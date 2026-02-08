@@ -298,21 +298,21 @@
             <!-- Spending Overview -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Today's Spending</div>
-                    <div class="stat-value" id="todaySpend">$0.00</div>
-                    <div class="stat-detail">Current day costs</div>
+                    <div class="stat-label">Tokens Today</div>
+                    <div class="stat-value" style="color: #00d9ff; font-size: 2.5rem;" id="todayTokens">0k</div>
+                    <div class="stat-detail" id="todaySpend">$0.00 spent</div>
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-label">This Week</div>
-                    <div class="stat-value" id="weekSpend">$0.00</div>
-                    <div class="stat-detail">Last 7 days</div>
+                    <div class="stat-label">Tokens This Week</div>
+                    <div class="stat-value" style="color: #00ff88; font-size: 2.5rem;" id="weekTokens">0k</div>
+                    <div class="stat-detail" id="weekSpend">$0.00 spent</div>
                 </div>
                 
                 <div class="stat-card">
-                    <div class="stat-label">This Month</div>
-                    <div class="stat-value" id="monthSpend">$0.00</div>
-                    <div class="stat-detail">Month-to-date total</div>
+                    <div class="stat-label">Tokens This Month</div>
+                    <div class="stat-value" style="color: #feca57; font-size: 2.5rem;" id="monthTokens">0k</div>
+                    <div class="stat-detail" id="monthSpend">$0.00 spent</div>
                 </div>
                 
                 <div class="stat-card">
@@ -363,7 +363,14 @@
             
             <!-- Spending Trend Chart -->
             <div class="section">
-                <div class="section-title">📈 Spending Trend (Last 30 Days)</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div class="section-title">📈 Trend (Last 30 Days)</div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn secondary" onclick="setChartView('cost')" id="costBtn">💰 Cost</button>
+                        <button class="btn secondary" onclick="setChartView('tokens')" id="tokensBtn">🔢 Tokens</button>
+                        <button class="btn" onclick="setChartView('both')" id="bothBtn">📊 Both</button>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="trendChart"></canvas>
                 </div>
@@ -424,14 +431,27 @@
             const response = await fetch('/api/costs');
             const data = await response.json();
             
-            // Update spending cards
-            document.getElementById('todaySpend').textContent = formatCurrency(data.spending.today);
-            document.getElementById('weekSpend').textContent = formatCurrency(data.spending.week);
-            document.getElementById('monthSpend').textContent = formatCurrency(data.spending.month);
+            // Calculate token totals from daily trend
+            const todayData = data.dailyTrend[data.dailyTrend.length - 1] || {};
+            const weekTokens = data.dailyTrend.slice(-7).reduce((sum, d) => sum + (d.tokens || 0), 0);
+            const monthTokens = data.dailyTrend.reduce((sum, d) => sum + (d.tokens || 0), 0);
+            
+            // Update token cards (primary now)
+            document.getElementById('todayTokens').textContent = `${Math.round((todayData.tokens || 0) / 1000)}k`;
+            document.getElementById('weekTokens').textContent = `${Math.round(weekTokens / 1000)}k`;
+            document.getElementById('monthTokens').textContent = `${Math.round(monthTokens / 1000)}k`;
+            
+            // Update spending (now as detail text)
+            document.getElementById('todaySpend').textContent = formatCurrency(data.spending.today) + ' spent';
+            document.getElementById('weekSpend').textContent = formatCurrency(data.spending.week) + ' spent';
+            document.getElementById('monthSpend').textContent = formatCurrency(data.spending.month) + ' spent';
             document.getElementById('modelCount').textContent = data.modelCosts.length;
             
             const totalSessions = data.modelCosts.reduce((sum, m) => sum + m.session_count, 0);
             document.getElementById('sessionCount').textContent = `${totalSessions} sessions tracked`;
+            
+            // Store data for chart toggle
+            window.chartData = data.dailyTrend;
             
             // Render model costs
             const modelList = document.getElementById('modelList');
@@ -520,6 +540,22 @@
             }).join('');
         }
         
+        let currentChartView = 'both';
+        
+        function setChartView(view) {
+            currentChartView = view;
+            
+            // Update button states
+            document.getElementById('costBtn').className = view === 'cost' ? 'btn' : 'btn secondary';
+            document.getElementById('tokensBtn').className = view === 'tokens' ? 'btn' : 'btn secondary';
+            document.getElementById('bothBtn').className = view === 'both' ? 'btn' : 'btn secondary';
+            
+            // Re-render chart
+            if (window.chartData) {
+                renderTrendChart(window.chartData);
+            }
+        }
+        
         function renderTrendChart(data) {
             const ctx = document.getElementById('trendChart').getContext('2d');
             
@@ -531,30 +567,99 @@
             });
             
             const costs = data.map(d => parseFloat(d.cost || 0));
+            const tokens = data.map(d => Math.round((d.tokens || 0) / 1000)); // Convert to k
+            
+            const datasets = [];
+            
+            // Cost dataset
+            if (currentChartView === 'cost' || currentChartView === 'both') {
+                datasets.push({
+                    label: 'Daily Cost ($)',
+                    data: costs,
+                    borderColor: '#00d9ff',
+                    backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: currentChartView === 'cost',
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#00d9ff',
+                    pointBorderColor: '#0a0a0f',
+                    pointBorderWidth: 2,
+                    yAxisID: 'y'
+                });
+            }
+            
+            // Tokens dataset
+            if (currentChartView === 'tokens' || currentChartView === 'both') {
+                datasets.push({
+                    label: 'Tokens (k)',
+                    data: tokens,
+                    borderColor: '#00ff88',
+                    backgroundColor: 'rgba(0, 255, 136, 0.1)',
+                    borderWidth: 3,
+                    fill: currentChartView === 'tokens',
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#00ff88',
+                    pointBorderColor: '#0a0a0f',
+                    pointBorderWidth: 2,
+                    yAxisID: currentChartView === 'both' ? 'y1' : 'y'
+                });
+            }
+            
+            const scales = {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#888' }
+                },
+                y: {
+                    type: 'linear',
+                    display: currentChartView !== 'tokens',
+                    position: 'left',
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { 
+                        color: '#00d9ff',
+                        callback: (value) => '$' + value.toFixed(2)
+                    },
+                    beginAtZero: true
+                }
+            };
+            
+            if (currentChartView === 'both') {
+                scales.y1 = {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: { display: false },
+                    ticks: { 
+                        color: '#00ff88',
+                        callback: (value) => value + 'k'
+                    },
+                    beginAtZero: true
+                };
+            } else if (currentChartView === 'tokens') {
+                scales.y.ticks.color = '#00ff88';
+                scales.y.ticks.callback = (value) => value + 'k';
+            }
             
             trendChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels,
-                    datasets: [{
-                        label: 'Daily Cost ($)',
-                        data: costs,
-                        borderColor: '#00d9ff',
-                        backgroundColor: 'rgba(0, 217, 255, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#00d9ff',
-                        pointBorderColor: '#0a0a0f',
-                        pointBorderWidth: 2
-                    }]
+                    datasets
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     plugins: {
-                        legend: { display: false },
+                        legend: { 
+                            display: currentChartView === 'both',
+                            labels: { color: '#888' }
+                        },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.9)',
                             titleColor: '#00d9ff',
@@ -562,26 +667,21 @@
                             borderColor: '#00d9ff',
                             borderWidth: 1,
                             padding: 12,
-                            displayColors: false,
+                            displayColors: true,
                             callbacks: {
-                                label: (context) => `Cost: $${context.parsed.y.toFixed(2)}`
+                                label: (context) => {
+                                    const label = context.dataset.label;
+                                    const value = context.parsed.y;
+                                    if (label.includes('Cost')) {
+                                        return `Cost: $${value.toFixed(2)}`;
+                                    } else {
+                                        return `Tokens: ${value}k`;
+                                    }
+                                }
                             }
                         }
                     },
-                    scales: {
-                        x: {
-                            grid: { color: 'rgba(255,255,255,0.05)' },
-                            ticks: { color: '#888' }
-                        },
-                        y: {
-                            grid: { color: 'rgba(255,255,255,0.05)' },
-                            ticks: { 
-                                color: '#888',
-                                callback: (value) => '$' + value.toFixed(2)
-                            },
-                            beginAtZero: true
-                        }
-                    }
+                    scales
                 }
             });
         }
