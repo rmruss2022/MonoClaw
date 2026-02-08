@@ -333,15 +333,8 @@
 <body>
     <div class="container">
         <header>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <h1>🦞 OpenClaw Command Hub</h1>
-                    <p class="subtitle">System monitoring • Service management • File access</p>
-                </div>
-                <button class="btn btn-primary" onclick="window.open('https://github.com/rmruss2022/MonoClaw', '_blank')" style="font-size: 1rem; padding: 10px 20px;">
-                    🔗 View MonoClaw on GitHub
-                </button>
-            </div>
+            <h1>🦞 OpenClaw Command Hub</h1>
+            <p class="subtitle">System monitoring • Service management • File access</p>
             <p class="refresh-time" id="refreshTime">Loading...</p>
         </header>
         
@@ -518,37 +511,23 @@
                     'Moltbook Dashboard': 'http://localhost:18797',
                     'MonoClaw Dashboard': 'http://localhost:18798'
                 };
-                const githubDirs = {
-                    'Voice Server': 'https://github.com/rmruss2022/MonoClaw/tree/main/voice-server',
-                    'Job Dashboard': 'https://github.com/rmruss2022/MonoClaw/tree/main/jobs',
-                    'NYC Raves Dashboard': 'https://github.com/rmruss2022/MonoClaw/tree/main/raves',
-                    'Token Tracker': 'https://github.com/rmruss2022/MonoClaw/tree/main/tokens',
-                    'Mission Control': 'https://github.com/rmruss2022/MonoClaw/tree/main/mission-control',
-                    'Activity Hub': 'https://github.com/rmruss2022/MonoClaw/tree/main/activity-hub',
-                    'Moltbook Dashboard': 'https://github.com/rmruss2022/MonoClaw/tree/main/moltbook-dashboard',
-                    'MonoClaw Dashboard': 'https://github.com/rmruss2022/MonoClaw'
-                };
                 
                 const apps = systemData.services.map(s => {
                     const icon = icons[s.name] || '⚙️';
                     const color = colors[s.name] || '#888';
                     const url = urls[s.name];
-                    const github = githubDirs[s.name];
                     const port = s.detail.match(/\d+/)?.[0] || '';
                     
                     return `
                         <div class="app-card ${s.running ? 'running' : 'stopped'}" 
-                             style="--app-color: ${color}; cursor: default;">
+                             ${url && s.running ? `onclick="window.open('${url}', '_blank')"` : ''}
+                             style="--app-color: ${color}">
                             <div class="app-icon" style="color: ${color}">${icon}</div>
                             <div class="app-status">
                                 <span class="status-indicator ${s.running ? 'online' : 'offline'}"></span>
                             </div>
                             <div class="app-name">${s.name.replace(' Dashboard', '')}</div>
                             ${port ? `<div class="app-port">:${port}</div>` : ''}
-                            <div class="app-actions" style="margin-top: 8px; display: flex; gap: 6px; justify-content: center;">
-                                ${url && s.running ? `<button class="btn btn-secondary" onclick="event.stopPropagation(); window.open('${url}', '_blank')" style="font-size: 14px; padding: 4px 8px;" title="Open Dashboard">🌐</button>` : ''}
-                                ${github ? `<button class="btn btn-secondary" onclick="event.stopPropagation(); window.open('${github}', '_blank')" style="font-size: 14px; padding: 4px 8px;" title="View on GitHub">🔗</button>` : ''}
-                            </div>
                         </div>
                     `;
                 }).join('');
@@ -573,22 +552,16 @@
             
             // Projects
             const projects = [
-                { name: 'Job Search Tracker', url: 'http://localhost:18791', detail: '11 companies tracked', github: 'https://github.com/rmruss2022/MonoClaw/tree/main/jobs' },
-                { name: 'NYC Raves', url: 'http://localhost:18793', detail: '24 events this week', github: 'https://github.com/rmruss2022/MonoClaw/tree/main/raves' },
-                { name: 'Token Usage Tracker', url: 'http://localhost:18794', detail: 'Real-time token monitoring', github: 'https://github.com/rmruss2022/MonoClaw/tree/main/tokens' },
-                { name: 'Mission Control', url: 'http://localhost:18795', detail: 'This dashboard', github: 'https://github.com/rmruss2022/MonoClaw/tree/main/mission-control' },
-                { name: 'Activity Hub', url: 'http://localhost:18796', detail: 'Agent activity tracking', github: 'https://github.com/rmruss2022/MonoClaw/tree/main/activity-hub' },
-                { name: 'Moltbook Dashboard', url: 'http://localhost:18797', detail: 'Social network posts', github: 'https://github.com/rmruss2022/MonoClaw/tree/main/moltbook-dashboard' }
+                { name: 'Job Search Tracker', url: 'http://localhost:18791', detail: '11 companies tracked' },
+                { name: 'NYC Raves', url: 'http://localhost:18793', detail: '24 events this week' },
+                { name: 'Token Usage Tracker', url: 'http://localhost:18794', detail: 'Real-time token monitoring' },
+                { name: 'Mission Control', url: 'http://localhost:18795', detail: 'This dashboard' }
             ];
             const projectsHtml = projects.map(p => `
-                <div class="project-item">
+                <div class="project-item" onclick="window.open('${p.url}', '_blank')">
                     <div class="project-info">
                         <div class="project-name">${p.name}</div>
                         <div class="project-detail">${p.detail}</div>
-                    </div>
-                    <div class="actions">
-                        <button class="btn btn-secondary" onclick="window.open('${p.url}', '_blank')" title="Open Dashboard">🌐</button>
-                        <button class="btn btn-secondary" onclick="window.open('${p.github}', '_blank')" title="View on GitHub">🔗</button>
                     </div>
                 </div>
             `).join('');
@@ -596,13 +569,12 @@
             
             // Files
             const files = [
-                { name: 'MonoClaw Repo', path: '~/.openclaw/workspace', github: 'https://github.com/rmruss2022/MonoClaw' },
-                { name: 'Config', path: '~/.openclaw/openclaw.json', github: null },
-                { name: 'Workspace', path: '~/.openclaw/workspace', github: 'https://github.com/rmruss2022/MonoClaw' },
-                { name: 'Gateway Logs', path: '~/.openclaw/logs', github: null },
-                { name: 'Voice Server Logs', path: '~/.openclaw/voice-server', github: null },
-                { name: 'AGENTS.md', path: '~/.openclaw/workspace/AGENTS.md', github: 'https://github.com/rmruss2022/MonoClaw/blob/main/AGENTS.md' },
-                { name: 'TOOLS.md', path: '~/.openclaw/workspace/TOOLS.md', github: 'https://github.com/rmruss2022/MonoClaw/blob/main/TOOLS.md' }
+                { name: 'Config', path: '~/.openclaw/openclaw.json', action: 'code' },
+                { name: 'Workspace', path: '~/.openclaw/workspace', action: 'finder' },
+                { name: 'Gateway Logs', path: '~/.openclaw/logs', action: 'finder' },
+                { name: 'Voice Server Logs', path: '~/.openclaw/voice-server', action: 'finder' },
+                { name: 'AGENTS.md', path: '~/.openclaw/workspace/AGENTS.md', action: 'code' },
+                { name: 'TOOLS.md', path: '~/.openclaw/workspace/TOOLS.md', action: 'code' }
             ];
             const filesHtml = files.map(f => `
                 <div class="file-item">
@@ -611,10 +583,8 @@
                         <div class="file-path">${f.path}</div>
                     </div>
                     <div class="actions">
-                        <button class="btn btn-secondary" onclick="openPath('${f.path}', 'finder')" title="Open in Finder">📁</button>
-                        <button class="btn btn-secondary" onclick="openPath('${f.path}', 'code')" title="Open in VSCode">💻</button>
-                        <button class="btn btn-secondary" onclick="openPath('${f.path}', 'cursor')" title="Open in Cursor">📝</button>
-                        ${f.github ? `<button class="btn btn-secondary" onclick="openPath('${f.github}', 'github')" title="View on GitHub">🔗</button>` : ''}
+                        <button class="btn btn-secondary" onclick="openPath('${f.path}', 'finder')">📁</button>
+                        <button class="btn btn-secondary" onclick="openPath('${f.path}', 'code')">💻</button>
                     </div>
                 </div>
             `).join('');
@@ -709,15 +679,6 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ path: expandedPath })
                     });
-                } else if (type === 'cursor') {
-                    await fetch('/api/open-cursor', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path: expandedPath })
-                    });
-                } else if (type === 'github') {
-                    // Open GitHub directory
-                    window.open(path, '_blank');
                 }
             } catch (error) {
                 alert(`Failed to open ${path}`);
