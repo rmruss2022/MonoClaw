@@ -1,0 +1,26 @@
+{
+  "name": "@openclaw/plugin-twitter",
+  "version": "1.0.0",
+  "description": "Twitter/X channel plugin for OpenClaw",
+  "main": "index.js",
+  "type": "module",
+  "keywords": [
+    "openclaw",
+    "twitter",
+    "x",
+    "social",
+    "channel"
+  ],
+  "author": "OpenClaw",
+  "license": "MIT",
+  "dependencies": {
+    "twitter-api-v2": "^1.17.2"
+  },
+  "openclaw": {
+    "plugin": {
+      "type": "channel",
+      "name": "twitter",
+      "version": "1.0.0"
+    }
+  }
+}
