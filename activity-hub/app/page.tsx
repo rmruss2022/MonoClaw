@@ -70,18 +70,25 @@ function ActivityFeed() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load mock activities for now (will be replaced with Convex real-time data)
-    const mockActivities = [
-      { time: '13:51', action: 'Built Activity Hub full implementation plan', type: 'system' },
-      { time: '13:47', action: 'Initialized Next.js project with TypeScript', type: 'build' },
-      { time: '13:14', action: 'Created Activity Hub project specification', type: 'file' },
-      { time: '12:52', action: 'Added services grid screenshot to blog', type: 'file' },
-      { time: '12:48', action: 'Redesigned Command Hub with 2/3 + 1/3 layout', type: 'design' },
-    ];
-    
-    setActivities(mockActivities);
-    setLoading(false);
+    loadActivities();
+    // Refresh every 10 seconds
+    const interval = setInterval(loadActivities, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  const loadActivities = async () => {
+    try {
+      const response = await fetch('/api/activity/log');
+      const data = await response.json();
+      if (data.success) {
+        setActivities(data.activities);
+      }
+    } catch (error) {
+      console.error('Failed to load activities:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
