@@ -718,8 +718,8 @@
         // Auto-refresh every 5 minutes
         setInterval(loadAllData, 5 * 60 * 1000);
     </script>
-    <script>
-/**
+    
+    <script>\n/**
  * Smart Hub Navigation
  * Finds existing Command Hub tab in current window or opens new one
  * Uses BroadcastChannel API to communicate between tabs
@@ -729,7 +729,11 @@ const HUB_URL = 'http://localhost:18795/hub';
 const HUB_CHANNEL = 'openclaw-hub-channel';
 
 function navigateToHub(event) {
-    if (event) event.preventDefault();
+    // Prevent default link behavior
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     
     // Create a broadcast channel to ask if hub is already open
     const bc = new BroadcastChannel(HUB_CHANNEL);
@@ -742,7 +746,7 @@ function navigateToHub(event) {
             hubFound = true;
             clearTimeout(timeout);
             bc.close();
-            // Hub is open, it will focus itself
+            // Hub is open and will focus itself - we do nothing
         }
     };
     
@@ -757,6 +761,8 @@ function navigateToHub(event) {
             window.open(HUB_URL, 'command-hub');
         }
     }, 100);
+    
+    return false; // Extra safety to prevent default
 }
 
 // If this page IS the hub, respond to pings
@@ -764,12 +770,18 @@ if (window.location.href.includes('localhost:18795')) {
     const bc = new BroadcastChannel(HUB_CHANNEL);
     bc.onmessage = (e) => {
         if (e.data.type === 'hub-ping') {
-            // We are the hub! Send confirmation and focus ourselves
+            // We are the hub! Send confirmation
             bc.postMessage({ type: 'hub-present' });
-            window.focus();
+            // Try to focus ourselves (without reload)
+            try {
+                if (document.hidden || !document.hasFocus()) {
+                    window.focus();
+                }
+            } catch (err) {
+                // Focus might fail in some browsers, that's okay
+                console.log('Could not focus hub tab');
+            }
         }
     };
-}
-    </script>
-</body>
+}\n    </script>\n</body>
 </html>
