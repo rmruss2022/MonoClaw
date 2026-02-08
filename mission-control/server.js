@@ -71,6 +71,7 @@ async function getSystemData() {
         const missionControl = await checkPort(18795);
         const activityHub = await checkPort(18796);
         const moltbookDash = await checkPort(18797);
+        const monoclawDash = await checkPort(18798);
         
         // Get cron jobs
         const cronJobs = await getCronJobs();
@@ -161,6 +162,11 @@ async function getSystemData() {
                     name: 'Moltbook Dashboard',
                     running: moltbookDash,
                     detail: moltbookDash ? `Port 18797` : 'Stopped'
+                },
+                {
+                    name: 'MonoClaw Dashboard',
+                    running: monoclawDash,
+                    detail: monoclawDash ? `Port 18798` : 'Stopped'
                 }
             ],
             apiKeys: [
