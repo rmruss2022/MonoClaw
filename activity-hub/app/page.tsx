@@ -100,6 +100,8 @@ function ActivityFeed() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
 
   useEffect(() => {
     loadActivities();
@@ -107,6 +109,11 @@ function ActivityFeed() {
     const interval = setInterval(loadActivities, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   const loadActivities = async () => {
     try {
@@ -125,15 +132,22 @@ function ActivityFeed() {
   // Filter activities
   const filteredActivities = activities.filter(act => {
     if (filter === 'all') return true;
-    if (filter === 'files') return ['file-create', 'file-edit'].includes(act.metadata?.category);
-    if (filter === 'reads') return act.metadata?.category === 'file-read';
-    if (filter === 'commands') return act.metadata?.category === 'command';
+    const category = act.category || act.metadata?.category;
+    if (filter === 'files') return ['file-create', 'file-edit'].includes(category);
+    if (filter === 'reads') return category === 'file-read';
+    if (filter === 'commands') return category === 'command';
     return true;
   });
 
+  // Paginate filtered activities
+  const totalPages = Math.ceil(filteredActivities.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
+
   // Group by agent
-  const groupedByAgent = filteredActivities.reduce((acc, act) => {
-    const agentLabel = act.metadata?.agentLabel || 'Unknown Agent';
+  const groupedByAgent = paginatedActivities.reduce((acc, act) => {
+    const agentLabel = act.agentName || act.metadata?.agentLabel || 'Unknown Agent';
     if (!acc[agentLabel]) acc[agentLabel] = [];
     acc[agentLabel].push(act);
     return acc;
@@ -203,6 +217,16 @@ function ActivityFeed() {
         </button>
       </div>
 
+      {/* Pagination Info */}
+      {filteredActivities.length > 0 && (
+        <div className="flex items-center justify-between mb-4 text-sm text-gray-400">
+          <div>
+            Showing {startIndex + 1}-{Math.min(endIndex, filteredActivities.length)} of {filteredActivities.length} activities
+          </div>
+          <div>Page {currentPage} of {totalPages}</div>
+        </div>
+      )}
+
       {/* Grouped Activities */}
       <div className="space-y-6">
         {Object.entries(groupedByAgent).map(([agentLabel, agentActivities]) => (
@@ -215,9 +239,9 @@ function ActivityFeed() {
             </h3>
             
             {agentActivities.map((activity, i) => {
-              const category = activity.metadata?.category || 'system';
-              const color = activity.metadata?.color || '#888';
-              const icon = activity.metadata?.icon || '🔧';
+              const category = activity.category || activity.metadata?.category || 'system';
+              const color = activity.color || activity.metadata?.color || '#888';
+              const icon = activity.icon || activity.metadata?.icon || '🔧';
               
               return (
                 <div
@@ -269,6 +293,71 @@ function ActivityFeed() {
           </div>
         ))}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-8">
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 text-gray-300 hover:bg-white/10"
+          >
+            First
+          </button>
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 text-gray-300 hover:bg-white/10"
+          >
+            Previous
+          </button>
+          
+          {/* Page Numbers */}
+          <div className="flex gap-1">
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (totalPages <= 5) {
+                pageNum = i + 1;
+              } else if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === pageNum
+                      ? 'bg-[#00d9ff] text-black'
+                      : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 text-gray-300 hover:bg-white/10"
+          >
+            Next
+          </button>
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-white/5 text-gray-300 hover:bg-white/10"
+          >
+            Last
+          </button>
+        </div>
+      )}
 
       {filteredActivities.length === 0 && (
         <div className="text-center py-12">

@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^12.6.2",
     "chart.js": "^4.5.1",
     "convex": "^1.31.7",
     "next": "14.2.35",
