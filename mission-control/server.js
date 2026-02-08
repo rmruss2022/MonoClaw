@@ -397,11 +397,48 @@ async function getCodeStats() {
                 let insertions = 0;
                 let deletions = 0;
                 
+                // Exclude patterns for non-code files
+                const excludePatterns = [
+                    /package-lock\.json$/,
+                    /node_modules\//,
+                    /\.db$/,
+                    /yarn\.lock$/,
+                    /pnpm-lock\.yaml$/,
+                    /\.min\.js$/,
+                    /\.min\.css$/,
+                    /\.map$/,
+                    /\.png$/,
+                    /\.jpg$/,
+                    /\.jpeg$/,
+                    /\.gif$/,
+                    /\.svg$/,
+                    /\.ico$/,
+                    /\.woff/,
+                    /\.ttf$/,
+                    /\.eot$/,
+                    /dist\//,
+                    /build\//,
+                    /\.next\//,
+                    /coverage\//
+                ];
+                
                 // Parse numstat output (format: insertions\tdeletions\tfilename)
                 const lines = stdout.split('\n').filter(line => line.trim());
                 for (const line of lines) {
                     const parts = line.split('\t');
-                    if (parts.length >= 2) {
+                    if (parts.length >= 3) {
+                        const filename = parts[2];
+                        
+                        // Skip if matches exclude patterns
+                        if (excludePatterns.some(pattern => pattern.test(filename))) {
+                            continue;
+                        }
+                        
+                        // Skip binary files (show as -)
+                        if (parts[0] === '-' || parts[1] === '-') {
+                            continue;
+                        }
+                        
                         const ins = parseInt(parts[0]) || 0;
                         const dels = parseInt(parts[1]) || 0;
                         insertions += ins;
