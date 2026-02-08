@@ -1,0 +1,57 @@
+{
+  "pricing": {
+    "claude-opus-4": {
+      "input": 15.00,
+      "output": 75.00,
+      "per_tokens": 1000000
+    },
+    "claude-sonnet-4-5": {
+      "input": 3.00,
+      "output": 15.00,
+      "per_tokens": 1000000
+    },
+    "claude-sonnet-3-5": {
+      "input": 3.00,
+      "output": 15.00,
+      "per_tokens": 1000000
+    },
+    "kimi-k2.5": {
+      "input": 0.00,
+      "output": 0.00,
+      "per_tokens": 1000000
+    }
+  },
+  "budgets": {
+    "daily": {
+      "enabled": true,
+      "limit": 25.00,
+      "alert_thresholds": [0.8, 0.9, 1.0]
+    },
+    "weekly": {
+      "enabled": true,
+      "limit": 175.00,
+      "alert_thresholds": [0.8, 0.9, 1.0]
+    },
+    "monthly": {
+      "enabled": true,
+      "limit": 750.00,
+      "alert_thresholds": [0.8, 0.9, 1.0]
+    }
+  },
+  "alerts": {
+    "telegram": {
+      "enabled": true,
+      "user_id": "5574760589"
+    },
+    "email": {
+      "enabled": false,
+      "to": ""
+    },
+    "cooldown_minutes": 60
+  },
+  "collection": {
+    "interval_minutes": 60,
+    "retention_days": 90,
+    "input_output_ratio": 0.6
+  }
+}

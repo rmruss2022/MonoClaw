@@ -7,6 +7,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-gray-100">
+      {/* Back Button */}
+      <a 
+        href="http://localhost:18795/hub"
+        className="fixed top-5 left-5 z-50 px-5 py-2.5 bg-[#00d9ff]/10 hover:bg-[#00d9ff]/20 border border-[#00d9ff]/30 rounded-lg text-[#00d9ff] font-semibold transition-all hover:-translate-x-1 hover:shadow-[0_0_20px_rgba(0,217,255,0.3)]"
+      >
+        ← Back to Command Hub
+      </a>
+      
       {/* Header */}
       <header className="border-b border-gray-800 bg-black/50">
         <div className="container mx-auto px-6 py-4">
