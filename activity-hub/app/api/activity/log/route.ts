@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-
-const STORE_PATH = path.join(process.cwd(), 'activities-store.json');
-const MAX_ACTIVITIES = 500; // Keep last 500 activities
-
-async function readActivities(): Promise<any[]> {
-  try {
-    const data = await fs.readFile(STORE_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-async function writeActivities(activities: any[]): Promise<void> {
-  await fs.writeFile(STORE_PATH, JSON.stringify(activities, null, 2));
-}
+import { getDb, insertActivity, getRecentActivities, getActivityCount } from '@/lib/db';
 
 export async function GET() {
   try {
-    const activities = await readActivities();
+    const activities = getRecentActivities(100); // Last 100 activities
+    const total = getActivityCount();
+    
     return NextResponse.json({
       success: true,
-      activities: activities.slice(-100).reverse(), // Return last 100, newest first
-      total: activities.length,
+      activities,
+      total,
     });
   } catch (error) {
     console.error('[Activity GET Error]', error);
@@ -38,7 +23,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, type, metadata } = body;
+    const { action, type, metadata, category, color, icon, agentName, agentId } = body;
 
     if (!action || !type) {
       return NextResponse.json(
@@ -55,25 +40,26 @@ export async function POST(request: NextRequest) {
       hour12: false,
     });
 
-    const activity = { timestamp, time, action, type, metadata };
+    const activity = {
+      timestamp,
+      time,
+      action,
+      type,
+      agentName,
+      agentId,
+      category,
+      color,
+      icon,
+      metadata,
+    };
 
-    // Read current activities
-    const activities = await readActivities();
-    
-    // Add new activity
-    activities.push(activity);
-    
-    // Trim to max size
-    const trimmed = activities.slice(-MAX_ACTIVITIES);
-    
-    // Write back
-    await writeActivities(trimmed);
+    const id = insertActivity(activity);
 
     console.log('[Activity Log]', activity);
 
     return NextResponse.json({
       success: true,
-      activity,
+      activity: { id, ...activity },
     });
   } catch (error) {
     console.error('[Activity Log Error]', error);
