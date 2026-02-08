@@ -442,6 +442,25 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, error: error.message }));
         }
+    } else if (req.url.startsWith('/api/sessions/history') && req.method === 'GET') {
+        try {
+            const url = new URL(req.url, `http://${req.headers.host}`);
+            const sessionKey = url.searchParams.get('sessionKey');
+            
+            if (!sessionKey) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: 'sessionKey required' }));
+                return;
+            }
+            
+            const { stdout } = await execPromise(`/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions history "${sessionKey}" --json --limit 50`);
+            const data = JSON.parse(stdout);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, history: data.messages || [] }));
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: error.message }));
+        }
     } else if (req.url === '/hub' || req.url === '/hub.html') {
         const html = fs.readFileSync(path.join(__dirname, 'hub.html'), 'utf-8');
         res.writeHead(200, { 'Content-Type': 'text/html' });
