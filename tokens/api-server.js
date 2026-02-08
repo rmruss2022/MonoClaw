@@ -72,30 +72,37 @@ async function getCostSummary() {
         // Daily spending trend (last 30 days)
         const dailyTrend = await query(`
             SELECT 
-                DATE(created_at) as date,
+                DATE(timestamp/1000, 'unixepoch') as date,
                 SUM(cost_total) as cost,
                 SUM(tokens_used) as tokens
             FROM token_usage
-            WHERE created_at >= datetime('now', '-30 days')
-            GROUP BY DATE(created_at)
+            WHERE timestamp >= ?
+            GROUP BY DATE(timestamp/1000, 'unixepoch')
             ORDER BY date ASC
-        `);
+        `, [Date.now() - 30 * 24 * 60 * 60 * 1000]);
         
         // Total spending periods
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        
         const today = await queryOne(`
             SELECT SUM(cost_total) as cost FROM token_usage 
-            WHERE created_at >= datetime('now', 'start of day')
-        `);
+            WHERE timestamp >= ?
+        `, [todayStart.getTime()]);
         
         const thisWeek = await queryOne(`
             SELECT SUM(cost_total) as cost FROM token_usage 
-            WHERE created_at >= datetime('now', '-7 days')
-        `);
+            WHERE timestamp >= ?
+        `, [Date.now() - 7 * 24 * 60 * 60 * 1000]);
+        
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
         
         const thisMonth = await queryOne(`
             SELECT SUM(cost_total) as cost FROM token_usage 
-            WHERE created_at >= datetime('now', 'start of month')
-        `);
+            WHERE timestamp >= ?
+        `, [monthStart.getTime()]);
         
         return {
             modelCosts,
