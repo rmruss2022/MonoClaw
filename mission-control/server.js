@@ -9,6 +9,11 @@ const execPromise = util.promisify(exec);
 
 const PORT = 18795;
 
+// Cache for openclaw status (expensive operation)
+let statusCache = null;
+let statusCacheTime = 0;
+const STATUS_CACHE_TTL = 10000; // 10 seconds
+
 function getAvailableModels(config) {
     const models = [];
     
@@ -62,21 +67,22 @@ async function getSystemData() {
         const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
         
         // Check actual service health (port-based, more reliable than LaunchAgent)
-        const voiceServerOnline = await checkPort(18790);
+        // Run all port checks in parallel for speed
+        const [voiceServerOnline, jobDashboard, ravesDashboard, tokenTracker, 
+               missionControl, activityHub, moltbookDash, monoclawDash] = await Promise.all([
+            checkPort(18790),
+            checkPort(18791),
+            checkPort(18793),
+            checkPort(18794),
+            checkPort(18795),
+            checkPort(18796),
+            checkPort(18797),
+            checkPort(18798)
+        ]);
         const voiceHealth = voiceServerOnline ? 'healthy' : 'down';
         
-        const jobDashboard = await checkPort(18791);
-        const ravesDashboard = await checkPort(18793);
-        const tokenTracker = await checkPort(18794);
-        const missionControl = await checkPort(18795);
-        const activityHub = await checkPort(18796);
-        const moltbookDash = await checkPort(18797);
-        const monoclawDash = await checkPort(18798);
-        
-        // Get cron jobs
-        const cronJobs = await getCronJobs();
-        
-        // Parse openclaw status output
+        // Get cron jobs (sync) and parse status (async)
+        const cronJobs = getCronJobs();
         const statusData = await parseOpenClawStatus();
         
         return {
@@ -211,7 +217,7 @@ async function getSystemData() {
 
 async function checkPort(port) {
     try {
-        const response = await fetch(`http://localhost:${port}`, { signal: AbortSignal.timeout(2000) });
+        const response = await fetch(`http://localhost:${port}`, { signal: AbortSignal.timeout(300) });
         return true;
     } catch {
         return false;
@@ -244,7 +250,7 @@ async function checkVoiceServerHealth() {
     }
 }
 
-async function getCronJobs() {
+function getCronJobs() {
     // Direct cron job list (gateway API not exposed in local mode)
     return [
         {
@@ -287,15 +293,25 @@ async function getCronJobs() {
 }
 
 async function parseOpenClawStatus() {
+    // Check cache first
+    const now = Date.now();
+    if (statusCache && (now - statusCacheTime) < STATUS_CACHE_TTL) {
+        return statusCache;
+    }
+    
     try {
-        const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw status');
+        // Add timeout to openclaw status command (max 2 seconds)
+        const { stdout } = await Promise.race([
+            execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw status'),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('openclaw status timeout')), 2000))
+        ]);
         
         // Parse session tokens
         const tokenMatch = stdout.match(/(\d+k)\/(\d+k)\s+\((\d+)%\)/);
         const sessionsMatch = stdout.match(/Sessions.*?(\d+)\s+active/s);
         const telegramMatch = stdout.match(/accounts\s+(\d+)\/(\d+)/);
         
-        return {
+        const result = {
             tokensUsed: tokenMatch ? tokenMatch[1] : '93k',
             tokensTotal: tokenMatch ? tokenMatch[2] : '1000k',
             usagePercent: tokenMatch ? parseInt(tokenMatch[3]) : 9,
@@ -304,8 +320,17 @@ async function parseOpenClawStatus() {
             lastActivity: '1m ago',
             contextWindow: '195k'
         };
-    } catch {
-        return {
+        
+        // Cache the result
+        statusCache = result;
+        statusCacheTime = Date.now();
+        return result;
+    } catch (error) {
+        console.error('Failed to parse openclaw status:', error.message);
+        // Return cached data if available, otherwise defaults
+        if (statusCache) return statusCache;
+        
+        const fallback = {
             tokensUsed: '93k',
             tokensTotal: '1000k',
             usagePercent: 9,
@@ -314,6 +339,12 @@ async function parseOpenClawStatus() {
             lastActivity: '1m ago',
             contextWindow: '195k'
         };
+        
+        // Cache the fallback so we don't keep timing out
+        statusCache = fallback;
+        statusCacheTime = Date.now();
+        
+        return fallback;
     }
 }
 
