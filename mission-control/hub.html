@@ -686,8 +686,8 @@
                     `${Math.round(agent.totalTokens / 1000)}k tokens` : 
                     'Starting...';
                 
-                // Status based on recent activity (15 minutes for active work)
-                const isRecent = agent.ageMs < 900000; // Active in last 15 minutes
+                // Status based on recent activity (5 minutes for active work)
+                const isRecent = agent.ageMs < 300000; // Active in last 5 minutes
                 const statusDot = isRecent ? 'online' : 'warn';
                 const statusText = isRecent ? 'Working' : 'Idle';
                 
