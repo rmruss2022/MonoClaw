@@ -1,0 +1,24 @@
+{
+  "quotes": [
+    {
+      "text": "The best time to plant a tree was 20 years ago. The second best time is now.",
+      "author": "Chinese Proverb"
+    },
+    {
+      "text": "Code is like humor. When you have to explain it, it's bad.",
+      "author": "Cory House"
+    },
+    {
+      "text": "First, solve the problem. Then, write the code.",
+      "author": "John Johnson"
+    },
+    {
+      "text": "Any fool can write code that a computer can understand. Good programmers write code that humans can understand.",
+      "author": "Martin Fowler"
+    },
+    {
+      "text": "The only way to do great work is to love what you do.",
+      "author": "Steve Jobs"
+    }
+  ]
+}

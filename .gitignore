@@ -43,3 +43,4 @@ activity-hub/convex/_generated/
 
 # Secrets
 MOLTBOOK_CONFIG.md
+*.db
