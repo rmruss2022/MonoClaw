@@ -212,8 +212,8 @@ const server = http.createServer(async (req, res) => {
             const projectPath = path.join(MONOCLAW_PATH, project);
             
             try {
-                if (action === 'vscode') {
-                    exec(`open -a "Visual Studio Code" "${projectPath}"`);
+                if (action === 'cursor') {
+                    exec(`open -a "Cursor" "${projectPath}"`);
                 } else if (action === 'terminal') {
                     exec(`open -a Terminal "${projectPath}"`);
                 } else if (action === 'finder') {
