@@ -7,12 +7,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-gray-100">
-      {/* Back Button */}
+      {/* Back Button - Floating Action Button */}
       <a 
         href="http://localhost:18795/hub"
-        className="fixed top-5 left-5 z-50 px-5 py-2.5 bg-[#00d9ff]/10 hover:bg-[#00d9ff]/20 border border-[#00d9ff]/30 rounded-lg text-[#00d9ff] font-semibold transition-all hover:-translate-x-1 hover:shadow-[0_0_20px_rgba(0,217,255,0.3)]"
+        className="fixed bottom-8 right-8 z-50 px-6 py-3 bg-[#00d9ff]/15 hover:bg-[#00d9ff]/25 border-2 border-[#00d9ff]/40 hover:border-[#00d9ff]/60 rounded-full text-[#00d9ff] font-semibold text-sm transition-all hover:-translate-y-1 shadow-[0_4px_15px_rgba(0,217,255,0.2)] hover:shadow-[0_6px_25px_rgba(0,217,255,0.4)] backdrop-blur-md"
       >
-        ← Back to Command Hub
+        ← Hub
       </a>
       
       {/* Header */}
