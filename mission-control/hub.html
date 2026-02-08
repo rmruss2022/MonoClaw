@@ -387,6 +387,16 @@
                     </div>
                     <div id="filesList"></div>
                 </div>
+                
+                <!-- Sub-Agents -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🤖</div>
+                        <div class="card-title">Sub-Agents</div>
+                        <button class="btn btn-secondary" onclick="loadSessions()" style="margin-left: auto;">🔄</button>
+                    </div>
+                    <div id="subAgentsList"></div>
+                </div>
             </div>
             
             <!-- Right Column -->
@@ -625,12 +635,84 @@
             document.getElementById('refreshTime').textContent = `Last updated: ${now}`;
         }
         
+        // Sub-Agents
+        let sessionsData = null;
+        
+        async function loadSessions() {
+            try {
+                const response = await fetch('/api/sessions');
+                const data = await response.json();
+                if (data.success) {
+                    sessionsData = data.sessions;
+                    renderSubAgents();
+                }
+            } catch (error) {
+                console.error('Failed to load sessions:', error);
+            }
+        }
+        
+        function renderSubAgents() {
+            if (!sessionsData || !sessionsData.sessions) {
+                document.getElementById('subAgentsList').innerHTML = '<div class="service-detail" style="padding: 10px; color: #888;">No sub-agents running</div>';
+                return;
+            }
+            
+            // Filter for sub-agent sessions only (contains "subagent" in key)
+            const subAgents = sessionsData.sessions.filter(s => s.key.includes('subagent'));
+            
+            if (subAgents.length === 0) {
+                document.getElementById('subAgentsList').innerHTML = '<div class="service-detail" style="padding: 10px; color: #888;">No sub-agents running</div>';
+                return;
+            }
+            
+            const html = subAgents.map(agent => {
+                // Calculate age
+                const ageMinutes = Math.floor(agent.ageMs / 60000);
+                const ageText = ageMinutes < 1 ? 'Just now' : 
+                               ageMinutes < 60 ? `${ageMinutes}m ago` : 
+                               `${Math.floor(ageMinutes / 60)}h ${ageMinutes % 60}m ago`;
+                
+                // Get model name (short version)
+                const modelShort = agent.model ? agent.model.split('/').pop().replace('claude-', '').replace('-4-5', '') : 'default';
+                
+                // Extract sub-agent ID from key (last part)
+                const agentId = agent.key.split(':').pop().substring(0, 8);
+                
+                // Format tokens if available
+                const tokenInfo = agent.totalTokens ? 
+                    `${Math.round(agent.totalTokens / 1000)}k tokens` : 
+                    'Starting...';
+                
+                // Status based on recent activity
+                const isRecent = agent.ageMs < 120000; // Active in last 2 minutes
+                const statusDot = isRecent ? 'online' : 'warn';
+                const statusText = isRecent ? 'Active' : 'Idle';
+                
+                return `
+                    <div class="service-item">
+                        <div class="service-info">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span class="status-dot ${statusDot}"></span>
+                                <div class="service-name">Sub-Agent ${agentId}</div>
+                            </div>
+                            <div class="service-detail">${statusText} • ${modelShort} • ${tokenInfo}</div>
+                            <div class="service-detail" style="font-size: 0.8rem; color: #666;">Last activity: ${ageText}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('subAgentsList').innerHTML = html;
+        }
+        
         // Initial load
         loadData();
         refreshStatus();
+        loadSessions();
         
         // Auto-refresh every 30 seconds
         setInterval(loadData, 30000);
+        setInterval(loadSessions, 10000); // Refresh sessions every 10 seconds
     </script>
 </body>
 </html>

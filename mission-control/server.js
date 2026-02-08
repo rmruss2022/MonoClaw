@@ -432,6 +432,16 @@ const server = http.createServer(async (req, res) => {
         
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(health));
+    } else if (req.url === '/api/sessions' && req.method === 'GET') {
+        try {
+            const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
+            const sessions = JSON.parse(stdout);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, sessions }));
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: error.message }));
+        }
     } else if (req.url === '/hub' || req.url === '/hub.html') {
         const html = fs.readFileSync(path.join(__dirname, 'hub.html'), 'utf-8');
         res.writeHead(200, { 'Content-Type': 'text/html' });
