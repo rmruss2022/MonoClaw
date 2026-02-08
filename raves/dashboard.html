@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Raves This Week 🎵</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        h1 { 
+            font-size: 2.5rem; 
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: #666; font-size: 0.9rem; margin-top: 8px; }
+        
+        .filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 25px;
+        }
+        .filter-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #aaa;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+        .filter-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .filter-btn.active {
+            background: rgba(255, 107, 107, 0.2);
+            border-color: #ff6b6b;
+            color: #ff6b6b;
+        }
+        
+        .day-section {
+            margin-bottom: 40px;
+        }
+        .day-header {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .day-date {
+            color: #666;
+            font-size: 1rem;
+            font-weight: normal;
+        }
+        
+        .events-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        
+        .event-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 22px;
+            border: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .event-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .event-card:hover {
+            background: rgba(255,255,255,0.06);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        .event-card:hover::before { opacity: 1; }
+        .event-card.top-pick {
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+        .event-card.top-pick::before {
+            background: linear-gradient(90deg, #ff6b6b, #ff9ff3);
+            opacity: 1;
+        }
+        
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .event-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            line-height: 1.3;
+        }
+        .top-pick-badge {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .event-venue {
+            color: #48dbfb;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .genre-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .genre-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: #feca57;
+        }
+        
+        .event-description {
+            color: #aaa;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .event-card:hover .event-description {
+            -webkit-line-clamp: unset;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            z-index: 1;
+        }
+        .modal-title {
+            font-size: 1.8rem;
+            line-height: 1.3;
+        }
+        .modal-close {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: background 0.2s;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.2); }
+        .modal-body { padding: 25px 30px; }
+        .detail-section {
+            margin-bottom: 25px;
+        }
+        .detail-label {
+            color: #666;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .detail-value {
+            color: #fff;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            h1 { font-size: 1.8rem; }
+            .events-grid { grid-template-columns: 1fr; gap: 15px; }
+            .event-card { padding: 18px; }
+            .modal { max-width: 100%; height: 100%; max-height: 100vh; border-radius: 0; }
+            .modal-header { padding: 16px 20px; }
+            .modal-body { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🎵 NYC Raves This Week</h1>
+                <p class="subtitle">Last updated: <span id="lastUpdated">Loading...</span></p>
+            </div>
+        </header>
+        
+        <div class="filters">
+            <button class="filter-btn active" data-filter="all">All Events</button>
+            <button class="filter-btn" data-filter="House">🏠 House</button>
+            <button class="filter-btn" data-filter="Techno">🖤 Techno</button>
+            <button class="filter-btn" data-filter="Disco">🪩 Disco</button>
+            <button class="filter-btn" data-filter="Experimental">🎨 Experimental</button>
+            <button class="filter-btn" data-filter="topPick">⭐ Top Picks</button>
+        </div>
+        
+        <div id="content"></div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Event</div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        let data = null;
+        let activeFilter = 'all';
+        
+        async function loadData() {
+            try {
+                const response = await fetch('events.json?' + Date.now());
+                data = await response.json();
+                render();
+            } catch (e) {
+                console.error('Failed to load data:', e);
+                document.getElementById('content').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">😔</div>
+                        <h2>No events found</h2>
+                        <p>Check back soon for this week's raves!</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function render() {
+            if (!data || !data.events) return;
+            
+            document.getElementById('lastUpdated').textContent = 
+                new Date(data.lastUpdated).toLocaleString();
+            
+            // Filter events
+            let filtered = data.events;
+            if (activeFilter === 'topPick') {
+                filtered = data.events.filter(e => e.topPick);
+            } else if (activeFilter !== 'all') {
+                filtered = data.events.filter(e => e.genres.includes(activeFilter));
+            }
+            
+            // Group by day
+            const byDay = {};
+            filtered.forEach(event => {
+                const day = event.dayOfWeek;
+                if (!byDay[day]) byDay[day] = [];
+                byDay[day].push(event);
+            });
+            
+            // Render
+            const dayOrder = ['Thursday', 'Friday', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday'];
+            let html = '';
+            
+            dayOrder.forEach(day => {
+                if (byDay[day]) {
+                    const firstEvent = byDay[day][0];
+                    const date = new Date(firstEvent.date).toLocaleDateString('en-US', { 
+                        month: 'long', day: 'numeric' 
+                    });
+                    
+                    html += `
+                        <div class="day-section">
+                            <div class="day-header">
+                                ${day}
+                                <span class="day-date">${date}</span>
+                            </div>
+                            <div class="events-grid">
+                                ${byDay[day].map(event => renderEventCard(event)).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            if (html === '') {
+                html = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <h2>No events match this filter</h2>
+                        <p>Try selecting a different genre</p>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function renderEventCard(event) {
+            const topPickBadge = event.topPick ? '<span class="top-pick-badge">⭐ TOP PICK</span>' : '';
+            const genreTags = event.genres.map(g => `<span class="genre-tag">${g}</span>`).join('');
+            
+            return `
+                <div class="event-card ${event.topPick ? 'top-pick' : ''}" onclick="openModal('${event.id}')">
+                    <div class="event-header">
+                        <div class="event-name">${event.name}</div>
+                        ${topPickBadge}
+                    </div>
+                    <div class="event-venue">📍 ${event.venue}</div>
+                    <div class="genre-tags">${genreTags}</div>
+                    <div class="event-description">${event.description}</div>
+                </div>
+            `;
+        }
+        
+        function openModal(id) {
+            const event = data.events.find(e => e.id === id);
+            if (!event) return;
+            
+            const date = new Date(event.date).toLocaleDateString('en-US', { 
+                weekday: 'long', month: 'long', day: 'numeric' 
+            });
+            const genreTags = event.genres.map(g => `<span class="genre-tag">${g}</span>`).join('');
+            
+            document.getElementById('modalTitle').innerHTML = event.name;
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-label">Date & Time</div>
+                    <div class="detail-value">${date}</div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-label">Venue</div>
+                    <div class="detail-value">📍 ${event.venue}</div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-label">Genres</div>
+                    <div class="genre-tags">${genreTags}</div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-label">About</div>
+                    <div class="detail-value" style="white-space: pre-wrap;">${event.description}</div>
+                </div>
+            `;
+            
+            document.getElementById('modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+        
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+        
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                activeFilter = this.dataset.filter;
+                render();
+            });
+        });
+        
+        loadData();
+        setInterval(loadData, 300000); // Refresh every 5 minutes
+    </script>
+</body>
+</html>

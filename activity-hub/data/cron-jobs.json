@@ -1,0 +1,68 @@
+{
+  "synced": "2026-02-07T18:55:00.000Z",
+  "count": 5,
+  "jobs": [
+    {
+      "jobId": "049cbe98-3609-43c3-8745-defdea52cbc2",
+      "name": "Centralized Health Check",
+      "schedule": {
+        "kind": "every",
+        "everyMs": 300000
+      },
+      "enabled": true,
+      "lastRun": 1770490419393,
+      "nextRun": 1770490738351,
+      "status": "active"
+    },
+    {
+      "jobId": "97c0655b-f62e-448e-b11c-2bd267fb8009",
+      "name": "Hourly Token Data Collection",
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 * * * *",
+        "tz": "America/New_York"
+      },
+      "enabled": true,
+      "lastRun": 1770487200046,
+      "nextRun": 1770490800000,
+      "status": "scheduled"
+    },
+    {
+      "jobId": "9437eebc-e384-492f-9344-ce02a9eefa92",
+      "name": "Daily Blog Post - Matt's Claw",
+      "schedule": {
+        "kind": "cron",
+        "expr": "59 23 * * *",
+        "tz": "America/New_York"
+      },
+      "enabled": true,
+      "nextRun": 1770526740000,
+      "status": "scheduled"
+    },
+    {
+      "jobId": "6c3c3e03-dc70-472a-8395-dc890f380511",
+      "name": "Morning News Briefing",
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 8 * * *",
+        "tz": "America/New_York"
+      },
+      "enabled": true,
+      "lastRun": 1770469200021,
+      "nextRun": 1770555600000,
+      "status": "scheduled"
+    },
+    {
+      "jobId": "010b8964-88ce-4ca2-a0ce-76b8b8511e6d",
+      "name": "Daily Security Audit",
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 9 * * *",
+        "tz": "America/New_York"
+      },
+      "enabled": true,
+      "nextRun": 1770559200000,
+      "status": "scheduled"
+    }
+  ]
+}

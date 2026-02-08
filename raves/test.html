@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Events Load</title>
+</head>
+<body>
+    <h1>Event Load Test</h1>
+    <div id="output"></div>
+    <script>
+        async function test() {
+            try {
+                const response = await fetch('events.json?' + Date.now());
+                const data = await response.json();
+                document.getElementById('output').innerHTML = `
+                    <p>Events loaded: ${data.events ? data.events.length : 0}</p>
+                    <p>Last updated: ${data.lastUpdated}</p>
+                    <pre>${JSON.stringify(data.events[0], null, 2)}</pre>
+                `;
+            } catch (e) {
+                document.getElementById('output').innerHTML = `<p style="color: red">Error: ${e.message}</p>`;
+            }
+        }
+        test();
+    </script>
+</body>
+</html>

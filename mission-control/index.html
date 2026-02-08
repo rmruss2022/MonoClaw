@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦞 OpenClaw Mission Control</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0f1419 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1800px; margin: 0 auto; }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(0, 217, 255, 0.2);
+        }
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #00ff88;
+        }
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .card-icon {
+            font-size: 1.5rem;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        .stat-value {
+            color: #fff;
+            font-weight: 500;
+        }
+        
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .status-badge.ok {
+            background: rgba(0, 255, 136, 0.15);
+            color: #00ff88;
+        }
+        .status-badge.warn {
+            background: rgba(255, 200, 0, 0.15);
+            color: #ffc800;
+        }
+        .status-badge.error {
+            background: rgba(255, 100, 100, 0.15);
+            color: #ff6b6b;
+        }
+        .status-badge.off {
+            background: rgba(150, 150, 150, 0.15);
+            color: #999;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .metric {
+            background: rgba(255,255,255,0.02);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            color: #888;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .service-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 8px;
+            border-left: 3px solid transparent;
+        }
+        .service-item.running {
+            border-left-color: #00ff88;
+        }
+        .service-item.stopped {
+            border-left-color: #666;
+        }
+        .service-name {
+            font-weight: 500;
+        }
+        .service-detail {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .cron-item {
+            background: rgba(255,255,255,0.02);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 3px solid #00d9ff;
+        }
+        .cron-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .cron-schedule {
+            font-size: 0.85rem;
+            color: #00d9ff;
+            margin-bottom: 5px;
+        }
+        .cron-next {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        .warning-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .warning-item {
+            padding: 12px 15px;
+            background: rgba(255, 200, 0, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #ffc800;
+            font-size: 0.9rem;
+        }
+        .warning-item.info {
+            background: rgba(0, 217, 255, 0.1);
+            border-left-color: #00d9ff;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 30px 0;
+            color: #444;
+            font-size: 0.85rem;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #00d9ff;
+            font-size: 1.2rem;
+        }
+        
+        .model-selector {
+            width: 100%;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .model-selector:hover {
+            border-color: #00d9ff;
+            background: rgba(0,0,0,0.5);
+        }
+        .model-selector:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+        }
+        .model-selector option {
+            background: #1a1a2e;
+            color: #fff;
+        }
+        
+        .switch-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+            margin-top: 10px;
+        }
+        .switch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 217, 255, 0.4);
+        }
+        .switch-btn:active {
+            transform: translateY(0);
+        }
+        .switch-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <span>🦞</span>
+                <span>OpenClaw Mission Control</span>
+            </h1>
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                <span>LIVE</span>
+            </div>
+        </header>
+        
+        <div id="content" class="loading">Loading mission control...</div>
+    </div>
+    
+    <script>
+        let data = null;
+        
+        async function loadData() {
+            try {
+                const response = await fetch('http://127.0.0.1:18795/data?' + Date.now());
+                data = await response.json();
+                render();
+            } catch (e) {
+                console.error('Failed to load data:', e);
+                document.getElementById('content').innerHTML = '<div class="loading">Failed to connect to mission control server</div>';
+            }
+        }
+        
+        async function switchModel() {
+            const selector = document.getElementById('model-selector');
+            const button = document.getElementById('switch-model-btn');
+            const model = selector.value;
+            
+            button.disabled = true;
+            button.textContent = 'Switching...';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:18795/set-model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    button.textContent = '✓ Restarting Gateway...';
+                    // Wait a bit for restart, then reload data
+                    setTimeout(() => {
+                        button.textContent = 'Apply & Restart Gateway';
+                        button.disabled = false;
+                        loadData();
+                    }, 5000);
+                } else {
+                    button.textContent = '✗ Failed: ' + result.error;
+                    button.disabled = false;
+                }
+            } catch (error) {
+                button.textContent = '✗ Error: ' + error.message;
+                button.disabled = false;
+            }
+        }
+        
+        function render() {
+            const content = document.getElementById('content');
+            content.className = '';
+            
+            content.innerHTML = `
+                <!-- System Overview -->
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">⚡</span>
+                            <span class="card-title">System Status</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Gateway</span>
+                            <span class="status-badge ok">● RUNNING</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Port</span>
+                            <span class="stat-value">${data.gateway.port}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Mode</span>
+                            <span class="stat-value">${data.gateway.mode}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">OS</span>
+                            <span class="stat-value">${data.system.os}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Node</span>
+                            <span class="stat-value">${data.system.node}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">🤖</span>
+                            <span class="card-title">Current Model</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Active Model</span>
+                            <span class="stat-value" style="font-size: 0.85rem">${data.model.primary}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Context Window</span>
+                            <span class="stat-value">${data.model.contextWindow}</span>
+                        </div>
+                        <div style="padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 10px;">
+                            <label style="display: block; color: #888; font-size: 0.85rem; margin-bottom: 8px;">Switch Model:</label>
+                            <select id="model-selector" class="model-selector">
+                                ${data.model.available.map(m => `
+                                    <option value="${m}" ${m === data.model.primary ? 'selected' : ''}>${m}</option>
+                                `).join('')}
+                            </select>
+                            <button id="switch-model-btn" class="switch-btn" onclick="switchModel()">Apply & Restart Gateway</button>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Session Tokens</span>
+                            <span class="stat-value">${data.session.tokensUsed} / ${data.session.tokensTotal}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Usage</span>
+                            <span class="stat-value">${data.session.usagePercent}%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">📊</span>
+                            <span class="card-title">Session Info</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Active Sessions</span>
+                            <span class="stat-value">${data.session.active}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Last Activity</span>
+                            <span class="stat-value">${data.session.lastActivity}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Heartbeat Interval</span>
+                            <span class="stat-value">${data.heartbeat}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Workspace</span>
+                            <span class="stat-value" style="font-size: 0.8rem">${data.workspace}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Channels -->
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">📡</span>
+                            <span class="card-title">Channels</span>
+                        </div>
+                        <div class="service-list">
+                            ${data.channels.map(ch => `
+                                <div class="service-item ${ch.state === 'OK' ? 'running' : 'stopped'}">
+                                    <div>
+                                        <div class="service-name">${ch.name}</div>
+                                        <div class="service-detail">${ch.detail}</div>
+                                    </div>
+                                    <span class="status-badge ${ch.state === 'OK' ? 'ok' : ch.state === 'WARN' ? 'warn' : 'error'}">
+                                        ${ch.state}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">⚙️</span>
+                            <span class="card-title">Services</span>
+                        </div>
+                        <div class="service-list">
+                            ${data.services.map(svc => `
+                                <div class="service-item ${svc.running ? 'running' : 'stopped'}">
+                                    <div>
+                                        <div class="service-name">${svc.name}</div>
+                                        <div class="service-detail">${svc.detail}</div>
+                                    </div>
+                                    <span class="status-badge ${svc.running ? 'ok' : 'off'}">
+                                        ${svc.running ? '● RUNNING' : '○ STOPPED'}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">🔑</span>
+                            <span class="card-title">API Keys Configured</span>
+                        </div>
+                        <div class="service-list">
+                            ${data.apiKeys.map(key => `
+                                <div class="service-item running">
+                                    <div class="service-name">${key}</div>
+                                    <span class="status-badge ok">✓ SET</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Projects & Automation -->
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">📋</span>
+                            <span class="card-title">Active Projects</span>
+                        </div>
+                        <div class="service-list">
+                            ${data.projects.map(proj => `
+                                <div class="service-item running">
+                                    <div>
+                                        <div class="service-name">${proj.name}</div>
+                                        <div class="service-detail">${proj.description}</div>
+                                    </div>
+                                    ${proj.url ? `<a href="${proj.url}" target="_blank" style="color: #00d9ff; text-decoration: none;">→</a>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">⏰</span>
+                            <span class="card-title">Scheduled Jobs</span>
+                        </div>
+                        ${data.cron.map(job => `
+                            <div class="cron-item">
+                                <div class="cron-name">${job.name}</div>
+                                <div class="cron-schedule">${job.schedule}</div>
+                                <div class="cron-next">Next run: ${job.nextRun}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">⚠️</span>
+                            <span class="card-title">Security Audit</span>
+                        </div>
+                        <div class="warning-list">
+                            ${data.warnings.length === 0 ? '<div class="warning-item info">No warnings - all good! ✓</div>' : 
+                              data.warnings.map(w => `<div class="warning-item">${w}</div>`).join('')}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    Mission Control synced with OpenClaw 🦞 • Auto-refreshes every 10s • Last update: ${new Date().toLocaleTimeString()}
+                </div>
+            `;
+        }
+        
+        loadData();
+        setInterval(loadData, 10000);
+    </script>
+</body>
+</html>

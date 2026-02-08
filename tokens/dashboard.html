@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Token Usage Tracker</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            padding: 30px;
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+        }
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        .subtitle { color: #888; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .stat-label {
+            color: #888;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #00d9ff;
+            margin-bottom: 5px;
+        }
+        .stat-detail {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+        
+        .trend {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .trend.up { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .trend.down { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .trend.stable { background: rgba(254, 202, 87, 0.2); color: #feca57; }
+        
+        .chart-container {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .chart-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        
+        canvas {
+            width: 100% !important;
+            height: 400px !important;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #888;
+            font-size: 1.2rem;
+        }
+        
+        .error {
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #00d9ff, #0088cc);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 217, 255, 0.4);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Token Usage Tracker</h1>
+            <p class="subtitle">Real-time monitoring of OpenClaw token consumption</p>
+        </header>
+        
+        <div id="loading" class="loading">Loading token usage data...</div>
+        
+        <div id="content" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Current Usage</div>
+                    <div class="stat-value" id="currentUsage">-</div>
+                    <div class="stat-detail" id="currentDetail">-</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Average Usage</div>
+                    <div class="stat-value" id="avgUsage">-</div>
+                    <div class="stat-detail">Over tracked period</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Peak Usage</div>
+                    <div class="stat-value" id="maxUsage">-</div>
+                    <div class="stat-detail">Highest recorded</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-label">Active Sessions</div>
+                    <div class="stat-value" id="activeSessions">-</div>
+                    <div class="stat-detail" id="trendDetail">
+                        Trend: <span class="trend" id="trendBadge">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div class="chart-title">Token Usage Over Time</div>
+                    <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+                </div>
+                <canvas id="usageChart"></canvas>
+            </div>
+            
+            <div class="stat-detail" style="margin-top: 20px; text-align: center; color: #666;">
+                Data points: <span id="dataPoints">-</span> • Time range: <span id="timeRange">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        
+        async function loadData() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('loading').innerHTML = `<div class="error">Error: ${data.error}</div>`;
+                    return;
+                }
+                
+                if (!data.summary || data.history.length === 0) {
+                    document.getElementById('loading').innerHTML = `<div class="error">No data available yet. Run tracker.js to collect data.</div>`;
+                    return;
+                }
+                
+                // Hide loading, show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                
+                // Update stats
+                const { summary, history } = data;
+                document.getElementById('currentUsage').textContent = `${summary.current.usagePercent}%`;
+                document.getElementById('currentDetail').textContent = `${summary.current.tokensUsed} / ${summary.current.tokensTotal}`;
+                document.getElementById('avgUsage').textContent = `${summary.avgUsage}%`;
+                document.getElementById('maxUsage').textContent = `${summary.maxUsage}%`;
+                document.getElementById('activeSessions').textContent = summary.current.activeSessions;
+                document.getElementById('dataPoints').textContent = summary.dataPoints;
+                document.getElementById('timeRange').textContent = summary.timeRange;
+                
+                // Trend badge
+                const trendBadge = document.getElementById('trendBadge');
+                trendBadge.textContent = summary.trend.toUpperCase();
+                trendBadge.className = `trend ${summary.trend}`;
+                
+                // Render chart
+                renderChart(history);
+                
+            } catch (error) {
+                document.getElementById('loading').innerHTML = `<div class="error">Failed to load data: ${error.message}</div>`;
+            }
+        }
+        
+        function renderChart(history) {
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            
+            // Destroy existing chart if any
+            if (chart) chart.destroy();
+            
+            const labels = history.map(d => {
+                const date = new Date(d.timestamp);
+                return date.toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: 'numeric', 
+                    minute: '2-digit'
+                });
+            });
+            
+            const usageData = history.map(d => d.usagePercent);
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Token Usage (%)',
+                        data: usageData,
+                        borderColor: '#00d9ff',
+                        backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#00d9ff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#00d9ff',
+                            bodyColor: '#fff',
+                            borderColor: '#00d9ff',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#888', maxRotation: 45, minRotation: 45 }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#888' },
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initial load
+        loadData();
+        
+        // Auto-refresh every 5 minutes
+        setInterval(loadData, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

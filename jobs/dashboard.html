@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Search Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        h1 { 
+            font-size: 2.5rem; 
+            background: linear-gradient(90deg, #00d9ff, #00ff88, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle { color: #666; font-size: 0.9rem; }
+        .live-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Stats Row */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+        }
+        .stat-num { 
+            font-size: 2.8rem; 
+            font-weight: 700; 
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-num.urgent { background: linear-gradient(135deg, #ff6b6b, #ffa500); -webkit-background-clip: text; }
+        .stat-num.excited { background: linear-gradient(135deg, #00ff88, #00d9ff); -webkit-background-clip: text; }
+        .stat-label { color: #888; font-size: 0.85rem; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* Charts Section */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .chart-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .chart-title {
+            font-size: 1rem;
+            color: #888;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Two Column Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 25px;
+        }
+        
+        /* Urgent Sidebar */
+        .urgent-sidebar {
+            background: rgba(255, 100, 100, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 100, 100, 0.2);
+            height: fit-content;
+        }
+        .sidebar-title {
+            font-size: 1.1rem;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .urgent-item {
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid #ff6b6b;
+        }
+        .urgent-item:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(5px);
+        }
+        .urgent-company { font-weight: 600; color: #fff; }
+        .urgent-action { color: #aaa; font-size: 0.85rem; margin-top: 4px; }
+        
+        /* Pipeline */
+        .pipeline-section {
+            background: rgba(255,255,255,0.03);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .pipeline {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .job-card {
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid rgba(255,255,255,0.06);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .job-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .job-card:hover {
+            background: rgba(255,255,255,0.06);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        .job-card:hover::before { opacity: 1; }
+        .job-card.excited::before { background: linear-gradient(90deg, #00ff88, #00d9ff); opacity: 1; }
+        .job-card.urgent { border-color: rgba(255, 100, 100, 0.3); }
+        
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .job-name { font-size: 1.1rem; font-weight: 600; }
+        .job-vibe { font-size: 1.2rem; }
+        .job-stage {
+            display: inline-block;
+            background: rgba(0, 217, 255, 0.15);
+            color: #00d9ff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-top: 5px;
+        }
+        .job-recruiter { color: #666; font-size: 0.85rem; margin-top: 8px; }
+        .job-desc { color: #888; font-size: 0.8rem; margin-top: 5px; }
+        .job-action { 
+            color: #00ff88; 
+            font-size: 0.85rem;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+        }
+        .modal-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            z-index: 1;
+        }
+        .modal-title {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .modal-close {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: background 0.2s;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.2); }
+        .modal-body { padding: 25px 30px; }
+        
+        .detail-section {
+            margin-bottom: 25px;
+        }
+        .detail-label {
+            color: #666;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .detail-value {
+            color: #fff;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .interview-timeline {
+            position: relative;
+            padding-left: 25px;
+        }
+        .interview-timeline::before {
+            content: '';
+            position: absolute;
+            left: 6px;
+            top: 5px;
+            bottom: 5px;
+            width: 2px;
+            background: rgba(255,255,255,0.1);
+        }
+        .interview-item {
+            position: relative;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+        }
+        .interview-item::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 18px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00d9ff;
+        }
+        .interview-item.completed::before { background: #00ff88; }
+        .interview-date { color: #00d9ff; font-size: 0.85rem; }
+        .interview-type { color: #fff; margin-top: 4px; }
+        
+        .notes-box {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 3px solid #00d9ff;
+        }
+        .notes-text {
+            color: #ccc;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+        
+        .vibe-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .vibe-badge.excited { background: rgba(0, 255, 136, 0.15); color: #00ff88; }
+        .vibe-badge.neutral { background: rgba(255, 200, 0, 0.15); color: #ffc800; }
+        .vibe-badge.early { background: rgba(150, 150, 150, 0.15); color: #999; }
+        
+        .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        .tag.profitable { background: rgba(0, 255, 136, 0.15); color: #00ff88; }
+        .tag.office { background: rgba(255, 200, 0, 0.15); color: #ffc800; }
+        
+        .refresh-note {
+            text-align: center;
+            color: #444;
+            font-size: 0.85rem;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        @media (max-width: 1200px) { 
+            .main-grid { grid-template-columns: 1fr; } 
+            .stats { grid-template-columns: repeat(3, 1fr); } 
+        }
+        
+        /* Stack charts on tablets and below */
+        @media (max-width: 992px) {
+            .charts-row { grid-template-columns: 1fr; }
+        }
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+ body { padding: 12px; font-size: 14px; }
+ header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+ h1 { font-size: 1.6rem; line-height: 1.2; }
+ .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+ .stat-card { padding: 15px 12px; border-radius: 12px; }
+ .stat-num { font-size: 1.8rem; }
+ .stat-label { font-size: 0.75rem; }
+ .charts-row { gap: 12px; margin-bottom: 20px; }
+ .chart-card { padding: 15px; border-radius: 12px; }
+ .chart-title { font-size: 0.85rem; margin-bottom: 10px; }
+ .main-grid { gap: 15px; }
+ .urgent-sidebar { padding: 15px; border-radius: 12px; }
+ .urgent-item { padding: 14px 12px; min-height: 44px; }
+ .urgent-company { font-size: 0.95rem; }
+ .pipeline-section { padding: 15px; border-radius: 12px; }
+ .pipeline { grid-template-columns: 1fr; gap: 12px; }
+ .job-card { padding: 16px; border-radius: 10px; min-height: 80px; }
+ .job-card:hover { transform: none; box-shadow: none; }
+ .job-card:active { background: rgba(255,255,255,0.08); }
+ .job-name { font-size: 1rem; }
+ .job-stage { font-size: 0.7rem; padding: 4px 8px; }
+ .job-recruiter, .job-desc, .job-action { font-size: 0.8rem; }
+ .modal-overlay { padding: 0; }
+ .modal { max-width: 100%; width: 100%; height: 100%; max-height: 100vh; border-radius: 0; border: none; }
+ .modal-header { padding: 16px 20px; position: fixed; width: 100%; top: 0; left: 0; right: 0; border-radius: 0; z-index: 10; }
+ .modal-title { font-size: 1.2rem; padding-right: 50px; flex-wrap: wrap; }
+ .modal-close { width: 44px; height: 44px; font-size: 1.8rem; }
+ .modal-body { padding: 80px 20px 30px; height: 100vh; overflow-y: auto; }
+ .detail-grid { grid-template-columns: 1fr; gap: 12px; }
+ .detail-section { margin-bottom: 18px; }
+ .detail-label { font-size: 0.75rem; }
+ .detail-value { font-size: 0.95rem; }
+ .vibe-badge { font-size: 0.8rem; padding: 4px 10px; margin-top: 8px; }
+ .interview-timeline { padding-left: 20px; }
+ .interview-item { padding: 10px 12px; }
+ .interview-item::before { left: -18px; width: 8px; height: 8px; }
+ .interview-date { font-size: 0.8rem; }
+ .tag { font-size: 0.75rem; padding: 3px 8px; margin: 0 6px 6px 0; }
+ .notes-box { padding: 15px; }
+ .refresh-note { font-size: 0.75rem; margin-top: 25px; padding-top: 15px; }
+ canvas { max-height: 180px !important; }
+}
+
+@media (max-width: 380px) {
+ h1 { font-size: 1.4rem; }
+ .stats { grid-template-columns: repeat(2, 1fr); }
+ .stat-num { font-size: 1.5rem; }
+ .stat-label { font-size: 0.7rem; }
+ .job-card { padding: 14px; }
+ .modal-title { font-size: 1.1rem; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+ .job-card { cursor: default; -webkit-tap-highlight-color: transparent; }
+ .urgent-item { cursor: default; }
+ .urgent-item:hover { transform: none; }
+ .modal-close { width: 48px; height: 48px; }
+ .modal-close:active { background: rgba(255,255,255,0.3); }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+ .pipeline { grid-template-columns: repeat(2, 1fr); }
+ .modal-body { padding-top: 70px; }
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+  body { padding: 12px; font-size: 14px; }
+  header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  h1 { font-size: 1.6rem; line-height: 1.2; }
+  .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-card { padding: 15px 12px; border-radius: 12px; }
+  .stat-num { font-size: 1.8rem; }
+  .stat-label { font-size: 0.75rem; }
+  .charts-row { gap: 12px; margin-bottom: 20px; }
+  .chart-card { padding: 15px; border-radius: 12px; }
+  .chart-title { font-size: 0.85rem; margin-bottom: 10px; }
+  canvas { max-height: 180px !important; }
+  .main-grid { gap: 15px; }
+  .urgent-sidebar { padding: 15px; border-radius: 12px; }
+  .urgent-item { padding: 14px 12px; min-height: 44px; }
+  .pipeline-section { padding: 15px; border-radius: 12px; }
+  .pipeline { grid-template-columns: 1fr; gap: 12px; }
+  .job-card { padding: 16px; border-radius: 10px; min-height: 80px; }
+  .job-card:hover { transform: none; box-shadow: none; }
+  .job-card:active { background: rgba(255,255,255,0.08); }
+  .job-stage { font-size: 0.7rem; padding: 4px 8px; }
+  .modal-overlay { padding: 0; }
+  .modal { max-width: 100%; width: 100%; height: 100%; max-height: 100vh; border-radius: 0; }
+  .modal-header { padding: 16px 20px; position: fixed; width: 100%; top: 0; left: 0; right: 0; border-radius: 0; }
+  .modal-title { font-size: 1.2rem; padding-right: 50px; }
+  .modal-close { width: 44px; height: 44px; font-size: 1.8rem; }
+  .modal-body { padding: 80px 20px 30px; height: 100vh; overflow-y: auto; }
+  .detail-grid { grid-template-columns: 1fr; gap: 12px; }
+  .vibe-badge { font-size: 0.8rem; padding: 4px 10px; }
+  .tag { font-size: 0.75rem; padding: 3px 8px; margin-right: 6px; margin-bottom: 6px; }
+  .refresh-note { font-size: 0.75rem; margin-top: 25px; padding-top: 15px; }
+}
+
+@media (max-width: 380px) {
+  h1 { font-size: 1.4rem; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stat-num { font-size: 1.5rem; }
+  .stat-label { font-size: 0.7rem; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .job-card:hover { transform: none; box-shadow: none; }
+  .urgent-item:hover { transform: none; }
+}
+    
+    
+</style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🎯 Job Search Command Center</h1>
+                <p class="subtitle"><span class="live-dot"></span>Last updated: <span id="lastUpdated">Loading...</span></p>
+            </div>
+        </header>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-num" id="totalActive">-</div>
+                <div class="stat-label">Active</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num urgent" id="urgentCount">-</div>
+                <div class="stat-label">Need Action</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num excited" id="excitedCount">-</div>
+                <div class="stat-label">Excited About</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" id="interviewsCount">-</div>
+                <div class="stat-label">Interviews Done</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num" id="avgStage">-</div>
+                <div class="stat-label">Avg Stage</div>
+            </div>
+        </div>
+        
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-title">Pipeline by Stage</div>
+                <canvas id="stageChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Vibe Distribution</div>
+                <canvas id="vibeChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Interview Activity (This Week)</div>
+                <canvas id="activityChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="main-grid">
+            <div class="urgent-sidebar">
+                <div class="sidebar-title">🔥 Action Required</div>
+                <div id="urgentList"></div>
+            </div>
+            
+            <div class="pipeline-section">
+                <div class="section-header">
+                    <div class="section-title">📊 Full Pipeline</div>
+                </div>
+                <div class="pipeline" id="pipeline"></div>
+            </div>
+        </div>
+        
+        <p class="refresh-note">Dashboard synced with Claw 🦞 • Click any company for details • Auto-refreshes every 30s</p>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Company</div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        let data = null;
+        let stageChart, vibeChart, activityChart;
+        
+        async function loadData() {
+            try {
+                const response = await fetch('data.json?' + Date.now());
+                data = await response.json();
+                render();
+                renderCharts();
+            } catch (e) {
+                console.error('Failed to load data:', e);
+            }
+        }
+        
+        function getVibeEmoji(vibe) {
+            if (!vibe) return '';
+            if (vibe.includes('Very excited') || vibe.includes('⭐⭐')) return '🔥';
+            if (vibe.includes('Excited') || vibe.includes('⭐')) return '⭐';
+            if (vibe.includes('great') || vibe.includes('Great')) return '✨';
+            if (vibe.includes('Wait and see') || vibe.includes('🤷')) return '🤷';
+            if (vibe.includes('Too early')) return '🌱';
+            return '';
+        }
+        
+        function getVibeClass(vibe) {
+            if (!vibe) return '';
+            if (vibe.includes('excited') || vibe.includes('Excited') || vibe.includes('⭐')) return 'excited';
+            return '';
+        }
+        
+        function render() {
+            if (!data) return;
+            
+            document.getElementById('lastUpdated').textContent = 
+                new Date(data.lastUpdated).toLocaleString();
+            
+            const active = data.companies.filter(c => c.status === 'active');
+            const urgent = active.filter(c => c.urgent);
+            const excited = active.filter(c => c.vibe && (c.vibe.includes('Excited') || c.vibe.includes('excited') || c.vibe.includes('⭐')));
+            const totalInterviews = active.reduce((sum, c) => sum + (c.interviews?.length || 0), 0);
+            
+            document.getElementById('totalActive').textContent = active.length;
+            document.getElementById('urgentCount').textContent = urgent.length;
+            document.getElementById('excitedCount').textContent = excited.length;
+            document.getElementById('interviewsCount').textContent = totalInterviews;
+            document.getElementById('avgStage').textContent = 
+                (active.reduce((sum, c) => sum + c.stageNum, 0) / active.length).toFixed(1);
+            
+            // Urgent list
+            const urgentHtml = urgent.map(c => `
+                <div class="urgent-item" onclick="openModal('${c.id}')">
+                    <div class="urgent-company">${c.name}</div>
+                    <div class="urgent-action">${c.action || 'Follow up'}</div>
+                </div>
+            `).join('');
+            document.getElementById('urgentList').innerHTML = urgentHtml || '<div style="color:#666; padding: 10px;">No urgent items 🎉</div>';
+            
+            // Pipeline - sort by stage then by vibe
+            const sorted = [...active].sort((a, b) => {
+                if (b.stageNum !== a.stageNum) return b.stageNum - a.stageNum;
+                const aExcited = a.vibe?.includes('Excited') ? 1 : 0;
+                const bExcited = b.vibe?.includes('Excited') ? 1 : 0;
+                return bExcited - aExcited;
+            });
+            
+            const pipelineHtml = sorted.map(c => `
+                <div class="job-card ${c.urgent ? 'urgent' : ''} ${getVibeClass(c.vibe)}" onclick="openModal('${c.id}')">
+                    <div class="job-header">
+                        <div>
+                            <span class="job-name">${c.name}</span>
+                            <span class="job-vibe">${getVibeEmoji(c.vibe)}</span>
+                        </div>
+                    </div>
+                    <div class="job-stage">${c.stage}</div>
+                    <div class="job-recruiter">👤 ${c.recruiter || 'Unknown'}</div>
+                    ${c.description ? `<div class="job-desc">${c.description}</div>` : ''}
+                    ${c.action ? `<div class="job-action">→ ${c.action}</div>` : ''}
+                </div>
+            `).join('');
+            document.getElementById('pipeline').innerHTML = pipelineHtml;
+        }
+        
+        function renderCharts() {
+            if (!data) return;
+            const active = data.companies.filter(c => c.status === 'active');
+            
+            // Stage Chart
+            const stages = {};
+            active.forEach(c => {
+                const stage = c.stage || 'Unknown';
+                stages[stage] = (stages[stage] || 0) + 1;
+            });
+            
+            if (stageChart) stageChart.destroy();
+            stageChart = new Chart(document.getElementById('stageChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(stages),
+                    datasets: [{
+                        data: Object.values(stages),
+                        backgroundColor: ['#00d9ff', '#00ff88', '#ff6b6b', '#ffc800', '#a855f7', '#06b6d4', '#f472b6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            labels: { color: '#888', padding: 15, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+            
+            // Vibe Chart
+            let excited = 0, neutral = 0, early = 0;
+            active.forEach(c => {
+                if (c.vibe?.includes('Excited') || c.vibe?.includes('excited') || c.vibe?.includes('⭐') || c.vibe?.includes('great')) excited++;
+                else if (c.vibe?.includes('Wait') || c.vibe?.includes('🤷')) neutral++;
+                else early++;
+            });
+            
+            if (vibeChart) vibeChart.destroy();
+            vibeChart = new Chart(document.getElementById('vibeChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Excited 🔥', 'Wait & See 🤷', 'Too Early 🌱'],
+                    datasets: [{
+                        data: [excited, neutral, early],
+                        backgroundColor: ['#00ff88', '#ffc800', '#666'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            labels: { color: '#888', padding: 15, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+            
+            // Activity Chart (interviews this week)
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+            active.forEach(c => {
+                c.interviews?.forEach(i => {
+                    const d = new Date(i.date);
+                    const day = d.getDay();
+                    const adjustedDay = day === 0 ? 6 : day - 1;
+                    dayCounts[adjustedDay]++;
+                });
+            });
+            
+            if (activityChart) activityChart.destroy();
+            activityChart = new Chart(document.getElementById('activityChart'), {
+                type: 'bar',
+                data: {
+                    labels: days,
+                    datasets: [{
+                        label: 'Interviews',
+                        data: dayCounts,
+                        backgroundColor: 'rgba(0, 217, 255, 0.6)',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { color: '#666', stepSize: 1 },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: { 
+                            ticks: { color: '#666' },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+        
+        function openModal(id) {
+            const company = data.companies.find(c => c.id === id);
+            if (!company) return;
+            
+            let vibeBadge = '';
+            if (company.vibe?.includes('Excited') || company.vibe?.includes('⭐')) {
+                vibeBadge = '<span class="vibe-badge excited">🔥 ' + company.vibe + '</span>';
+            } else if (company.vibe?.includes('Wait')) {
+                vibeBadge = '<span class="vibe-badge neutral">🤷 ' + company.vibe + '</span>';
+            } else if (company.vibe?.includes('Too early') || company.vibe?.includes('early')) {
+                vibeBadge = '<span class="vibe-badge early">🌱 ' + company.vibe + '</span>';
+            } else if (company.vibe) {
+                vibeBadge = '<span class="vibe-badge early">' + company.vibe + '</span>';
+            }
+            
+            const interviewsHtml = company.interviews?.length ? 
+                company.interviews.map(i => `
+                    <div class="interview-item completed">
+                        <div class="interview-date">${new Date(i.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}${i.time ? ' • ' + i.time : ''}</div>
+                        <div class="interview-type">${i.type}</div>
+                        ${i.notes ? `<div class="interview-notes" style="color: #aaa; font-size: 0.85rem; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05);">${i.notes}</div>` : ''}
+                        ${i.interviewer ? `
+                            <div style="margin-top: 10px; padding: 10px; background: rgba(0, 217, 255, 0.05); border-radius: 6px; border-left: 2px solid #00d9ff;">
+                                <div style="font-size: 0.9rem; font-weight: 600; color: #00d9ff; margin-bottom: 4px;">👤 ${i.interviewer.name}</div>
+                                <div style="font-size: 0.8rem; color: #aaa; white-space: pre-wrap; line-height: 1.5;">${i.interviewer.summary}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('') : '<div style="color: #666">No interviews yet</div>';
+            
+            document.getElementById('modalTitle').innerHTML = `
+                ${company.name} ${vibeBadge}
+            `;
+            
+            document.getElementById('modalBody').innerHTML = `
+                <div class="detail-grid">
+                    <div class="detail-section">
+                        <div class="detail-label">Current Stage</div>
+                        <div class="detail-value"><span class="job-stage" style="font-size: 0.9rem">${company.stage}</span></div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-label">Recruiter / Contact</div>
+                        <div class="detail-value">${company.recruiter || 'Unknown'}</div>
+                    </div>
+                </div>
+                
+                ${company.description ? `
+                <div class="detail-section">
+                    <div class="detail-label">What They Do</div>
+                    <div class="detail-value">${company.description}</div>
+                    ${company.url ? `<div style="margin-top: 8px"><a href="${company.url}" target="_blank" style="color: #00d9ff; text-decoration: none; font-size: 0.9rem;">🔗 ${company.url}</a></div>` : ''}
+                </div>
+                ` : ''}
+                
+                ${company.process ? `
+                <div class="detail-section">
+                    <div class="detail-label">Interview Process</div>
+                    <div class="detail-value">${company.process}</div>
+                </div>
+                ` : ''}
+                
+                <div class="detail-section">
+                    <div class="detail-label">Tags</div>
+                    <div>
+                        ${company.profitable ? '<span class="tag profitable">💰 Profitable</span>' : ''}
+                        ${company.inOffice ? `<span class="tag office">🏢 ${company.inOffice}</span>` : ''}
+                        ${company.urgent ? '<span class="tag" style="background: rgba(255,100,100,0.15); color: #ff6b6b">⚡ Action Needed</span>' : ''}
+                        ${!company.profitable && !company.inOffice && !company.urgent ? '<span style="color: #666">None</span>' : ''}
+                    </div>
+                </div>
+                
+                ${company.action ? `
+                <div class="detail-section">
+                    <div class="detail-label">Next Action</div>
+                    <div class="detail-value" style="color: #00ff88">→ ${company.action}</div>
+                </div>
+                ` : ''}
+                
+                <div class="detail-section">
+                    <div class="detail-label">Interview Timeline</div>
+                    <div class="interview-timeline">
+                        ${interviewsHtml}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+        
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+        
+        loadData();
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>

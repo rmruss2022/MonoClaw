@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+pre {
+  @apply bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto;
+}
+
+code {
+  @apply text-cyan-400 text-sm;
+}

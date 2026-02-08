@@ -1,0 +1,309 @@
+{
+  "events": [
+    {
+      "id": "February-5-honeytrap-anniversary",
+      "name": "Honeytrap Anniversary",
+      "venue": "Signal",
+      "date": "2026-02-05",
+      "dayOfWeek": "Thursday",
+      "genres": [
+        "House"
+      ],
+      "description": "Honeytrap is Amelia Holt's taste-driven party—warm, curious, and built around smart selection, with a crowd open to danceable left turns. Justin Strauss brings deep NYC lineage b2b Matias Aguayo's playful, off-kilter groove, while Amelia Holt and SiSi keep the room buoyant and moving.",
+      "topPick": null
+    },
+    {
+      "id": "February-5-dvs1-house-set",
+      "name": "DVS1: House Set",
+      "venue": "Green Room",
+      "date": "2026-02-05",
+      "dayOfWeek": "Thursday",
+      "genres": [
+        "House"
+      ],
+      "description": "House Set @ Green Room",
+      "topPick": null
+    },
+    {
+      "id": "February-5-lounge-sessions",
+      "name": "Lounge Sessions",
+      "venue": "Silo",
+      "date": "2026-02-05",
+      "dayOfWeek": "Thursday",
+      "genres": [
+        "House"
+      ],
+      "description": "We keep hearing the same thing about Lounge Sessions—people plan to stay for an hour and end up WAY later. Discord reports say the b4b spans everything from dark, tribal cuts to Latin and disco house, all flowing like one long ride. FREE RSVP.",
+      "topPick": null
+    },
+    {
+      "id": "February-6-paradiso",
+      "name": "Paradiso",
+      "venue": "Paragon",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "House",
+        "Disco"
+      ],
+      "description": "Absolutely loving the main-floor trifecta here. NYC mainstays and icons The Carry Nation bring house-first sets with disco flourishes and just the right pacing, Kim Anh keeps things warm and groovy with super tasteful transitions, and Cosmo adds range and musical curiosity. Dancers will be so happy here.",
+      "topPick": null
+    },
+    {
+      "id": "February-6-spielraum-mama-snake-pablo-bozzi",
+      "name": "SPIELRAUM: Mama Snake / Pablo Bozzi",
+      "venue": "Basement",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "Techno",
+        "House"
+      ],
+      "description": "Mama Snake / Pablo Bozzi @ Basement",
+      "topPick": null
+    },
+    {
+      "id": "February-6-level-iii-x-baile-world",
+      "name": "Level III x Baile World",
+      "venue": "H0l0",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "Experimental",
+        "Global"
+      ],
+      "description": "Level III's clubby, ghetto-tech energy meets Baile World's percussive, global bounce. The theme will be fast, physical house and club sounds with lots of locals on the bill; livwutang, MoMA Ready, Berrakka, Donis, and INVT are all worth catching if you like high-energy, sweaty dancefloors.",
+      "topPick": null
+    },
+    {
+      "id": "February-6-julie-marghilano-live",
+      "name": "Julie Marghilano Live",
+      "venue": "Signal",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "House"
+      ],
+      "description": "Julie comes from a deep musical background—vinyl digging, jazz lineage, and hardware performance. Her live sets reflect that range, with melodic detail and groovy, hypnotic house built in real time with loops and subtle shifts. Warm, emotional, and feminine with a dancers-first feel.",
+      "topPick": null
+    },
+    {
+      "id": "February-6-focus-afro-house-tech-more",
+      "name": "Focus: Afro-House/Tech + more",
+      "venue": "Nowadays",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "Percussion",
+        "Global"
+      ],
+      "description": "Afro-House/Tech + more @ Nowadays",
+      "topPick": null
+    },
+    {
+      "id": "February-6-phat-trax",
+      "name": "Phat Trax",
+      "venue": "Shh",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "Eclectic",
+        "House"
+      ],
+      "description": "The Brooklyn-based label has been gaining traction lately for its energizing take on club music. In particular, Poolhaus and Beni Hana have caught my attention with a fresh sound that nods to '90s and early-2000s club culture. It's that classic, ravey, trance-leaning, groove-heavy energy that makes you want to throw your arms around your friends and bounce together on the dancefloor.",
+      "topPick": null
+    },
+    {
+      "id": "February-6-body-shop",
+      "name": "Body Shop",
+      "venue": "The Chocolate Factory",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "House",
+        "Techno"
+      ],
+      "description": "A beloved queer party known for filthy-fun, dance-first house and techno—campy, sweaty, and all about letting loose. Rimarkable, The Illustrious Blacks, and Luis Fernando run the main room with soulful, jacking, disco-laced house energy with DJ Dawson + Ben Wild dipping into techno.",
+      "topPick": null
+    },
+    {
+      "id": "February-6-plo-man-amelia-holt",
+      "name": "PLO Man / Amelia Holt",
+      "venue": "Shh",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "House",
+        "Minimal"
+      ],
+      "description": "A 12-hour party with Amelia Holt x Gee Dee on duty for a 6-hour b2b, and PLO Man on a 6-hour solo trip. He plays psychedelic house and minimal techno with patience—it's odd and explorative time-melting music. Definitely for getting lost.",
+      "topPick": null
+    },
+    {
+      "id": "February-6-house-of-grooves",
+      "name": "House of Grooves",
+      "venue": "House of Yes",
+      "date": "2026-02-06",
+      "dayOfWeek": "Friday",
+      "genres": [
+        "House",
+        "Disco"
+      ],
+      "description": "Eli Escobar and Sissies of Mercy are going all night in both the Main Room and Onyx for a six-hour ride! All night sets are amazing because you get to experience an artists full musical story, feel the emotional waves over the course of the night, and just get lost in time.",
+      "topPick": null
+    },
+    {
+      "id": "February-7-dvs1",
+      "name": "DVS1",
+      "venue": "Shhh",
+      "date": "2026-02-07",
+      "dayOfWeek": "Saturday",
+      "genres": [
+        "Techno"
+      ],
+      "description": "Widely regarded as one of the best techno selectors working, DVS1 is all about pressure—long, slow builds, zero flash, and a focus on how the music hits your body over time. Will take place at a secret warehouse with a custom Hennessey Sound Design system to do him justice.",
+      "topPick": null
+    },
+    {
+      "id": "February-7-paranoid-london-live",
+      "name": "Paranoid London Live",
+      "venue": "House of Yes",
+      "date": "2026-02-07",
+      "dayOfWeek": "Saturday",
+      "genres": [
+        "Acid",
+        "Techno"
+      ],
+      "description": "Masters of early Chicago acid and '90s warehouse energy, Paranoid London bring raw, hardware-driven acid house and techno with real punk attitude—gritty, jacky, shouted vocals and all. Acida Dominga adds a darker EBM live layer, and Italo Brutalo (a 'vintage synth fetishist') hits on dark disco energy with a DJ set. Don't miss David Kiss! Ultra Violet also holds down Onyx Room.",
+      "topPick": null
+    },
+    {
+      "id": "February-7-your-love-yvonne-turner",
+      "name": "Your Love: Yvonne Turner",
+      "venue": "Nowadays",
+      "date": "2026-02-07",
+      "dayOfWeek": "Saturday",
+      "genres": [
+        "House"
+      ],
+      "description": "Yvonne Turner @ Nowadays",
+      "topPick": null
+    },
+    {
+      "id": "February-7-dan-ghenacia",
+      "name": "Dan Ghenacia",
+      "venue": "Signal",
+      "date": "2026-02-07",
+      "dayOfWeek": "Saturday",
+      "genres": [
+        "House",
+        "Minimal"
+      ],
+      "description": "One of the founding members of the iconic Apollonia trifecta (the crew that defined Paris minimal/microhouse). He is FAMOUS for extended sets with ultra smooth, long blends and deep, groovy journeys. It's all about those delicious lil shifts—and he's got 7 hours of play time. 🖤🤖Outwatch x Ladies on Wax: Two great local collectives uniting. Ladies on Wax centers women, trans + nonbinary DJs and is proudly vinyl-forward, while Outwatch focuses on heads-down, techno-first club music. Together, they're bringing a techno + electro session at a secret location. Runs until 10am.",
+      "topPick": null
+    },
+    {
+      "id": "February-7-support-women-djs-anniv",
+      "name": "Support Women DJs Anniv",
+      "venue": "The Sultan Room",
+      "date": "2026-02-07",
+      "dayOfWeek": "Saturday",
+      "genres": [
+        "Other",
+        "Other",
+        "Techno"
+      ],
+      "description": "Come celebrate two years of SWDJs with a femme-forward lineup (as always) spanning techno, tech house, and house. Plus flash tattoos, tooth gems, and giveaways.",
+      "topPick": null
+    },
+    {
+      "id": "February-7-afriqua-eli-soul-clap",
+      "name": "Afriqua / Eli Soul Clap",
+      "venue": "Refuge",
+      "date": "2026-02-07",
+      "dayOfWeek": "Saturday",
+      "genres": [
+        "House"
+      ],
+      "description": "A house-heads lineup—deep, soulful and rhythm-driven. Afriqua brings warm, emotional house with long arcs, Eli Soul Clap adds classic house + disco shimmer, Kim Anh and Mona Matsuoka keep the flow tasteful and grounded, and Greg Paulus layers in live trumpet flourishes. Grown and musical.",
+      "topPick": null
+    },
+    {
+      "id": "February-7-david-lindmer-x-layla-benitez",
+      "name": "David Lindmer x Layla Benitez",
+      "venue": "Superior Ingredients",
+      "date": "2026-02-07",
+      "dayOfWeek": "Saturday",
+      "genres": [
+        "Melodic",
+        "House"
+      ],
+      "description": "A double-header evening featuring two distinct musical journeys, culminating in an epic B2B that spans multiple genres and moods. Layla Benitez sits at the intersection of indie and dark disco, while David Lindmer brings drama with melodic techno, cinematic layers, and deep, driving rhythms.",
+      "topPick": null
+    },
+    {
+      "id": "February-8-hercules-love-affair",
+      "name": "Hercules & Love Affair",
+      "venue": "Public Records",
+      "date": "2026-02-08",
+      "dayOfWeek": "Sunday",
+      "genres": [
+        "Disco",
+        "House"
+      ],
+      "description": "This one's for the dancers! Andy Butler is one of those DJs who just gets it. He blends vintage disco, Chicago house, and sleek Euro-house into sets that celebrate feeling—full of subtle shifts, warmth, and groove. You don't even realize how deep you're in it until you catch yourself smiling an hour later. Justin Cudmore's on support and he is also an incredible storyteller.",
+      "topPick": null
+    },
+    {
+      "id": "February-8-k-lsch-brina-knauss",
+      "name": "Kölsch / Brina Knauss",
+      "venue": "Superior Ingredients Rooftop",
+      "date": "2026-02-08",
+      "dayOfWeek": "Sunday",
+      "genres": [
+        "Progressive",
+        "Melodic"
+      ],
+      "description": "Kölsch's music hits you like a tidal wave. Melodic, emotional, and expansive—his sound sits at the intersection of melodic techno and progressive with traces of deep house. Sometimes it's shimmery and synthy, sometimes it's darker and heavier, and that push and pull is so nice. Brina Knauss is also incredible, spanning house and techno for dancers.",
+      "topPick": null
+    },
+    {
+      "id": "February-8-tiki-disco-winter",
+      "name": "Tiki Disco Winter",
+      "venue": "Knockdown Center",
+      "date": "2026-02-08",
+      "dayOfWeek": "Sunday",
+      "genres": [
+        "House"
+      ],
+      "description": "We went to this party last year, and it felt different than the summer tiki's. The dance floor is grittier and you can really feel like people are there to find some escape on the dance floor. Founders, Eli Escobar, Lloyd, and Andy Pry are super playful behind the decks jumping from disco and classic house to pop remixes and melodic moments. It's a never ending party.",
+      "topPick": null
+    },
+    {
+      "id": "February-8-love-from-the-sun",
+      "name": "Love From the Sun",
+      "venue": "Green Room",
+      "date": "2026-02-08",
+      "dayOfWeek": "Sunday",
+      "genres": [
+        "House",
+        "Disco"
+      ],
+      "description": "This Black History Month, JADALAREIGN brings her project Love From The Sun to Green Room for a special edition celebrating connection, community, and local mutual aid. Chicago's disco master Rahaan and NYC vinyl connoisseur Shawn Dub join to showcase their musical artistry in the spirit of the project. A night made for soulful moments and dancing free.",
+      "topPick": null
+    },
+    {
+      "id": "February-8-spaghetti-strap",
+      "name": "Spaghetti Strap",
+      "venue": "Signal",
+      "date": "2026-02-08",
+      "dayOfWeek": "Sunday",
+      "genres": [
+        "House"
+      ],
+      "description": "A queer, dancer-first party that leans sensual and playful. Ciel brings her emotional, left-of-center club sound, while Keenan Orr grounds the night with patient, thoughtful mixing. The 3 sets of b2bs make it feel intimate and shared from start to finish.",
+      "topPick": null
+    }
+  ],
+  "lastUpdated": "2026-02-07T14:28:08.682Z"
+}
