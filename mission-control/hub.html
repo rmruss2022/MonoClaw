@@ -419,6 +419,15 @@
                     <div id="projectsList"></div>
                 </div>
                 
+                <!-- Code Stats -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Lines Pushed</div>
+                    </div>
+                    <div id="codeStats"></div>
+                </div>
+                
                 <!-- Cron Jobs -->
                 <div class="card">
                     <div class="card-header">
@@ -591,6 +600,49 @@
                 </div>
             `).join('');
             document.getElementById('cronList').innerHTML = cronHtml;
+        }
+        
+        async function loadCodeStats() {
+            try {
+                const response = await fetch('/api/code-stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.stats;
+                    
+                    const formatNumber = (num) => {
+                        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                        if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+                        return num.toString();
+                    };
+                    
+                    const statItem = (label, ins, dels, net) => `
+                        <div class="service-item" style="display: block;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div class="service-name">${label}</div>
+                                <div style="color: ${net >= 0 ? '#00ff88' : '#ff6b6b'}; font-weight: 600;">
+                                    ${net >= 0 ? '+' : ''}${formatNumber(net)}
+                                </div>
+                            </div>
+                            <div class="service-detail" style="display: flex; gap: 12px;">
+                                <span style="color: #00ff88;">+${formatNumber(ins)}</span>
+                                <span style="color: #ff6b6b;">-${formatNumber(dels)}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const html = `
+                        ${statItem('Today', stats.today.insertions, stats.today.deletions, stats.today.net)}
+                        ${statItem('This Week', stats.week.insertions, stats.week.deletions, stats.week.net)}
+                        ${statItem('This Month', stats.month.insertions, stats.month.deletions, stats.month.net)}
+                    `;
+                    
+                    document.getElementById('codeStats').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Failed to load code stats:', error);
+                document.getElementById('codeStats').innerHTML = '<div class="service-detail" style="padding: 10px; color: #888;">Failed to load stats</div>';
+            }
         }
         
         async function refreshStatus() {
@@ -857,10 +909,12 @@
         loadData();
         refreshStatus();
         loadSessions();
+        loadCodeStats();
         
         // Auto-refresh every 30 seconds
         setInterval(loadData, 30000);
         setInterval(loadSessions, 10000); // Refresh sessions every 10 seconds
+        setInterval(loadCodeStats, 60000); // Refresh code stats every minute
     </script>
     
     <script>\n/**
