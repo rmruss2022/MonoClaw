@@ -1,0 +1,24 @@
+{
+  "seafood_collection": [
+    {
+      "name": "Mantis Shrimp",
+      "habitat": "Tropical and subtropical shallow waters of the Indo-Pacific",
+      "fun_fact": "Has the fastest punch in the animal kingdom - striking at 50mph with the force of a .22 caliber bullet, creating cavitation bubbles that reach 8,500°F!"
+    },
+    {
+      "name": "Pacific Geoduck",
+      "habitat": "Buried deep in sandy/muddy seafloor along Pacific Northwest coast",
+      "fun_fact": "Can live over 160 years and is one of the longest-living animals on Earth. Also has the world's most suggestive appearance for a clam."
+    },
+    {
+      "name": "Flying Gurnard",
+      "habitat": "Tropical and warm temperate waters, walking along ocean floor on fin rays",
+      "fun_fact": "Despite the name, it doesn't actually fly but 'walks' along the seafloor on leg-like fins and can spread enormous, colorful pectoral fins like wings when threatened!"
+    },
+    {
+      "name": "Vampire Squid",
+      "habitat": "Deep ocean oxygen minimum zones, typically 600-900 meters deep in tropical and temperate seas",
+      "fun_fact": "Despite its terrifying name, it doesn't suck blood! It's a gentle scavenger that eats marine snow. When threatened, it turns itself inside-out like an umbrella, revealing bioluminescent organs and fleshy spines to scare predators."
+    }
+  ]
+}

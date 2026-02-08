@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <item id="1" name="First Item" value="100"/>
+    <item id="2" name="Second Item" value="200"/>
+    <item id="3" name="Third Item" value="300"/>
+</root>
