@@ -69,17 +69,17 @@ async function getCostSummary() {
             ORDER BY total_cost DESC
         `, [Date.now() - 24 * 60 * 60 * 1000]);
         
-        // Daily spending trend (last 30 days)
-        const dailyTrend = await query(`
+        // Hourly spending trend (last 12 hours)
+        const hourlyTrend = await query(`
             SELECT 
-                DATE(timestamp/1000, 'unixepoch') as date,
+                strftime('%Y-%m-%d %H:00', timestamp/1000, 'unixepoch', 'localtime') as hour,
                 SUM(cost_total) as cost,
                 SUM(tokens_used) as tokens
             FROM token_usage
             WHERE timestamp >= ?
-            GROUP BY DATE(timestamp/1000, 'unixepoch')
-            ORDER BY date ASC
-        `, [Date.now() - 30 * 24 * 60 * 60 * 1000]);
+            GROUP BY strftime('%Y-%m-%d %H:00', timestamp/1000, 'unixepoch', 'localtime')
+            ORDER BY hour ASC
+        `, [Date.now() - 12 * 60 * 60 * 1000]);
         
         // Total spending periods
         const todayStart = new Date();
@@ -106,7 +106,7 @@ async function getCostSummary() {
         
         return {
             modelCosts,
-            dailyTrend,
+            hourlyTrend,
             spending: {
                 today: today?.cost || 0,
                 week: thisWeek?.cost || 0,

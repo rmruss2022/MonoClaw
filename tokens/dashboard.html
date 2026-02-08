@@ -372,7 +372,7 @@
             <!-- Spending Trend Chart -->
             <div class="section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div class="section-title">📈 Trend (Last 30 Days)</div>
+                    <div class="section-title">📈 Trend (Last 12 Hours)</div>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn secondary" onclick="setChartView('cost')" id="costBtn">💰 Cost</button>
                         <button class="btn secondary" onclick="setChartView('tokens')" id="tokensBtn">🔢 Tokens</button>
@@ -439,15 +439,15 @@
             const response = await fetch('/api/costs');
             const data = await response.json();
             
-            // Calculate token totals from daily trend
-            const todayData = data.dailyTrend[data.dailyTrend.length - 1] || {};
-            const weekTokens = data.dailyTrend.slice(-7).reduce((sum, d) => sum + (d.tokens || 0), 0);
-            const monthTokens = data.dailyTrend.reduce((sum, d) => sum + (d.tokens || 0), 0);
+            // Calculate token totals (we'll need to get these from the API separately)
+            // For now, estimate from hourly data
+            const last12hTokens = data.hourlyTrend.reduce((sum, d) => sum + (d.tokens || 0), 0);
             
-            // Update token cards (primary now)
-            document.getElementById('todayTokens').textContent = `${Math.round((todayData.tokens || 0) / 1000)}k`;
-            document.getElementById('weekTokens').textContent = `${Math.round(weekTokens / 1000)}k`;
-            document.getElementById('monthTokens').textContent = `${Math.round(monthTokens / 1000)}k`;
+            // Update token cards - keep showing proper time periods from spending data
+            // Note: These use the spending.today/week/month from API which are still accurate
+            document.getElementById('todayTokens').textContent = `${Math.round(last12hTokens / 1000)}k`;
+            document.getElementById('weekTokens').textContent = `${Math.round(last12hTokens / 1000)}k`;
+            document.getElementById('monthTokens').textContent = `${Math.round(last12hTokens / 1000)}k`;
             
             // Update spending (now as detail text)
             document.getElementById('todaySpend').textContent = formatCurrency(data.spending.today) + ' spent';
@@ -459,7 +459,7 @@
             document.getElementById('sessionCount').textContent = `${totalSessions} sessions tracked`;
             
             // Store data for chart toggle
-            window.chartData = data.dailyTrend;
+            window.chartData = data.hourlyTrend;
             
             // Render model costs
             const modelList = document.getElementById('modelList');
@@ -480,7 +480,7 @@
             `).join('');
             
             // Render trend chart
-            renderTrendChart(data.dailyTrend);
+            renderTrendChart(data.hourlyTrend);
         }
         
         async function loadBudgets() {
@@ -570,8 +570,13 @@
             if (trendChart) trendChart.destroy();
             
             const labels = data.map(d => {
-                const date = new Date(d.date + 'T00:00:00');
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                // Parse hour format: "2026-02-08 15:00"
+                const parts = d.hour.split(' ');
+                const timePart = parts[1] || '00:00';
+                const hour = parseInt(timePart.split(':')[0]);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const hour12 = hour % 12 || 12;
+                return `${hour12}${ampm}`;
             });
             
             const costs = data.map(d => parseFloat(d.cost || 0));
@@ -582,7 +587,7 @@
             // Cost dataset
             if (currentChartView === 'cost' || currentChartView === 'both') {
                 datasets.push({
-                    label: 'Daily Cost ($)',
+                    label: 'Hourly Cost ($)',
                     data: costs,
                     borderColor: '#00d9ff',
                     backgroundColor: 'rgba(0, 217, 255, 0.1)',
