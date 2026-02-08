@@ -578,6 +578,31 @@ const server = http.createServer(async (req, res) => {
         try {
             const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
             const sessions = JSON.parse(stdout);
+            
+            // Enrich sessions with labels from sessions.json (openclaw CLI doesn't return them)
+            try {
+                const sessionsJsonPath = path.join(process.env.HOME, '.openclaw/agents/main/sessions/sessions.json');
+                const sessionsData = JSON.parse(fs.readFileSync(sessionsJsonPath, 'utf-8'));
+                
+                // Map labels by session key
+                const labelMap = {};
+                for (const [key, session] of Object.entries(sessionsData)) {
+                    if (session.label) {
+                        labelMap[key] = session.label;
+                    }
+                }
+                
+                // Apply labels to sessions list
+                if (sessions.sessions) {
+                    sessions.sessions = sessions.sessions.map(s => ({
+                        ...s,
+                        label: labelMap[s.key] || s.label
+                    }));
+                }
+            } catch (labelError) {
+                console.error('Failed to load session labels:', labelError.message);
+            }
+            
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, sessions }));
         } catch (error) {
