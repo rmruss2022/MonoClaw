@@ -351,9 +351,42 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+        .back-button {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(0, 217, 255, 0.15);
+            border: 2px solid rgba(0, 217, 255, 0.4);
+            padding: 12px 24px;
+            border-radius: 50px;
+            color: #00d9ff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(0, 217, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        .back-button:hover {
+            background: rgba(0, 217, 255, 0.25);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0, 217, 255, 0.4);
+            border-color: rgba(0, 217, 255, 0.6);
+        }
+        .back-button::before {
+            content: "←";
+            font-size: 1.2rem;
+        }
+
     </style>
 </head>
 <body>
+    <a href="http://localhost:18795/hub" target="command-hub" class="back-button">Hub</a>
+
     <div class="container">
         <header>
             <h1>🦞 MonoClaw Dashboard</h1>
