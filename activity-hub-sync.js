@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Activity Hub Sync for Sub-Agents - LIVE VERSION
- * Tails sub-agent transcript files in real-time and logs activities as they happen
+ * Activity Hub Sync - Enhanced Version with Agent Labels & Categorization
+ * 
+ * Features:
+ * - Tracks agent labels from sessions
+ * - Categorizes activities with color coding
+ * - Maps tool calls to activity types
  */
 
 const { exec } = require('child_process');
@@ -12,13 +16,86 @@ const path = require('path');
 const execPromise = util.promisify(exec);
 
 const ACTIVITY_HUB_URL = 'http://localhost:18796';
-const POLL_INTERVAL = 10000; // 10 seconds for live tracking
+const POLL_INTERVAL = 10000; // 10 seconds
 const SESSIONS_DIR = '/Users/matthew/.openclaw/agents/main/sessions';
 
 // Track file read positions for each transcript
 const filePositions = new Map();
 const seenActivityIds = new Set();
 
+// Agent label cache (agentId -> label)
+const agentLabels = new Map();
+
+// Activity categories with colors and icons
+const CATEGORIES = {
+  'file-create': { color: '#00ff88', icon: '📝', label: 'File Created' },
+  'file-edit': { color: '#00d9ff', icon: '✏️', label: 'File Modified' },
+  'file-read': { color: '#888', icon: '👁️', label: 'File Read' },
+  'command': { color: '#9b59b6', icon: '⚡', label: 'Command' },
+  'system': { color: '#feca57', icon: '🔧', label: 'System' }
+};
+
+/**
+ * Fetch active sessions and extract agent labels
+ */
+async function updateAgentLabels() {
+  try {
+    const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
+    const data = JSON.parse(stdout);
+    
+    if (data.sessions) {
+      data.sessions.forEach(session => {
+        // Extract agent ID from key (last 8 chars of UUID)
+        const match = session.key.match(/([a-f0-9]{8})-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
+        if (match) {
+          const agentId = match[1];
+          
+          // Store label if available
+          if (session.label) {
+            agentLabels.set(agentId, session.label);
+          }
+          // Otherwise create a descriptive label based on session type
+          else if (session.key.includes('subagent')) {
+            agentLabels.set(agentId, `sub-agent-${agentId}`);
+          } else if (session.key.includes('cron')) {
+            agentLabels.set(agentId, `cron-${agentId}`);
+          }
+        }
+      });
+    }
+    
+    console.log(`[${new Date().toLocaleTimeString()}] Updated agent labels: ${agentLabels.size} agents tracked`);
+  } catch (error) {
+    console.error('Failed to update agent labels:', error.message);
+  }
+}
+
+/**
+ * Get label for an agent ID
+ */
+function getAgentLabel(agentId) {
+  return agentLabels.get(agentId) || `agent-${agentId}`;
+}
+
+/**
+ * Categorize activity based on tool and arguments
+ */
+function categorizeActivity(toolName, args) {
+  if (toolName === 'write') {
+    return 'file-create';
+  } else if (toolName === 'edit') {
+    return 'file-edit';
+  } else if (toolName === 'read') {
+    return 'file-read';
+  } else if (toolName === 'exec') {
+    return 'command';
+  }
+  return 'system';
+}
+
+/**
+ * Log activity to Activity Hub
+ */
 async function logActivity(action, type, metadata = {}) {
   try {
     await fetch(`${ACTIVITY_HUB_URL}/api/activity/log`, {
@@ -31,6 +108,9 @@ async function logActivity(action, type, metadata = {}) {
   }
 }
 
+/**
+ * Get active sub-agents
+ */
 async function getActiveSubAgents() {
   try {
     const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
@@ -41,9 +121,13 @@ async function getActiveSubAgents() {
   }
 }
 
+/**
+ * Parse transcript lines and extract activities
+ */
 function parseTranscriptLines(lines, agentKey) {
   const activities = [];
   const agentId = agentKey.split(':').pop().substring(0, 8);
+  const agentLabel = getAgentLabel(agentId);
   
   lines.forEach(line => {
     try {
@@ -65,36 +149,43 @@ function parseTranscriptLines(lines, agentKey) {
             if (!seenActivityIds.has(activityId)) {
               seenActivityIds.add(activityId);
               
+              // Categorize the activity
+              const category = categorizeActivity(c.name, c.arguments);
+              const categoryInfo = CATEGORIES[category];
+              
               let action = '';
-              let type = 'system';
+              let type = category;
               const metadata = {
                 subAgent: agentId,
-                tool: c.name
+                agentLabel: agentLabel,
+                tool: c.name,
+                category: category,
+                color: categoryInfo.color,
+                icon: categoryInfo.icon
               };
               
+              // Build descriptive action text
               if (c.name === 'write' && c.arguments && c.arguments.path) {
                 const filename = c.arguments.path.split('/').pop();
-                action = `Sub-agent created ${filename}`;
-                type = 'file';
+                action = `${agentLabel} created ${filename}`;
                 metadata.path = c.arguments.path;
+                metadata.filename = filename;
               } else if (c.name === 'edit' && c.arguments && c.arguments.path) {
                 const filename = c.arguments.path.split('/').pop();
-                action = `Sub-agent modified ${filename}`;
-                type = 'file';
+                action = `${agentLabel} modified ${filename}`;
                 metadata.path = c.arguments.path;
+                metadata.filename = filename;
               } else if (c.name === 'exec' && c.arguments && c.arguments.command) {
                 const cmd = c.arguments.command.substring(0, 60);
-                action = `Sub-agent executed: ${cmd}`;
-                type = 'command';
+                action = `${agentLabel} executed: ${cmd}`;
                 metadata.command = c.arguments.command;
               } else if (c.name === 'read' && c.arguments && c.arguments.path) {
                 const filename = c.arguments.path.split('/').pop();
-                action = `Sub-agent read ${filename}`;
-                type = 'file';
+                action = `${agentLabel} read ${filename}`;
                 metadata.path = c.arguments.path;
+                metadata.filename = filename;
               } else {
-                action = `Sub-agent used ${c.name}`;
-                type = 'system';
+                action = `${agentLabel} used ${c.name}`;
               }
               
               if (action) {
@@ -112,6 +203,9 @@ function parseTranscriptLines(lines, agentKey) {
   return activities;
 }
 
+/**
+ * Tail a transcript file for new content
+ */
 async function tailTranscriptFile(transcriptPath, agentKey) {
   try {
     const stats = fs.statSync(transcriptPath);
@@ -147,7 +241,7 @@ async function tailTranscriptFile(transcriptPath, agentKey) {
       }
       
       if (activities.length > 0) {
-        console.log(`[${new Date().toLocaleTimeString()}] Logged ${activities.length} new activities from ${agentKey.split(':').pop().substring(0, 8)}`);
+        console.log(`[${new Date().toLocaleTimeString()}] Logged ${activities.length} new activities from ${getAgentLabel(agentKey.split(':').pop().substring(0, 8))}`);
       }
     }
   } catch (error) {
@@ -155,6 +249,9 @@ async function tailTranscriptFile(transcriptPath, agentKey) {
   }
 }
 
+/**
+ * Poll sub-agents for new activities
+ */
 async function pollSubAgents() {
   try {
     const subAgents = await getActiveSubAgents();
@@ -170,11 +267,27 @@ async function pollSubAgents() {
   }
 }
 
-// Initial poll
-pollSubAgents();
+/**
+ * Main initialization
+ */
+async function main() {
+  console.log(`🦞 Activity Hub Sync - Enhanced Version`);
+  console.log(`📁 Watching: ${SESSIONS_DIR}`);
+  console.log(`🔄 Poll interval: ${POLL_INTERVAL/1000}s`);
+  console.log(`🎨 Categories: ${Object.keys(CATEGORIES).join(', ')}`);
+  
+  // Initial label update
+  await updateAgentLabels();
+  
+  // Initial poll
+  await pollSubAgents();
+  
+  // Poll every 10 seconds for activities
+  setInterval(pollSubAgents, POLL_INTERVAL);
+  
+  // Update agent labels every 30 seconds
+  setInterval(updateAgentLabels, 30000);
+}
 
-// Poll every 10 seconds for live updates
-setInterval(pollSubAgents, POLL_INTERVAL);
-
-console.log(`🦞 Activity Hub Sync running (live tracking every ${POLL_INTERVAL/1000}s)`);
-console.log(`📁 Watching: ${SESSIONS_DIR}`);
+// Start the sync
+main();

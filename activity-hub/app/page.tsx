@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import ActivityFrequencyChart from './components/ActivityFrequencyChart';
+
+type FilterType = 'all' | 'files' | 'commands' | 'reads';
 
 export default function Home() {
   const [activeView, setActiveView] = useState<'feed' | 'calendar' | 'search'>('feed');
@@ -19,7 +22,6 @@ export default function Home() {
             if (msg.data.type === 'hub-present') {
               hubFound = true;
               bc.close();
-              // Hub will focus itself - we do nothing
             }
           };
           bc.postMessage({ type: 'hub-ping' });
@@ -42,7 +44,7 @@ export default function Home() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#00d9ff] to-[#00ff88] bg-clip-text text-transparent">
             🦞 Activity Hub
           </h1>
-          <p className="text-sm text-gray-400 mt-1">Real-time activity tracking, cron calendar, and workspace search</p>
+          <p className="text-sm text-gray-400 mt-1">Real-time activity tracking with color-coded categorization</p>
         </div>
       </header>
 
@@ -97,6 +99,7 @@ export default function Home() {
 function ActivityFeed() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
     loadActivities();
@@ -119,9 +122,26 @@ function ActivityFeed() {
     }
   };
 
+  // Filter activities
+  const filteredActivities = activities.filter(act => {
+    if (filter === 'all') return true;
+    if (filter === 'files') return ['file-create', 'file-edit'].includes(act.metadata?.category);
+    if (filter === 'reads') return act.metadata?.category === 'file-read';
+    if (filter === 'commands') return act.metadata?.category === 'command';
+    return true;
+  });
+
+  // Group by agent
+  const groupedByAgent = filteredActivities.reduce((acc, act) => {
+    const agentLabel = act.metadata?.agentLabel || 'Unknown Agent';
+    if (!acc[agentLabel]) acc[agentLabel] = [];
+    acc[agentLabel].push(act);
+    return acc;
+  }, {} as Record<string, any[]>);
+
   if (loading) {
     return (
-      <div className="max-w-4xl">
+      <div className="max-w-5xl">
         <div className="flex items-center justify-center py-12">
           <div className="text-gray-400">Loading activities...</div>
         </div>
@@ -130,34 +150,134 @@ function ActivityFeed() {
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-[#00d9ff]">Activity Feed</h2>
-        <div className="text-sm text-gray-400">{activities.length} activities</div>
+        <div className="text-sm text-gray-400">{filteredActivities.length} activities</div>
       </div>
-      <div className="space-y-3">
-        {activities.map((activity, i) => (
-          <div
-            key={i}
-            className="bg-white/5 border border-gray-800 rounded-lg p-4 hover:bg-white/10 transition-colors"
-          >
-            <div className="flex items-start gap-4">
-              <span className="text-[#00ff88] font-mono text-sm">{activity.time}</span>
-              <div className="flex-1">
-                <p className="text-gray-200">{activity.action}</p>
-                <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded bg-white/5 text-gray-400">
-                  {activity.type}
-                </span>
-              </div>
-            </div>
+
+      {/* Activity Frequency Chart */}
+      <ActivityFrequencyChart activities={activities} />
+
+      {/* Filter Buttons */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'all'
+              ? 'bg-[#00d9ff] text-black'
+              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setFilter('files')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'files'
+              ? 'bg-[#00ff88] text-black'
+              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+          }`}
+        >
+          📝 Files
+        </button>
+        <button
+          onClick={() => setFilter('commands')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'commands'
+              ? 'bg-[#9b59b6] text-white'
+              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+          }`}
+        >
+          ⚡ Commands
+        </button>
+        <button
+          onClick={() => setFilter('reads')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'reads'
+              ? 'bg-[#888] text-white'
+              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+          }`}
+        >
+          👁️ Reads
+        </button>
+      </div>
+
+      {/* Grouped Activities */}
+      <div className="space-y-6">
+        {Object.entries(groupedByAgent).map(([agentLabel, agentActivities]) => (
+          <div key={agentLabel} className="space-y-3">
+            <h3 className="text-lg font-semibold text-white/90 border-b border-gray-800 pb-2">
+              🤖 {agentLabel}
+              <span className="ml-3 text-sm text-gray-500 font-normal">
+                {agentActivities.length} activities
+              </span>
+            </h3>
+            
+            {agentActivities.map((activity, i) => {
+              const category = activity.metadata?.category || 'system';
+              const color = activity.metadata?.color || '#888';
+              const icon = activity.metadata?.icon || '🔧';
+              
+              return (
+                <div
+                  key={i}
+                  className="bg-white/5 border border-gray-800 rounded-lg p-4 hover:bg-white/8 transition-all"
+                  style={{
+                    borderLeftWidth: '4px',
+                    borderLeftColor: color
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="text-2xl">{icon}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span 
+                          className="text-xs font-mono font-semibold px-2 py-1 rounded"
+                          style={{
+                            backgroundColor: color + '20',
+                            color: color
+                          }}
+                        >
+                          {activity.time}
+                        </span>
+                        <span 
+                          className="text-xs px-2 py-1 rounded bg-white/5 text-gray-400"
+                        >
+                          {activity.metadata?.tool || 'system'}
+                        </span>
+                      </div>
+                      <p className="text-gray-200">{activity.action}</p>
+                      
+                      {/* Additional details */}
+                      {activity.metadata?.filename && (
+                        <div className="mt-2 text-sm text-gray-400 font-mono">
+                          📄 {activity.metadata.filename}
+                        </div>
+                      )}
+                      {activity.metadata?.command && (
+                        <div className="mt-2 text-sm text-gray-400 font-mono bg-black/30 p-2 rounded">
+                          $ {activity.metadata.command.substring(0, 100)}
+                          {activity.metadata.command.length > 100 && '...'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
-      <div className="mt-6 p-4 border border-[#00d9ff]/20 bg-[#00d9ff]/5 rounded-lg">
-        <p className="text-sm text-gray-300">
-          <strong>📡 Next:</strong> Connect to Convex for real-time activity streaming
-        </p>
-      </div>
+
+      {filteredActivities.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-400">No activities yet</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Start the activity sync script to track sub-agent activities
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -237,11 +357,6 @@ function CalendarView() {
             </div>
           </div>
         ))}
-      </div>
-      <div className="mt-6 p-4 border border-[#00d9ff]/20 bg-[#00d9ff]/5 rounded-lg">
-        <p className="text-sm text-gray-300">
-          <strong>📅 Next:</strong> Build weekly calendar grid view with time slots
-        </p>
       </div>
     </div>
   );

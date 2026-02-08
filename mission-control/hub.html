@@ -681,6 +681,9 @@
                 // Extract sub-agent ID from key (last part)
                 const agentId = agent.key.split(':').pop().substring(0, 8);
                 
+                // Use agent label if available, otherwise fall back to ID
+                const displayName = agent.label || `sub-agent-${agentId}`;
+                
                 // Format tokens if available
                 const tokenInfo = agent.totalTokens ? 
                     `${Math.round(agent.totalTokens / 1000)}k tokens` : 
@@ -692,16 +695,16 @@
                 const statusText = isRecent ? 'Working' : 'Idle';
                 
                 return `
-                    <div class="service-item" style="cursor: pointer;" onclick="viewAgentDetails('${agent.key}', '${agentId}')">
+                    <div class="service-item" style="cursor: pointer;" onclick="viewAgentDetails('${agent.key}', '${displayName}', '${agentId}')">
                         <div class="service-info">
                             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                                 <span class="status-dot ${statusDot}"></span>
-                                <div class="service-name">Sub-Agent ${agentId}</div>
+                                <div class="service-name">${displayName}</div>
                             </div>
                             <div class="service-detail">${statusText} • ${modelShort} • ${tokenInfo}</div>
                             <div class="service-detail" style="font-size: 0.8rem; color: #666;">Last activity: ${ageText}</div>
                         </div>
-                        <button class="btn btn-secondary" onclick="event.stopPropagation(); viewAgentDetails('${agent.key}', '${agentId}')">📋</button>
+                        <button class="btn btn-secondary" onclick="event.stopPropagation(); viewAgentDetails('${agent.key}', '${displayName}', '${agentId}')">📋</button>
                     </div>
                 `;
             }).join('');
@@ -710,13 +713,13 @@
         }
         
         // View agent details
-        async function viewAgentDetails(sessionKey, agentId) {
+        async function viewAgentDetails(sessionKey, displayName, agentId) {
             try {
                 const response = await fetch(`/api/sessions/history?sessionKey=${encodeURIComponent(sessionKey)}`);
                 const data = await response.json();
                 
                 if (data.success) {
-                    showAgentModal(agentId, sessionKey, data.history);
+                    showAgentModal(displayName, agentId, sessionKey, data.history);
                 }
             } catch (error) {
                 console.error('Failed to load agent history:', error);
@@ -724,7 +727,7 @@
             }
         }
         
-        function showAgentModal(agentId, sessionKey, history) {
+        function showAgentModal(displayName, agentId, sessionKey, history) {
             const modal = document.createElement('div');
             modal.style.cssText = `
                 position: fixed;
@@ -790,8 +793,9 @@
             
             content.innerHTML = `
                 <div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <h2 style="color: #00d9ff; margin: 0; font-size: 24px;">Sub-Agent ${agentId}</h2>
+                    <h2 style="color: #00d9ff; margin: 0; font-size: 24px;">${displayName}</h2>
                     <p style="color: #888; margin: 8px 0 0 0; font-size: 14px;">${sessionKey}</p>
+                    <p style="color: #666; margin: 4px 0 0 0; font-size: 12px;">Agent ID: ${agentId}</p>
                 </div>
                 
                 <div style="padding: 24px; overflow-y: auto; flex: 1;">

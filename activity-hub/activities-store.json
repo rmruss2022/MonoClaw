@@ -1,5 +1,289 @@
 [
   {
+    "timestamp": "2026-02-08T17:20:05.141Z",
+    "time": "12:20:05 PM",
+    "action": "Executed: mkdir -p activity-hub-test",
+    "type": "command",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "exec",
+      "command": "mkdir -p activity-hub-test"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:05.141Z",
+    "time": "12:20:05 PM",
+    "action": "Created quotes.json",
+    "type": "file-create",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "write",
+      "path": "activity-hub-test/quotes.json",
+      "content": "{\n  \"quotes\": [\n    {\n      \"text\": \"The best time to plant a tree was 20 years ago. The second best time is now.\",\n      \"author\": \"Chinese Proverb\"\n    },\n    {\n      \"text\": \"Code is like humor. When you have to explain it, it's bad.\",\n      \"author\": \"Cory House\"\n    },\n    {\n      \"text\": \"First, solve the problem. Then, write the code.\",\n      \"author\": \"John Johnson\"\n    }\n  ]\n}\n"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:05.141Z",
+    "time": "12:20:05 PM",
+    "action": "Created quote.sh",
+    "type": "file-create",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "write",
+      "path": "activity-hub-test/quote.sh",
+      "content": "#!/bin/bash\n# Daily Quote Generator\n# Displays a random motivational quote\n\nSCRIPT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\nQUOTES_FILE=\"$SCRIPT_DIR/quotes.json\"\n\nif [ ! -f \"$QUOTES_FILE\" ]; then\n    echo \"Error: quotes.json not found!\"\n    exit 1\nfi\n\n# Get random quote using jq\nRANDOM_INDEX=$(jq '.quotes | length' \"$QUOTES_FILE\" | awk '{print int(rand()*$1)}')\nQUOTE=$(jq -r \".quotes[$RANDOM_INDEX].text\" \"$QUOTES_FILE\")\nAUTHOR=$(jq -r \".quotes[$RANDOM_INDEX].author\" \"$QUOTES_FILE\")\n\necho \"\"\necho \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\necho \"  $QUOTE\"\necho \"\"\necho \"  — $AUTHOR\"\necho \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"\necho \"\"\n"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:05.141Z",
+    "time": "12:20:05 PM",
+    "action": "Created config.ini",
+    "type": "file-create",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "write",
+      "path": "activity-hub-test/config.ini",
+      "content": "[display]\nshow_border = true\ncolor_enabled = false\n\n[quotes]\nsource = quotes.json\nrandom_seed = auto\n"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:05.141Z",
+    "time": "12:20:05 PM",
+    "action": "Created .gitignore",
+    "type": "file-create",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "write",
+      "path": "activity-hub-test/.gitignore",
+      "content": "*.log\n*.tmp\n.DS_Store\n"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:10.597Z",
+    "time": "12:20:10 PM",
+    "action": "Created test.sh",
+    "type": "file-create",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "write",
+      "path": "activity-hub-test/test.sh",
+      "content": "#!/bin/bash\n# Simple test script for quote generator\n\necho \"Testing quote generator...\"\nbash quote.sh\n\nif [ $? -eq 0 ]; then\n    echo \"✓ Test passed!\"\nelse\n    echo \"✗ Test failed!\"\n    exit 1\nfi\n"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:10.597Z",
+    "time": "12:20:10 PM",
+    "action": "Read quotes.json",
+    "type": "file-read",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-read",
+    "color": "#888",
+    "icon": "👁️",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "read",
+      "path": "activity-hub-test/quotes.json"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:16.510Z",
+    "time": "12:20:16 PM",
+    "action": "Modified quotes.json",
+    "type": "file-edit",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-edit",
+    "color": "#00d9ff",
+    "icon": "✏️",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "edit",
+      "path": "activity-hub-test/quotes.json",
+      "oldText": "    {\n      \"text\": \"First, solve the problem. Then, write the code.\",\n      \"author\": \"John Johnson\"\n    }\n  ]\n}",
+      "newText": "    {\n      \"text\": \"First, solve the problem. Then, write the code.\",\n      \"author\": \"John Johnson\"\n    },\n    {\n      \"text\": \"Any fool can write code that a computer can understand. Good programmers write code that humans can understand.\",\n      \"author\": \"Martin Fowler\"\n    },\n    {\n      \"text\": \"The only way to do great work is to love what you do.\",\n      \"author\": \"Steve Jobs\"\n    }\n  ]\n}"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:16.510Z",
+    "time": "12:20:16 PM",
+    "action": "Modified config.ini",
+    "type": "file-edit",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-edit",
+    "color": "#00d9ff",
+    "icon": "✏️",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "edit",
+      "path": "activity-hub-test/config.ini",
+      "oldText": "[display]\nshow_border = true\ncolor_enabled = false",
+      "newText": "[display]\nshow_border = true\ncolor_enabled = true\nwidth = 80"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:16.510Z",
+    "time": "12:20:16 PM",
+    "action": "Read config.ini",
+    "type": "file-read",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-read",
+    "color": "#888",
+    "icon": "👁️",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "read",
+      "path": "activity-hub-test/config.ini"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:20.360Z",
+    "time": "12:20:20 PM",
+    "action": "Executed: cd activity-hub-test && chmod +x quote.sh test.sh",
+    "type": "command",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "exec",
+      "command": "cd activity-hub-test && chmod +x quote.sh test.sh"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:20.360Z",
+    "time": "12:20:20 PM",
+    "action": "Executed: cd activity-hub-test && ls -lah",
+    "type": "command",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "exec",
+      "command": "cd activity-hub-test && ls -lah"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:20.360Z",
+    "time": "12:20:20 PM",
+    "action": "Executed: cd activity-hub-test && bash quote.sh",
+    "type": "command",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "exec",
+      "command": "cd activity-hub-test && bash quote.sh"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:32.908Z",
+    "time": "12:20:32 PM",
+    "action": "Created README.md",
+    "type": "file-create",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "write",
+      "path": "activity-hub-test/README.md",
+      "content": "# Daily Quote Generator 💬\n\nA simple command-line utility that displays random motivational quotes. Built as a test project for the OpenClaw Activity Hub.\n\n## Features\n\n- 📜 Displays random quotes from a JSON database\n- 🎨 Configurable display settings\n- 🧪 Includes basic test script\n- ⚡ Lightweight and fast\n\n## Files\n\n- `quote.sh` - Main script to display quotes\n- `quotes.json` - Quote database (5 quotes included)\n- `config.ini` - Configuration file for display settings\n- `test.sh` - Simple test runner\n- `.gitignore` - Standard git ignore patterns\n\n## Usage\n\n```bash\n# Display a random quote\n./quote.sh\n```\n\n## Configuration\n\nEdit `config.ini` to customize:\n\n- `show_border` - Enable/disable decorative borders\n- `color_enabled` - Enable colored output (future feature)\n- `width` - Display width in characters\n\n## Testing\n\n```bash\n# Run the test suite\n./test.sh\n```\n\n## Requirements\n\n- bash\n- jq (for JSON parsing)\n\n## Activity Tracking Test\n\nThis project was created specifically to generate trackable activities for testing the Activity Hub:\n\n### Activities Generated:\n1. ✍️ **Write operations (5)**: Created quotes.json, quote.sh, config.ini, .gitignore, test.sh\n2. ✏️ **Edit operations (2)**: Modified quotes.json (added 2 quotes), updated config.ini (added width setting)\n3. 👀 **Read operations (2)**: Read quotes.json and config.ini for verification\n4. ⚙️ **Execute operations (3)**: chmod scripts, ls directory, ran quote.sh\n\n**Total activities: ~12 tracked operations**\n\n## Future Enhancements\n\n- Color-coded output\n- Categories for quotes\n- Search functionality\n- Add custom quotes via CLI\n- Daily quote scheduler\n\n---\n\n*Created: February 8, 2026*  \n*Purpose: Activity Hub Testing*  \n*Completion time: ~3 minutes*\n"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:36.251Z",
+    "time": "12:20:36 PM",
+    "action": "Read README.md",
+    "type": "file-read",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-read",
+    "color": "#888",
+    "icon": "👁️",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "read",
+      "path": "activity-hub-test/README.md"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:36.251Z",
+    "time": "12:20:36 PM",
+    "action": "Executed: cd activity-hub-test && wc -l *.sh *.json *.md",
+    "type": "command",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "exec",
+      "command": "cd activity-hub-test && wc -l *.sh *.json *.md"
+    }
+  },
+  {
+    "timestamp": "2026-02-08T17:20:42.032Z",
+    "time": "12:20:42 PM",
+    "action": "Modified README.md",
+    "type": "file-edit",
+    "agentName": "activity-tracker-test",
+    "agentId": "328df95c",
+    "category": "file-edit",
+    "color": "#00d9ff",
+    "icon": "✏️",
+    "metadata": {
+      "subAgent": "328df95c",
+      "tool": "edit",
+      "path": "activity-hub-test/README.md",
+      "oldText": "### Activities Generated:\n1. ✍️ **Write operations (5)**: Created quotes.json, quote.sh, config.ini, .gitignore, test.sh\n2. ✏️ **Edit operations (2)**: Modified quotes.json (added 2 quotes), updated config.ini (added width setting)\n3. 👀 **Read operations (2)**: Read quotes.json and config.ini for verification\n4. ⚙️ **Execute operations (3)**: chmod scripts, ls directory, ran quote.sh\n\n**Total activities: ~12 tracked operations**",
+      "newText": "### Activities Generated:\n1. ✍️ **Write operations (6)**: Created quotes.json, quote.sh, config.ini, .gitignore, test.sh, README.md\n2. ✏️ **Edit operations (3)**: Modified quotes.json (added quotes), updated config.ini (added width), updated README.md (final count)\n3. 👀 **Read operations (3)**: Read quotes.json, config.ini, and README.md for verification\n4. ⚙️ **Execute operations (5)**: mkdir, chmod scripts, ls directory, ran quote.sh, wc line count\n\n**Total activities: 17 tracked operations** ✅"
+    }
+  },
+  {
     "timestamp": 1770522907063,
     "time": "22:55",
     "action": "Sub-agent created HomeScreen.tsx",
@@ -8,7 +292,12 @@
       "subAgent": "7dff6491",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/ora-health/ora-health/src/screens/HomeScreen.tsx"
-    }
+    },
+    "agentName": "Agent 7dff6491",
+    "agentId": "7dff6491",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770522933759,
@@ -17,7 +306,12 @@
     "type": "file",
     "metadata": {
       "subAgent": "7dff6491"
-    }
+    },
+    "agentName": "Agent 7dff6491",
+    "agentId": "7dff6491",
+    "category": "system",
+    "color": "#feca57",
+    "icon": "🔧"
   },
   {
     "timestamp": 1770522933804,
@@ -26,7 +320,12 @@
     "type": "file",
     "metadata": {
       "subAgent": "7dff6491"
-    }
+    },
+    "agentName": "Agent 7dff6491",
+    "agentId": "7dff6491",
+    "category": "system",
+    "color": "#feca57",
+    "icon": "🔧"
   },
   {
     "timestamp": 1770522933832,
@@ -35,7 +334,12 @@
     "type": "file",
     "metadata": {
       "subAgent": "7dff6491"
-    }
+    },
+    "agentName": "Agent 7dff6491",
+    "agentId": "7dff6491",
+    "category": "system",
+    "color": "#feca57",
+    "icon": "🔧"
   },
   {
     "timestamp": 1770522933855,
@@ -44,7 +348,12 @@
     "type": "file",
     "metadata": {
       "subAgent": "7dff6491"
-    }
+    },
+    "agentName": "Agent 7dff6491",
+    "agentId": "7dff6491",
+    "category": "system",
+    "color": "#feca57",
+    "icon": "🔧"
   },
   {
     "timestamp": 1770523355055,
@@ -55,7 +364,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "mkdir -p /Users/matthew/.openclaw/workspace/activity-test"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523355055,
@@ -66,7 +380,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/README.md"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523362728,
@@ -77,7 +396,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/package.json"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523362728,
@@ -88,7 +412,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/.gitignore"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523368595,
@@ -99,7 +428,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "mkdir -p /Users/matthew/.openclaw/workspace/activity-test/lib"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523368595,
@@ -110,7 +444,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/config.json"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523379621,
@@ -121,7 +460,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/lib/config.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523393948,
@@ -132,7 +476,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/lib/api.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523414235,
@@ -143,7 +492,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/lib/formatter.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523422972,
@@ -154,7 +508,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/weather.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523427352,
@@ -165,7 +524,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && find . -type f -name \"*.js\" -o -name \"*.json\" -o -name \"*.md\" | sort"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523427352,
@@ -176,7 +540,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && ls -lah"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523429940,
@@ -187,7 +556,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && node weather.js \"Boston\""
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523435183,
@@ -198,7 +572,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && node weather.js London Tokyo Miami"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523441726,
@@ -209,7 +588,12 @@
       "subAgent": "b6478812",
       "tool": "read",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/config.json"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-read",
+    "color": "#888",
+    "icon": "👁️"
   },
   {
     "timestamp": 1770523441726,
@@ -220,7 +604,12 @@
       "subAgent": "b6478812",
       "tool": "edit",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/config.json"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-edit",
+    "color": "#00d9ff",
+    "icon": "✏️"
   },
   {
     "timestamp": 1770523445489,
@@ -231,7 +620,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && node weather.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523445489,
@@ -242,7 +636,12 @@
       "subAgent": "b6478812",
       "tool": "read",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/lib/formatter.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-read",
+    "color": "#888",
+    "icon": "👁️"
   },
   {
     "timestamp": 1770523456382,
@@ -253,7 +652,12 @@
       "subAgent": "b6478812",
       "tool": "edit",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/README.md"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-edit",
+    "color": "#00d9ff",
+    "icon": "✏️"
   },
   {
     "timestamp": 1770523456382,
@@ -264,7 +668,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/test.sh"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523459679,
@@ -275,7 +684,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && chmod +x test.sh"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523459679,
@@ -286,7 +700,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && ./test.sh"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523475259,
@@ -297,7 +716,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/.npmrc"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523475259,
@@ -308,7 +732,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/CONTRIBUTING.md"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523525872,
@@ -319,7 +748,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && find . -type f | wc -l"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523525872,
@@ -330,7 +764,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && du -sh ."
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523525872,
@@ -341,7 +780,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/RESULTS.md"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523530822,
@@ -352,7 +796,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "ls -lah /Users/matthew/.openclaw/workspace/activity-test/"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523530822,
@@ -363,7 +812,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "ls -lah /Users/matthew/.openclaw/workspace/activity-test/lib/"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523530822,
@@ -374,7 +828,12 @@
       "subAgent": "b6478812",
       "tool": "read",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/RESULTS.md"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-read",
+    "color": "#888",
+    "icon": "👁️"
   },
   {
     "timestamp": 1770523535503,
@@ -385,7 +844,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "find /Users/matthew/.openclaw/workspace -name \"weather.js\" -o -name \"test.sh\" 2>/dev/null"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523535503,
@@ -396,7 +860,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "ls -la /Users/matthew/.openclaw/workspace/ | grep activity"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523550385,
@@ -407,7 +876,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "mkdir -p /Users/matthew/.openclaw/workspace/activity-test/lib"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523550385,
@@ -418,7 +892,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/package.json"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523550385,
@@ -429,7 +908,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/weather.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523565283,
@@ -440,7 +924,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/config.json"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523565283,
@@ -451,7 +940,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/lib/config.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523565283,
@@ -462,7 +956,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/lib/api.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523586683,
@@ -473,7 +972,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/lib/formatter.js"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523586683,
@@ -484,7 +988,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/README.md"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523590194,
@@ -495,7 +1004,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && node weather.js \"Paris\""
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523590194,
@@ -506,7 +1020,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && ls -lah"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523645742,
@@ -517,7 +1036,12 @@
       "subAgent": "b6478812",
       "tool": "write",
       "path": "/Users/matthew/.openclaw/workspace/activity-test/ACTIVITY-SUMMARY.md"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "file-create",
+    "color": "#00ff88",
+    "icon": "📝"
   },
   {
     "timestamp": 1770523650796,
@@ -528,7 +1052,12 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && tree -L 2 -h || find . -type f -print | sed 's|^\\./||' | sort"
-    }
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
   },
   {
     "timestamp": 1770523650796,
@@ -539,6 +1068,72 @@
       "subAgent": "b6478812",
       "tool": "exec",
       "command": "cd /Users/matthew/.openclaw/workspace/activity-test && wc -l *.js *.json *.md lib/*.js 2>/dev/null | tail -1"
+    },
+    "agentName": "Agent b6478812",
+    "agentId": "b6478812",
+    "category": "command",
+    "color": "#9b59b6",
+    "icon": "⚡"
+  },
+  {
+    "timestamp": 1770571678233,
+    "time": "12:27",
+    "action": "activity-hub-test-agent created test-output.txt",
+    "type": "file-create",
+    "metadata": {
+      "subAgent": "test1234",
+      "agentLabel": "activity-hub-test-agent",
+      "tool": "write",
+      "category": "file-create",
+      "color": "#00ff88",
+      "icon": "📝",
+      "path": "/tmp/test-output.txt",
+      "filename": "test-output.txt"
+    }
+  },
+  {
+    "timestamp": 1770571678448,
+    "time": "12:27",
+    "action": "activity-hub-test-agent modified config.json",
+    "type": "file-edit",
+    "metadata": {
+      "subAgent": "test1234",
+      "agentLabel": "activity-hub-test-agent",
+      "tool": "edit",
+      "category": "file-edit",
+      "color": "#00d9ff",
+      "icon": "✏️",
+      "filename": "config.json"
+    }
+  },
+  {
+    "timestamp": 1770571678581,
+    "time": "12:27",
+    "action": "activity-hub-test-agent executed: npm install axios",
+    "type": "command",
+    "metadata": {
+      "subAgent": "test1234",
+      "agentLabel": "activity-hub-test-agent",
+      "tool": "exec",
+      "category": "command",
+      "color": "#9b59b6",
+      "icon": "⚡",
+      "command": "npm install axios"
+    }
+  },
+  {
+    "timestamp": 1770571678637,
+    "time": "12:27",
+    "action": "activity-hub-test-agent read package.json",
+    "type": "file-read",
+    "metadata": {
+      "subAgent": "test1234",
+      "agentLabel": "activity-hub-test-agent",
+      "tool": "read",
+      "category": "file-read",
+      "color": "#888",
+      "icon": "👁️",
+      "filename": "package.json"
     }
   }
 ]
