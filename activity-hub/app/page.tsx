@@ -10,6 +10,7 @@ export default function Home() {
       {/* Back Button - Floating Action Button */}
       <a 
         href="http://localhost:18795/hub"
+        target="command-hub"
         className="fixed bottom-8 right-8 z-50 px-6 py-3 bg-[#00d9ff]/15 hover:bg-[#00d9ff]/25 border-2 border-[#00d9ff]/40 hover:border-[#00d9ff]/60 rounded-full text-[#00d9ff] font-semibold text-sm transition-all hover:-translate-y-1 shadow-[0_4px_15px_rgba(0,217,255,0.2)] hover:shadow-[0_6px_25px_rgba(0,217,255,0.4)] backdrop-blur-md"
       >
         ← Hub
