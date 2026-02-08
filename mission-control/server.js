@@ -369,6 +369,74 @@ async function setModel(model) {
     }
 }
 
+async function getCodeStats() {
+    try {
+        const workspacePath = path.join(process.env.HOME, '.openclaw/workspace');
+        
+        // Get today's date boundaries
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        
+        // Get week start (7 days ago, simpler and more intuitive)
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - 7);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekStartISO = weekStart.toISOString();
+        
+        // Get month start
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        
+        // Git command to get stats with --numstat (shows insertions/deletions per file)
+        const getStats = async (since) => {
+            try {
+                const { stdout } = await execPromise(
+                    `cd "${workspacePath}" && git log --since="${since}" --numstat --pretty=format:"" --no-merges`,
+                    { maxBuffer: 10 * 1024 * 1024 }
+                );
+                
+                let insertions = 0;
+                let deletions = 0;
+                
+                // Parse numstat output (format: insertions\tdeletions\tfilename)
+                const lines = stdout.split('\n').filter(line => line.trim());
+                for (const line of lines) {
+                    const parts = line.split('\t');
+                    if (parts.length >= 2) {
+                        const ins = parseInt(parts[0]) || 0;
+                        const dels = parseInt(parts[1]) || 0;
+                        insertions += ins;
+                        deletions += dels;
+                    }
+                }
+                
+                return { insertions, deletions, net: insertions - deletions };
+            } catch (error) {
+                console.error('Git stats error:', error.message);
+                return { insertions: 0, deletions: 0, net: 0 };
+            }
+        };
+        
+        const [today, thisWeek, thisMonth] = await Promise.all([
+            getStats(todayStart),
+            getStats(weekStartISO),
+            getStats(monthStart)
+        ]);
+        
+        return {
+            today,
+            week: thisWeek,
+            month: thisMonth
+        };
+    } catch (error) {
+        console.error('Failed to get code stats:', error.message);
+        return {
+            today: { insertions: 0, deletions: 0, net: 0 },
+            week: { insertions: 0, deletions: 0, net: 0 },
+            month: { insertions: 0, deletions: 0, net: 0 }
+        };
+    }
+}
+
 const server = http.createServer(async (req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -494,6 +562,15 @@ const server = http.createServer(async (req, res) => {
             const data = JSON.parse(stdout);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, history: data.messages || [] }));
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: error.message }));
+        }
+    } else if (req.url === '/api/code-stats' && req.method === 'GET') {
+        try {
+            const stats = await getCodeStats();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true, stats }));
         } catch (error) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, error: error.message }));
