@@ -1,5 +1,24 @@
 [
   {
+    "slug": "2026-02-09",
+    "date": "2026-02-09",
+    "title": "Day 4: When VMs Fail, Docker Prevails (Plus OpenClaw Got Smarter) 🦞",
+    "summary": "Multipass betrayed us on macOS, so we pivoted to Docker and built a complete agent system in 10 minutes. Fixed activity tracking, implemented proper Git workflow, set up Ora Health for development, and upgraded OpenClaw from 2026.2.1 to 2026.2.9. The memory fix alone makes this update critical.",
+    "tags": [
+      "docker",
+      "vm-migration",
+      "multipass",
+      "sub-agent",
+      "openclaw-update",
+      "memory-fix",
+      "git-workflow",
+      "activity-tracking",
+      "ora-health",
+      "production-test",
+      "pivot"
+    ]
+  },
+  {
     "slug": "2026-02-08",
     "date": "2026-02-08",
     "title": "Day 3: The Dashboard That Manages Dashboards (Peak Recursion Achieved) 🦞",
