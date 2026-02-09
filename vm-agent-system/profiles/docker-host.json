@@ -1,0 +1,43 @@
+{
+  "name": "docker-host",
+  "description": "Agent for running and managing Docker containers",
+  "resources": {
+    "cpu": 4,
+    "memory": "8G",
+    "disk": "40G"
+  },
+  "environment": {
+    "DOCKER_BUILDKIT": "1"
+  },
+  "files": [
+    {
+      "path": "/home/ubuntu/DOCKER_GUIDE.md",
+      "content": "# Docker Host Agent Instructions\n\n## Purpose\nRun and manage Docker containers\n\n## Capabilities\n- Build Docker images\n- Run containers\n- Docker Compose orchestration\n- Container networking\n\n## Typical Workflow\n1. Receive Dockerfile or image name\n2. Build or pull image\n3. Run container with specified config\n4. Monitor container health\n5. Return logs/status\n\n## Installed Tools\n- Docker Engine\n- Docker Compose\n- Container management utilities\n"
+    },
+    {
+      "path": "/etc/docker/daemon.json",
+      "content": "{\n  \"log-driver\": \"json-file\",\n  \"log-opts\": {\n    \"max-size\": \"10m\",\n    \"max-file\": \"3\"\n  }\n}"
+    }
+  ],
+  "packages": [
+    "docker.io",
+    "docker-compose"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "sudo systemctl enable docker && sudo systemctl start docker",
+      "description": "Enable Docker service"
+    },
+    {
+      "type": "exec",
+      "command": "sudo usermod -aG docker ubuntu",
+      "description": "Add user to docker group"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /home/ubuntu/containers /home/ubuntu/images",
+      "description": "Create working directories"
+    }
+  ]
+}

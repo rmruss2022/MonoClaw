@@ -1,0 +1,42 @@
+{
+  "name": "tester",
+  "description": "Agent for running tests, E2E testing, and quality assurance",
+  "resources": {
+    "cpu": 2,
+    "memory": "4G",
+    "disk": "20G"
+  },
+  "environment": {
+    "NODE_ENV": "test",
+    "CI": "true",
+    "HEADLESS": "true"
+  },
+  "files": [
+    {
+      "path": "/home/ubuntu/TEST_INSTRUCTIONS.md",
+      "content": "# Tester Agent Instructions\n\n## Purpose\nRun automated tests and quality checks\n\n## Capabilities\n- Unit tests (Jest, Mocha, Vitest)\n- E2E tests (Playwright, Cypress)\n- API testing (Supertest)\n- Load testing (k6)\n\n## Typical Workflow\n1. Clone repository\n2. Install dependencies\n3. Run test suite\n4. Generate reports\n5. Return results\n\n## Installed Tools\n- Node.js test runners\n- Playwright browsers\n- Chrome/Firefox headless\n"
+    }
+  ],
+  "packages": [
+    "git",
+    "chromium-browser",
+    "firefox"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "npm install -g playwright jest vitest @playwright/test",
+      "description": "Install testing frameworks"
+    },
+    {
+      "type": "exec",
+      "command": "npx playwright install --with-deps",
+      "description": "Install Playwright browsers"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /home/ubuntu/test-results",
+      "description": "Create test results directory"
+    }
+  ]
+}

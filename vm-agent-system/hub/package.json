@@ -1,0 +1,19 @@
+{
+  "name": "@openclaw/vm-hub",
+  "version": "1.0.0",
+  "description": "Central message hub for VM agents",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "express": "^4.18.2",
+    "uuid": "^9.0.1",
+    "prom-client": "^15.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+}

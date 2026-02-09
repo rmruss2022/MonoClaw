@@ -1,0 +1,14 @@
+{
+  "name": "@openclaw/vm-agent-cli",
+  "version": "1.0.0",
+  "description": "CLI for managing VM agents",
+  "bin": {
+    "vm-agent": "./vm-agent"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "chalk": "^4.1.2",
+    "ora": "^5.4.1",
+    "cli-table3": "^0.6.3"
+  }
+}

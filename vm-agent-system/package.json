@@ -1,0 +1,20 @@
+{
+  "name": "openclaw-vm-agent-system",
+  "version": "1.0.0",
+  "description": "VM-based agent system for OpenClaw with isolated execution environments",
+  "author": "OpenClaw",
+  "license": "MIT",
+  "scripts": {
+    "hub": "node hub/server.js",
+    "dashboard": "node hub/dashboard-server.js",
+    "test": "node test/integration-test.js"
+  },
+  "workspaces": [
+    "hub",
+    "agent-runtime",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
