@@ -1,0 +1,27 @@
+{
+  "name": "@openclaw/docker-agent-system",
+  "version": "1.0.0",
+  "description": "Docker-based agent system for OpenClaw",
+  "main": "index.js",
+  "scripts": {
+    "install-runtime": "cd agent-runtime && npm install",
+    "install-cli": "cd cli && npm install",
+    "install-all": "npm run install-runtime && npm run install-cli",
+    "build-base": "cd agent-runtime && docker build -t openclaw-agent-base .",
+    "link-cli": "cd cli && npm link",
+    "setup": "npm run install-all && npm run build-base && npm run link-cli",
+    "test": "echo 'Run integration tests' && exit 0"
+  },
+  "keywords": [
+    "openclaw",
+    "agent",
+    "docker",
+    "containers"
+  ],
+  "author": "OpenClaw",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/docker-agent-system"
+  }
+}

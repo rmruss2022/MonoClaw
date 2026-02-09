@@ -201,23 +201,9 @@ function scanTranscripts() {
     const files = fs.readdirSync(SESSIONS_DIR);
     const transcripts = files.filter(f => f.endsWith('.jsonl'));
     
+    // Process ALL transcripts (main session + sub-agents)
     for (const file of transcripts) {
-      // Check if it's a sub-agent session
-      const sessionId = file.replace('.jsonl', '');
-      const sessionsData = fs.readFileSync(SESSIONS_JSON, 'utf-8');
-      const sessions = JSON.parse(sessionsData);
-      
-      let isSubAgent = false;
-      for (const key of Object.keys(sessions)) {
-        if (sessions[key].sessionId === sessionId && key.includes('subagent')) {
-          isSubAgent = true;
-          break;
-        }
-      }
-      
-      if (isSubAgent) {
-        processTranscriptFile(file);
-      }
+      processTranscriptFile(file);
     }
   } catch (error) {
     console.error('Scan error:', error.message);
@@ -227,13 +213,21 @@ function scanTranscripts() {
 // Main
 console.log('🦞 Activity Tracker V2 started');
 console.log(`   API: ${ACTIVITY_HUB_API}`);
+console.log(`   Tracking ALL sessions (main + sub-agents)`);
+console.log(`   Poll interval: ${POLL_INTERVAL}ms`);
 console.log('');
 
 // Initial scan
+console.log('Starting initial scan...');
 scanTranscripts();
+console.log('Initial scan complete\n');
 
 // Poll continuously
-setInterval(scanTranscripts, POLL_INTERVAL);
+setInterval(() => {
+  const now = new Date().toLocaleTimeString();
+  console.log(`[${now}] Scanning...`);
+  scanTranscripts();
+}, POLL_INTERVAL);
 
 process.on('SIGINT', () => {
   console.log('\nShutting down...');

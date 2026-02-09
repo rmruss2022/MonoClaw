@@ -1,0 +1,41 @@
+{
+  "name": "researcher",
+  "description": "Agent for data analysis and research tasks",
+  "resources": {
+    "cpus": "4",
+    "memory": "8g",
+    "disk": "40g"
+  },
+  "environment": {
+    "PYTHONUNBUFFERED": "1",
+    "JUPYTER_ENABLE_LAB": "yes"
+  },
+  "files": [
+    {
+      "path": "/workspace/RESEARCH_INSTRUCTIONS.md",
+      "content": "# Researcher Agent Instructions\n\n## Purpose\nData analysis, research, and scientific computing\n\n## Capabilities\n- Python data analysis (pandas, numpy, scipy)\n- Machine learning (scikit-learn)\n- Data visualization (matplotlib, seaborn)\n- Jupyter notebooks\n- Web scraping\n\n## Installed Tools\n- Python 3.10+\n- pip, virtualenv\n- Jupyter Lab\n- Common data science libraries\n"
+    }
+  ],
+  "packages": [
+    "python3",
+    "python3-pip",
+    "python3-venv",
+    "git",
+    "curl",
+    "wget",
+    "build-essential",
+    "python3-dev"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "pip3 install --no-cache-dir jupyter pandas numpy scipy matplotlib seaborn scikit-learn requests beautifulsoup4",
+      "description": "Install Python data science tools"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /workspace/notebooks /workspace/data /workspace/results",
+      "description": "Create research directories"
+    }
+  ]
+}

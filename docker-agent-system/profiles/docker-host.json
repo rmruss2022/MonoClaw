@@ -1,0 +1,48 @@
+{
+  "name": "docker-host",
+  "description": "Agent with Docker-in-Docker capability for building containers",
+  "resources": {
+    "cpus": "4",
+    "memory": "8g",
+    "disk": "50g"
+  },
+  "environment": {
+    "DOCKER_BUILDKIT": "1",
+    "COMPOSE_DOCKER_CLI_BUILD": "1"
+  },
+  "files": [
+    {
+      "path": "/workspace/DOCKER_INSTRUCTIONS.md",
+      "content": "# Docker Host Agent Instructions\n\n## Purpose\nBuild and manage Docker containers and images\n\n## Capabilities\n- Docker build with BuildKit\n- Docker Compose\n- Multi-stage builds\n- Image registry operations\n- Container orchestration\n\n## Installed Tools\n- Docker Engine\n- Docker Compose\n- Docker BuildKit\n\n## Notes\n- This agent requires privileged mode\n- Use for building containers, not running untrusted code\n"
+    }
+  ],
+  "packages": [
+    "git",
+    "curl",
+    "ca-certificates",
+    "gnupg",
+    "lsb-release"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
+      "description": "Add Docker GPG key"
+    },
+    {
+      "type": "exec",
+      "command": "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | tee /etc/apt/sources.list.d/docker.list > /dev/null",
+      "description": "Add Docker repository"
+    },
+    {
+      "type": "exec",
+      "command": "apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin",
+      "description": "Install Docker"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /workspace/builds",
+      "description": "Create build directory"
+    }
+  ]
+}

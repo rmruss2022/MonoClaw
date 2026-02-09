@@ -1,0 +1,44 @@
+{
+  "name": "builder",
+  "description": "Agent optimized for building Node.js, React, and Next.js projects",
+  "resources": {
+    "cpus": "4",
+    "memory": "8g",
+    "disk": "30g"
+  },
+  "environment": {
+    "NODE_ENV": "production",
+    "CI": "true",
+    "VERCEL_CLI_VERSION": "latest"
+  },
+  "files": [
+    {
+      "path": "/home/agent/.npmrc",
+      "content": "registry=https://registry.npmjs.org/\nprogress=false\naudit=false"
+    },
+    {
+      "path": "/workspace/BUILD_INSTRUCTIONS.md",
+      "content": "# Builder Agent Instructions\n\n## Purpose\nBuild and deploy Node.js applications\n\n## Capabilities\n- npm/yarn/pnpm package management\n- Next.js builds\n- Vercel deployments\n- Docker image creation\n\n## Typical Workflow\n1. Clone repository\n2. Install dependencies\n3. Run build\n4. Deploy or create artifact\n\n## Installed Tools\n- Node.js 18+\n- npm, yarn, pnpm\n- Vercel CLI\n- PM2 process manager\n"
+    }
+  ],
+  "packages": [
+    "git",
+    "curl",
+    "build-essential",
+    "python3",
+    "make",
+    "g++"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "npm install -g vercel pm2 yarn pnpm",
+      "description": "Install global Node.js tools"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /workspace/builds /workspace/artifacts",
+      "description": "Create working directories"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@openclaw/docker-agent-runtime",
+  "version": "1.0.0",
+  "description": "Runtime for Docker-based agents",
+  "main": "client.js",
+  "scripts": {
+    "start": "node client.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
