@@ -1,0 +1,41 @@
+{
+  "name": "tester",
+  "description": "Agent for running tests and quality checks",
+  "resources": {
+    "cpus": "2",
+    "memory": "4g",
+    "disk": "20g"
+  },
+  "environment": {
+    "NODE_ENV": "test",
+    "CI": "true"
+  },
+  "files": [
+    {
+      "path": "/workspace/TEST_INSTRUCTIONS.md",
+      "content": "# Tester Agent Instructions\n\n## Purpose\nRun automated tests and quality checks\n\n## Capabilities\n- Unit testing (Jest, Mocha, AVA)\n- Integration testing\n- E2E testing (Playwright, Cypress)\n- Linting and formatting\n- Code coverage\n\n## Installed Tools\n- Node.js 18+\n- Jest, Mocha test frameworks\n- ESLint, Prettier\n- Playwright for E2E tests\n"
+    }
+  ],
+  "packages": [
+    "git",
+    "curl",
+    "build-essential"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "npm install -g jest mocha eslint prettier @playwright/test",
+      "description": "Install testing tools"
+    },
+    {
+      "type": "exec",
+      "command": "npx playwright install --with-deps chromium",
+      "description": "Install Playwright browsers"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /workspace/test-results /workspace/coverage",
+      "description": "Create test output directories"
+    }
+  ]
+}

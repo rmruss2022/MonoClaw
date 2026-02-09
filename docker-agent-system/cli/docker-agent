@@ -1,0 +1,97 @@
+#!/usr/bin/env node
+
+const { program } = require('commander');
+const path = require('path');
+
+// Import commands
+const createCommand = require('./commands/create');
+const listCommand = require('./commands/list');
+const statusCommand = require('./commands/status');
+const execCommand = require('./commands/exec');
+const logsCommand = require('./commands/logs');
+const destroyCommand = require('./commands/destroy');
+const shellCommand = require('./commands/shell');
+const taskCommand = require('./commands/task');
+const startCommand = require('./commands/start');
+const stopCommand = require('./commands/stop');
+
+program
+  .name('docker-agent')
+  .description('CLI for managing OpenClaw Docker agents')
+  .version('1.0.0');
+
+// Create agent
+program
+  .command('create <name>')
+  .description('Create a new Docker agent')
+  .option('-p, --profile <profile>', 'Profile to apply (builder, tester, deployer, etc.)')
+  .option('-c, --cpus <cpus>', 'CPU limit', '2')
+  .option('-m, --memory <memory>', 'Memory limit', '4g')
+  .option('--disk <disk>', 'Disk limit', '30g')
+  .action(createCommand);
+
+// List agents
+program
+  .command('list')
+  .description('List all Docker agents')
+  .option('-a, --all', 'Show all containers (including stopped)')
+  .action(listCommand);
+
+// Get agent status
+program
+  .command('status <name>')
+  .description('Get detailed status of an agent')
+  .action(statusCommand);
+
+// Execute command
+program
+  .command('exec <name> <command...>')
+  .description('Execute a command in an agent')
+  .option('-i, --interactive', 'Keep stdin open')
+  .option('-t, --tty', 'Allocate a pseudo-TTY')
+  .action(execCommand);
+
+// View logs
+program
+  .command('logs <name>')
+  .description('View agent logs')
+  .option('-f, --follow', 'Follow log output')
+  .option('-n, --tail <lines>', 'Number of lines to show', '100')
+  .action(logsCommand);
+
+// Destroy agent
+program
+  .command('destroy <name>')
+  .description('Destroy an agent (stop and remove container)')
+  .option('-f, --force', 'Force removal')
+  .option('-v, --volumes', 'Remove associated volumes')
+  .action(destroyCommand);
+
+// Interactive shell
+program
+  .command('shell <name>')
+  .description('Open interactive shell in agent')
+  .option('-s, --shell <shell>', 'Shell to use', '/bin/bash')
+  .action(shellCommand);
+
+// Send task
+program
+  .command('task <name> <task-json>')
+  .description('Send a JSON task to an agent')
+  .action(taskCommand);
+
+// Start agent
+program
+  .command('start <name>')
+  .description('Start a stopped agent')
+  .action(startCommand);
+
+// Stop agent
+program
+  .command('stop <name>')
+  .description('Stop a running agent')
+  .option('-t, --time <seconds>', 'Seconds to wait before killing', '10')
+  .action(stopCommand);
+
+// Parse arguments
+program.parse(process.argv);

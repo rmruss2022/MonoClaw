@@ -1,0 +1,42 @@
+{
+  "name": "deployer",
+  "description": "Agent for deploying applications to various platforms",
+  "resources": {
+    "cpus": "2",
+    "memory": "4g",
+    "disk": "20g"
+  },
+  "environment": {
+    "NODE_ENV": "production"
+  },
+  "files": [
+    {
+      "path": "/workspace/DEPLOY_INSTRUCTIONS.md",
+      "content": "# Deployer Agent Instructions\n\n## Purpose\nDeploy applications to cloud platforms\n\n## Capabilities\n- Vercel deployments\n- AWS deployments (via CLI)\n- Docker registry pushes\n- SSH deployments\n- Kubernetes deployments\n\n## Installed Tools\n- Node.js 18+\n- Vercel CLI\n- AWS CLI\n- Docker CLI\n- kubectl\n- SSH client\n"
+    }
+  ],
+  "packages": [
+    "git",
+    "curl",
+    "openssh-client",
+    "rsync",
+    "unzip"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "npm install -g vercel",
+      "description": "Install Vercel CLI"
+    },
+    {
+      "type": "exec",
+      "command": "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -",
+      "description": "Setup Node.js repository"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /workspace/deployments /home/agent/.ssh",
+      "description": "Create deployment directories"
+    }
+  ]
+}

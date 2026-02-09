@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-09T17:17:18.987Z",
+  "lastUpdated": "2026-02-07T02:55:00-05:00",
   "companies": [
     {
       "id": "daylight",
@@ -299,64 +299,6 @@
       "profitable": null,
       "inOffice": null,
       "interviews": []
-    },
-    {
-      "id": "alpine",
-      "name": "Alpine",
-      "description": "",
-      "recruiter": "Juliette Callam",
-      "stage": "Screening Interview Scheduled",
-      "stageNum": 1,
-      "status": "active",
-      "urgent": true,
-      "action": "Screening call on Feb 10",
-      "process": "",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": null,
-      "interviews": [
-        {
-          "date": "2026-02-10",
-          "time": "11:00",
-          "type": "Screening Call with Juliette Callam",
-          "completed": false,
-          "notes": "Initial screening call",
-          "interviewer": {
-            "name": "Juliette Callam",
-            "linkedin": null,
-            "summary": null
-          }
-        }
-      ]
-    },
-    {
-      "id": "brianna-lechner",
-      "name": "Company (via Brianna Lechner)",
-      "description": "",
-      "recruiter": "Brianna Lechner",
-      "stage": "Interview Scheduled",
-      "stageNum": 1,
-      "status": "active",
-      "urgent": true,
-      "action": "Interview on Feb 11",
-      "process": "",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": null,
-      "interviews": [
-        {
-          "date": "2026-02-11",
-          "time": "13:00",
-          "type": "Interview with Brianna Lechner",
-          "completed": false,
-          "notes": "Initial interview",
-          "interviewer": {
-            "name": "Brianna Lechner",
-            "linkedin": null,
-            "summary": null
-          }
-        }
-      ]
     }
   ]
 }

@@ -1,0 +1,26 @@
+node_modules/
+npm-debug.log
+*.log
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Local development
+.env
+.env.local
+
+# Test artifacts
+test/fixtures/
+test/tmp/
+
+# Logs
+logs/
+*.log
+
+# Docker
+.docker/
+
+# IDE
+.vscode/
+.idea/
