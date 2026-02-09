@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, insertActivity, getRecentActivities, getActivityCount } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const activities = getRecentActivities(100); // Last 100 activities
+    // Get limit from query params, default to 500, max 10000
+    const { searchParams } = new URL(request.url);
+    const limitParam = searchParams.get('limit');
+    const limit = Math.min(
+      limitParam ? parseInt(limitParam, 10) : 500,
+      10000
+    );
+    
+    const activities = getRecentActivities(limit);
     const total = getActivityCount();
     
     return NextResponse.json({
       success: true,
       activities,
       total,
+      limit,
     });
   } catch (error) {
     console.error('[Activity GET Error]', error);

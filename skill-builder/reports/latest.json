@@ -1,0 +1,167 @@
+{
+  "timestamp": "2026-02-09T18:51:36.723Z",
+  "runId": "2026-02-09-087a9a3e",
+  "discovered": [
+    {
+      "name": "activity-hub",
+      "type": "http-api",
+      "port": 18796,
+      "status": "running",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/activity-hub/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "activity-tracker",
+      "type": "background-service",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/activity-tracker/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "job-dashboard",
+      "type": "http-api",
+      "port": 18791,
+      "status": "running",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/job-dashboard/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "mission-control",
+      "type": "background-service",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/mission-control/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "moltbook-dashboard",
+      "type": "background-service",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/moltbook-dashboard/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "monoclaw-dashboard",
+      "type": "background-service",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/monoclaw-dashboard/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "raves-dashboard",
+      "type": "background-service",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/raves-dashboard/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "token-collector",
+      "type": "background-service",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/token-collector/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "token-tracker",
+      "type": "background-service",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/token-tracker/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "voice-server",
+      "type": "http-api",
+      "port": 18790,
+      "status": "running",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/voice-server/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "docker-agent-system",
+      "type": "docker-system",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/docker-agent-system/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "jobs",
+      "type": "http-api",
+      "port": 18791,
+      "status": "running",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/jobs/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "matts-claw-blog",
+      "type": "blog",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/matts-claw-blog/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "raves",
+      "type": "nextjs-app",
+      "port": 18800,
+      "status": "running",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/raves/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "tokens",
+      "type": "node-package",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/tokens/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "twitter-plugin",
+      "type": "node-package",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/twitter-plugin/SKILL.md",
+      "errors": []
+    },
+    {
+      "name": "vm-agent-system",
+      "type": "vm-system",
+      "port": null,
+      "status": "unknown",
+      "skillCreated": true,
+      "skillPath": "/Users/matthew/.openclaw/workspace/skills/vm-agent-system/SKILL.md",
+      "errors": []
+    }
+  ],
+  "summary": {
+    "totalDiscovered": 17,
+    "running": 5,
+    "stopped": 0,
+    "skillsCreated": 17,
+    "skillsFailed": 0
+  },
+  "errors": []
+}

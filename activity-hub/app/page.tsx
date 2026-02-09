@@ -117,7 +117,8 @@ function ActivityFeed() {
 
   const loadActivities = async () => {
     try {
-      const response = await fetch('/api/activity/log');
+      // Request up to 5000 activities instead of default limit
+      const response = await fetch('/api/activity/log?limit=5000');
       const data = await response.json();
       if (data.success) {
         setActivities(data.activities);

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw Sessions Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 OpenClaw Sessions Dashboard</h1>
+      <div class="header-stats">
+        <div class="stat">
+          <span class="stat-label">Total Sessions:</span>
+          <span class="stat-value" id="total-sessions">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Active:</span>
+          <span class="stat-value online" id="active-sessions">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Docker Agents:</span>
+          <span class="stat-value docker" id="docker-agents">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Sub-agents:</span>
+          <span class="stat-value" id="subagents">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <button class="btn" onclick="refreshData()">🔄 Refresh</button>
+      <div class="filter-group">
+        <label>
+          <input type="checkbox" id="filter-docker" checked> Show Docker
+        </label>
+        <label>
+          <input type="checkbox" id="filter-local" checked> Show Local
+        </label>
+        <label>
+          <input type="checkbox" id="filter-inactive"> Show Inactive
+        </label>
+      </div>
+      <div class="auto-refresh">
+        <label>
+          <input type="checkbox" id="auto-refresh" checked> Auto-refresh (10s)
+        </label>
+      </div>
+    </div>
+
+    <div class="view-toggle">
+      <button class="btn-view active" data-view="tree" onclick="switchView('tree')">🌳 Tree View</button>
+      <button class="btn-view" data-view="grid" onclick="switchView('grid')">📊 Grid View</button>
+    </div>
+
+    <div id="tree-view" class="sessions-tree">
+      <!-- Session tree will be inserted here -->
+    </div>
+
+    <div id="grid-view" class="sessions-grid" style="display: none;">
+      <!-- Session grid will be inserted here -->
+    </div>
+
+    <div class="logs-section">
+      <h2>System Logs</h2>
+      <div class="logs" id="logs">
+        <div class="log-entry info">
+          <span class="log-time">${new Date().toLocaleTimeString()}</span>
+          <span class="log-message">Dashboard loaded</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Detail Modal -->
+  <div id="modal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+      <div id="modal-body">
+        <!-- Detail content will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

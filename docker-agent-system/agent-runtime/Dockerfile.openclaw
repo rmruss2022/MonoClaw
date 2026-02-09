@@ -1,0 +1,49 @@
+# OpenClaw Docker Agent - OpenClaw Native Runtime
+# Uses openclaw npm package instead of custom WebSocket client
+
+FROM node:22-slim
+
+# Metadata
+LABEL maintainer="OpenClaw"
+LABEL description="OpenClaw-native Docker agent"
+LABEL version="2.0.0"
+
+# Set working directory
+WORKDIR /app
+
+# Install system utilities
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install openclaw globally
+RUN npm install -g openclaw@latest && npm cache clean --force
+
+# Create workspace and config directories
+RUN mkdir -p /workspace /root/.openclaw && \
+    chmod 777 /workspace
+
+# Create entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Set environment defaults
+ENV NODE_ENV=production \
+    AGENT_NAME="docker-agent" \
+    GATEWAY_URL="http://host.docker.internal:18787" \
+    DEFAULT_MODEL="nvidia/moonshotai/kimi-k2.5" \
+    OPENCLAW_SESSION_LABEL="" \
+    THINKING_LEVEL="low"
+
+# Health check - check if openclaw process is running
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD pgrep -f "openclaw" > /dev/null || exit 1
+
+# Expose any ports if needed (optional)
+EXPOSE 3000
+
+# Start via entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
