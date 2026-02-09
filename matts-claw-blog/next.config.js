@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Let Vercel handle deployment natively - no static export needed
+  output: 'export',
   images: {
     unoptimized: true,
   },
