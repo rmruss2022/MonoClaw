@@ -69,7 +69,8 @@ async function getSystemData() {
         // Check actual service health (port-based, more reliable than LaunchAgent)
         // Run all port checks in parallel for speed
         const [voiceServerOnline, jobDashboard, ravesDashboard, tokenTracker, 
-               missionControl, activityHub, moltbookDash, monoclawDash] = await Promise.all([
+               missionControl, activityHub, moltbookDash, monoclawDash, 
+               skillBuilderDash, dockerDash] = await Promise.all([
             checkPort(18790),
             checkPort(18791),
             checkPort(18793),
@@ -77,7 +78,9 @@ async function getSystemData() {
             checkPort(18795),
             checkPort(18796),
             checkPort(18797),
-            checkPort(18798)
+            checkPort(18798),
+            checkPort(18799),
+            checkPort(9092)
         ]);
         const voiceHealth = voiceServerOnline ? 'healthy' : 'down';
         
@@ -173,6 +176,16 @@ async function getSystemData() {
                     name: 'MonoClaw Dashboard',
                     running: monoclawDash,
                     detail: monoclawDash ? `Port 18798` : 'Stopped'
+                },
+                {
+                    name: 'Skill Builder Dashboard',
+                    running: skillBuilderDash,
+                    detail: skillBuilderDash ? `Port 18799` : 'Stopped'
+                },
+                {
+                    name: 'Docker Agent Dashboard',
+                    running: dockerDash,
+                    detail: dockerDash ? `Port 9092` : 'Stopped'
                 }
             ],
             apiKeys: [
