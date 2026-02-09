@@ -1,0 +1,134 @@
+#!/usr/bin/env node
+
+const { Command } = require('commander');
+const chalk = require('chalk');
+
+const createCommand = require('./commands/create');
+const listCommand = require('./commands/list');
+const destroyCommand = require('./commands/destroy');
+const execCommand = require('./commands/exec');
+const logsCommand = require('./commands/logs');
+
+const program = new Command();
+
+program
+  .name('vm-agent')
+  .description('Manage VM-based agents for OpenClaw')
+  .version('1.0.0');
+
+// Create command
+program
+  .command('create <name>')
+  .description('Create a new VM agent')
+  .option('-t, --type <type>', 'Agent type (builder|tester|researcher)', 'generic')
+  .option('-c, --cpu <count>', 'CPU cores', '2')
+  .option('-m, --memory <size>', 'Memory size', '4G')
+  .option('-d, --disk <size>', 'Disk size', '20G')
+  .option('--capabilities <list>', 'Comma-separated capabilities', '')
+  .option('--hub-url <url>', 'Hub WebSocket URL', 'ws://10.0.2.2:9090')
+  .action(createCommand);
+
+// List command
+program
+  .command('list')
+  .description('List all VM agents')
+  .option('-s, --status <status>', 'Filter by status (online|offline)')
+  .option('-t, --type <type>', 'Filter by type')
+  .action(listCommand);
+
+// Status command
+program
+  .command('status <name>')
+  .description('Get agent status')
+  .option('-w, --watch', 'Watch status continuously')
+  .action(async (name, options) => {
+    const status = require('./commands/status');
+    await status(name, options);
+  });
+
+// Exec command
+program
+  .command('exec <name> <command...>')
+  .description('Execute command in agent VM')
+  .option('--sudo', 'Run with sudo')
+  .option('--timeout <ms>', 'Timeout in milliseconds', '300000')
+  .action(execCommand);
+
+// Logs command
+program
+  .command('logs <name>')
+  .description('View agent logs')
+  .option('-f, --follow', 'Follow log output')
+  .option('-n, --lines <count>', 'Number of lines to show', '100')
+  .action(logsCommand);
+
+// Snapshot command
+program
+  .command('snapshot <name> [snapshot-name]')
+  .description('Create a snapshot of agent VM')
+  .action(async (name, snapshotName, options) => {
+    const snapshot = require('./commands/snapshot');
+    await snapshot(name, snapshotName, options);
+  });
+
+// Restore command
+program
+  .command('restore <name> <snapshot-name>')
+  .description('Restore agent VM from snapshot')
+  .action(async (name, snapshotName, options) => {
+    const restore = require('./commands/restore');
+    await restore(name, snapshotName, options);
+  });
+
+// Destroy command
+program
+  .command('destroy <name>')
+  .description('Destroy a VM agent')
+  .option('-f, --force', 'Force destroy without confirmation')
+  .action(destroyCommand);
+
+// Task command
+program
+  .command('task <name> <task-json>')
+  .description('Send a task to agent')
+  .option('--wait', 'Wait for task completion')
+  .option('--timeout <ms>', 'Task timeout', '300000')
+  .action(async (name, taskJson, options) => {
+    const task = require('./commands/task');
+    await task(name, taskJson, options);
+  });
+
+// Shell command
+program
+  .command('shell <name>')
+  .description('Open interactive shell in agent VM')
+  .action(async (name, options) => {
+    const shell = require('./commands/shell');
+    await shell(name, options);
+  });
+
+// Stop command
+program
+  .command('stop <name>')
+  .description('Stop agent VM')
+  .action(async (name, options) => {
+    const stop = require('./commands/stop');
+    await stop(name, options);
+  });
+
+// Start command
+program
+  .command('start <name>')
+  .description('Start agent VM')
+  .action(async (name, options) => {
+    const start = require('./commands/start');
+    await start(name, options);
+  });
+
+// Parse arguments
+program.parse(process.argv);
+
+// Show help if no command provided
+if (!process.argv.slice(2).length) {
+  program.outputHelp();
+}

@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "agent": {
+    "name": "AGENT_NAME",
+    "type": "AGENT_TYPE",
+    "environment": "vm"
+  },
+  "hub": {
+    "url": "ws://HOST_IP:9090",
+    "reconnect": {
+      "enabled": true,
+      "maxAttempts": 10,
+      "initialDelay": 1000,
+      "maxDelay": 60000
+    }
+  },
+  "health": {
+    "enabled": true,
+    "interval": 30000
+  },
+  "tasks": {
+    "defaultTimeout": 1800000,
+    "allowSudo": false,
+    "maxConcurrent": 5
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "agentId": "AGENT_ID",
+  "token": "AGENT_TOKEN",
+  "hubUrl": "ws://HOST_IP:9090",
+  "type": "generic",
+  "capabilities": []
+}

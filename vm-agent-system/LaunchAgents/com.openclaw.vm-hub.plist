@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.openclaw.vm-hub</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/node</string>
+        <string>server.js</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/matthew/.openclaw/workspace/vm-agent-system/hub</string>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/matthew/.openclaw/workspace/vm-agent-system/logs/hub-stdout.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/matthew/.openclaw/workspace/vm-agent-system/logs/hub-stderr.log</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>NODE_ENV</key>
+        <string>production</string>
+        <key>WS_PORT</key>
+        <string>9090</string>
+        <key>HTTP_PORT</key>
+        <string>9091</string>
+    </dict>
+</dict>
+</plist>

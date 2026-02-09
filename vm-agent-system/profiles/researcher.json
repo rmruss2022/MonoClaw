@@ -1,0 +1,42 @@
+{
+  "name": "researcher",
+  "description": "Agent for web scraping, data analysis, and research tasks",
+  "resources": {
+    "cpu": 2,
+    "memory": "6G",
+    "disk": "25G"
+  },
+  "environment": {
+    "PYTHONUNBUFFERED": "1"
+  },
+  "files": [
+    {
+      "path": "/home/ubuntu/RESEARCH_GUIDE.md",
+      "content": "# Researcher Agent Instructions\n\n## Purpose\nWeb scraping, data collection, and analysis\n\n## Capabilities\n- Web scraping (Puppeteer, Playwright, Beautiful Soup)\n- Data processing (pandas, Node.js streams)\n- API integration\n- Report generation\n\n## Typical Workflow\n1. Receive research task\n2. Scrape/fetch data from sources\n3. Process and analyze data\n4. Generate structured output\n5. Return findings\n\n## Installed Tools\n- Node.js + Puppeteer\n- Python + pandas/requests\n- Chrome headless\n"
+    }
+  ],
+  "packages": [
+    "git",
+    "python3",
+    "python3-pip",
+    "chromium-browser",
+    "jq"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "npm install -g puppeteer playwright axios cheerio",
+      "description": "Install Node.js scraping tools"
+    },
+    {
+      "type": "exec",
+      "command": "pip3 install requests beautifulsoup4 pandas lxml",
+      "description": "Install Python scraping tools"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /home/ubuntu/research-data /home/ubuntu/reports",
+      "description": "Create working directories"
+    }
+  ]
+}

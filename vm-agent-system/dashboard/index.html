@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VM Agent Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🖥️ VM Agent Dashboard</h1>
+      <div class="header-stats">
+        <div class="stat">
+          <span class="stat-label">Total Agents:</span>
+          <span class="stat-value" id="total-agents">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Online:</span>
+          <span class="stat-value online" id="online-agents">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Offline:</span>
+          <span class="stat-value offline" id="offline-agents">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Active Tasks:</span>
+          <span class="stat-value" id="active-tasks">0</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="createAgent()">+ Create Agent</button>
+      <button class="btn" onclick="refreshData()">🔄 Refresh</button>
+      <div class="auto-refresh">
+        <label>
+          <input type="checkbox" id="auto-refresh" checked> Auto-refresh (5s)
+        </label>
+      </div>
+    </div>
+
+    <div class="agents-grid" id="agents-grid">
+      <!-- Agent cards will be inserted here -->
+    </div>
+
+    <div class="logs-section">
+      <h2>System Logs</h2>
+      <div class="logs" id="logs">
+        <div class="log-entry info">
+          <span class="log-time">${new Date().toLocaleTimeString()}</span>
+          <span class="log-message">Dashboard loaded</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const HUB_URL = 'http://localhost:9091';
+    let autoRefreshInterval = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      refreshData();
+      setupAutoRefresh();
+    });
+
+    // Setup auto-refresh
+    function setupAutoRefresh() {
+      const checkbox = document.getElementById('auto-refresh');
+      
+      if (checkbox.checked) {
+        startAutoRefresh();
+      }
+
+      checkbox.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          startAutoRefresh();
+        } else {
+          stopAutoRefresh();
+        }
+      });
+    }
+
+    function startAutoRefresh() {
+      if (autoRefreshInterval) return;
+      autoRefreshInterval = setInterval(refreshData, 5000);
+    }
+
+    function stopAutoRefresh() {
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+      }
+    }
+
+    // Fetch and display agents
+    async function refreshData() {
+      try {
+        const response = await fetch(`${HUB_URL}/agents`);
+        const data = await response.json();
+        
+        displayAgents(data.agents || []);
+        updateStats(data.agents || []);
+        
+        addLog('Data refreshed successfully', 'info');
+        
+      } catch (error) {
+        console.error('Failed to fetch agents:', error);
+        addLog('Failed to connect to hub server', 'error');
+      }
+    }
+
+    // Display agents
+    function displayAgents(agents) {
+      const grid = document.getElementById('agents-grid');
+      
+      if (agents.length === 0) {
+        grid.innerHTML = '<div class="no-agents">No agents registered. Create one to get started!</div>';
+        return;
+      }
+
+      grid.innerHTML = agents.map(agent => createAgentCard(agent)).join('');
+    }
+
+    // Create agent card HTML
+    function createAgentCard(agent) {
+      const statusClass = agent.status === 'online' ? 'online' : 'offline';
+      const cpuPercent = agent.health.cpu || 0;
+      const memPercent = agent.health.memory?.usagePercent || 0;
+      const diskPercent = agent.health.disk?.usagePercent || 0;
+      const uptime = agent.health.uptime ? formatUptime(agent.health.uptime) : 'N/A';
+
+      return `
+        <div class="agent-card ${statusClass}">
+          <div class="agent-header">
+            <h3>${agent.id}</h3>
+            <span class="status-badge ${statusClass}">${agent.status}</span>
+          </div>
+          
+          <div class="agent-info">
+            <div class="info-row">
+              <span class="label">Type:</span>
+              <span class="value">${agent.metadata.type || 'generic'}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Uptime:</span>
+              <span class="value">${uptime}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Tasks:</span>
+              <span class="value">${agent.stats.tasksCompleted}/${agent.stats.tasksReceived}</span>
+            </div>
+          </div>
+
+          <div class="agent-resources">
+            <div class="resource">
+              <div class="resource-label">CPU</div>
+              <div class="resource-bar">
+                <div class="resource-fill" style="width: ${cpuPercent}%"></div>
+              </div>
+              <div class="resource-value">${cpuPercent.toFixed(1)}%</div>
+            </div>
+
+            <div class="resource">
+              <div class="resource-label">Memory</div>
+              <div class="resource-bar">
+                <div class="resource-fill" style="width: ${memPercent}%"></div>
+              </div>
+              <div class="resource-value">${memPercent.toFixed(1)}%</div>
+            </div>
+
+            <div class="resource">
+              <div class="resource-label">Disk</div>
+              <div class="resource-bar">
+                <div class="resource-fill" style="width: ${diskPercent}%"></div>
+              </div>
+              <div class="resource-value">${diskPercent.toFixed(1)}%</div>
+            </div>
+          </div>
+
+          ${agent.currentTasks.length > 0 ? `
+            <div class="active-tasks">
+              <div class="tasks-label">Active Tasks (${agent.currentTasks.length})</div>
+              ${agent.currentTasks.map(task => `
+                <div class="task-item">${task.type}</div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          <div class="agent-actions">
+            <button class="btn-small" onclick="viewAgent('${agent.id}')">Details</button>
+            <button class="btn-small" onclick="execCommand('${agent.id}')">Exec</button>
+            <button class="btn-small btn-danger" onclick="destroyAgent('${agent.id}')">Destroy</button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update stats
+    function updateStats(agents) {
+      const online = agents.filter(a => a.status === 'online').length;
+      const offline = agents.length - online;
+      const activeTasks = agents.reduce((sum, a) => sum + a.currentTasks.length, 0);
+
+      document.getElementById('total-agents').textContent = agents.length;
+      document.getElementById('online-agents').textContent = online;
+      document.getElementById('offline-agents').textContent = offline;
+      document.getElementById('active-tasks').textContent = activeTasks;
+    }
+
+    // Add log entry
+    function addLog(message, level = 'info') {
+      const logs = document.getElementById('logs');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${level}`;
+      
+      const time = document.createElement('span');
+      time.className = 'log-time';
+      time.textContent = new Date().toLocaleTimeString();
+      
+      const msg = document.createElement('span');
+      msg.className = 'log-message';
+      msg.textContent = message;
+      
+      entry.appendChild(time);
+      entry.appendChild(msg);
+      logs.insertBefore(entry, logs.firstChild);
+
+      // Limit to 50 log entries
+      while (logs.children.length > 50) {
+        logs.removeChild(logs.lastChild);
+      }
+    }
+
+    // Format uptime
+    function formatUptime(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      
+      if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+      } else {
+        return `${minutes}m`;
+      }
+    }
+
+    // Actions
+    function createAgent() {
+      const name = prompt('Agent name:');
+      if (!name) return;
+      
+      addLog(`Creating agent: ${name}`, 'info');
+      alert('Use CLI to create agents: vm-agent create ' + name);
+    }
+
+    function viewAgent(id) {
+      window.location.href = `agent.html?id=${id}`;
+    }
+
+    function execCommand(id) {
+      const command = prompt('Command to execute:');
+      if (!command) return;
+      
+      addLog(`Executing command on ${id}: ${command}`, 'info');
+      alert('Use CLI to execute: vm-agent exec ' + id + ' ' + command);
+    }
+
+    async function destroyAgent(id) {
+      if (!confirm(`Are you sure you want to destroy agent ${id}?`)) {
+        return;
+      }
+
+      try {
+        addLog(`Destroying agent: ${id}`, 'warn');
+        
+        const response = await fetch(`${HUB_URL}/agents/${id}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          addLog(`Agent ${id} deregistered`, 'success');
+          alert('Agent deregistered. Use CLI to delete VM: vm-agent destroy ' + id);
+          refreshData();
+        } else {
+          addLog(`Failed to deregister agent ${id}`, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Failed to destroy agent:', error);
+        addLog(`Error destroying agent ${id}: ${error.message}`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

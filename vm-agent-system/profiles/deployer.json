@@ -1,0 +1,42 @@
+{
+  "name": "deployer",
+  "description": "Agent for deployment operations (Vercel, AWS, Docker)",
+  "resources": {
+    "cpu": 2,
+    "memory": "4G",
+    "disk": "20G"
+  },
+  "environment": {
+    "NODE_ENV": "production",
+    "DEPLOYMENT_ENV": "production"
+  },
+  "files": [
+    {
+      "path": "/home/ubuntu/DEPLOYMENT_GUIDE.md",
+      "content": "# Deployer Agent Instructions\n\n## Purpose\nHandle deployments to various platforms\n\n## Capabilities\n- Vercel deployments\n- AWS S3/CloudFront\n- Docker image builds and pushes\n- SSH deployments\n\n## Typical Workflow\n1. Receive build artifacts\n2. Run pre-deployment checks\n3. Deploy to target platform\n4. Run post-deployment verification\n5. Return deployment URL/status\n\n## Installed Tools\n- Vercel CLI\n- AWS CLI\n- Docker\n- SSH client\n"
+    }
+  ],
+  "packages": [
+    "git",
+    "curl",
+    "docker.io",
+    "awscli"
+  ],
+  "setup_tasks": [
+    {
+      "type": "exec",
+      "command": "npm install -g vercel",
+      "description": "Install Vercel CLI"
+    },
+    {
+      "type": "exec",
+      "command": "sudo usermod -aG docker ubuntu",
+      "description": "Add user to docker group"
+    },
+    {
+      "type": "exec",
+      "command": "mkdir -p /home/ubuntu/deployments",
+      "description": "Create deployments directory"
+    }
+  ]
+}
