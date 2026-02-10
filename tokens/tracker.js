@@ -17,30 +17,31 @@ async function collectTokenData() {
     try {
         const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw status --sessions');
         
-        // Find the main session line (agent:main:main)
-        const mainSessionMatch = stdout.match(/agent:main:main.*?(\d+)k\/(\d+)k\s+\((\d+)%\)/);
+        // Parse Sessions section - find the row with highest token usage (likely the main interactive session)
+        // Format: │ agent:main:cron:... │ direct │ just now │ claude-sonnet-4-5 │ 31k/200k (15%) │
+        const sessionMatches = [...stdout.matchAll(/│\s+agent:main:([^\s│]+)\s+│\s+(\w+)\s+│\s+([^│]+?)\s+│\s+([^\s│]+)\s+│\s+([\d.]+)k\/([\d.]+)k\s+\((\d+)%\)/g)];
         
-        // Count active sessions
-        const sessionLines = stdout.match(/agent:main:/g);
-        const activeSessions = sessionLines ? sessionLines.length : 1;
-        
-        // Get model from Sessions section
-        const modelMatch = stdout.match(/agent:main:main.*?│\s+([^\s]+)\s+│\s+\d+k/);
-        
-        if (!mainSessionMatch) {
-            console.error('Could not parse token usage from openclaw status');
-            console.error('Looking for main session in output...');
+        if (sessionMatches.length === 0) {
+            console.error('Could not parse any session data from openclaw status');
             return;
         }
+        
+        // Find non-cron session with highest token usage, or fallback to any session
+        const nonCronSessions = sessionMatches.filter(m => !m[1].startsWith('cron:'));
+        const targetSession = (nonCronSessions.length > 0 ? nonCronSessions : sessionMatches)
+            .reduce((max, curr) => parseFloat(curr[5]) > parseFloat(max[5]) ? curr : max);
+        
+        const activeSessions = sessionMatches.length;
         
         const dataPoint = {
             timestamp: Date.now(),
             date: new Date().toISOString(),
-            tokensUsed: `${mainSessionMatch[1]}k`,
-            tokensTotal: `${mainSessionMatch[2]}k`,
-            usagePercent: parseInt(mainSessionMatch[3]),
+            tokensUsed: `${targetSession[5]}k`,
+            tokensTotal: `${targetSession[6]}k`,
+            usagePercent: parseInt(targetSession[7]),
             activeSessions: activeSessions,
-            model: modelMatch ? modelMatch[1] : 'claude-sonnet-4-5'
+            model: targetSession[4] || 'claude-sonnet-4-5',
+            sessionType: targetSession[1].startsWith('cron:') ? 'cron' : targetSession[2]
         };
         
         // Load existing history

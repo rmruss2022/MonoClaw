@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-09T17:17:18.987Z",
+  "lastUpdated": "2026-02-09T21:44:00.000Z",
   "companies": [
     {
       "id": "daylight",
@@ -91,11 +91,11 @@
       "name": "Figure",
       "description": "Blockchain/investing platform",
       "recruiter": "Tyler",
-      "stage": "Scheduling Interview",
+      "stage": "Interview Scheduled",
       "stageNum": 2,
       "status": "active",
-      "urgent": false,
-      "action": "Wait for interview confirmation",
+      "urgent": true,
+      "action": "Interview on Feb 11",
       "process": "HR screen → Coding → Team",
       "profitable": null,
       "inOffice": null,
@@ -119,6 +119,18 @@
           "type": "Submitted availability",
           "completed": true,
           "notes": "Sent times for interview next week"
+        },
+        {
+          "date": "2026-02-11",
+          "time": "12:30",
+          "type": "Interview with Figure Lending",
+          "completed": false,
+          "notes": "Scheduled interview",
+          "interviewer": {
+            "name": null,
+            "linkedin": null,
+            "summary": null
+          }
         }
       ]
     },
@@ -180,6 +192,36 @@
           "notes": "Recruiter call completed"
         }
       ]
+    },
+    {
+      "id": "traba",
+      "name": "Traba",
+      "description": "Labor marketplace connecting light industrial businesses with temp workers. Mobile-first staffing platform for manufacturing, warehousing, logistics. $45M raised (Founders Fund, Khosla Ventures)",
+      "recruiter": null,
+      "stage": "Interview Scheduled",
+      "stageNum": 2,
+      "status": "active",
+      "urgent": true,
+      "action": "Interview on Feb 11",
+      "process": null,
+      "profitable": null,
+      "inOffice": null,
+      "vibe": null,
+      "interviews": [
+        {
+          "date": "2026-02-11",
+          "time": "11:00",
+          "type": "Interview for Software Engineer (Fullstack)",
+          "completed": false,
+          "notes": "Scheduled interview",
+          "interviewer": {
+            "name": null,
+            "linkedin": null,
+            "summary": null
+          }
+        }
+      ],
+      "url": "https://traba.work"
     },
     {
       "id": "yarn",
