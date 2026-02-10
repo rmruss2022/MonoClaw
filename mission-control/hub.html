@@ -488,7 +488,9 @@
                     'Mission Control': '🎛️',
                     'Activity Hub': '🦞',
                     'Moltbook Dashboard': '📱',
-                    'MonoClaw Dashboard': '🦾'
+                    'MonoClaw Dashboard': '🦾',
+                    'Skill Builder Dashboard': '🔍',
+                    'Docker Agent Dashboard': '🐳'
                 };
                 const colors = {
                     'Gateway': '#00d9ff',
@@ -499,7 +501,9 @@
                     'Mission Control': '#a29bfe',
                     'Activity Hub': '#9b59b6',
                     'Moltbook Dashboard': '#e74c3c',
-                    'MonoClaw Dashboard': '#ff9ff3'
+                    'MonoClaw Dashboard': '#ff9ff3',
+                    'Skill Builder Dashboard': '#22c55e',
+                    'Docker Agent Dashboard': '#3b82f6'
                 };
                 const urls = {
                     'Voice Server': 'http://localhost:18790/status',
@@ -509,7 +513,9 @@
                     'Mission Control': 'http://localhost:18795/hub',
                     'Activity Hub': 'http://localhost:18796',
                     'Moltbook Dashboard': 'http://localhost:18797',
-                    'MonoClaw Dashboard': 'http://localhost:18798'
+                    'MonoClaw Dashboard': 'http://localhost:18798',
+                    'Skill Builder Dashboard': 'http://localhost:18799',
+                    'Docker Agent Dashboard': 'http://localhost:9092'
                 };
                 
                 const apps = systemData.services.map(s => {
@@ -555,7 +561,11 @@
                 { name: 'Job Search Tracker', url: 'http://localhost:18791', detail: '11 companies tracked' },
                 { name: 'NYC Raves', url: 'http://localhost:18793', detail: '24 events this week' },
                 { name: 'Token Usage Tracker', url: 'http://localhost:18794', detail: 'Real-time token monitoring' },
-                { name: 'Mission Control', url: 'http://localhost:18795', detail: 'This dashboard' }
+                { name: 'Mission Control', url: 'http://localhost:18795', detail: 'This dashboard' },
+                { name: 'Activity Hub', url: 'http://localhost:18796', detail: 'Track all agent activity' },
+                { name: 'MonoClaw Dashboard', url: 'http://localhost:18798', detail: '19 projects dashboard' },
+                { name: 'Skill Builder', url: 'http://localhost:18799', detail: '17 services documented' },
+                { name: 'Docker Agent System', url: 'http://localhost:9092', detail: 'Container agent runtime' }
             ];
             const projectsHtml = projects.map(p => `
                 <div class="project-item" onclick="window.open('${p.url}', '_blank')">
