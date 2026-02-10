@@ -214,6 +214,26 @@ async function getSystemData() {
                     name: 'Mission Control',
                     description: 'System status and command hub',
                     url: 'http://127.0.0.1:18795'
+                },
+                {
+                    name: 'Activity Hub',
+                    description: 'Track all agent activity and sessions',
+                    url: 'http://127.0.0.1:18796'
+                },
+                {
+                    name: 'MonoClaw Dashboard',
+                    description: '19 active projects, quick launch buttons',
+                    url: 'http://127.0.0.1:18798'
+                },
+                {
+                    name: 'Skill Builder',
+                    description: 'Auto-discover services, generate documentation',
+                    url: 'http://127.0.0.1:18799'
+                },
+                {
+                    name: 'Docker Agent System',
+                    description: 'Container-based agent runtime with WebSocket API',
+                    url: 'http://127.0.0.1:9092'
                 }
             ],
             cron: cronJobs,
