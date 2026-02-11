@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-11T20:37:39.196Z",
+  "lastUpdated": "2026-02-11T20:39:03.077Z",
   "companies": [
     {
       "id": "daylight",
@@ -95,7 +95,7 @@
       "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Book live coding via Greenhouse (recommended: Tue 2/17 10 AM or 2 PM)",
+      "action": "Availability submitted - awaiting interview confirmation",
       "process": "HR screen → Initial interview → Live coding → Team",
       "profitable": null,
       "inOffice": null,
@@ -166,6 +166,19 @@
           "interviewer": {
             "name": "Perry Donnafield",
             "title": "Principal Software Engineer",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:37",
+          "type": "Submitted availability to Emily Ku",
+          "completed": true,
+          "notes": "Submitted Greenhouse availability for next week. Also requested Holly email for follow-up.",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
             "linkedin": null,
             "summary": null
           }
