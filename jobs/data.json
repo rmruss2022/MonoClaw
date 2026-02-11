@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-11T19:29:00.000Z",
+  "lastUpdated": "2026-02-11T20:06:30.119Z",
   "companies": [
     {
       "id": "daylight",
@@ -276,8 +276,8 @@
     {
       "id": "yarn",
       "name": "Yarn",
-      "description": "",
-      "recruiter": "Shirly",
+      "description": "Rare Capital portfolio company",
+      "recruiter": "Shirly Ribak (shirly@rare-capital.com)",
       "stage": "Post-Intro",
       "stageNum": 1,
       "status": "active",
@@ -426,13 +426,13 @@
       "name": "Gloss Genius",
       "url": "https://www.glossgenius.com",
       "description": "Front-end role. Backend uses Scala/Go, interested in integrating AI into workflow",
-      "recruiter": null,
-      "stage": "Technical Round",
+      "recruiter": "Brianna Lechner (b.lechner@glossgenius.com)",
+      "stage": "Technical Round - Schedule",
       "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Schedule technical call with Brianna",
-      "process": "Initial interviews → Culture fit → Technical",
+      "action": "Submit availability for CoderPad live coding",
+      "process": "Initial interviews → Culture fit → Technical (CoderPad)",
       "profitable": null,
       "inOffice": null,
       "vibe": "Going well ⭐",
@@ -461,12 +461,25 @@
         },
         {
           "date": "2026-02-11",
-          "time": "13:00",
-          "type": "Technical interview with Brianna",
-          "completed": false,
-          "notes": "Technical round - need to schedule",
+          "time": "15:05",
+          "type": "Technical interview details from Brianna",
+          "completed": true,
+          "notes": "Email received with CoderPad live coding details. 20-35 min, medium LeetCode level. Submit availability: https://www.gem.com/scheduling/availability/5087b20b-d82d-4b2c-8a99-e579edcbb2a8",
           "interviewer": {
-            "name": "Brianna",
+            "name": "Brianna Lechner",
+            "email": "b.lechner@glossgenius.com",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "TBD",
+          "type": "Technical/Pair Programming Interview (CoderPad)",
+          "completed": false,
+          "notes": "20-35 min live coding. Practice medium LeetCode. Interview window: 9:30am-5:30pm ET. Collaborative environment, can look up docs.",
+          "interviewer": {
+            "name": "Brianna Lechner",
+            "email": "b.lechner@glossgenius.com",
             "linkedin": null,
             "summary": null
           }
