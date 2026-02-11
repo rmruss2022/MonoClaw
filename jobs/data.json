@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-09T21:44:00.000Z",
+  "lastUpdated": "2026-02-11T19:29:00.000Z",
   "companies": [
     {
       "id": "daylight",
@@ -89,17 +89,17 @@
     {
       "id": "figure",
       "name": "Figure",
-      "description": "Blockchain/investing platform",
-      "recruiter": "Tyler",
-      "stage": "Interview Scheduled",
-      "stageNum": 2,
+      "description": "Blockchain/investing platform - Software Engineer, Originations",
+      "recruiter": "Tyler Ichikawa",
+      "stage": "Live Coding Scheduled",
+      "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Interview on Feb 11",
-      "process": "HR screen → Coding → Team",
+      "action": "Schedule live coding with Perry Donnafield",
+      "process": "HR screen → Initial interview → Live coding → Team",
       "profitable": null,
       "inOffice": null,
-      "vibe": "Wait and see 🤷",
+      "vibe": "Moving forward ⭐",
       "interviews": [
         {
           "date": "2026-02-05",
@@ -124,10 +124,35 @@
           "date": "2026-02-11",
           "time": "12:30",
           "type": "Interview with Figure Lending",
-          "completed": false,
-          "notes": "Scheduled interview",
+          "completed": true,
+          "notes": "Interview completed - moved forward!",
           "interviewer": {
             "name": null,
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "14:28",
+          "type": "Tyler follow-up - moving forward",
+          "completed": true,
+          "notes": "Tyler confirmed next step: 1hr live coding with Perry Donnafield. Choose your language, no prep needed. ⚠️ AI usage prohibited",
+          "interviewer": {
+            "name": "Tyler Ichikawa",
+            "title": "Technical Recruiter",
+            "linkedin": "https://www.linkedin.com/in/tyler-ichikawa-talent/",
+            "summary": null
+          }
+        },
+        {
+          "date": "TBD",
+          "type": "Live Coding Session with Perry Donnafield",
+          "completed": false,
+          "notes": "1-hour live coding - choose language, everything set up on call. Coordinating team will schedule",
+          "interviewer": {
+            "name": "Perry Donnafield",
+            "title": "Principal Software Engineer",
             "linkedin": null,
             "summary": null
           }
@@ -198,24 +223,49 @@
       "name": "Traba",
       "description": "Labor marketplace connecting light industrial businesses with temp workers. Mobile-first staffing platform for manufacturing, warehousing, logistics. $45M raised (Founders Fund, Khosla Ventures)",
       "recruiter": null,
-      "stage": "Interview Scheduled",
-      "stageNum": 2,
+      "stage": "Systems Design Scheduled",
+      "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Interview on Feb 11",
-      "process": null,
+      "action": "Systems Design interview Feb 13",
+      "process": "Initial → Systems Design → Onsite → CEO/Founders",
       "profitable": null,
       "inOffice": null,
-      "vibe": null,
+      "vibe": "Going great ⭐⭐",
       "interviews": [
         {
           "date": "2026-02-11",
           "time": "11:00",
-          "type": "Interview for Software Engineer (Fullstack)",
-          "completed": false,
-          "notes": "Scheduled interview",
+          "type": "Interview with Connor",
+          "completed": true,
+          "notes": "WENT WELL - bonded over soccer, moved forward",
           "interviewer": {
-            "name": null,
+            "name": "Connor",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "14:27",
+          "type": "Follow-up from Jeff Chen (Director of Engineering)",
+          "completed": true,
+          "notes": "Jeff shadowed the Connor call, confirmed next step is systems design",
+          "interviewer": {
+            "name": "Jeff Chen",
+            "title": "Director of Engineering",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-13",
+          "time": "11:30",
+          "type": "Systems Design (Build Traba) with Austin Carter",
+          "completed": false,
+          "notes": "Google Meet - https://meet.google.com/jxa-uoip-xke",
+          "interviewer": {
+            "name": "Austin Carter",
             "linkedin": null,
             "summary": null
           }
@@ -372,28 +422,51 @@
       ]
     },
     {
-      "id": "brianna-lechner",
-      "name": "Company (via Brianna Lechner)",
-      "description": "",
-      "recruiter": "Brianna Lechner",
-      "stage": "Interview Scheduled",
-      "stageNum": 1,
+      "id": "glossgenius",
+      "name": "Gloss Genius",
+      "url": "https://www.glossgenius.com",
+      "description": "Front-end role. Backend uses Scala/Go, interested in integrating AI into workflow",
+      "recruiter": null,
+      "stage": "Technical Round",
+      "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Interview on Feb 11",
-      "process": "",
+      "action": "Schedule technical call with Brianna",
+      "process": "Initial interviews → Culture fit → Technical",
       "profitable": null,
       "inOffice": null,
-      "vibe": null,
+      "vibe": "Going well ⭐",
       "interviews": [
+        {
+          "date": "2026-02-XX",
+          "type": "First interview with Trevor and Connor",
+          "completed": true,
+          "notes": "Went well, talked about soccer",
+          "interviewer": {
+            "name": "Trevor and Connor",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-XX",
+          "type": "Culture fit with Holly",
+          "completed": true,
+          "notes": "Talked about culture, moved me onto technical round",
+          "interviewer": {
+            "name": "Holly",
+            "linkedin": null,
+            "summary": null
+          }
+        },
         {
           "date": "2026-02-11",
           "time": "13:00",
-          "type": "Interview with Brianna Lechner",
+          "type": "Technical interview with Brianna",
           "completed": false,
-          "notes": "Initial interview",
+          "notes": "Technical round - need to schedule",
           "interviewer": {
-            "name": "Brianna Lechner",
+            "name": "Brianna",
             "linkedin": null,
             "summary": null
           }
