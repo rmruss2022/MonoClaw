@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-11T20:39:03.077Z",
+  "lastUpdated": "2026-02-11T20:40:56.999Z",
   "companies": [
     {
       "id": "daylight",
@@ -179,6 +179,20 @@
           "interviewer": {
             "name": "Emily Ku",
             "title": "Recruiter",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:40",
+          "type": "Received Holly Wendt contact info from Emily",
+          "completed": true,
+          "notes": "Emily provided Holly Wendt email: hwendt@figure.com",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "email": "eku@figure.com",
             "linkedin": null,
             "summary": null
           }
