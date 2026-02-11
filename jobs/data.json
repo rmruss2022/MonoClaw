@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-11T20:06:30.119Z",
+  "lastUpdated": "2026-02-11T20:37:39.196Z",
   "companies": [
     {
       "id": "daylight",
@@ -90,12 +90,12 @@
       "id": "figure",
       "name": "Figure",
       "description": "Blockchain/investing platform - Software Engineer, Originations",
-      "recruiter": "Tyler Ichikawa",
-      "stage": "Live Coding Scheduled",
+      "recruiter": "Tyler Ichikawa / Emily Ku",
+      "stage": "Live Coding - Schedule via Greenhouse",
       "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Schedule live coding with Perry Donnafield",
+      "action": "Book live coding via Greenhouse (recommended: Tue 2/17 10 AM or 2 PM)",
       "process": "HR screen → Initial interview → Live coding → Team",
       "profitable": null,
       "inOffice": null,
@@ -146,10 +146,23 @@
           }
         },
         {
+          "date": "2026-02-11",
+          "time": "15:36",
+          "type": "Emily Ku - scheduling email received",
+          "completed": true,
+          "notes": "Emily sent Greenhouse scheduling link for live coding. Recommended: Tuesday 2/17 at 10 AM or 2 PM EST",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
           "date": "TBD",
           "type": "Live Coding Session with Perry Donnafield",
           "completed": false,
-          "notes": "1-hour live coding - choose language, everything set up on call. Coordinating team will schedule",
+          "notes": "1-hour live coding - choose language, everything set up on call. ⚠️ AI prohibited. Schedule via: https://app2.greenhouse.io/availability/3945b956377a0a7db81883a07123dba4 | Recommended times: Tue 2/17 (10 AM or 2 PM), Wed 2/18 (10 AM-4 PM), Thu 2/19 (10 AM-4 PM), Fri 2/20 (10 AM-1 PM)",
           "interviewer": {
             "name": "Perry Donnafield",
             "title": "Principal Software Engineer",
