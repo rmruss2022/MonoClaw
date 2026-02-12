@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-09T21:44:00.000Z",
+  "lastUpdated": "2026-02-11T21:01:36.084Z",
   "companies": [
     {
       "id": "daylight",
@@ -89,17 +89,17 @@
     {
       "id": "figure",
       "name": "Figure",
-      "description": "Blockchain/investing platform",
-      "recruiter": "Tyler",
-      "stage": "Interview Scheduled",
-      "stageNum": 2,
+      "description": "Blockchain/investing platform - Software Engineer, Originations",
+      "recruiter": "Tyler Ichikawa / Emily Ku",
+      "stage": "Live Coding - Schedule via Greenhouse",
+      "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Interview on Feb 11",
-      "process": "HR screen → Coding → Team",
+      "action": "Availability submitted - awaiting interview confirmation",
+      "process": "HR screen → Initial interview → Live coding → Team",
       "profitable": null,
       "inOffice": null,
-      "vibe": "Wait and see 🤷",
+      "vibe": "Moving forward ⭐",
       "interviews": [
         {
           "date": "2026-02-05",
@@ -124,10 +124,75 @@
           "date": "2026-02-11",
           "time": "12:30",
           "type": "Interview with Figure Lending",
-          "completed": false,
-          "notes": "Scheduled interview",
+          "completed": true,
+          "notes": "Interview completed - moved forward!",
           "interviewer": {
             "name": null,
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "14:28",
+          "type": "Tyler follow-up - moving forward",
+          "completed": true,
+          "notes": "Tyler confirmed next step: 1hr live coding with Perry Donnafield. Choose your language, no prep needed. ⚠️ AI usage prohibited",
+          "interviewer": {
+            "name": "Tyler Ichikawa",
+            "title": "Technical Recruiter",
+            "linkedin": "https://www.linkedin.com/in/tyler-ichikawa-talent/",
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:36",
+          "type": "Emily Ku - scheduling email received",
+          "completed": true,
+          "notes": "Emily sent Greenhouse scheduling link for live coding. Recommended: Tuesday 2/17 at 10 AM or 2 PM EST",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "TBD",
+          "type": "Live Coding Session with Perry Donnafield",
+          "completed": false,
+          "notes": "1-hour live coding - choose language, everything set up on call. ⚠️ AI prohibited. Schedule via: https://app2.greenhouse.io/availability/3945b956377a0a7db81883a07123dba4 | Recommended times: Tue 2/17 (10 AM or 2 PM), Wed 2/18 (10 AM-4 PM), Thu 2/19 (10 AM-4 PM), Fri 2/20 (10 AM-1 PM)",
+          "interviewer": {
+            "name": "Perry Donnafield",
+            "title": "Principal Software Engineer",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:37",
+          "type": "Submitted availability to Emily Ku",
+          "completed": true,
+          "notes": "Submitted Greenhouse availability for next week. Also requested Holly email for follow-up.",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:40",
+          "type": "Received Holly Wendt contact info from Emily",
+          "completed": true,
+          "notes": "Emily provided Holly Wendt email: hwendt@figure.com",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "email": "eku@figure.com",
             "linkedin": null,
             "summary": null
           }
@@ -138,14 +203,14 @@
       "id": "cerula",
       "name": "Cerula",
       "url": "https://www.linkedin.com/company/cerula-care",
-      "description": "Healthcare - cancer patients. Cerula Care provides collaborative care coordination.",
-      "recruiter": "Steph",
-      "stage": "Take-home Submitted",
-      "stageNum": 3,
+      "description": "Healthcare - cancer patients. Cerula Care provides collaborative care coordination. Position: Senior Full Stack Engineer",
+      "recruiter": "Steph Shaw (steph.shaw@cerulacare.com)",
+      "stage": "Interview Scheduled",
+      "stageNum": 4,
       "status": "active",
       "urgent": true,
-      "action": "Hear back from Steph on take-home",
-      "process": "Call → Take-home → ?",
+      "action": "Interview Friday 2/13 at 1:00 PM EST (⚠️ 30 min after Traba)",
+      "process": "Call → Take-home → Interview with Ayush → ?",
       "profitable": null,
       "inOffice": null,
       "vibe": "Very great ⭐⭐",
@@ -158,6 +223,7 @@
           "notes": "Deep mission, helping cancer patients",
           "interviewer": {
             "name": "Steph Shaw",
+            "email": "steph.shaw@cerulacare.com",
             "linkedin": null,
             "summary": "**Steph Shaw** - Recruiting/Hiring at Cerula Care\n\nWorking on Cerula Care's mission to provide collaborative care coordination for cancer patients. Company focuses on matching patients with appropriate care teams and support services - deeply mission-driven work in the healthcare space.\n\nLinkedIn profile not found under this spelling - may use Stephanie or different variation professionally"
           }
@@ -167,6 +233,18 @@
           "type": "Take-home submitted",
           "completed": true,
           "notes": "Completed and submitted take-home assignment"
+        },
+        {
+          "date": "2026-02-13",
+          "time": "13:00",
+          "type": "Interview with Ayush Mathur",
+          "completed": false,
+          "notes": "Senior Full Stack Engineer interview. Microsoft Teams: https://teams.microsoft.com/l/meetup-join/19%3ameeting_N2JjMGExOGQtZDI0Yi00NWE4LWExMDQtOTBiZWY4N2JmM2Rm%40thread.v2/0?context=%7b%22Tid%22%3a%2221e8d93f-3f06-4b05-ba71-c21c34d4d5c5%22%2c%22Oid%22%3a%2256f9ec29-1cc0-49dc-bad5-336c9aa09cd8%22%7d | ⚠️ SCHEDULING NOTE: 30 min after Traba interview ends",
+          "interviewer": {
+            "name": "Ayush Mathur",
+            "linkedin": null,
+            "summary": null
+          }
         }
       ]
     },
@@ -198,24 +276,49 @@
       "name": "Traba",
       "description": "Labor marketplace connecting light industrial businesses with temp workers. Mobile-first staffing platform for manufacturing, warehousing, logistics. $45M raised (Founders Fund, Khosla Ventures)",
       "recruiter": null,
-      "stage": "Interview Scheduled",
-      "stageNum": 2,
+      "stage": "Systems Design Scheduled",
+      "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Interview on Feb 11",
-      "process": null,
+      "action": "Systems Design interview Feb 13",
+      "process": "Initial → Systems Design → Onsite → CEO/Founders",
       "profitable": null,
       "inOffice": null,
-      "vibe": null,
+      "vibe": "Going great ⭐⭐",
       "interviews": [
         {
           "date": "2026-02-11",
           "time": "11:00",
-          "type": "Interview for Software Engineer (Fullstack)",
-          "completed": false,
-          "notes": "Scheduled interview",
+          "type": "Interview with Connor",
+          "completed": true,
+          "notes": "WENT WELL - bonded over soccer, moved forward",
           "interviewer": {
-            "name": null,
+            "name": "Connor",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "14:27",
+          "type": "Follow-up from Jeff Chen (Director of Engineering)",
+          "completed": true,
+          "notes": "Jeff shadowed the Connor call, confirmed next step is systems design",
+          "interviewer": {
+            "name": "Jeff Chen",
+            "title": "Director of Engineering",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-13",
+          "time": "11:30",
+          "type": "Systems Design (Build Traba) with Austin Carter",
+          "completed": false,
+          "notes": "Google Meet - https://meet.google.com/jxa-uoip-xke",
+          "interviewer": {
+            "name": "Austin Carter",
             "linkedin": null,
             "summary": null
           }
@@ -226,8 +329,8 @@
     {
       "id": "yarn",
       "name": "Yarn",
-      "description": "",
-      "recruiter": "Shirly",
+      "description": "Rare Capital portfolio company",
+      "recruiter": "Shirly Ribak (shirly@rare-capital.com)",
       "stage": "Post-Intro",
       "stageNum": 1,
       "status": "active",
@@ -372,28 +475,64 @@
       ]
     },
     {
-      "id": "brianna-lechner",
-      "name": "Company (via Brianna Lechner)",
-      "description": "",
-      "recruiter": "Brianna Lechner",
-      "stage": "Interview Scheduled",
-      "stageNum": 1,
+      "id": "glossgenius",
+      "name": "Gloss Genius",
+      "url": "https://www.glossgenius.com",
+      "description": "Front-end role. Backend uses Scala/Go, interested in integrating AI into workflow",
+      "recruiter": "Brianna Lechner (b.lechner@glossgenius.com)",
+      "stage": "Technical Round - Schedule",
+      "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "Interview on Feb 11",
-      "process": "",
+      "action": "Submit availability for CoderPad live coding",
+      "process": "Initial interviews → Culture fit → Technical (CoderPad)",
       "profitable": null,
       "inOffice": null,
-      "vibe": null,
+      "vibe": "Going well ⭐",
       "interviews": [
         {
+          "date": "2026-02-XX",
+          "type": "First interview with Trevor and Connor",
+          "completed": true,
+          "notes": "Went well, talked about soccer",
+          "interviewer": {
+            "name": "Trevor and Connor",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-XX",
+          "type": "Culture fit with Holly",
+          "completed": true,
+          "notes": "Talked about culture, moved me onto technical round",
+          "interviewer": {
+            "name": "Holly",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
           "date": "2026-02-11",
-          "time": "13:00",
-          "type": "Interview with Brianna Lechner",
-          "completed": false,
-          "notes": "Initial interview",
+          "time": "15:05",
+          "type": "Technical interview details from Brianna",
+          "completed": true,
+          "notes": "Email received with CoderPad live coding details. 20-35 min, medium LeetCode level. Submit availability: https://www.gem.com/scheduling/availability/5087b20b-d82d-4b2c-8a99-e579edcbb2a8",
           "interviewer": {
             "name": "Brianna Lechner",
+            "email": "b.lechner@glossgenius.com",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "TBD",
+          "type": "Technical/Pair Programming Interview (CoderPad)",
+          "completed": false,
+          "notes": "20-35 min live coding. Practice medium LeetCode. Interview window: 9:30am-5:30pm ET. Collaborative environment, can look up docs.",
+          "interviewer": {
+            "name": "Brianna Lechner",
+            "email": "b.lechner@glossgenius.com",
             "linkedin": null,
             "summary": null
           }
