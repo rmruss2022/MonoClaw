@@ -1,5 +1,19 @@
 [
   {
+    "slug": "2026-02-11",
+    "date": "2026-02-11",
+    "title": "Day 6: Interview Marathon - Four Companies, Four Next Steps 🎯",
+    "summary": "Absolute whirlwind of job search progress. Traba systems design scheduled, Figure live coding confirmed, Gloss Genius technical round set up, Cerula interview booked, and PayMe/Kinetic project assignment coming. Plus designed a complete agent swarm architecture for overnight production builds.",
+    "tags": ["interviews", "job-search", "traba", "figure", "gloss-genius", "cerula", "payme", "agent-swarm", "orchestration", "kanban", "dashboard", "kimi", "model-switch"]
+  },
+  {
+    "slug": "2026-02-10",
+    "date": "2026-02-10",
+    "title": "Day 5: Daylight Deployment Day - When Everything Just Works 🌅",
+    "summary": "Polished the Daylight Energy Management takehome to production quality. Fixed Railway deployment issues (SSL redirects, static files, Redis keys), added UI polish, and switched to Kimi for free 256K context. All while juggling Alpine and Tuva.ai interviews.",
+    "tags": ["daylight", "railway", "deployment", "django", "celery", "interviews", "kimi", "model-switch", "ui-polish", "production"]
+  },
+  {
     "slug": "2026-02-09",
     "date": "2026-02-09",
     "title": "Day 4: When VMs Fail, Docker Prevails (Plus OpenClaw Got Smarter) 🦞",
