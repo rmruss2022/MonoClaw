@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Swarm Dashboard</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .kanban-column { min-height: 400px; }
+    .task-card { transition: all 0.2s; }
+    .task-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    
+    /* Cannon styles */
+    .cannon {
+      width: 200px;
+      height: 120px;
+      position: relative;
+      margin: 0 auto;
+    }
+    .cannon-base {
+      width: 80px;
+      height: 40px;
+      background: linear-gradient(to bottom, #4a5568, #2d3748);
+      border-radius: 8px;
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .cannon-barrel {
+      width: 100px;
+      height: 30px;
+      background: linear-gradient(to right, #718096, #4a5568);
+      border-radius: 15px;
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-10deg);
+      transform-origin: left center;
+      transition: transform 0.3s ease;
+    }
+    .cannon-barrel.firing {
+      animation: recoil 0.3s ease;
+    }
+    @keyframes recoil {
+      0%, 100% { transform: translateX(-50%) rotate(-10deg); }
+      50% { transform: translateX(-60%) rotate(-15deg); }
+    }
+    .cannon-ball {
+      width: 20px;
+      height: 20px;
+      background: radial-gradient(circle at 30% 30%, #2d3748, #000);
+      border-radius: 50%;
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      opacity: 0;
+    }
+    .cannon-ball.firing {
+      animation: fire 1s ease-out forwards;
+    }
+    @keyframes fire {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+      }
+      70% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(300px, -150px) scale(0.5);
+      }
+    }
+    .explosion {
+      position: absolute;
+      top: -80px;
+      right: -50px;
+      width: 100px;
+      height: 100px;
+      opacity: 0;
+    }
+    .explosion.active {
+      animation: explode 0.6s ease-out forwards;
+    }
+    @keyframes explode {
+      0% {
+        opacity: 0;
+        transform: scale(0);
+      }
+      30% {
+        opacity: 1;
+        transform: scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(2);
+      }
+    }
+    .flash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.8);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .flash.active {
+      animation: flash 0.5s ease-out;
+    }
+    @keyframes flash {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+    .congrats-text {
+      font-size: 3rem;
+      font-weight: bold;
+      text-align: center;
+      background: linear-gradient(45deg, #f59e0b, #ef4444, #ec4899, #8b5cf6, #3b82f6);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbow 2s ease infinite;
+      opacity: 0;
+    }
+    .congrats-text.show {
+      animation: rainbow 2s ease infinite, fadeIn 0.5s ease forwards;
+    }
+    @keyframes rainbow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // Main Dashboard Component
+    function Dashboard() {
+      const [data, setData] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [lastUpdate, setLastUpdate] = useState(new Date());
+      const [projectId, setProjectId] = useState(3); // Default to Ora AI
+      const [projects, setProjects] = useState([]);
+      const [showCompletion, setShowCompletion] = useState(false);
+      const [previousProgress, setPreviousProgress] = useState(0);
+      const [contextDocs, setContextDocs] = useState([]);
+
+      // Load available projects
+      const loadProjects = async () => {
+        try {
+          const response = await fetch('http://localhost:3001/api/projects');
+          const data = await response.json();
+          setProjects(data.projects.map(p => ({ id: p.id, name: p.name, isDemo: false })));
+        } catch (err) {
+          console.error('Error loading projects:', err);
+        }
+      };
+
+      // Load context documents
+      const loadContext = async () => {
+        try {
+          const response = await fetch(`http://localhost:3001/api/projects/${projectId}/context`);
+          if (response.ok) {
+            const json = await response.json();
+            console.log('📚 Context loaded:', json.documents.length, 'documents');
+            setContextDocs(json.documents || []);
+          } else {
+            console.log('⚠️ Context response not OK:', response.status);
+          }
+        } catch (err) {
+          console.error('❌ Error loading context:', err);
+        }
+      };
+
+      // Load data from API
+      const loadData = async () => {
+        try {
+          const apiUrl = `http://localhost:3001/api/projects/${projectId}`;
+          const response = await fetch(apiUrl);
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+          }
+          const json = await response.json();
+          
+          // Check for completion
+          const total = json.stats.total_tasks || 1;
+          const completed = json.stats.completed || 0;
+          const progress = Math.round((completed / total) * 100);
+          
+          // Show completion modal when reaching 100%
+          if (progress === 100 && previousProgress < 100) {
+            setShowCompletion(true);
+          }
+          setPreviousProgress(progress);
+          
+          setData(json);
+          setError(null);
+          setLastUpdate(new Date());
+        } catch (err) {
+          console.error('Error loading data:', err);
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      // Load projects on mount
+      useEffect(() => {
+        loadProjects();
+      }, []);
+
+      // Auto-refresh every 5 seconds when projectId changes
+      useEffect(() => {
+        loadData();
+        loadContext();
+        const interval = setInterval(loadData, 5000);
+        return () => clearInterval(interval);
+      }, [projectId]);
+
+      if (loading) return <LoadingScreen />;
+      if (error) return <ErrorScreen error={error} retry={loadData} />;
+      if (!data) return <ErrorScreen error="No data loaded" retry={loadData} />;
+
+      return (
+        <div className="min-h-screen bg-gray-50 p-6">
+          <Header 
+            project={data.project} 
+            lastUpdate={lastUpdate} 
+            refresh={loadData}
+            projects={projects}
+            projectId={projectId}
+            setProjectId={setProjectId}
+          />
+          <Stats stats={data.stats} />
+          
+          {contextDocs.length > 0 && (
+            <ContextPanel docs={contextDocs} />
+          )}
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+            <div className="lg:col-span-2">
+              <KanbanBoard tasks={data.tasks} />
+            </div>
+            <div className="space-y-6">
+              <ActiveAgents agents={data.agents.active} />
+              <ActivityLog log={data.activity_log} />
+            </div>
+          </div>
+          
+          {showCompletion && (
+            <CompletionModal 
+              projectName={data.project.name}
+              onClose={() => setShowCompletion(false)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    // Completion Modal with Cannon
+    function CompletionModal({ projectName, onClose }) {
+      const [stage, setStage] = useState('ready'); // ready -> firing -> exploded
+      const [showFlash, setShowFlash] = useState(false);
+      const audioRef = useRef(null);
+
+      useEffect(() => {
+        // Wait 2 seconds, then fire
+        const fireTimer = setTimeout(() => {
+          setStage('firing');
+          
+          // Play explosion sound
+          playExplosionSound();
+          
+          // Show flash after 0.8s (when ball hits)
+          setTimeout(() => {
+            setShowFlash(true);
+            setTimeout(() => setShowFlash(false), 500);
+            setStage('exploded');
+          }, 800);
+        }, 2000);
+
+        // Auto-close after 90 seconds (1.5 minutes)
+        const closeTimer = setTimeout(() => {
+          onClose();
+        }, 90000);
+
+        return () => {
+          clearTimeout(fireTimer);
+          clearTimeout(closeTimer);
+        };
+      }, [onClose]);
+
+      const playExplosionSound = () => {
+        // Create explosion sound using Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Create explosion sound (low frequency rumble + high frequency crack)
+        const now = audioContext.currentTime;
+        
+        // Bass rumble
+        const bass = audioContext.createOscillator();
+        const bassGain = audioContext.createGain();
+        bass.type = 'sawtooth';
+        bass.frequency.setValueAtTime(50, now);
+        bass.frequency.exponentialRampToValueAtTime(20, now + 0.5);
+        bassGain.gain.setValueAtTime(0.8, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        bass.connect(bassGain);
+        bassGain.connect(audioContext.destination);
+        bass.start(now);
+        bass.stop(now + 0.5);
+        
+        // High frequency crack
+        const crack = audioContext.createOscillator();
+        const crackGain = audioContext.createGain();
+        crack.type = 'square';
+        crack.frequency.setValueAtTime(1000, now);
+        crack.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+        crackGain.gain.setValueAtTime(0.5, now);
+        crackGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        crack.connect(crackGain);
+        crackGain.connect(audioContext.destination);
+        crack.start(now);
+        crack.stop(now + 0.1);
+        
+        // White noise burst
+        const bufferSize = audioContext.sampleRate * 0.3;
+        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = audioContext.createBufferSource();
+        const noiseGain = audioContext.createGain();
+        noise.buffer = buffer;
+        noiseGain.gain.setValueAtTime(0.3, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        noise.connect(noiseGain);
+        noiseGain.connect(audioContext.destination);
+        noise.start(now);
+      };
+
+      return (
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={onClose}>
+            <div className="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">🎯 Project Complete!</h2>
+                <p className="text-gray-600">{projectName}</p>
+              </div>
+              
+              {/* Cannon */}
+              <div className="cannon mb-6">
+                <div className={`cannon-barrel ${stage === 'firing' || stage === 'exploded' ? 'firing' : ''}`}></div>
+                <div className="cannon-base"></div>
+                <div className={`cannon-ball ${stage === 'firing' || stage === 'exploded' ? 'firing' : ''}`}></div>
+                <div className={`explosion ${stage === 'exploded' ? 'active' : ''}`}>
+                  <div style={{ fontSize: '100px' }}>💥</div>
+                </div>
+              </div>
+
+              {/* Congrats text - only show after explosion */}
+              <div className={`congrats-text mb-6 ${stage === 'exploded' ? 'show' : ''}`}>
+                🎉 CONGRATS! 🎉
+              </div>
+
+              <div className="text-center text-sm text-gray-500 mb-4">
+                All tasks completed! Great work! 🦞
+              </div>
+
+              <button
+                onClick={onClose}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium">
+                Close
+              </button>
+              
+              <p className="text-xs text-gray-400 text-center mt-3">
+                Auto-closes in 90 seconds
+              </p>
+            </div>
+          </div>
+          
+          {/* Flash effect */}
+          <div className={`flash ${showFlash ? 'active' : ''}`}></div>
+        </>
+      );
+    }
+
+    // Header Component
+    function Header({ project, lastUpdate, refresh, projects, projectId, setProjectId }) {
+      const statusColors = {
+        'not-started': 'bg-gray-100 text-gray-800',
+        'in-progress': 'bg-blue-100 text-blue-800',
+        'paused': 'bg-yellow-100 text-yellow-800',
+        'completed': 'bg-green-100 text-green-800',
+        'blocked': 'bg-red-100 text-red-800'
+      };
+
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <select 
+                value={projectId}
+                onChange={(e) => setProjectId(Number(e.target.value))}
+                className="px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                {projects.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {projects.find(p => p.id === projectId)?.isDemo && (
+                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                  Demo Data
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[project.status]}`}>
+                {project.status}
+              </span>
+              <div className="text-sm text-gray-500 mt-2">
+                Last update: {lastUpdate.toLocaleTimeString()}
+              </div>
+              <button 
+                onClick={refresh}
+                className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
+                🔄 Refresh
+              </button>
+            </div>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
+            <p className="text-gray-600 mt-1">{project.description}</p>
+            {project.reference && (
+              <a href={project.reference} target="_blank" 
+                 className="text-blue-600 hover:underline text-sm mt-2 inline-block">
+                Reference: {project.reference}
+              </a>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Stats Component
+    function Stats({ stats }) {
+      const total = stats.total_tasks || 1;
+      const completed = stats.completed || 0;
+      const progress = Math.round((completed / total) * 100);
+
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <StatCard label="Total Tasks" value={stats.total_tasks} color="blue" />
+          <StatCard label="In Progress" value={stats.in_progress} color="yellow" />
+          <StatCard label="Ready" value={stats.ready} color="purple" />
+          <StatCard label="In QA" value={stats.qa} color="orange" />
+          <StatCard label="Completed" value={stats.completed} color="green" />
+          
+          <div className="md:col-span-5 bg-white rounded-lg shadow-sm p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Project Progress</span>
+              <span className="text-sm font-bold text-gray-900">{progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-green-600 h-3 rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {stats.estimated_hours_remaining > 0 && (
+              <div className="text-sm text-gray-600 mt-2">
+                ~{stats.estimated_hours_remaining}h remaining
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function StatCard({ label, value, color }) {
+      const colors = {
+        blue: 'bg-blue-50 text-blue-700',
+        yellow: 'bg-yellow-50 text-yellow-700',
+        purple: 'bg-purple-50 text-purple-700',
+        orange: 'bg-orange-50 text-orange-700',
+        green: 'bg-green-50 text-green-700'
+      };
+
+      return (
+        <div className={`${colors[color]} rounded-lg p-4 shadow-sm`}>
+          <div className="text-2xl font-bold">{value}</div>
+          <div className="text-sm font-medium mt-1">{label}</div>
+        </div>
+      );
+    }
+
+    // Kanban Board Component
+    function KanbanBoard({ tasks }) {
+      const columns = [
+        { id: 'todo', title: 'To Do', color: 'gray' },
+        { id: 'in-progress', title: 'In Progress', color: 'blue' },
+        { id: 'ready', title: 'Ready', color: 'purple' },
+        { id: 'qa', title: 'QA', color: 'orange' },
+        { id: 'complete', title: 'Complete', color: 'green' }
+      ];
+
+      const getTasksByState = (state) => {
+        return tasks.filter(task => task.state === state);
+      };
+
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">📋 Kanban Board</h2>
+          <div className="grid grid-cols-5 gap-4">
+            {columns.map(column => (
+              <KanbanColumn 
+                key={column.id}
+                column={column}
+                tasks={getTasksByState(column.id)}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function KanbanColumn({ column, tasks }) {
+      const colorMap = {
+        gray: 'border-gray-300 bg-gray-50',
+        blue: 'border-blue-300 bg-blue-50',
+        purple: 'border-purple-300 bg-purple-50',
+        orange: 'border-orange-300 bg-orange-50',
+        green: 'border-green-300 bg-green-50'
+      };
+
+      return (
+        <div className={`kanban-column border-2 rounded-lg p-3 ${colorMap[column.color]}`}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm text-gray-700">{column.title}</h3>
+            <span className="text-xs bg-white px-2 py-1 rounded-full font-medium">
+              {tasks.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {tasks.length === 0 ? (
+              <div className="text-xs text-gray-400 text-center py-4">No tasks</div>
+            ) : (
+              tasks.map(task => <TaskCard key={task.id} task={task} />)
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function TaskCard({ task }) {
+      const priorityColors = {
+        low: 'bg-gray-100 text-gray-700',
+        medium: 'bg-blue-100 text-blue-700',
+        high: 'bg-orange-100 text-orange-700',
+        critical: 'bg-red-100 text-red-700'
+      };
+
+      return (
+        <div className="task-card bg-white border border-gray-200 rounded-md p-3 cursor-pointer">
+          <div className="flex items-start justify-between mb-2">
+            <h4 className="text-sm font-medium text-gray-900 leading-tight">{task.title}</h4>
+            {task.priority && (
+              <span className={`text-xs px-2 py-0.5 rounded ${priorityColors[task.priority]}`}>
+                {task.priority}
+              </span>
+            )}
+          </div>
+          {task.description && (
+            <p className="text-xs text-gray-600 mb-2 line-clamp-2">{task.description}</p>
+          )}
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span>{task.estimated_hours}h</span>
+            {task.assigned_to && (
+              <span className="font-medium text-blue-600">{task.assigned_to}</span>
+            )}
+          </div>
+          {task.tags && task.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {task.tags.map(tag => (
+                <span key={tag} className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Active Agents Component
+    function ActiveAgents({ agents }) {
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">🤖 Active Agents</h2>
+          {agents.length === 0 ? (
+            <div className="text-center text-gray-400 py-8">No active agents</div>
+          ) : (
+            <div className="space-y-3">
+              {agents.map((agent, idx) => (
+                <AgentCard key={idx} agent={agent} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function AgentCard({ agent }) {
+      const runtime = agent.spawned_at 
+        ? Math.floor((Date.now() - new Date(agent.spawned_at).getTime()) / 60000)
+        : 0;
+
+      return (
+        <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-medium text-sm text-gray-900">{agent.agent_id}</span>
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+              {agent.status}
+            </span>
+          </div>
+          <div className="text-xs text-gray-600">
+            Task: <span className="font-medium">{agent.task_id}</span>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Runtime: {runtime}m
+          </div>
+          {agent.session_key && (
+            <div className="text-xs text-gray-400 mt-1 font-mono truncate">
+              {agent.session_key}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Activity Log Component
+    function ActivityLog({ log }) {
+      const recentLog = log.slice(-10).reverse();
+
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">📝 Activity Log</h2>
+          {recentLog.length === 0 ? (
+            <div className="text-center text-gray-400 py-8">No activity yet</div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {recentLog.map((entry, idx) => (
+                <ActivityEntry key={idx} entry={entry} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ActivityEntry({ entry }) {
+      const typeIcons = {
+        spawn: '🚀',
+        completion: '✅',
+        error: '❌',
+        update: '📝',
+        info: 'ℹ️'
+      };
+
+      const time = new Date(entry.timestamp).toLocaleTimeString();
+
+      return (
+        <div className="border-l-4 border-blue-500 pl-3 py-2 text-sm">
+          <div className="flex items-start justify-between">
+            <span className="text-xs text-gray-500">{time}</span>
+            <span>{typeIcons[entry.type] || '•'}</span>
+          </div>
+          <div className="text-gray-700 mt-1">
+            <span className="font-medium text-blue-600">{entry.agent}</span>
+            {entry.task_id && <span className="text-gray-500"> → {entry.task_id}</span>}
+          </div>
+          <div className="text-gray-600">{entry.message}</div>
+        </div>
+      );
+    }
+
+    // Context Panel Component
+    function ContextPanel({ docs }) {
+      const [selectedDoc, setSelectedDoc] = useState(null);
+      const [showFullContent, setShowFullContent] = useState(false);
+
+      console.log('🎨 ContextPanel rendering with', docs.length, 'docs');
+
+      const docTypeIcons = {
+        roadmap: '🗺️',
+        plan: '📋',
+        orchestrator: '🤖',
+        spec: '📄',
+        design: '🎨'
+      };
+
+      const docTypeColors = {
+        roadmap: 'bg-blue-50 text-blue-700 border-blue-200',
+        plan: 'bg-purple-50 text-purple-700 border-purple-200',
+        orchestrator: 'bg-green-50 text-green-700 border-green-200',
+        spec: 'bg-gray-50 text-gray-700 border-gray-200',
+        design: 'bg-pink-50 text-pink-700 border-pink-200'
+      };
+
+      return (
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">📚 Project Context</h2>
+          
+          {!selectedDoc ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {docs.map(doc => (
+                <button
+                  key={doc.id}
+                  onClick={() => setSelectedDoc(doc)}
+                  className={`text-left p-4 rounded-lg border-2 transition-all hover:shadow-md ${docTypeColors[doc.document_type] || docTypeColors.spec}`}
+                >
+                  <div className="text-2xl mb-2">{docTypeIcons[doc.document_type] || '📄'}</div>
+                  <h3 className="font-semibold text-sm mb-1">{doc.title}</h3>
+                  <p className="text-xs opacity-75 capitalize">{doc.document_type}</p>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {docTypeIcons[selectedDoc.document_type]} {selectedDoc.title}
+                </h3>
+                <button
+                  onClick={() => setSelectedDoc(null)}
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  ← Back
+                </button>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                <pre className="text-xs font-mono whitespace-pre-wrap text-gray-700">
+                  {showFullContent 
+                    ? selectedDoc.content 
+                    : selectedDoc.content.substring(0, 2000) + (selectedDoc.content.length > 2000 ? '...' : '')
+                  }
+                </pre>
+                
+                {selectedDoc.content.length > 2000 && !showFullContent && (
+                  <button
+                    onClick={() => setShowFullContent(true)}
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Show full content →
+                  </button>
+                )}
+              </div>
+              
+              {selectedDoc.file_path && (
+                <p className="text-xs text-gray-500 mt-3">
+                  📁 {selectedDoc.file_path}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Loading & Error Screens
+    function LoadingScreen() {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      );
+    }
+
+    function ErrorScreen({ error, retry }) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center max-w-md">
+            <div className="text-6xl mb-4">❌</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Dashboard</h2>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button 
+              onClick={retry}
+              className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+              Retry
+            </button>
+            <p className="text-sm text-gray-500 mt-4">
+              Make sure the API server is running: <code className="bg-gray-100 px-2 py-1 rounded">node server.js</code>
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Render
+    ReactDOM.render(<Dashboard />, document.getElementById('root'));
+  </script>
+</body>
+</html>

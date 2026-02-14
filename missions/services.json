@@ -1,0 +1,17 @@
+{
+  "services": [
+    {
+      "name": "Agent Swarm Dashboard",
+      "description": "Agent orchestration dashboard with kanban board and real-time agent tracking",
+      "command": "cd /Users/matthew/.openclaw/workspace/agent-swarm-template/dashboard && npm run dev",
+      "url": "http://localhost:5173",
+      "api_url": "http://localhost:3001",
+      "process_check": "vite",
+      "ports": [5173, 3001],
+      "status": "running",
+      "pid": 64032,
+      "category": "development",
+      "auto_start": true
+    }
+  ]
+}

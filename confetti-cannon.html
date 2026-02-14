@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎉 CONGRATS! 🎉</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        #canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .congrats {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 120px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: bounce 1s ease-in-out infinite, glow 2s ease-in-out infinite;
+            z-index: 10;
+            text-align: center;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 40px rgba(255,255,255,0.5); }
+            50% { text-shadow: 0 10px 30px rgba(0,0,0,0.3), 0 0 80px rgba(255,255,255,0.8); }
+        }
+
+        .emoji {
+            font-size: 80px;
+            display: block;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div class="congrats">
+        <span class="emoji">🎊</span>
+        CONGRATS!
+        <span class="emoji">🎉</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Confetti particles
+        const confetti = [];
+        const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'];
+
+        class Confetto {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 10 + 5;
+                this.speedY = Math.random() * -15 - 10;
+                this.speedX = Math.random() * 10 - 5;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.rotation = Math.random() * 360;
+                this.rotationSpeed = Math.random() * 10 - 5;
+                this.gravity = 0.5;
+                this.friction = 0.99;
+                this.opacity = 1;
+            }
+
+            update() {
+                this.speedY += this.gravity;
+                this.speedX *= this.friction;
+                this.speedY *= this.friction;
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.rotation += this.rotationSpeed;
+
+                if (this.y > canvas.height) {
+                    this.opacity -= 0.02;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.restore();
+            }
+        }
+
+        // Create initial burst
+        function createBurst(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                confetti.push(new Confetto(x, y));
+            }
+        }
+
+        // Fire from multiple cannons
+        createBurst(canvas.width * 0.2, canvas.height * 0.8, 100);
+        createBurst(canvas.width * 0.8, canvas.height * 0.8, 100);
+        
+        setTimeout(() => {
+            createBurst(canvas.width * 0.5, canvas.height * 0.9, 150);
+        }, 200);
+
+        setTimeout(() => {
+            createBurst(canvas.width * 0.1, canvas.height * 0.7, 80);
+            createBurst(canvas.width * 0.9, canvas.height * 0.7, 80);
+        }, 400);
+
+        // Animation loop
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            confetti.forEach((c, index) => {
+                c.update();
+                c.draw();
+
+                if (c.opacity <= 0) {
+                    confetti.splice(index, 1);
+                }
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Play celebration sound (optional - using Web Audio API)
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.5);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Play sound on load
+        setTimeout(() => {
+            try { playSound(); } catch(e) {}
+        }, 100);
+    </script>
+</body>
+</html>

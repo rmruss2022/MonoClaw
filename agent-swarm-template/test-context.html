@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Context API Test</title>
+</head>
+<body>
+  <h1>Context API Test</h1>
+  <button onclick="testContext()">Test Context Load</button>
+  <pre id="output"></pre>
+  
+  <script>
+    async function testContext() {
+      const output = document.getElementById('output');
+      output.textContent = 'Loading...';
+      
+      try {
+        const response = await fetch('http://localhost:3001/api/projects/3/context');
+        const data = await response.json();
+        
+        output.textContent = JSON.stringify(data, null, 2);
+        
+        console.log('Context documents:', data.documents.length);
+        data.documents.forEach(doc => {
+          console.log(`- ${doc.document_type}: ${doc.title}`);
+        });
+      } catch (error) {
+        output.textContent = 'Error: ' + error.message;
+      }
+    }
+    
+    // Auto-run on load
+    window.addEventListener('load', testContext);
+  </script>
+</body>
+</html>
