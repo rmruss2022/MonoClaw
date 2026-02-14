@@ -1,0 +1,561 @@
+const express = require('express');
+const Database = require('better-sqlite3');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname));
+
+// Initialize SQLite Database
+const db = new Database('swarm.db');
+db.pragma('journal_mode = WAL');
+
+// Create tables
+function initializeDatabase() {
+  console.log('🔧 Initializing database schema...');
+  
+  // Projects table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      reference TEXT,
+      status TEXT DEFAULT 'not-started',
+      created_at TEXT NOT NULL,
+      target_completion TEXT
+    )
+  `);
+
+  // Tasks table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      project_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      state TEXT DEFAULT 'todo',
+      priority TEXT DEFAULT 'medium',
+      estimated_hours REAL DEFAULT 0,
+      actual_hours REAL DEFAULT 0,
+      assigned_to TEXT,
+      agent_session_key TEXT,
+      started_at TEXT,
+      completed_at TEXT,
+      spec_file TEXT,
+      dependencies_json TEXT,
+      tags_json TEXT,
+      code_files_json TEXT,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `);
+
+  // Agents table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS agents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      agent_id TEXT NOT NULL,
+      session_key TEXT,
+      task_id TEXT,
+      spawned_at TEXT NOT NULL,
+      completed_at TEXT,
+      status TEXT DEFAULT 'running',
+      result TEXT,
+      FOREIGN KEY (project_id) REFERENCES projects(id),
+      FOREIGN KEY (task_id) REFERENCES tasks(id)
+    )
+  `);
+
+  // Activity log table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS activity_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      timestamp TEXT NOT NULL,
+      agent TEXT NOT NULL,
+      task_id TEXT,
+      message TEXT NOT NULL,
+      type TEXT DEFAULT 'info',
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `);
+
+  // Project context table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS project_context (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      document_type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      file_path TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `);
+
+  console.log('✅ Database schema initialized');
+}
+
+initializeDatabase();
+
+// Helper functions
+function calculateStats(projectId) {
+  const tasks = db.prepare('SELECT * FROM tasks WHERE project_id = ?').all(projectId);
+  
+  const stats = {
+    total_tasks: tasks.length,
+    completed: tasks.filter(t => t.state === 'complete').length,
+    in_progress: tasks.filter(t => t.state === 'in-progress').length,
+    ready: tasks.filter(t => t.state === 'ready').length,
+    qa: tasks.filter(t => t.state === 'qa').length,
+    blocked: tasks.filter(t => t.state === 'blocked').length,
+    estimated_hours_remaining: tasks
+      .filter(t => t.state !== 'complete')
+      .reduce((sum, t) => sum + (t.estimated_hours - t.actual_hours), 0)
+  };
+  
+  return stats;
+}
+
+function formatTask(task) {
+  if (!task) return null;
+  
+  return {
+    ...task,
+    dependencies: task.dependencies_json ? JSON.parse(task.dependencies_json) : [],
+    tags: task.tags_json ? JSON.parse(task.tags_json) : [],
+    code_files: task.code_files_json ? JSON.parse(task.code_files_json) : []
+  };
+}
+
+// API Endpoints
+
+// GET /api/projects - List all projects
+app.get('/api/projects', (req, res) => {
+  try {
+    const projects = db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all();
+    res.json({ projects });
+  } catch (error) {
+    console.error('Error listing projects:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/projects/:id - Get full project data
+app.get('/api/projects/:id', (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    
+    // Get project
+    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Get all tasks
+    const tasks = db.prepare('SELECT * FROM tasks WHERE project_id = ?')
+      .all(projectId)
+      .map(formatTask);
+    
+    // Get active and completed agents
+    const activeAgents = db.prepare(`
+      SELECT * FROM agents 
+      WHERE project_id = ? AND status = 'running'
+      ORDER BY spawned_at DESC
+    `).all(projectId);
+    
+    const completedAgents = db.prepare(`
+      SELECT * FROM agents 
+      WHERE project_id = ? AND status = 'completed'
+      ORDER BY completed_at DESC
+      LIMIT 10
+    `).all(projectId);
+    
+    // Get recent activity log
+    const activityLog = db.prepare(`
+      SELECT * FROM activity_log
+      WHERE project_id = ?
+      ORDER BY timestamp DESC
+      LIMIT 50
+    `).all(projectId);
+    
+    // Calculate stats
+    const stats = calculateStats(projectId);
+    
+    // Parse project configuration
+    if (project.configuration_json) {
+      try {
+        project.configuration = JSON.parse(project.configuration_json);
+      } catch (e) {
+        project.configuration = null;
+      }
+    }
+    
+    // Build response
+    const response = {
+      project,
+      stats,
+      tasks,
+      agents: {
+        active: activeAgents,
+        completed: completedAgents
+      },
+      activity_log: activityLog
+    };
+    
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/projects - Create new project
+app.post('/api/projects', (req, res) => {
+  try {
+    const { name, description, reference, status, target_completion } = req.body;
+    
+    const stmt = db.prepare(`
+      INSERT INTO projects (name, description, reference, status, created_at, target_completion)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    
+    const result = stmt.run(
+      name,
+      description || '',
+      reference || '',
+      status || 'not-started',
+      new Date().toISOString(),
+      target_completion || null
+    );
+    
+    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(result.lastInsertRowid);
+    
+    // Log activity
+    db.prepare(`
+      INSERT INTO activity_log (project_id, timestamp, agent, message, type)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(result.lastInsertRowid, new Date().toISOString(), 'system', `Project created: ${name}`, 'info');
+    
+    res.status(201).json(project);
+  } catch (error) {
+    console.error('Error creating project:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/tasks - Create new task
+app.post('/api/tasks', (req, res) => {
+  try {
+    const {
+      id, project_id, title, description, state, priority,
+      estimated_hours, assigned_to, spec_file, dependencies, tags, code_files
+    } = req.body;
+    
+    const stmt = db.prepare(`
+      INSERT INTO tasks (
+        id, project_id, title, description, state, priority,
+        estimated_hours, assigned_to, spec_file,
+        dependencies_json, tags_json, code_files_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id,
+      project_id,
+      title,
+      description || '',
+      state || 'todo',
+      priority || 'medium',
+      estimated_hours || 0,
+      assigned_to || null,
+      spec_file || null,
+      JSON.stringify(dependencies || []),
+      JSON.stringify(tags || []),
+      JSON.stringify(code_files || [])
+    );
+    
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    
+    // Log activity
+    db.prepare(`
+      INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(project_id, new Date().toISOString(), 'system', id, `Task created: ${title}`, 'info');
+    
+    res.status(201).json(formatTask(task));
+  } catch (error) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PATCH /api/tasks/:id - Update task state
+app.patch('/api/tasks/:id', (req, res) => {
+  try {
+    const taskId = req.params.id;
+    const updates = req.body;
+    
+    // Build dynamic update query
+    const fields = [];
+    const values = [];
+    
+    const allowedFields = [
+      'title', 'description', 'state', 'priority', 'estimated_hours',
+      'actual_hours', 'assigned_to', 'agent_session_key', 'started_at',
+      'completed_at', 'spec_file'
+    ];
+    
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        fields.push(`${field} = ?`);
+        values.push(updates[field]);
+      }
+    }
+    
+    // Handle JSON fields
+    if (updates.dependencies) {
+      fields.push('dependencies_json = ?');
+      values.push(JSON.stringify(updates.dependencies));
+    }
+    if (updates.tags) {
+      fields.push('tags_json = ?');
+      values.push(JSON.stringify(updates.tags));
+    }
+    if (updates.code_files) {
+      fields.push('code_files_json = ?');
+      values.push(JSON.stringify(updates.code_files));
+    }
+    
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+    
+    values.push(taskId);
+    const stmt = db.prepare(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`);
+    stmt.run(...values);
+    
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(taskId);
+    
+    // Log activity if state changed
+    if (updates.state) {
+      db.prepare(`
+        INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        task.project_id,
+        new Date().toISOString(),
+        updates.assigned_to || 'system',
+        taskId,
+        `Task moved to ${updates.state}`,
+        'update'
+      );
+    }
+    
+    res.json(formatTask(task));
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/agents/assign - Assign agent to task
+app.post('/api/agents/assign', (req, res) => {
+  try {
+    const { project_id, agent_id, session_key, task_id } = req.body;
+    
+    const stmt = db.prepare(`
+      INSERT INTO agents (project_id, agent_id, session_key, task_id, spawned_at, status)
+      VALUES (?, ?, ?, ?, ?, 'running')
+    `);
+    
+    const result = stmt.run(project_id, agent_id, session_key || null, task_id || null, new Date().toISOString());
+    
+    // Update task if task_id provided
+    if (task_id) {
+      db.prepare(`
+        UPDATE tasks 
+        SET assigned_to = ?, agent_session_key = ?, started_at = ?, state = 'in-progress'
+        WHERE id = ?
+      `).run(agent_id, session_key, new Date().toISOString(), task_id);
+    }
+    
+    // Log activity
+    db.prepare(`
+      INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      project_id,
+      new Date().toISOString(),
+      agent_id,
+      task_id,
+      `Agent ${agent_id} assigned to task`,
+      'spawn'
+    );
+    
+    const agent = db.prepare('SELECT * FROM agents WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(agent);
+  } catch (error) {
+    console.error('Error assigning agent:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/agents/complete - Mark agent complete
+app.post('/api/agents/complete', (req, res) => {
+  try {
+    const { agent_id, session_key, result } = req.body;
+    
+    const stmt = db.prepare(`
+      UPDATE agents 
+      SET status = 'completed', completed_at = ?, result = ?
+      WHERE agent_id = ? AND session_key = ? AND status = 'running'
+    `);
+    
+    stmt.run(new Date().toISOString(), result || '', agent_id, session_key);
+    
+    const agent = db.prepare(`
+      SELECT * FROM agents 
+      WHERE agent_id = ? AND session_key = ?
+      ORDER BY id DESC LIMIT 1
+    `).get(agent_id, session_key);
+    
+    if (agent && agent.task_id) {
+      // Log activity
+      db.prepare(`
+        INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        agent.project_id,
+        new Date().toISOString(),
+        agent_id,
+        agent.task_id,
+        result || 'Agent completed',
+        'completion'
+      );
+    }
+    
+    res.json(agent);
+  } catch (error) {
+    console.error('Error completing agent:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/stats/:project_id - Get project statistics
+app.get('/api/stats/:project_id', (req, res) => {
+  try {
+    const projectId = parseInt(req.params.project_id);
+    const stats = calculateStats(projectId);
+    res.json(stats);
+  } catch (error) {
+    console.error('Error calculating stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/projects/:id/context - Get all context documents for a project
+app.get('/api/projects/:id/context', (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const documents = db.prepare(`
+      SELECT * FROM project_context 
+      WHERE project_id = ? 
+      ORDER BY document_type, created_at DESC
+    `).all(projectId);
+    res.json({ documents });
+  } catch (error) {
+    console.error('Error fetching project context:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/projects/:id/context - Add context document to project
+app.post('/api/projects/:id/context', (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const { document_type, title, content, file_path } = req.body;
+    
+    const stmt = db.prepare(`
+      INSERT INTO project_context (project_id, document_type, title, content, file_path, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    const now = new Date().toISOString();
+    const result = stmt.run(projectId, document_type, title, content, file_path || null, now, now);
+    
+    const document = db.prepare('SELECT * FROM project_context WHERE id = ?').get(result.lastInsertRowid);
+    
+    // Log activity
+    db.prepare(`
+      INSERT INTO activity_log (project_id, timestamp, agent, message, type)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(projectId, now, 'system', `Added context document: ${title}`, 'info');
+    
+    res.status(201).json(document);
+  } catch (error) {
+    console.error('Error adding project context:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PUT /api/projects/:id/context/:doc_id - Update context document
+app.put('/api/projects/:id/context/:doc_id', (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const docId = parseInt(req.params.doc_id);
+    const { title, content } = req.body;
+    
+    const stmt = db.prepare(`
+      UPDATE project_context 
+      SET title = ?, content = ?, updated_at = ?
+      WHERE id = ? AND project_id = ?
+    `);
+    
+    stmt.run(title, content, new Date().toISOString(), docId, projectId);
+    
+    const document = db.prepare('SELECT * FROM project_context WHERE id = ?').get(docId);
+    res.json(document);
+  } catch (error) {
+    console.error('Error updating project context:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Root redirect
+app.get('/', (req, res) => {
+  res.redirect('/dashboard.html');
+});
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log('');
+  console.log('🚀 Agent Swarm Dashboard Server');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`📡 Server running on http://localhost:${PORT}`);
+  console.log(`🌐 Dashboard: http://localhost:${PORT}/dashboard.html`);
+  console.log(`📊 API: http://localhost:${PORT}/api/projects/1`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('\n👋 Shutting down server...');
+  db.close();
+  process.exit(0);
+});

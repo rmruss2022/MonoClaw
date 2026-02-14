@@ -1,0 +1,155 @@
+CLI Weather Dashboard - Example Output
+=======================================
+
+This file shows what the weather tool output looks like.
+
+Note: Actual output includes colors and formatting via the Rich library.
+The emoji icons and colors won't render correctly in plain text.
+
+---
+
+Command: ./weather "Seattle, WA"
+
+Output:
+---
+
+┌─────────────────────────────────────┐
+│  Seattle, US                   ⛅   │
+│  Tuesday, February 11, 2026         │
+└─────────────────────────────────────┘
+
+Current Conditions
+  Temperature:  52°F (feels like 48°F)
+  Conditions:   Partly Cloudy
+  Humidity:     75%
+  Wind:         8.0 mph NW
+
+7-Day Forecast
+┌──────────┬──────┬──────┬──────────────────────┐
+│ Day      │ High │ Low  │ Conditions           │
+├──────────┼──────┼──────┼──────────────────────┤
+│ Today    │ 54°F │ 45°F │ ☁️  Overcast Clouds   │
+│ Tomorrow │ 48°F │ 42°F │ 🌧️  Light Rain        │
+│ Thu 13   │ 50°F │ 44°F │ ⛅ Partly Cloudy     │
+│ Fri 14   │ 55°F │ 46°F │ ☀️  Clear Sky         │
+│ Sat 15   │ 58°F │ 48°F │ ☀️  Clear Sky         │
+│ Sun 16   │ 52°F │ 46°F │ ☁️  Cloudy            │
+│ Mon 17   │ 49°F │ 43°F │ 🌧️  Moderate Rain     │
+└──────────┴──────┴──────┴──────────────────────┘
+
+Last updated: 8:57 PM
+
+---
+
+Command: ./weather Tokyo --metric
+
+Output:
+---
+
+┌─────────────────────────────────────┐
+│  Tokyo, JP                     ☀️   │
+│  Tuesday, February 11, 2026         │
+└─────────────────────────────────────┘
+
+Current Conditions
+  Temperature:  12°C (feels like 10°C)
+  Conditions:   Clear Sky
+  Humidity:     45%
+  Wind:         5.2 m/s E
+
+7-Day Forecast
+┌──────────┬──────┬──────┬──────────────────────┐
+│ Day      │ High │ Low  │ Conditions           │
+├──────────┼──────┼──────┼──────────────────────┤
+│ Today    │ 14°C │ 8°C  │ ☀️  Clear Sky         │
+│ Tomorrow │ 13°C │ 7°C  │ ⛅ Few Clouds        │
+│ Thu 13   │ 11°C │ 6°C  │ ☁️  Cloudy            │
+│ Fri 14   │ 10°C │ 5°C  │ 🌧️  Light Rain        │
+│ Sat 15   │ 12°C │ 6°C  │ ⛅ Partly Cloudy     │
+│ Sun 16   │ 15°C │ 9°C  │ ☀️  Clear Sky         │
+│ Mon 17   │ 16°C │ 10°C │ ☀️  Clear Sky         │
+└──────────┴──────┴──────┴──────────────────────┘
+
+Last updated: 8:57 PM
+
+---
+
+Command: ./weather 90210 --days 3
+
+Output:
+---
+
+┌─────────────────────────────────────┐
+│  Beverly Hills, US             ☀️   │
+│  Tuesday, February 11, 2026         │
+└─────────────────────────────────────┘
+
+Current Conditions
+  Temperature:  72°F (feels like 72°F)
+  Conditions:   Clear Sky
+  Humidity:     42%
+  Wind:         3.5 mph SW
+
+3-Day Forecast
+┌──────────┬──────┬──────┬──────────────────────┐
+│ Day      │ High │ Low  │ Conditions           │
+├──────────┼──────┼──────┼──────────────────────┤
+│ Today    │ 75°F │ 58°F │ ☀️  Clear Sky         │
+│ Tomorrow │ 76°F │ 59°F │ ☀️  Clear Sky         │
+│ Thu 13   │ 73°F │ 60°F │ ⛅ Few Clouds        │
+└──────────┴──────┴──────┴──────────────────────┘
+
+Last updated: 8:57 PM
+
+---
+
+Error Examples:
+---
+
+Command: ./weather Seattle
+(without API key configured)
+
+Output:
+Error: API key not found. Run: weather --setup
+
+---
+
+Command: ./weather "INVALIDCITY123"
+
+Output:
+Error: Location 'INVALIDCITY123' not found. Try 'City, State' format
+
+---
+
+Color Legend (actual output shows colors):
+---
+
+Temperature Colors:
+- Freezing (≤32°F): Blue
+- Cool (33-60°F): Green  
+- Warm (61-80°F): Yellow
+- Hot (81-95°F): Orange
+- Very Hot (≥96°F): Red
+
+Weather Icons:
+- ☀️  Clear/Sunny
+- ⛅ Partly Cloudy
+- ☁️  Cloudy
+- 🌧️  Rain
+- ⛈️  Thunderstorm
+- ❄️  Snow
+- 🌫️  Fog/Mist
+
+---
+
+Performance:
+---
+
+First call (API): ~1.5 seconds
+Cached call: ~0.3 seconds
+Target: <2 seconds ✅
+
+---
+
+Note: To see actual colored output with beautiful formatting,
+run the tool in your terminal!

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cannon Launcher</title>
+</head>
+<body>
+  <script>
+    // Get screen dimensions
+    const screenWidth = window.screen.width;
+    const screenHeight = window.screen.height;
+    
+    // Calculate quarter size (roughly 50% width, 50% height = 25% area)
+    const width = Math.floor(screenWidth * 0.5);
+    const height = Math.floor(screenHeight * 0.5);
+    
+    // Center the window
+    const left = Math.floor((screenWidth - width) / 2);
+    const top = Math.floor((screenHeight - height) / 2);
+    
+    // Use HTTP URL instead of file://
+    const cannonPath = 'http://localhost:18888/index.html';
+    
+    // Open popup window
+    const popup = window.open(
+      cannonPath,
+      'CannonCelebration',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,status=no,toolbar=no,menubar=no,location=no`
+    );
+    
+    if (popup) {
+      console.log('🎉 Cannon popup opened!');
+      // Show success message instead of closing
+      document.body.innerHTML = `
+        <div style="text-align:center;margin-top:50px;font-family:system-ui;">
+          <h1 style="color:#10b981;">✅ Cannon Launched!</h1>
+          <p style="color:#666;margin-top:20px;">Celebration window opened. You can close this tab.</p>
+          <button onclick="window.close()" style="margin-top:30px;padding:12px 24px;background:#3b82f6;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px;">
+            Close This Tab
+          </button>
+        </div>
+      `;
+    } else {
+      alert('❌ Popup blocked! Please allow popups for this page.');
+      document.body.innerHTML = '<h1 style="text-align:center;margin-top:50px;">Popup blocked! Please allow popups and try again.</h1>';
+    }
+  </script>
+</body>
+</html>

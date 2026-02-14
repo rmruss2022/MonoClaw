@@ -1,0 +1,108 @@
+#!/usr/bin/env node
+
+const { generatePassword } = require('../lib/generator');
+const { displayPassword, displayMultiplePasswords } = require('../lib/display');
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+
+const options = {
+  length: 16,
+  count: 1,
+  lowercase: true,
+  uppercase: true,
+  numbers: true,
+  special: true,
+  showEntropy: false,
+  copy: false
+};
+
+// Parse flags
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  
+  if (arg === '--help' || arg === '-h') {
+    showHelp();
+    process.exit(0);
+  }
+  
+  if (arg === '--length' || arg === '-l') {
+    options.length = parseInt(args[++i]);
+  } else if (arg === '--count' || arg === '-c') {
+    options.count = parseInt(args[++i]);
+  } else if (arg === '--entropy' || arg === '-e') {
+    options.showEntropy = true;
+  } else if (arg === '--no-special') {
+    options.special = false;
+  } else if (arg === '--no-uppercase') {
+    options.uppercase = false;
+  } else if (arg === '--no-lowercase') {
+    options.lowercase = false;
+  } else if (arg === '--no-numbers') {
+    options.numbers = false;
+  } else if (arg === '--copy') {
+    options.copy = true;
+  } else if (arg === '--simple') {
+    options.special = false;
+  }
+}
+
+// Generate passwords
+try {
+  if (options.count === 1) {
+    const result = generatePassword(options);
+    displayPassword(result, { showEntropy: options.showEntropy });
+    
+    if (options.copy) {
+      try {
+        const clipboardy = require('clipboardy');
+        clipboardy.writeSync(result.password);
+        console.log('✅ Password copied to clipboard!\n');
+      } catch (err) {
+        console.log('⚠️  Clipboard not available (install clipboardy)\n');
+      }
+    }
+  } else {
+    const passwords = [];
+    for (let i = 0; i < options.count; i++) {
+      passwords.push(generatePassword(options));
+    }
+    displayMultiplePasswords(passwords, options.showEntropy);
+  }
+} catch (error) {
+  console.error('❌ Error:', error.message);
+  process.exit(1);
+}
+
+function showHelp() {
+  console.log(`
+🔐 Password Generator CLI
+
+Usage: passgen [options]
+
+Options:
+  --length, -l <n>      Password length (8-128, default: 16)
+  --count, -c <n>       Generate multiple passwords (default: 1)
+  --entropy, -e         Show entropy calculation
+  --copy                Copy to clipboard
+  --no-special          Exclude special characters
+  --no-uppercase        Exclude uppercase letters
+  --no-lowercase        Exclude lowercase letters
+  --no-numbers          Exclude numbers
+  --simple              Letters and numbers only (same as --no-special)
+  --help, -h            Show this help message
+
+Examples:
+  passgen                           # Generate default 16-char password
+  passgen --length 32               # 32 characters
+  passgen --count 5                 # Generate 5 passwords
+  passgen --entropy                 # Show security analysis
+  passgen --simple --length 24      # 24-char alphanumeric only
+  passgen --copy                    # Copy to clipboard
+
+Security:
+  - Uses crypto.randomBytes for cryptographically secure generation
+  - Entropy calculation: log2(charset_size ^ length)
+  - Recommended: 80+ bits for strong security
+  `);
+}

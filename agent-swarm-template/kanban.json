@@ -1,0 +1,25 @@
+{
+  "project": {
+    "name": "Example Project",
+    "description": "Agent swarm project template",
+    "reference": "",
+    "created_at": "2026-02-11T19:00:00Z",
+    "status": "not-started",
+    "target_completion": null
+  },
+  "stats": {
+    "total_tasks": 0,
+    "completed": 0,
+    "in_progress": 0,
+    "ready": 0,
+    "qa": 0,
+    "blocked": 0,
+    "estimated_hours_remaining": 0
+  },
+  "tasks": [],
+  "agents": {
+    "active": [],
+    "completed": []
+  },
+  "activity_log": []
+}

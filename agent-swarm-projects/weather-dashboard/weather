@@ -1,0 +1,478 @@
+#!/usr/bin/env python3
+"""
+CLI Weather Dashboard
+A fast, beautiful terminal-based weather application.
+"""
+
+import argparse
+import json
+import os
+import sys
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, Optional, Tuple
+import hashlib
+
+try:
+    import requests
+except ImportError:
+    print("Error: 'requests' library not found. Install with: pip3 install requests")
+    sys.exit(1)
+
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich import box
+except ImportError:
+    print("Error: 'rich' library not found. Install with: pip3 install rich")
+    sys.exit(1)
+
+# Configuration
+CONFIG_PATH = Path.home() / ".weatherrc"
+CACHE_DIR = Path.home() / ".cache" / "weather"
+CACHE_CURRENT_TTL = 600  # 10 minutes
+CACHE_FORECAST_TTL = 3600  # 1 hour
+
+# Weather icon mapping
+WEATHER_ICONS = {
+    "clear": "☀️",
+    "clouds": "☁️",
+    "partly_cloudy": "⛅",
+    "rain": "🌧️",
+    "drizzle": "🌧️",
+    "thunderstorm": "⛈️",
+    "snow": "❄️",
+    "mist": "🌫️",
+    "fog": "🌫️",
+    "haze": "🌫️",
+    "smoke": "🌫️",
+    "dust": "🌫️",
+}
+
+console = Console()
+
+
+def get_weather_icon(condition: str, clouds: int = 0) -> str:
+    """Map weather condition to ASCII art icon."""
+    condition_lower = condition.lower()
+    
+    if "clear" in condition_lower:
+        return WEATHER_ICONS["clear"]
+    elif "thunder" in condition_lower:
+        return WEATHER_ICONS["thunderstorm"]
+    elif "drizzle" in condition_lower:
+        return WEATHER_ICONS["drizzle"]
+    elif "rain" in condition_lower:
+        return WEATHER_ICONS["rain"]
+    elif "snow" in condition_lower:
+        return WEATHER_ICONS["snow"]
+    elif "mist" in condition_lower or "fog" in condition_lower:
+        return WEATHER_ICONS["mist"]
+    elif "haze" in condition_lower or "smoke" in condition_lower or "dust" in condition_lower:
+        return WEATHER_ICONS["haze"]
+    elif "cloud" in condition_lower:
+        # Partly cloudy if clouds < 50%, fully cloudy otherwise
+        if clouds < 50:
+            return WEATHER_ICONS["partly_cloudy"]
+        return WEATHER_ICONS["clouds"]
+    
+    return "🌡️"  # Default fallback
+
+
+def colorize_temp(temp: float, metric: bool = False) -> str:
+    """Color-code temperature based on ranges."""
+    # Convert to Fahrenheit for color logic
+    temp_f = temp if not metric else (temp * 9/5) + 32
+    
+    if temp_f <= 32:
+        color = "bright_blue"
+    elif temp_f <= 60:
+        color = "green"
+    elif temp_f <= 80:
+        color = "yellow"
+    elif temp_f <= 95:
+        color = "bright_yellow"
+    else:
+        color = "red"
+    
+    unit = "°C" if metric else "°F"
+    return f"[{color}]{int(temp)}{unit}[/{color}]"
+
+
+def load_config() -> Dict:
+    """Load configuration from ~/.weatherrc."""
+    default_config = {
+        "api_key": "",
+        "default_location": "",
+        "units": "imperial",
+        "cache_ttl": 600
+    }
+    
+    if CONFIG_PATH.exists():
+        try:
+            with open(CONFIG_PATH, 'r') as f:
+                config = json.load(f)
+                return {**default_config, **config}
+        except Exception as e:
+            console.print(f"[yellow]Warning: Could not load config: {e}[/yellow]")
+    
+    return default_config
+
+
+def save_config(config: Dict) -> None:
+    """Save configuration to ~/.weatherrc."""
+    try:
+        with open(CONFIG_PATH, 'w') as f:
+            json.dump(config, f, indent=2)
+    except Exception as e:
+        console.print(f"[red]Error saving config: {e}[/red]")
+
+
+def get_cache_key(location: str, units: str) -> str:
+    """Generate cache key from location and units."""
+    key_str = f"{location}_{units}".encode()
+    return hashlib.md5(key_str).hexdigest()
+
+
+def get_cached_data(cache_key: str, data_type: str) -> Optional[Dict]:
+    """Retrieve cached weather data if valid."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file = CACHE_DIR / f"{cache_key}_{data_type}.json"
+    
+    if cache_file.exists():
+        try:
+            with open(cache_file, 'r') as f:
+                cached = json.load(f)
+                
+            ttl = CACHE_CURRENT_TTL if data_type == "current" else CACHE_FORECAST_TTL
+            age = time.time() - cached.get("timestamp", 0)
+            
+            if age < ttl:
+                return cached.get("data")
+        except Exception:
+            pass
+    
+    return None
+
+
+def save_cached_data(cache_key: str, data_type: str, data: Dict) -> None:
+    """Save weather data to cache."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file = CACHE_DIR / f"{cache_key}_{data_type}.json"
+    
+    try:
+        cached = {
+            "timestamp": time.time(),
+            "data": data
+        }
+        with open(cache_file, 'w') as f:
+            json.dump(cached, f)
+    except Exception as e:
+        console.print(f"[yellow]Warning: Could not cache data: {e}[/yellow]")
+
+
+def fetch_weather(location: str, api_key: str, metric: bool = False) -> Tuple[Optional[Dict], Optional[Dict]]:
+    """Fetch current weather and forecast from OpenWeatherMap API."""
+    units = "metric" if metric else "imperial"
+    cache_key = get_cache_key(location, units)
+    
+    # Try cache first
+    current_data = get_cached_data(cache_key, "current")
+    forecast_data = get_cached_data(cache_key, "forecast")
+    
+    if current_data and forecast_data:
+        return current_data, forecast_data
+    
+    # Fetch from API
+    base_url = "https://api.openweathermap.org/data/2.5"
+    
+    try:
+        # Fetch current weather
+        current_url = f"{base_url}/weather"
+        current_params = {
+            "q": location,
+            "appid": api_key,
+            "units": units
+        }
+        
+        current_response = requests.get(current_url, params=current_params, timeout=5)
+        
+        if current_response.status_code == 401:
+            console.print("[red]Error: Invalid API key. Run: weather --setup[/red]")
+            return None, None
+        elif current_response.status_code == 404:
+            console.print(f"[red]Error: Location '{location}' not found. Try 'City, State' format[/red]")
+            return None, None
+        elif current_response.status_code != 200:
+            console.print(f"[red]Error: Weather service returned status {current_response.status_code}[/red]")
+            return None, None
+        
+        current_data = current_response.json()
+        
+        # Fetch forecast
+        forecast_url = f"{base_url}/forecast"
+        forecast_params = {
+            "q": location,
+            "appid": api_key,
+            "units": units
+        }
+        
+        forecast_response = requests.get(forecast_url, params=forecast_params, timeout=5)
+        
+        if forecast_response.status_code != 200:
+            console.print("[yellow]Warning: Could not fetch forecast data[/yellow]")
+            forecast_data = None
+        else:
+            forecast_data = forecast_response.json()
+        
+        # Cache the results
+        save_cached_data(cache_key, "current", current_data)
+        if forecast_data:
+            save_cached_data(cache_key, "forecast", forecast_data)
+        
+        return current_data, forecast_data
+    
+    except requests.exceptions.Timeout:
+        console.print("[red]Error: Request timed out. Check your internet connection[/red]")
+        return None, None
+    except requests.exceptions.ConnectionError:
+        console.print("[yellow]Cannot connect. Using cached data if available...[/yellow]")
+        # Try to return any cached data, even if expired
+        return current_data, forecast_data
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        return None, None
+
+
+def display_current(data: Dict, metric: bool = False) -> None:
+    """Display current weather conditions."""
+    location = data.get("name", "Unknown")
+    country = data.get("sys", {}).get("country", "")
+    
+    weather = data.get("weather", [{}])[0]
+    condition = weather.get("main", "Unknown")
+    description = weather.get("description", "").title()
+    
+    main = data.get("main", {})
+    temp = main.get("temp", 0)
+    feels_like = main.get("feels_like", 0)
+    humidity = main.get("humidity", 0)
+    
+    wind = data.get("wind", {})
+    wind_speed = wind.get("speed", 0)
+    wind_deg = wind.get("deg", 0)
+    
+    clouds = data.get("clouds", {}).get("all", 0)
+    
+    # Get appropriate icon
+    icon = get_weather_icon(condition, clouds)
+    
+    # Wind direction
+    directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    wind_dir = directions[int((wind_deg + 22.5) / 45) % 8]
+    
+    # Date
+    date_str = datetime.now().strftime("%A, %b %d, %Y")
+    
+    # Speed unit
+    speed_unit = "m/s" if metric else "mph"
+    
+    # Header
+    header = f"  {location}, {country}{'':>20}{icon}  \n  {date_str}{'':>15}"
+    console.print(Panel(header, box=box.ROUNDED))
+    
+    # Current conditions
+    console.print("\n[bold]Current Conditions[/bold]")
+    temp_str = colorize_temp(temp, metric)
+    feels_str = colorize_temp(feels_like, metric)
+    console.print(f"  Temperature:  {temp_str} (feels like {feels_str})")
+    console.print(f"  Conditions:   {description}")
+    console.print(f"  Humidity:     {humidity}%")
+    console.print(f"  Wind:         {wind_speed:.1f} {speed_unit} {wind_dir}")
+
+
+def display_forecast(data: Dict, metric: bool = False, days: int = 7) -> None:
+    """Display 7-day forecast."""
+    if not data:
+        return
+    
+    forecast_list = data.get("list", [])
+    if not forecast_list:
+        return
+    
+    # Group forecasts by day
+    daily_forecasts = {}
+    
+    for item in forecast_list:
+        dt = datetime.fromtimestamp(item["dt"])
+        date_key = dt.date()
+        
+        if date_key not in daily_forecasts:
+            daily_forecasts[date_key] = []
+        
+        daily_forecasts[date_key].append(item)
+    
+    # Create table
+    console.print(f"\n[bold]{days}-Day Forecast[/bold]")
+    table = Table(box=box.ROUNDED)
+    table.add_column("Day", style="cyan", no_wrap=True)
+    table.add_column("High", justify="right")
+    table.add_column("Low", justify="right")
+    table.add_column("Conditions", style="white")
+    
+    # Add rows
+    count = 0
+    for date_key in sorted(daily_forecasts.keys())[:days]:
+        if count >= days:
+            break
+        
+        day_data = daily_forecasts[date_key]
+        
+        # Get high/low temps
+        temps = [item["main"]["temp"] for item in day_data]
+        high = max(temps)
+        low = min(temps)
+        
+        # Get most common condition (use midday if available)
+        midday_item = None
+        for item in day_data:
+            dt = datetime.fromtimestamp(item["dt"])
+            if 11 <= dt.hour <= 14:
+                midday_item = item
+                break
+        
+        if not midday_item:
+            midday_item = day_data[len(day_data) // 2]
+        
+        weather = midday_item.get("weather", [{}])[0]
+        condition = weather.get("main", "Unknown")
+        description = weather.get("description", "").title()
+        clouds = midday_item.get("clouds", {}).get("all", 0)
+        
+        icon = get_weather_icon(condition, clouds)
+        
+        # Format date
+        if count == 0:
+            day_str = "Today"
+        elif count == 1:
+            day_str = "Tomorrow"
+        else:
+            day_str = date_key.strftime("%a %d")
+        
+        high_str = colorize_temp(high, metric)
+        low_str = colorize_temp(low, metric)
+        condition_str = f"{icon}  {description}"
+        
+        table.add_row(day_str, high_str, low_str, condition_str)
+        count += 1
+    
+    console.print(table)
+
+
+def setup_wizard() -> None:
+    """Interactive setup wizard for API key and preferences."""
+    console.print("[bold cyan]Weather Dashboard Setup[/bold cyan]\n")
+    
+    config = load_config()
+    
+    # API Key
+    console.print("Get your free API key from: https://openweathermap.org/api")
+    api_key = input("Enter your OpenWeatherMap API key: ").strip()
+    if api_key:
+        config["api_key"] = api_key
+    
+    # Default location
+    location = input("Enter your default location (e.g., 'Seattle, WA'): ").strip()
+    if location:
+        config["default_location"] = location
+    
+    # Units
+    units = input("Preferred units (imperial/metric) [imperial]: ").strip().lower()
+    if units in ["metric", "m"]:
+        config["units"] = "metric"
+    else:
+        config["units"] = "imperial"
+    
+    save_config(config)
+    console.print("\n[green]✓ Configuration saved to ~/.weatherrc[/green]")
+
+
+def main():
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="CLI Weather Dashboard - Fast, beautiful terminal weather",
+        epilog="Examples:\n"
+               "  weather Seattle\n"
+               "  weather 98101 --metric\n"
+               "  weather \"New York, NY\" --days 3\n",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    
+    parser.add_argument("location", nargs="*", help="Location (city, zip, 'city, state')")
+    parser.add_argument("-m", "--metric", action="store_true", help="Use metric units (Celsius)")
+    parser.add_argument("-d", "--days", type=int, default=7, help="Number of forecast days (default: 7)")
+    parser.add_argument("--setup", action="store_true", help="Run interactive setup wizard")
+    parser.add_argument("--refresh", action="store_true", help="Force refresh (ignore cache)")
+    
+    args = parser.parse_args()
+    
+    # Setup wizard
+    if args.setup:
+        setup_wizard()
+        return
+    
+    # Load config
+    config = load_config()
+    
+    # Get API key
+    api_key = os.environ.get("WEATHER_API_KEY") or config.get("api_key", "")
+    if not api_key:
+        console.print("[red]Error: API key not found. Run: weather --setup[/red]")
+        sys.exit(1)
+    
+    # Get location
+    if args.location:
+        location = " ".join(args.location)
+    else:
+        location = config.get("default_location", "")
+    
+    if not location:
+        console.print("[red]Error: No location specified. Provide a location or run: weather --setup[/red]")
+        sys.exit(1)
+    
+    # Determine units
+    if args.metric:
+        metric = True
+    else:
+        metric = config.get("units", "imperial") == "metric"
+    
+    # Clear cache if refresh requested
+    if args.refresh:
+        units = "metric" if metric else "imperial"
+        cache_key = get_cache_key(location, units)
+        for data_type in ["current", "forecast"]:
+            cache_file = CACHE_DIR / f"{cache_key}_{data_type}.json"
+            if cache_file.exists():
+                cache_file.unlink()
+    
+    # Fetch weather
+    current_data, forecast_data = fetch_weather(location, api_key, metric)
+    
+    if not current_data:
+        sys.exit(1)
+    
+    # Display
+    display_current(current_data, metric)
+    
+    if forecast_data:
+        display_forecast(forecast_data, metric, args.days)
+    
+    # Last updated
+    now = datetime.now().strftime("%I:%M %p")
+    console.print(f"\n[dim]Last updated: {now}[/dim]")
+
+
+if __name__ == "__main__":
+    main()

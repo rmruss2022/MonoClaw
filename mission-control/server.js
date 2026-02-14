@@ -70,7 +70,7 @@ async function getSystemData() {
         // Run all port checks in parallel for speed
         const [voiceServerOnline, jobDashboard, ravesDashboard, tokenTracker, 
                missionControl, activityHub, moltbookDash, monoclawDash, 
-               skillBuilderDash, dockerDash] = await Promise.all([
+               skillBuilderDash, dockerDash, agentSwarmDash] = await Promise.all([
             checkPort(18790),
             checkPort(18791),
             checkPort(18793),
@@ -80,7 +80,8 @@ async function getSystemData() {
             checkPort(18797),
             checkPort(18798),
             checkPort(18799),
-            checkPort(9092)
+            checkPort(9092),
+            checkPort(5173)
         ]);
         const voiceHealth = voiceServerOnline ? 'healthy' : 'down';
         
@@ -186,6 +187,11 @@ async function getSystemData() {
                     name: 'Docker Agent Dashboard',
                     running: dockerDash,
                     detail: dockerDash ? `Port 9092` : 'Stopped'
+                },
+                {
+                    name: 'Agent Swarm Dashboard',
+                    running: agentSwarmDash,
+                    detail: agentSwarmDash ? `Port 5173` : 'Stopped'
                 }
             ],
             apiKeys: [
