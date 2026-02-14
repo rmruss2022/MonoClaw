@@ -75,7 +75,6 @@ Designer agents have access to image generation capabilities:
 
 \`\`\`javascript
 sessions_spawn({
-  cleanup: "delete",
   agentId: "main",
   label: "Designer-Agent: Create Home Screen Mockup",
   model: "anthropic/claude-opus-4-6",

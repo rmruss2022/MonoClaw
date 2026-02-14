@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Context Manager Service</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, Segoe UI, Roboto, sans-serif; background: #0b1020; color: #e5e7eb; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .sub { color: #9ca3af; font-size: 13px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .card { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 12px; }
+    .card h3 { margin: 0 0 8px 0; font-size: 16px; }
+    .grow { flex: 1; min-width: 260px; }
+    .small { min-width: 180px; }
+    label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
+    input, select { width: 100%; background: #0f172a; border: 1px solid #374151; color: #e5e7eb; border-radius: 6px; padding: 8px; }
+    button { background: #2563eb; color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+    button.secondary { background: #374151; }
+    button.danger { background: #b91c1c; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid #1f2937; text-align: left; padding: 8px; }
+    th button { background: transparent; color: #93c5fd; padding: 0; }
+    .muted { color: #9ca3af; }
+    .ok { color: #34d399; }
+    .bad { color: #f87171; }
+    .warn { color: #fbbf24; }
+    .error { background: #3b0d0d; border: 1px solid #7f1d1d; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useMemo, useState } = React;
+
+    async function api(url, options = {}) {
+      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+      const json = await res.json();
+      if (!res.ok || json.ok === false) {
+        const err = new Error(json?.error?.message || 'Request failed');
+        err.payload = json;
+        throw err;
+      }
+      return json;
+    }
+
+    function App() {
+      const [agentId, setAgentId] = useState('main');
+      const [olderThanMinutes, setOlderThanMinutes] = useState(60);
+      const [confirmApply, setConfirmApply] = useState('');
+      const [report, setReport] = useState(null);
+      const [beforeReport, setBeforeReport] = useState(null);
+      const [prune, setPrune] = useState(null);
+      const [gateway, setGateway] = useState(null);
+      const [diagnostics, setDiagnostics] = useState(null);
+      const [trends, setTrends] = useState(null);
+      const [range, setRange] = useState('7d');
+      const [error, setError] = useState('');
+      const [busy, setBusy] = useState(false);
+      const [sortBy, setSortBy] = useState('sizeMb');
+      const [sortDir, setSortDir] = useState('desc');
+
+      const sortedSessions = useMemo(() => {
+        const rows = [...(report?.topSessions || [])];
+        rows.sort((a, b) => {
+          const av = a?.[sortBy] ?? 0;
+          const bv = b?.[sortBy] ?? 0;
+          if (av < bv) return sortDir === 'asc' ? -1 : 1;
+          if (av > bv) return sortDir === 'asc' ? 1 : -1;
+          return 0;
+        });
+        return rows;
+      }, [report, sortBy, sortDir]);
+
+      async function runReport() {
+        setBusy(true);
+        setError('');
+        try {
+          const res = await api(`/api/context/report?agent=${encodeURIComponent(agentId)}`);
+          setReport(res.data);
+          const tr = await api(`/api/context/trends?agent=${encodeURIComponent(agentId)}&range=${range}`);
+          setTrends(tr.data);
+        } catch (e) {
+          setError(e?.payload?.error?.message || e.message);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runPrune(apply) {
+        setBusy(true);
+        setError('');
+        try {
+          if (apply) setBeforeReport(report);
+          const res = await api('/api/context/prune', {
+            method: 'POST',
+            body: JSON.stringify({ agentId, olderThanMinutes: Number(olderThanMinutes), apply })
+          });
+          setPrune(res.data);
+          if (res.data.reportAfter) setReport(res.data.reportAfter);
+          const tr = await api(`/api/context/trends?agent=${encodeURIComponent(agentId)}&range=${range}`);
+          setTrends(tr.data);
+        } catch (e) {
+          setError(e?.payload?.error?.message || e.message);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function checkGateway() {
+        setBusy(true);
+        setError('');
+        try {
+          const res = await api('/api/context/gateway-status');
+          setGateway(res.data);
+        } catch (e) {
+          setError(e?.payload?.error?.message || e.message);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function loadDiagnostics() {
+        setBusy(true);
+        setError('');
+        try {
+          const res = await api('/api/context/diagnostics');
+          setDiagnostics(res.data);
+        } catch (e) {
+          setError(e?.payload?.error?.message || e.message);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function runCompact() {
+        setBusy(true);
+        setError('');
+        try {
+          await api('/api/context/maintenance/compact', { method: 'POST' });
+          await runReport();
+        } catch (e) {
+          setError(e?.payload?.error?.message || e.message);
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      function toggleSort(col) {
+        if (sortBy === col) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+        else { setSortBy(col); setSortDir('desc'); }
+      }
+
+      function copyReport() {
+        if (!report) return;
+        navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+      }
+
+      const diff = report && beforeReport ? {
+        totalSessions: (report?.totals?.totalSessions || 0) - (beforeReport?.totals?.totalSessions || 0),
+        subAgentSessions: (report?.totals?.subAgentSessions || 0) - (beforeReport?.totals?.subAgentSessions || 0),
+        totalMb: Number((report?.totals?.totalTranscriptSizeMb || 0) - (beforeReport?.totals?.totalTranscriptSizeMb || 0)).toFixed(2)
+      } : null;
+
+      return (
+        <div className="container">
+          <div className="header">
+            <div>
+              <h1>Context Manager</h1>
+              <div className="sub">Standalone Command Hub service for ctxreport/ctxprune</div>
+            </div>
+            <a href="http://localhost:18795/hub">Back to Hub</a>
+          </div>
+          {error && <div className="error">{error}</div>}
+
+          <div className="row">
+            <div className="card small">
+              <label>Agent</label>
+              <select value={agentId} onChange={(e) => setAgentId(e.target.value)}>
+                <option value="main">main</option>
+                <option value="swarm">swarm</option>
+              </select>
+            </div>
+            <div className="card small">
+              <label>Older Than Minutes</label>
+              <input type="number" min="1" max="10080" value={olderThanMinutes} onChange={(e) => setOlderThanMinutes(e.target.value)} />
+            </div>
+            <div className="card grow">
+              <label>Actions</label>
+              <div className="row">
+                <button disabled={busy} onClick={runReport}>Run ctxreport</button>
+                <button disabled={busy} className="secondary" onClick={() => runPrune(false)}>Run ctxprune (dry-run)</button>
+                <button disabled={busy} className="secondary" onClick={checkGateway}>Gateway health</button>
+                <button disabled={busy} className="secondary" onClick={copyReport}>Copy report</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="row">
+            <div className="card grow">
+              <h3>Apply Prune (requires confirmation)</h3>
+              <label>Type APPLY to enable</label>
+              <input value={confirmApply} onChange={(e) => setConfirmApply(e.target.value)} placeholder="APPLY" />
+              <div className="row" style={{ marginTop: 8 }}>
+                <button className="danger" disabled={busy || confirmApply !== 'APPLY' || !prune} onClick={() => runPrune(true)}>
+                  Apply prune
+                </button>
+                <span className="muted">You must run dry-run first and type APPLY.</span>
+              </div>
+            </div>
+            <div className="card grow">
+              <h3>Gateway Status</h3>
+              {!gateway && <div className="muted">Not checked yet.</div>}
+              {gateway && (
+                <>
+                  <div className={gateway.ok ? 'ok' : 'bad'}>{gateway.ok ? 'OK' : 'Unavailable'}</div>
+                  <div className="mono muted">{gateway.statusText?.slice(0, 800)}</div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {report && (
+            <div className="row">
+              <div className="card small"><h3>Total</h3><div>{report.totals?.totalSessions ?? 0}</div></div>
+              <div className="card small"><h3>Main</h3><div>{report.totals?.mainSessions ?? 0}</div></div>
+              <div className="card small"><h3>Sub-agent</h3><div>{report.totals?.subAgentSessions ?? 0}</div></div>
+              <div className="card small"><h3>Transcript MB</h3><div>{report.totals?.totalTranscriptSizeMb ?? 0}</div></div>
+              <div className="card grow"><h3>Last Run</h3><div className="muted">{new Date(report.generatedAt).toLocaleString()}</div></div>
+            </div>
+          )}
+
+          {diff && (
+            <div className="card" style={{ marginBottom: 12 }}>
+              <h3>Before vs After (Apply diff)</h3>
+              <div className="row">
+                <div>Total sessions delta: <strong className={diff.totalSessions <= 0 ? 'ok' : 'warn'}>{diff.totalSessions}</strong></div>
+                <div>Sub-agent delta: <strong className={diff.subAgentSessions <= 0 ? 'ok' : 'warn'}>{diff.subAgentSessions}</strong></div>
+                <div>Size delta MB: <strong className={Number(diff.totalMb) <= 0 ? 'ok' : 'warn'}>{diff.totalMb}</strong></div>
+              </div>
+            </div>
+          )}
+
+          {prune && (
+            <div className="card" style={{ marginBottom: 12 }}>
+              <h3>Prune Result ({prune.apply ? 'APPLY' : 'DRY RUN'})</h3>
+              <div className="row">
+                <div>Pruned candidates: <strong>{prune.prunedCount}</strong></div>
+                <div>Renamed: <strong>{prune.renamedCount}</strong></div>
+                <div>Missing transcripts: <strong>{prune.missingTranscriptCount}</strong></div>
+                <div>Total MB: <strong>{prune.totalSizeMb}</strong></div>
+              </div>
+              {prune.backupFile && <div className="muted">Backup: {prune.backupFile}</div>}
+            </div>
+          )}
+
+          <div className="card" style={{ marginBottom: 12 }}>
+            <h3>Top Sessions</h3>
+            {!report && <div className="muted">Run a report to load sessions.</div>}
+            {report && (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Session Key</th>
+                    <th><button onClick={() => toggleSort('type')}>Type</button></th>
+                    <th><button onClick={() => toggleSort('sizeMb')}>Size MB</button></th>
+                    <th><button onClick={() => toggleSort('ageMinutes')}>Age Minutes</button></th>
+                    <th><button onClick={() => toggleSort('updatedAt')}>Updated</button></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedSessions.slice(0, 50).map((s) => (
+                    <tr key={s.key}>
+                      <td className="mono">{s.key}</td>
+                      <td>{s.type}</td>
+                      <td>{s.sizeMb}</td>
+                      <td>{s.ageMinutes}</td>
+                      <td>{new Date(s.updatedAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="row">
+            <div className="card grow">
+              <h3>Trends (SQLite)</h3>
+              <div className="row">
+                <select value={range} onChange={(e) => setRange(e.target.value)}>
+                  <option value="7d">7d</option>
+                  <option value="30d">30d</option>
+                </select>
+                <button className="secondary" disabled={busy} onClick={runReport}>Refresh trends</button>
+                <button className="secondary" disabled={busy} onClick={runCompact}>Compact storage</button>
+              </div>
+              {!trends && <div className="muted">No trend data yet.</div>}
+              {trends && (
+                <div className="mono">
+                  Reports/day: {JSON.stringify(trends.reportsByDay, null, 2)}
+                  {'\n'}Prunes/day: {JSON.stringify(trends.prunesByDay, null, 2)}
+                </div>
+              )}
+            </div>
+            <div className="card grow">
+              <h3>Diagnostics</h3>
+              <div className="row">
+                <button className="secondary" disabled={busy} onClick={loadDiagnostics}>Load diagnostics</button>
+              </div>
+              {!diagnostics && <div className="muted">Not loaded.</div>}
+              {diagnostics && (
+                <details>
+                  <summary>Show raw diagnostics output</summary>
+                  <div className="mono">
+                    plugins list:
+                    {'\n'}{diagnostics.pluginsList?.stdout || diagnostics.pluginsList?.stderr}
+                    {'\n\n'}plugins doctor:
+                    {'\n'}{diagnostics.pluginsDoctor?.stdout || diagnostics.pluginsDoctor?.stderr}
+                    {'\n\n'}doctor:
+                    {'\n'}{diagnostics.doctor?.stdout || diagnostics.doctor?.stderr}
+                  </div>
+                </details>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+  </script>
+</body>
+</html>

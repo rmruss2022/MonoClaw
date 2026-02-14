@@ -14,6 +14,7 @@ SERVICES=(
     "Raves Dashboard:18793:/Users/matthew/.openclaw/workspace/raves/server.js:/"
     "Token Tracker:18794:/Users/matthew/.openclaw/workspace/tokens/server.js:/"
     "Mission Control:18795:/Users/matthew/.openclaw/workspace/mission-control/server.js:/"
+    "Context Manager:18800:/Users/matthew/.openclaw/workspace/context-manager/server.js:/"
 )
 
 RESTARTS=0
@@ -63,6 +64,7 @@ if [ $RESTARTS -eq 0 ]; then
     echo "- Raves Dashboard (18793) ✓"
     echo "- Token Tracker (18794) ✓"
     echo "- Mission Control (18795) ✓"
+    echo "- Context Manager (18800) ✓"
 else
     echo "[$TIMESTAMP] ⚠️  Restarted $RESTARTS service(s)" >> "$LOG_FILE"
     echo "⚠️  Health check complete — $RESTARTS service(s) restarted."
