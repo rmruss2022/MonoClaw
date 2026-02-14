@@ -133,6 +133,7 @@ taskPrompt = taskPrompt
 
 // Now spawn with real paths
 sessions_spawn({
+  cleanup: "delete",
   agentId: "main",
   label: "iOS-Dev-Agent: Task XYZ",
   task: taskPrompt,

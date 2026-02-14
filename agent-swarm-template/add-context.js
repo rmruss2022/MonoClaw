@@ -144,6 +144,7 @@ Never spawn an agent for a task with unmet dependencies!
 
 \`\`\`javascript
 sessions_spawn({
+  cleanup: "delete",
   agentId: "main",
   label: "iOS-Dev-Agent: Build Home Screen Component",
   model: "anthropic/claude-opus-4-6",

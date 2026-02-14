@@ -93,7 +93,7 @@ async function getSystemData() {
         // Run all port checks in parallel for speed
         const [voiceServerOnline, jobDashboard, ravesDashboard, tokenTracker, 
                missionControl, activityHub, moltbookDash, monoclawDash, 
-               skillBuilderDash, dockerDash, agentSwarmDash] = await Promise.all([
+               skillBuilderDash, dockerDash, agentSwarmDash, contextManager] = await Promise.all([
             checkPort(18790),
             checkPort(18791),
             checkPort(18793),
@@ -104,7 +104,8 @@ async function getSystemData() {
             checkPort(18798),
             checkPort(18799),
             checkPort(9092),
-            checkPort(5173)
+            checkPort(5173),
+            checkPort(18800)
         ]);
         const voiceHealth = voiceServerOnline ? 'healthy' : 'down';
         
@@ -217,6 +218,11 @@ async function getSystemData() {
                     detail: agentSwarmDash ? `Port 5173` : 'Stopped'
                 },
                 {
+                    name: 'Context Manager',
+                    running: contextManager,
+                    detail: contextManager ? `Port 18800` : 'Stopped'
+                },
+                {
                     name: 'Gmail Inbox Check',
                     running: await isGmailEnabled(),
                     detail: (await isGmailEnabled()) ? 'Every 10 minutes' : 'Disabled',
@@ -265,6 +271,11 @@ async function getSystemData() {
                     name: 'Skill Builder',
                     description: 'Auto-discover services, generate documentation',
                     url: 'http://127.0.0.1:18799'
+                },
+                {
+                    name: 'Context Manager',
+                    description: 'Session bloat reports and safe prune controls',
+                    url: 'http://127.0.0.1:18800'
                 },
                 {
                     name: 'Docker Agent System',
@@ -543,6 +554,15 @@ async function getCodeStats() {
     }
 }
 
+function readRequestBody(req) {
+    return new Promise((resolve, reject) => {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => resolve(body));
+        req.on('error', reject);
+    });
+}
+
 const server = http.createServer(async (req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -560,19 +580,16 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(data));
     } else if (req.url === '/set-model' && req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', async () => {
-            try {
-                const { model } = JSON.parse(body);
-                const result = await setModel(model);
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(result));
-            } catch (error) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: false, error: error.message }));
-            }
-        });
+        const body = await readRequestBody(req);
+        try {
+            const { model } = JSON.parse(body);
+            const result = await setModel(model);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        } catch (error) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: error.message }));
+        }
     } else if (req.url === '/api/open-finder' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => body += chunk);
