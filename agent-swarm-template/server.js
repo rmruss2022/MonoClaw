@@ -113,13 +113,13 @@ function calculateStats(projectId) {
   
   const stats = {
     total_tasks: tasks.length,
-    completed: tasks.filter(t => t.state === 'complete').length,
+    completed: tasks.filter(t => t.state === 'done').length,
     in_progress: tasks.filter(t => t.state === 'in-progress').length,
     ready: tasks.filter(t => t.state === 'ready').length,
     qa: tasks.filter(t => t.state === 'qa').length,
     blocked: tasks.filter(t => t.state === 'blocked').length,
     estimated_hours_remaining: tasks
-      .filter(t => t.state !== 'complete')
+      .filter(t => t.state !== 'done')
       .reduce((sum, t) => sum + (t.estimated_hours - t.actual_hours), 0)
   };
   
@@ -242,7 +242,7 @@ app.post('/api/projects', (req, res) => {
     
     // Log activity
     db.prepare(`
-      INSERT INTO activity_log (project_id, timestamp, agent, message, type)
+      INSERT INTO activity_log (project_id, timestamp, agent_id, message, event_type)
       VALUES (?, ?, ?, ?, ?)
     `).run(result.lastInsertRowid, new Date().toISOString(), 'system', `Project created: ${name}`, 'info');
     
@@ -288,7 +288,7 @@ app.post('/api/tasks', (req, res) => {
     
     // Log activity
     db.prepare(`
-      INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+      INSERT INTO activity_log (project_id, timestamp, agent_id, task_id, message, event_type)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(project_id, new Date().toISOString(), 'system', id, `Task created: ${title}`, 'info');
     
@@ -349,7 +349,7 @@ app.patch('/api/tasks/:id', (req, res) => {
     // Log activity if state changed
     if (updates.state) {
       db.prepare(`
-        INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+        INSERT INTO activity_log (project_id, timestamp, agent_id, task_id, message, event_type)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(
         task.project_id,
@@ -391,7 +391,7 @@ app.post('/api/agents/assign', (req, res) => {
     
     // Log activity
     db.prepare(`
-      INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+      INSERT INTO activity_log (project_id, timestamp, agent_id, task_id, message, event_type)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(
       project_id,
@@ -432,7 +432,7 @@ app.post('/api/agents/complete', (req, res) => {
     if (agent && agent.task_id) {
       // Log activity
       db.prepare(`
-        INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
+        INSERT INTO activity_log (project_id, timestamp, agent_id, task_id, message, event_type)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(
         agent.project_id,
@@ -497,7 +497,7 @@ app.post('/api/projects/:id/context', (req, res) => {
     
     // Log activity
     db.prepare(`
-      INSERT INTO activity_log (project_id, timestamp, agent, message, type)
+      INSERT INTO activity_log (project_id, timestamp, agent_id, message, event_type)
       VALUES (?, ?, ?, ?, ?)
     `).run(projectId, now, 'system', `Added context document: ${title}`, 'info');
     
@@ -532,6 +532,27 @@ app.put('/api/projects/:id/context/:doc_id', (req, res) => {
 });
 
 // Root redirect
+// GET /api/agents - Get all agents for a project
+app.get('/api/agents', (req, res) => {
+  try {
+    const projectId = req.query.project_id ? parseInt(req.query.project_id) : null;
+    let query = 'SELECT * FROM agents';
+    let params = [];
+    
+    if (projectId) {
+      query += ' WHERE project_id = ?';
+      params.push(projectId);
+    }
+    
+    query += ' ORDER BY spawned_at DESC';
+    const agents = db.prepare(query).all(...params);
+    res.json({ agents });
+  } catch (error) {
+    console.error('Error fetching agents:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/', (req, res) => {
   res.redirect('/dashboard.html');
 });

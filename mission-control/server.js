@@ -60,6 +60,29 @@ function getAvailableModels(config) {
     return models;
 }
 
+async function isGmailEnabled() {
+    try {
+        const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron list --json');
+        const cronData = JSON.parse(stdout);
+        const gmailJob = cronData.jobs?.find(j => j.id === '3956a4f1-f07b-4ce6-869d-5d69664debb2');
+        return gmailJob?.enabled || false;
+    } catch (error) {
+        console.error('Failed to check Gmail status:', error.message);
+        return false;
+    }
+}
+
+async function toggleGmail(enabled) {
+    try {
+        const enableFlag = enabled ? 'true' : 'false';
+        await execPromise(`/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron update 3956a4f1-f07b-4ce6-869d-5d69664debb2 --patch '{"enabled":${enableFlag}}'`);
+        return { success: true, enabled };
+    } catch (error) {
+        console.error('Failed to toggle Gmail:', error.message);
+        return { success: false, error: error.message };
+    }
+}
+
 async function getSystemData() {
     try {
         // Read config
@@ -192,6 +215,13 @@ async function getSystemData() {
                     name: 'Agent Swarm Dashboard',
                     running: agentSwarmDash,
                     detail: agentSwarmDash ? `Port 5173` : 'Stopped'
+                },
+                {
+                    name: 'Gmail Inbox Check',
+                    running: await isGmailEnabled(),
+                    detail: (await isGmailEnabled()) ? 'Every 10 minutes' : 'Disabled',
+                    controllable: true,
+                    cronJobId: '3956a4f1-f07b-4ce6-869d-5d69664debb2'
                 }
             ],
             apiKeys: [
@@ -676,6 +706,20 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: false, error: error.message }));
         }
+    } else if (req.url === '/api/toggle-gmail' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', async () => {
+            try {
+                const { enabled } = JSON.parse(body);
+                const result = await toggleGmail(enabled);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result));
+            } catch (error) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: error.message }));
+            }
+        });
     } else if (req.url === '/hub' || req.url === '/hub.html') {
         const html = fs.readFileSync(path.join(__dirname, 'hub.html'), 'utf-8');
         res.writeHead(200, { 'Content-Type': 'text/html' });
