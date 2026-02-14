@@ -490,7 +490,8 @@
                     'Moltbook Dashboard': '📱',
                     'MonoClaw Dashboard': '🦾',
                     'Skill Builder Dashboard': '🔍',
-                    'Docker Agent Dashboard': '🐳'
+                    'Docker Agent Dashboard': '🐳',
+                    'Gmail Inbox Check': '📧'
                 };
                 const colors = {
                     'Gateway': '#00d9ff',
@@ -503,7 +504,8 @@
                     'Moltbook Dashboard': '#e74c3c',
                     'MonoClaw Dashboard': '#ff9ff3',
                     'Skill Builder Dashboard': '#22c55e',
-                    'Docker Agent Dashboard': '#3b82f6'
+                    'Docker Agent Dashboard': '#3b82f6',
+                    'Gmail Inbox Check': '#ea4335'
                 };
                 const urls = {
                     'Voice Server': 'http://localhost:18790/status',
@@ -523,6 +525,25 @@
                     const color = colors[s.name] || '#888';
                     const url = urls[s.name];
                     const port = s.detail.match(/\d+/)?.[0] || '';
+                    
+                    // Special handling for controllable services (Gmail)
+                    if (s.controllable) {
+                        return `
+                            <div class="app-card ${s.running ? 'running' : 'stopped'}" 
+                                 style="--app-color: ${color}">
+                                <div class="app-icon" style="color: ${color}">${icon}</div>
+                                <div class="app-status">
+                                    <span class="status-indicator ${s.running ? 'online' : 'offline'}"></span>
+                                </div>
+                                <div class="app-name">${s.name.replace(' Inbox Check', '')}</div>
+                                <button class="btn ${s.running ? 'btn-danger' : 'btn-primary'}" 
+                                        onclick="event.stopPropagation(); toggleGmailService(${!s.running})"
+                                        style="margin-top: 8px; padding: 4px 8px; font-size: 0.75rem; width: 100%;">
+                                    ${s.running ? 'Disable' : 'Enable'}
+                                </button>
+                            </div>
+                        `;
+                    }
                     
                     return `
                         <div class="app-card ${s.running ? 'running' : 'stopped'}" 
@@ -692,6 +713,26 @@
                 }
             } catch (error) {
                 alert(`Failed to open ${path}`);
+            }
+        }
+        
+        async function toggleGmailService(enabled) {
+            try {
+                const response = await fetch('/api/toggle-gmail', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Reload data to update UI
+                    await loadData();
+                } else {
+                    alert(`Failed to ${enabled ? 'enable' : 'disable'} Gmail: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Failed to toggle Gmail: ${error.message}`);
             }
         }
         

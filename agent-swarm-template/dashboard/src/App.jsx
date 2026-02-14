@@ -6,8 +6,9 @@ function App() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [projectId, setProjectId] = useState(2); // Default to Password Generator
+  const [projectId, setProjectId] = useState(3); // Default to Ora AI
   const [projects, setProjects] = useState([]);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   // Load available projects
   const loadProjects = async () => {
@@ -30,6 +31,18 @@ function App() {
         throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
       const jsonData = await response.json();
+      
+      // Also fetch agents for this project
+      const agentsResponse = await fetch(`/api/agents?project_id=${projectId}`);
+      const agentsData = await agentsResponse.json();
+      
+      // Merge agents into the data object
+      jsonData.agents = {
+        active: agentsData.agents.filter(a => a.status === 'running'),
+        completed: agentsData.agents.filter(a => a.status === 'completed'),
+        all: agentsData.agents
+      };
+      
       setData(jsonData);
       setLastUpdate(new Date());
       if (initialLoad) setInitialLoad(false);
@@ -77,13 +90,16 @@ function App() {
       <Stats stats={data.stats} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         <div className="lg:col-span-2">
-          <KanbanBoard tasks={data.tasks} />
+          <KanbanBoard tasks={data.tasks} onTaskClick={setSelectedTask} />
         </div>
         <div className="space-y-6">
           <ActiveAgents agents={data.agents.active} />
           <ActivityLog log={data.activity_log} />
         </div>
       </div>
+      {selectedTask && (
+        <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />
+      )}
     </div>
   );
 }
@@ -199,13 +215,13 @@ function StatCard({ label, value, color }) {
 }
 
 // Kanban Board Component
-function KanbanBoard({ tasks }) {
+function KanbanBoard({ tasks, onTaskClick }) {
   const columns = [
     { id: 'todo', title: 'To Do', color: 'gray' },
     { id: 'in-progress', title: 'In Progress', color: 'blue' },
     { id: 'ready', title: 'Ready', color: 'purple' },
     { id: 'qa', title: 'QA', color: 'orange' },
-    { id: 'complete', title: 'Complete', color: 'green' }
+    { id: 'done', title: 'Complete', color: 'green' }
   ];
 
   const getTasksByState = (state) => {
@@ -221,6 +237,7 @@ function KanbanBoard({ tasks }) {
             key={column.id}
             column={column}
             tasks={getTasksByState(column.id)}
+            onTaskClick={onTaskClick}
           />
         ))}
       </div>
@@ -228,7 +245,7 @@ function KanbanBoard({ tasks }) {
   );
 }
 
-function KanbanColumn({ column, tasks }) {
+function KanbanColumn({ column, tasks, onTaskClick }) {
   const colorMap = {
     gray: 'border-gray-300 bg-gray-50',
     blue: 'border-blue-300 bg-blue-50',
@@ -249,14 +266,14 @@ function KanbanColumn({ column, tasks }) {
         {tasks.length === 0 ? (
           <div className="text-xs text-gray-400 text-center py-4">No tasks</div>
         ) : (
-          tasks.map(task => <TaskCard key={task.id} task={task} />)
+          tasks.map(task => <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} />)
         )}
       </div>
     </div>
   );
 }
 
-function TaskCard({ task }) {
+function TaskCard({ task, onClick }) {
   const priorityColors = {
     low: 'bg-gray-100 text-gray-700',
     medium: 'bg-blue-100 text-blue-700',
@@ -265,7 +282,10 @@ function TaskCard({ task }) {
   };
 
   return (
-    <div className="task-card bg-white border border-gray-200 rounded-md p-3 cursor-pointer hover:shadow-md transition-shadow">
+    <div 
+      className="task-card bg-white border border-gray-200 rounded-md p-3 cursor-pointer hover:shadow-md transition-shadow"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-2">
         <h4 className="text-sm font-medium text-gray-900 leading-tight">{task.title}</h4>
         {task.priority && (
@@ -319,6 +339,23 @@ function AgentCard({ agent }) {
     ? Math.floor((Date.now() - new Date(agent.spawned_at).getTime()) / 60000)
     : 0;
 
+  const getModelDisplay = (model) => {
+    if (!model) return null;
+    
+    const modelNames = {
+      'orchestrator': 'Orchestrator',
+      'shell-script': 'Shell Script',
+      'claude-sonnet-4-5': 'Claude Sonnet 4.5',
+      'claude-opus-4-6': 'Claude Opus 4.6',
+      'kimi-k2.5': 'Kimi K2.5',
+      'moonshotai/kimi-k2.5': 'Kimi K2.5',
+      'anthropic/claude-sonnet-4-5': 'Claude Sonnet 4.5',
+      'anthropic/claude-opus-4-6': 'Claude Opus 4.6'
+    };
+
+    return modelNames[model] || model.replace('moonshotai/', '').replace('anthropic/', '');
+  };
+
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
       <div className="flex items-center justify-between mb-2">
@@ -327,10 +364,15 @@ function AgentCard({ agent }) {
           {agent.status}
         </span>
       </div>
-      <div className="text-xs text-gray-600">
+      <div className="text-xs text-gray-600 mb-1">
         Task: <span className="font-medium">{agent.task_id}</span>
       </div>
-      <div className="text-xs text-gray-500 mt-1">
+      {agent.model && (
+        <div className="text-xs text-gray-500 mb-1">
+          Model: <span className="font-medium">{getModelDisplay(agent.model)}</span>
+        </div>
+      )}
+      <div className="text-xs text-gray-500">
         Runtime: {runtime}m
       </div>
       {agent.session_key && (
@@ -415,6 +457,143 @@ function ErrorScreen({ error, retry }) {
         <p className="text-sm text-gray-500 mt-4">
           Make sure the API server is running: <code className="bg-gray-100 px-2 py-1 rounded">node server.js</code>
         </p>
+      </div>
+    </div>
+  );
+}
+
+// Task Detail Modal
+function TaskModal({ task, onClose }) {
+  const priorityColors = {
+    low: 'bg-gray-100 text-gray-700',
+    medium: 'bg-blue-100 text-blue-700',
+    high: 'bg-orange-100 text-orange-700',
+    critical: 'bg-red-100 text-red-700'
+  };
+
+  const stateColors = {
+    'todo': 'bg-gray-100 text-gray-700',
+    'in-progress': 'bg-blue-100 text-blue-700',
+    'ready': 'bg-purple-100 text-purple-700',
+    'qa': 'bg-orange-100 text-orange-700',
+    'done': 'bg-green-100 text-green-700'
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-mono text-gray-500">{task.id}</span>
+              {task.priority && (
+                <span className={`text-xs px-2 py-1 rounded font-medium ${priorityColors[task.priority]}`}>
+                  {task.priority}
+                </span>
+              )}
+              {task.state && (
+                <span className={`text-xs px-2 py-1 rounded font-medium ${stateColors[task.state]}`}>
+                  {task.state}
+                </span>
+              )}
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">{task.title}</h2>
+          </div>
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-4"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Description */}
+          {task.description && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Description</h3>
+              <p className="text-gray-600 whitespace-pre-wrap">{task.description}</p>
+            </div>
+          )}
+
+          {/* Metadata */}
+          <div className="grid grid-cols-2 gap-4">
+            {task.estimated_hours && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Estimated Hours</h3>
+                <p className="text-gray-900">{task.estimated_hours}h</p>
+              </div>
+            )}
+            {task.actual_hours > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Actual Hours</h3>
+                <p className="text-gray-900">{task.actual_hours}h</p>
+              </div>
+            )}
+            {task.assigned_to && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Assigned To</h3>
+                <p className="text-blue-600 font-medium">{task.assigned_to}</p>
+              </div>
+            )}
+            {task.completed_at && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-1">Completed</h3>
+                <p className="text-gray-900">{new Date(task.completed_at).toLocaleString()}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Dependencies */}
+          {task.dependencies && task.dependencies.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Dependencies</h3>
+              <div className="flex flex-wrap gap-2">
+                {task.dependencies.map(dep => (
+                  <span key={dep} className="text-sm bg-yellow-100 text-yellow-700 px-3 py-1 rounded font-mono">
+                    {dep}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tags */}
+          {task.tags && task.tags.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {task.tags.map(tag => (
+                  <span key={tag} className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Code Files */}
+          {task.code_files && task.code_files.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Code Files</h3>
+              <div className="bg-gray-50 rounded-lg p-4 space-y-1">
+                {task.code_files.map((file, idx) => (
+                  <div key={idx} className="text-sm font-mono text-gray-600">
+                    📄 {file}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

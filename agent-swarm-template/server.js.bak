@@ -288,7 +288,7 @@ app.post('/api/tasks', (req, res) => {
     
     // Log activity
     db.prepare(`
-      INSERT INTO activity_log (project_id, timestamp, agent_id, task_id, message, event_type)
+      INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(project_id, new Date().toISOString(), 'system', id, `Task created: ${title}`, 'info');
     
@@ -349,7 +349,7 @@ app.patch('/api/tasks/:id', (req, res) => {
     // Log activity if state changed
     if (updates.state) {
       db.prepare(`
-        INSERT INTO activity_log (project_id, timestamp, agent_id, task_id, message, event_type)
+        INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(
         task.project_id,
@@ -432,7 +432,7 @@ app.post('/api/agents/complete', (req, res) => {
     if (agent && agent.task_id) {
       // Log activity
       db.prepare(`
-        INSERT INTO activity_log (project_id, timestamp, agent_id, task_id, message, event_type)
+        INSERT INTO activity_log (project_id, timestamp, agent, task_id, message, type)
         VALUES (?, ?, ?, ?, ?, ?)
       `).run(
         agent.project_id,
@@ -497,7 +497,7 @@ app.post('/api/projects/:id/context', (req, res) => {
     
     // Log activity
     db.prepare(`
-      INSERT INTO activity_log (project_id, timestamp, agent_id, message, event_type)
+      INSERT INTO activity_log (project_id, timestamp, agent, message, type)
       VALUES (?, ?, ?, ?, ?)
     `).run(projectId, now, 'system', `Added context document: ${title}`, 'info');
     

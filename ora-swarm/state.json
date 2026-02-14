@@ -1,0 +1,63 @@
+{
+  "project_id": 3,
+  "started_at": "2026-02-14T02:07:00.000Z",
+  "active_agents": {
+    "ORA-001": {
+      "pid": 88296,
+      "session_id": "ora-designer-001",
+      "title": "Design Home Screen Layout",
+      "agent_type": "designer",
+      "model": "anthropic/claude-opus-4-6",
+      "thinking": "high",
+      "spawned_at": "2026-02-14T02:07:00.000Z",
+      "status": "running"
+    },
+    "ORA-066": {
+      "pid": 88343,
+      "session_id": "ora-designer-066",
+      "title": "Integrate Ora 2 Brand Assets",
+      "agent_type": "designer",
+      "model": "anthropic/claude-sonnet-4-5",
+      "thinking": "medium",
+      "spawned_at": "2026-02-14T02:07:00.000Z",
+      "status": "running"
+    },
+    "ORA-011": {
+      "pid": 88395,
+      "session_id": "ora-backend-011",
+      "title": "Design Multi-Vector Architecture",
+      "agent_type": "backend-dev",
+      "model": "anthropic/claude-opus-4-6",
+      "thinking": "high",
+      "spawned_at": "2026-02-14T02:07:00.000Z",
+      "status": "running",
+      "critical": true,
+      "blocks": 14
+    },
+    "ORA-050": {
+      "pid": 88440,
+      "session_id": "ora-backend-050",
+      "title": "Build Auth Backend with JWT",
+      "agent_type": "backend-dev",
+      "model": "anthropic/claude-sonnet-4-5",
+      "thinking": "medium",
+      "spawned_at": "2026-02-14T02:07:00.000Z",
+      "status": "running"
+    },
+    "ORA-053": {
+      "pid": 88508,
+      "session_id": "ora-content-053",
+      "title": "Write Intake Quiz Questions",
+      "agent_type": "content",
+      "model": "anthropic/claude-sonnet-4-5",
+      "thinking": "low",
+      "spawned_at": "2026-02-14T02:07:00.000Z",
+      "status": "running"
+    }
+  },
+  "completed_tasks": [],
+  "total_tasks": 96,
+  "hours_elapsed": 0,
+  "last_check": "2026-02-14T02:07:00.000Z",
+  "next_telegram_update": "2026-02-14T03:07:00.000Z"
+}
