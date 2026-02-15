@@ -453,6 +453,9 @@
           {prune && (
             <div className="card" style={{ marginBottom: 12 }}>
               <h3>Prune Result ({prune.apply ? 'APPLY' : 'DRY RUN'})</h3>
+              <div className="muted" style={{ marginBottom: 8, padding: '8px 0', borderBottom: '1px solid #1f2937' }}>
+                <strong>Rule:</strong> Pruning {agentId === 'main' ? 'all inactive sessions' : `inactive sessions for agent "${agentId}"`} older than {olderThanMinutes} minute{olderThanMinutes !== 1 ? 's' : ''} ({Math.floor(olderThanMinutes / 60) > 0 ? `${Math.floor(olderThanMinutes / 60)}h ${olderThanMinutes % 60}m` : `${olderThanMinutes}m`})
+              </div>
               <div className="row">
                 <div>Pruned candidates: <strong>{fmtInt(prune.prunedCount)}</strong></div>
                 <div>Renamed: <strong>{fmtInt(prune.renamedCount)}</strong></div>

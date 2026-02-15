@@ -73,6 +73,18 @@ function initializeDatabase() {
     )
   `);
 
+  // Orchestrator heartbeat table (per-project orchestrator agents)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS orchestrator_heartbeat (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER NOT NULL,
+      session_key TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      state_json TEXT,
+      FOREIGN KEY (project_id) REFERENCES projects(id)
+    )
+  `);
+
   // Activity log table
   db.exec(`
     CREATE TABLE IF NOT EXISTS activity_log (
@@ -651,6 +663,170 @@ app.get('/api/context/inspect', async (req, res) => {
       details: 'Failed to run openclaw ctxinspect. Make sure OpenClaw CLI is available.'
     });
   }
+});
+
+// GET /api/files/read - Read file contents (with safety checks)
+app.get('/api/files/read', (req, res) => {
+  try {
+    const filePath = req.query.path;
+    
+    if (!filePath) {
+      return res.status(400).json({ error: 'Missing path parameter' });
+    }
+    
+    // Safety check: only allow reading from allowed base paths
+    const allowedPaths = [
+      '/Users/matthew/Desktop/Feb26/',
+      '/Users/matthew/.openclaw/workspace/agent-swarm-template/projects/'
+    ];
+    
+    const isAllowed = allowedPaths.some(allowed => filePath.startsWith(allowed));
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Access denied to this path' });
+    }
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found', path: filePath });
+    }
+    
+    // Check if it's a file (not directory)
+    const stats = fs.statSync(filePath);
+    if (stats.isDirectory()) {
+      // List directory contents
+      const files = fs.readdirSync(filePath);
+      return res.json({
+        type: 'directory',
+        path: filePath,
+        files: files.map(f => {
+          const fullPath = path.join(filePath, f);
+          const fStats = fs.statSync(fullPath);
+          return {
+            name: f,
+            isDirectory: fStats.isDirectory(),
+            size: fStats.size
+          };
+        })
+      });
+    }
+    
+    // Determine file type
+    const ext = path.extname(filePath).toLowerCase();
+    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
+    const textExts = ['.md', '.txt', '.js', '.json', '.ts', '.tsx', '.css', '.html', '.xml', '.yaml', '.yml'];
+    
+    if (imageExts.includes(ext)) {
+      // Return image as base64
+      const imageBuffer = fs.readFileSync(filePath);
+      const base64 = imageBuffer.toString('base64');
+      const mimeType = ext === '.svg' ? 'image/svg+xml' : `image/${ext.substring(1)}`;
+      
+      return res.json({
+        type: 'image',
+        path: filePath,
+        mimeType: mimeType,
+        data: `data:${mimeType};base64,${base64}`,
+        size: stats.size
+      });
+    } else if (textExts.includes(ext) || stats.size < 1024 * 1024) {
+      // Return text content (limit to 1MB)
+      const content = fs.readFileSync(filePath, 'utf-8');
+      return res.json({
+        type: 'text',
+        path: filePath,
+        extension: ext,
+        content: content,
+        size: stats.size,
+        lines: content.split('\n').length
+      });
+    } else {
+      return res.json({
+        type: 'binary',
+        path: filePath,
+        size: stats.size,
+        message: 'Binary file preview not supported'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error reading file:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/projects/:id/orchestrator - Get per-project orchestrator status
+app.get('/api/projects/:id/orchestrator', (req, res) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    
+    // Query orchestrator heartbeat from database
+    const heartbeat = db.prepare(`
+      SELECT * FROM orchestrator_heartbeat 
+      WHERE project_id = ? 
+      ORDER BY updated_at DESC 
+      LIMIT 1
+    `).get(projectId);
+    
+    // Query active agents for this project
+    const activeAgents = db.prepare(`
+      SELECT a.*, t.title as task_title
+      FROM agents a
+      LEFT JOIN tasks t ON a.task_id = t.id
+      WHERE a.project_id = ? AND a.status = 'running'
+      ORDER BY a.spawned_at DESC
+    `).all(projectId);
+    
+    // Query completed agents count
+    const completedCount = db.prepare(`
+      SELECT COUNT(*) as count FROM agents 
+      WHERE project_id = ? AND status = 'completed'
+    `).get(projectId).count;
+    
+    let status = 'stopped';
+    let timeSinceLastPoll = null;
+    
+    if (heartbeat) {
+      const lastPoll = new Date(heartbeat.updated_at);
+      timeSinceLastPoll = Date.now() - lastPoll.getTime();
+      
+      // Consider orchestrator running if heartbeat < 10 minutes old
+      if (timeSinceLastPoll < 10 * 60 * 1000) {
+        status = 'running';
+      } else if (timeSinceLastPoll < 60 * 60 * 1000) {
+        status = 'stale';
+      }
+    }
+    
+    res.json({
+      status,
+      isRunning: status === 'running',
+      isHealthy: status === 'running',
+      lastPoll: heartbeat ? heartbeat.updated_at : null,
+      timeSinceLastPoll,
+      sessionKey: heartbeat ? heartbeat.session_key : null,
+      activeAgents: activeAgents.map(a => ({
+        agentId: a.agent_id,
+        taskId: a.task_id,
+        taskTitle: a.task_title,
+        spawnedAt: a.spawned_at,
+        sessionKey: a.session_key
+      })),
+      completedCount,
+      state: heartbeat ? JSON.parse(heartbeat.state_json || '{}') : {}
+    });
+  } catch (error) {
+    console.error('Error fetching orchestrator status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Legacy endpoint for backward compatibility
+app.get('/api/orchestrator/status', (req, res) => {
+  res.json({
+    deprecated: true,
+    message: 'Use /api/projects/:id/orchestrator instead. Per-project orchestrators are now the standard.',
+    status: 'stopped'
+  });
 });
 
 // Health check

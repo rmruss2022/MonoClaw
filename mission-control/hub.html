@@ -408,8 +408,10 @@
                             <div class="stat-label">Context</div>
                         </div>
                         <div class="stat-box">
-                            <div class="stat-value" id="queueDepth">-</div>
-                            <div class="stat-label">Gateway Queue</div>
+                            <div class="stat-value" id="queueDepth" style="font-size: 1.8rem;">
+                                <span id="queueActive">-</span><span style="opacity: 0.5;">/</span><span id="queueWaiting">-</span><span style="opacity: 0.5;">/</span><span id="queueQueued">-</span>
+                            </div>
+                            <div class="stat-label">Active / Wait / Queue</div>
                         </div>
                         <div class="stat-box">
                             <div class="stat-value" id="gatewayMemory">-</div>
@@ -831,30 +833,48 @@
             document.getElementById('riskScore').textContent = riskScore;
             document.getElementById('contextPressure').textContent = `${contextPct}%`;
 
-            // Gateway Queue stat: prefer heartbeat, fall back to lane-wait, then infer from silence
-            let queueDisplay, queueSource;
-            if (hbFresh && hbQueued !== null) {
+            // Gateway Queue stats: prefer heartbeat, fall back to lane-wait, then infer from silence
+            let activeDisplay, waitingDisplay, queuedDisplay, queueSource;
+            if (hbFresh && hbActive !== null && hbWaiting !== null && hbQueued !== null) {
                 // Real-time heartbeat data (diagnostic heartbeat every 30s)
-                queueDisplay = String(hbQueued);
+                activeDisplay = String(hbActive);
+                waitingDisplay = String(hbWaiting);
+                queuedDisplay = String(hbQueued);
                 queueSource = 'heartbeat';
+            } else if (hbQueued !== null) {
+                // Partial heartbeat data - show queued only
+                activeDisplay = '-';
+                waitingDisplay = '-';
+                queuedDisplay = String(hbQueued);
+                queueSource = 'partial-heartbeat';
             } else if (queueLatest !== null) {
                 // Lane-wait diagnostic logged within lookback window
-                queueDisplay = `${queueInferred ? '~' : ''}${queueLatest}`;
+                activeDisplay = '-';
+                waitingDisplay = '-';
+                queuedDisplay = `${queueInferred ? '~' : ''}${queueLatest}`;
                 queueSource = 'lane-wait';
             } else if (lastHb && Number.isFinite(lastHb.queued)) {
                 // Stale heartbeat: show last known value with ? marker
-                queueDisplay = `${lastHb.queued}?`;
+                activeDisplay = lastHb.active ? String(lastHb.active) + '?' : '-';
+                waitingDisplay = lastHb.waiting ? String(lastHb.waiting) + '?' : '-';
+                queuedDisplay = `${lastHb.queued}?`;
                 queueSource = 'stale-heartbeat';
             } else if (queueLastObserved !== null && queueLastObservedAgeSec !== null && queueLastObservedAgeSec < 3600) {
                 // Recent lane-wait observation (within 1hr)
-                queueDisplay = `${queueLastObserved}?`;
+                activeDisplay = '-';
+                waitingDisplay = '-';
+                queuedDisplay = `${queueLastObserved}?`;
                 queueSource = 'last-observed';
             } else {
                 // No congestion signals at all = system is idle/healthy = queue is 0
-                queueDisplay = '0';
+                activeDisplay = '0';
+                waitingDisplay = '0';
+                queuedDisplay = '0';
                 queueSource = 'inferred-idle';
             }
-            document.getElementById('queueDepth').textContent = queueDisplay;
+            document.getElementById('queueActive').textContent = activeDisplay;
+            document.getElementById('queueWaiting').textContent = waitingDisplay;
+            document.getElementById('queueQueued').textContent = queuedDisplay;
             document.getElementById('gatewayMemory').textContent = memoryDisplay;
 
             const pill = document.getElementById('riskBandPill');

@@ -36,6 +36,11 @@ temp/
 
 # Data files (keep structure, not data)
 tokens/usage-history.json
+*.db-shm
+*.db-wal
+
+# Agent runtime (do not version)
+.openclaw/
 
 # Convex
 activity-hub/.env.local
