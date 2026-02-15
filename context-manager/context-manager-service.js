@@ -1,6 +1,7 @@
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const crypto = require('crypto');
+const fs = require('fs');
 const ContextStorage = require('./context-storage');
 
 const execFileAsync = promisify(execFile);
@@ -9,6 +10,7 @@ const OPENCLAW_BIN = process.env.OPENCLAW_BIN || '/Users/matthew/.nvm/versions/n
 const MAX_STDERR = 4096;
 const COMMAND_TIMEOUT_MS = Number(process.env.CONTEXT_COMMAND_TIMEOUT_MS || 30000);
 const AGENT_RE = /^[a-zA-Z0-9_-]+$/;
+const OPENCLAW_HOME = process.env.OPENCLAW_HOME || '/Users/matthew/.openclaw';
 
 function trimStderr(stderr = '') {
   if (!stderr) return '';
@@ -257,6 +259,224 @@ class ContextManagerService {
       data: {
         timestamp: Date.now(),
         ...stats,
+      },
+    };
+  }
+
+  async getContextInspection(agentId = 'main') {
+    this.validateAgent(agentId);
+    const cmd = await this.runOpenClaw(['ctxinspect', '--agent', agentId, '--last', '--detailed']);
+    const output = cmd.stdout || '';
+    
+    // Parse the output
+    const result = {
+      agentId,
+      totalTokens: 0,
+      totalContextTokens: 0,
+      summaryTokens: 0,
+      categories: [],
+      toolStats: [],
+      toolOutputBreakdown: [],
+      topPruningTargets: [],
+      optimizationScore: 0,
+      suggestions: [],
+      messageCount: 0,
+      transcriptSize: '',
+      rawOutput: output
+    };
+    
+    // Extract summary line (messages, tokens, transcript size)
+    const summaryMatch = output.match(/\*\*Summary:\*\*\s+(\d+)\s+messages,\s+([\d,]+)\s+tokens.*?([\d.]+\s+[MKG]B)/);
+    if (summaryMatch) {
+      result.messageCount = parseInt(summaryMatch[1]);
+      result.summaryTokens = parseInt(summaryMatch[2].replace(/,/g, ''));
+      result.transcriptSize = summaryMatch[3];
+    }
+
+    // Extract full context total from detailed breakdown section
+    const totalContextMatch = output.match(/\*\*Total Context:\*\*\s+([\d,]+)\s+tokens/);
+    if (totalContextMatch) {
+      result.totalContextTokens = parseInt(totalContextMatch[1].replace(/,/g, ''), 10);
+    }
+
+    // Backwards-compatible field expected by existing UI consumers
+    result.totalTokens = result.totalContextTokens || result.summaryTokens;
+    
+    // Extract token breakdown
+    const breakdownMatch = output.match(/\*\*Token Breakdown:\*\*([\s\S]*?)\n\n/);
+    if (breakdownMatch) {
+      const breakdownLines = breakdownMatch[1].split('\n').filter(l => l.includes('tokens'));
+      breakdownLines.forEach(line => {
+        const match = line.match(/- ([^:]+):\s+([\d,]+)\s+tokens/);
+        if (match) {
+          const name = match[1].trim();
+          const tokens = parseInt(match[2].replace(/,/g, ''));
+          result.categories.push({
+            name,
+            tokens,
+            percent: result.summaryTokens > 0 ? (tokens / result.summaryTokens * 100) : 0
+          });
+        }
+      });
+    }
+    
+    // Extract tool usage
+    const toolMatch = output.match(/\*\*Tool Usage:\*\*([\s\S]*?)\n\n/);
+    if (toolMatch) {
+      const toolLines = toolMatch[1].split('\n').filter(l => l.includes('calls'));
+      toolLines.forEach(line => {
+        const match = line.match(/- ([^:]+):\s+(\d+)\s+calls/);
+        if (match) {
+          result.toolStats.push({
+            name: match[1].trim(),
+            calls: parseInt(match[2])
+          });
+        }
+      });
+    }
+    
+    // Extract optimization score
+    const scoreMatch = output.match(/Optimization Score:.*?(\d+)\/100/);
+    if (scoreMatch) {
+      result.optimizationScore = parseInt(scoreMatch[1]);
+    }
+    
+    // Extract suggestions
+    const suggestionsSection = output.match(/\*\*💡 Optimization Suggestions:\*\*([\s\S]*?)(?=\n\*\*Optimization Score|$)/);
+    if (suggestionsSection) {
+      const suggestionLines = suggestionsSection[1].split('\n').filter(l => l.trim().match(/^\d+\./));
+      result.suggestions = suggestionLines.map(l => {
+        // Remove emoji and number prefix, keep the suggestion text
+        return l.replace(/^\d+\.\s*[🟡🟢🔴🟠]\s*/, '').trim();
+      });
+    }
+
+    // Extract tool output breakdown from detailed section
+    const toolOutputSection = output.match(/\*\*🧪 Tool Output Breakdown \(by tokens\):\*\*([\s\S]*?)(?=\n\n\*\*🎯 Best Pruning Targets|\n\*\*🎯 Best Pruning Targets|$)/);
+    if (toolOutputSection) {
+      const lines = toolOutputSection[1]
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith('• '));
+      for (const line of lines) {
+        if (line.startsWith('• Action:')) {
+          result.toolOutputAction = line.replace(/^•\s*Action:\s*/, '').trim();
+          continue;
+        }
+        const m = line.match(/^•\s*([^:]+):\s*([\d,]+)\s+tokens\s+\(([\d,]+)\s+calls\s*-\s*(.+)\)$/);
+        if (!m) continue;
+        result.toolOutputBreakdown.push({
+          label: m[1].trim(),
+          tokens: parseInt(m[2].replace(/,/g, ''), 10),
+          calls: parseInt(m[3].replace(/,/g, ''), 10),
+          details: m[4].trim(),
+        });
+      }
+    }
+
+    // Extract top pruning targets from detailed section
+    const pruningSection = output.match(/\*\*🎯 Best Pruning Targets \(by impact\):\*\*([\s\S]*?)$/);
+    if (pruningSection) {
+      const lines = pruningSection[1].split('\n').map((l) => l.trim());
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const header = line.match(/^(\S+)\s+#(\d+):\s+\*\*([^*]+)\*\*\s+-\s+([\d,]+)\s+tokens\s+\(([\d.]+)%\)$/u);
+        if (!header) continue;
+        let action = '';
+        let topItems = '';
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          if (!action && lines[j].includes('Action:')) {
+            action = lines[j].replace(/^Action:\s*/, '').trim();
+          }
+          if (!topItems && lines[j].startsWith('Top items:')) {
+            topItems = lines[j].replace(/^Top items:\s*/, '').trim();
+          }
+          if (lines[j] === '') break;
+        }
+        result.topPruningTargets.push({
+          icon: header[1],
+          rank: parseInt(header[2], 10),
+          name: header[3].trim(),
+          tokens: parseInt(header[4].replace(/,/g, ''), 10),
+          percent: Number(header[5]),
+          action,
+          topItems,
+        });
+      }
+    }
+
+    return {
+      ok: true,
+      requestId: cmd.requestId,
+      durationMs: cmd.durationMs,
+      data: {
+        ...result,
+        inspectedAt: Date.now(),
+      },
+    };
+  }
+
+  async getActiveAgents() {
+    const cmd = await this.runOpenClaw(['agents', 'list', '--json']);
+    let agentsPayload;
+    try {
+      agentsPayload = JSON.parse(cmd.stdout || '[]');
+    } catch (error) {
+      throw {
+        requestId: cmd.requestId,
+        durationMs: cmd.durationMs,
+        mapped: makeError('INTERNAL_ERROR', 'Failed to parse agents list JSON output.', error.message),
+      };
+    }
+
+    const now = Date.now();
+    const activeWindowMs = 15 * 60 * 1000; // "running now" heuristic
+    const configuredAgents = Array.isArray(agentsPayload) ? agentsPayload : [];
+    const agents = [];
+
+    for (const agent of configuredAgents) {
+      const id = String(agent?.id || '');
+      if (!id || !AGENT_RE.test(id)) continue;
+
+      const sessionsPath = `${OPENCLAW_HOME}/agents/${id}/sessions/sessions.json`;
+      let sessions = {};
+      try {
+        sessions = JSON.parse(fs.readFileSync(sessionsPath, 'utf-8'));
+      } catch {
+        sessions = {};
+      }
+
+      const values = Object.values(sessions || {});
+      let newestUpdatedAt = 0;
+      for (const s of values) {
+        const updatedAt = Number(s?.updatedAt || 0);
+        if (Number.isFinite(updatedAt) && updatedAt > newestUpdatedAt) newestUpdatedAt = updatedAt;
+      }
+      const ageMs = newestUpdatedAt > 0 ? Math.max(0, now - newestUpdatedAt) : null;
+      const isRunning = ageMs !== null && ageMs <= activeWindowMs;
+
+      agents.push({
+        id,
+        isDefault: !!agent?.isDefault,
+        sessionCount: values.length,
+        newestAgeMs: ageMs,
+        activeSessionCount: isRunning ? 1 : 0,
+        running: isRunning,
+      });
+    }
+
+    const activeAgents = agents
+      .filter((a) => a.running)
+      .sort((a, b) => (a.newestAgeMs ?? Number.POSITIVE_INFINITY) - (b.newestAgeMs ?? Number.POSITIVE_INFINITY));
+
+    return {
+      ok: true,
+      requestId: cmd.requestId,
+      durationMs: cmd.durationMs,
+      data: {
+        generatedAt: now,
+        activeWindowMinutes: activeWindowMs / 60000,
+        agents: activeAgents,
       },
     };
   }

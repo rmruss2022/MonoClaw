@@ -44,3 +44,7 @@ activity-hub/convex/_generated/
 # Secrets
 MOLTBOOK_CONFIG.md
 *.db
+
+# Gmail credentials (sensitive)
+gmail/credentials.json
+gmail-check-temp.json

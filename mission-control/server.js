@@ -8,11 +8,316 @@ const util = require('util');
 const execPromise = util.promisify(exec);
 
 const PORT = 18795;
+const HOME_DIR = process.env.HOME || '/Users/matthew';
+const OPENCLAW_DIR = path.join(HOME_DIR, '.openclaw');
+const LOG_PATH = path.join(OPENCLAW_DIR, 'logs/gateway.log');
+const ERR_LOG_PATH = path.join(OPENCLAW_DIR, 'logs/gateway.err.log');
+const SWARM_SESSIONS_PATH = path.join(OPENCLAW_DIR, 'agents/swarm/sessions/sessions.json');
+const DELIVERY_QUEUE_PATH = path.join(OPENCLAW_DIR, 'delivery-queue');
+const PRESSURE_LOOKBACK_MIN = 10;
+const PRESSURE_TAIL_BYTES = 512 * 1024;
 
 // Cache for openclaw status (expensive operation)
 let statusCache = null;
 let statusCacheTime = 0;
 const STATUS_CACHE_TTL = 10000; // 10 seconds
+
+function safeReadJson(filePath) {
+    try {
+        return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    } catch {
+        return null;
+    }
+}
+
+function readFileTail(filePath, maxBytes = PRESSURE_TAIL_BYTES) {
+    try {
+        const stats = fs.statSync(filePath);
+        const size = stats.size;
+        const start = Math.max(0, size - maxBytes);
+        const length = size - start;
+        const fd = fs.openSync(filePath, 'r');
+        const buffer = Buffer.alloc(length);
+        fs.readSync(fd, buffer, 0, length, start);
+        fs.closeSync(fd);
+        return buffer.toString('utf-8');
+    } catch {
+        return '';
+    }
+}
+
+function parseTimestampFromLine(line) {
+    // Logs are expected to start with an ISO timestamp.
+    const token = line.trim().split(' ')[0] || '';
+    const ts = Date.parse(token);
+    return Number.isFinite(ts) ? ts : null;
+}
+
+function getRecentCount(lines, predicate, windowMs, nowMs) {
+    return lines.filter(line => {
+        const ts = parseTimestampFromLine(line);
+        if (!ts) return false;
+        if ((nowMs - ts) > windowMs) return false;
+        return predicate(line);
+    }).length;
+}
+
+function getRecentMax(lines, predicate, valueExtractor, windowMs, nowMs) {
+    let maxValue = 0;
+    for (const line of lines) {
+        const ts = parseTimestampFromLine(line);
+        if (!ts || (nowMs - ts) > windowMs) continue;
+        if (!predicate(line)) continue;
+        const value = valueExtractor(line);
+        if (Number.isFinite(value) && value > maxValue) {
+            maxValue = value;
+        }
+    }
+    return maxValue;
+}
+
+function getLatestQueueAhead(lines, windowMs, nowMs) {
+    let latestTs = -1;
+    let latestAhead = null;
+    const bounded = Number.isFinite(windowMs);
+    for (const line of lines) {
+        const ts = parseTimestampFromLine(line);
+        if (!ts) continue;
+        if (bounded && (nowMs - ts) > windowMs) continue;
+        const m = line.match(/queueAhead=(\d+)/);
+        if (!m) continue;
+        if (ts > latestTs) {
+            latestTs = ts;
+            latestAhead = parseInt(m[1], 10) || 0;
+        }
+    }
+    return { latestAhead, latestTimestamp: latestTs > 0 ? latestTs : null };
+}
+
+const HEARTBEAT_RE = /heartbeat: webhooks=(\d+)\/(\d+)\/(\d+) active=(\d+) waiting=(\d+) queued=(\d+)/;
+
+function getLatestDiagnosticHeartbeat(lines, windowMs, nowMs) {
+    let latestTs = -1;
+    let result = null;
+    for (const line of lines) {
+        const ts = parseTimestampFromLine(line);
+        if (!ts) continue;
+        if (Number.isFinite(windowMs) && (nowMs - ts) > windowMs) continue;
+        const m = line.match(HEARTBEAT_RE);
+        if (!m) continue;
+        if (ts > latestTs) {
+            latestTs = ts;
+            result = {
+                active: parseInt(m[4], 10),
+                waiting: parseInt(m[5], 10),
+                queued: parseInt(m[6], 10),
+                webhooks: { received: parseInt(m[1], 10), processed: parseInt(m[2], 10), errors: parseInt(m[3], 10) },
+                ts: latestTs
+            };
+        }
+    }
+    return result;
+}
+
+function countDeliveryQueueFiles() {
+    try {
+        const entries = fs.readdirSync(DELIVERY_QUEUE_PATH);
+        // Count only .json files (exclude 'failed' subdirectory and non-json)
+        return entries.filter(e => e.endsWith('.json')).length;
+    } catch {
+        return 0;
+    }
+}
+
+async function getPressureSignals() {
+    const nowMs = Date.now();
+    const lookbackMs = PRESSURE_LOOKBACK_MIN * 60 * 1000;
+
+    const sessionsJson = safeReadJson(SWARM_SESSIONS_PATH) || {};
+    const swarmMain = sessionsJson['agent:swarm:main'] || {};
+    const contextTokens = swarmMain.contextTokens || 0;
+    const totalTokens = swarmMain.totalTokens || swarmMain.inputTokens || 0;
+    const contextPct = contextTokens > 0 ? Math.round((totalTokens / contextTokens) * 100) : 0;
+    const compactions = swarmMain.compactionCount || 0;
+    const gatewayLines = readFileTail(LOG_PATH).split('\n').filter(Boolean);
+    const errLines = readFileTail(ERR_LOG_PATH).split('\n').filter(Boolean);
+
+    const orderingConflicts = getRecentCount(
+        gatewayLines,
+        line => line.toLowerCase().includes('message ordering conflict'),
+        lookbackMs,
+        nowMs
+    );
+    const noReplyEvents = getRecentCount(
+        gatewayLines,
+        line => line.includes('No reply from agent.'),
+        lookbackMs,
+        nowMs
+    );
+    const restarts = getRecentCount(
+        gatewayLines,
+        line => line.includes('[gateway] received SIGUSR1; restarting'),
+        lookbackMs,
+        nowMs
+    );
+    const serviceRestartDisconnects = getRecentCount(
+        gatewayLines,
+        line => line.includes('reason=service restart'),
+        lookbackMs,
+        nowMs
+    );
+    const swarmLaneWaitMaxMs = getRecentMax(
+        errLines,
+        line => line.includes('lane wait exceeded: lane=session:agent:swarm:main'),
+        line => {
+            const m = line.match(/waitedMs=(\d+)/);
+            return m ? parseInt(m[1], 10) : 0;
+        },
+        lookbackMs,
+        nowMs
+    );
+    const embeddedTimeouts = getRecentCount(
+        errLines,
+        line => line.includes('[agent/embedded] embedded run timeout') && line.includes('8dd498f8-43de-43f7-9c05-21de1775a34c'),
+        lookbackMs,
+        nowMs
+    );
+    const gatewayQueueMaxAhead = getRecentMax(
+        errLines,
+        line => line.includes('[diagnostic] lane wait exceeded:'),
+        line => {
+            const m = line.match(/queueAhead=(\d+)/);
+            return m ? parseInt(m[1], 10) : 0;
+        },
+        lookbackMs,
+        nowMs
+    );
+    const gatewayQueueLatest = getLatestQueueAhead(errLines, lookbackMs, nowMs);
+    const gatewayQueueLatestAny = getLatestQueueAhead(errLines, Number.POSITIVE_INFINITY, nowMs);
+    const inferredQueueFloor = (orderingConflicts > 0 || noReplyEvents > 0) ? 1 : 0;
+    const effectiveLatestAhead = gatewayQueueLatest.latestAhead !== null
+        ? gatewayQueueLatest.latestAhead
+        : (inferredQueueFloor > 0 ? inferredQueueFloor : null);
+
+    // Diagnostic heartbeat: real-time queue telemetry (every ~30s when diagnostics enabled)
+    const heartbeat = getLatestDiagnosticHeartbeat(errLines, lookbackMs, nowMs);
+    const heartbeatAny = getLatestDiagnosticHeartbeat(errLines, Number.POSITIVE_INFINITY, nowMs);
+    const heartbeatAgeSec = heartbeat ? Math.max(0, Math.round((nowMs - heartbeat.ts) / 1000)) : null;
+    const heartbeatFresh = heartbeatAgeSec !== null && heartbeatAgeSec < 90;
+
+    // Outbound delivery queue: count pending files on disk
+    const deliveryPending = countDeliveryQueueFiles();
+
+    const gatewayQueue = {
+        // Primary: diagnostic heartbeat (real-time session queue depth)
+        sessionActive: heartbeat ? heartbeat.active : null,
+        sessionWaiting: heartbeat ? heartbeat.waiting : null,
+        sessionQueued: heartbeat ? heartbeat.queued : null,
+        heartbeatAgeSec,
+        heartbeatFresh,
+        // Outbound delivery queue (filesystem)
+        deliveryPending,
+        // Legacy: lane-wait log parsing (reactive fallback)
+        latestAhead: effectiveLatestAhead,
+        maxAhead: gatewayQueueMaxAhead,
+        telemetryFresh: gatewayQueueLatest.latestTimestamp !== null,
+        telemetryAgeSec: gatewayQueueLatest.latestTimestamp ? Math.max(0, Math.round((nowMs - gatewayQueueLatest.latestTimestamp) / 1000)) : null,
+        inferred: gatewayQueueLatest.latestTimestamp === null && inferredQueueFloor > 0,
+        inferredReason: gatewayQueueLatest.latestTimestamp === null && inferredQueueFloor > 0
+            ? (orderingConflicts > 0 ? 'message_ordering_conflict' : 'no_reply_events')
+            : null,
+        lastObservedAhead: gatewayQueueLatestAny.latestAhead,
+        lastObservedAgeSec: gatewayQueueLatestAny.latestTimestamp ? Math.max(0, Math.round((nowMs - gatewayQueueLatestAny.latestTimestamp) / 1000)) : null,
+        // Last-ever heartbeat (for "last seen" display when current window is empty)
+        lastHeartbeat: heartbeatAny ? {
+            active: heartbeatAny.active,
+            waiting: heartbeatAny.waiting,
+            queued: heartbeatAny.queued,
+            ageSec: Math.max(0, Math.round((nowMs - heartbeatAny.ts) / 1000))
+        } : null
+    };
+
+    const gatewayMemory = await (async () => {
+        const thresholds = {
+            goodMaxMb: 600,
+            elevatedMaxMb: 1024,
+            highMaxMb: 1800
+        };
+        try {
+            const { stdout: pidStdout } = await execPromise('lsof -t -iTCP:18789 -sTCP:LISTEN');
+            const pid = parseInt((pidStdout || '').split('\n').find(Boolean)?.trim() || '', 10);
+            if (!Number.isFinite(pid)) {
+                return { pid: null, memoryMb: null, band: 'UNKNOWN', score: 0, thresholds };
+            }
+
+            const { stdout: rssStdout } = await execPromise(`ps -o rss= -p ${pid}`);
+            const rssKb = parseInt((rssStdout || '').trim().split(/\s+/)[0] || '', 10);
+            if (!Number.isFinite(rssKb)) {
+                return { pid, memoryMb: null, band: 'UNKNOWN', score: 0, thresholds };
+            }
+
+            const memoryMb = Math.round(rssKb / 1024);
+            let band = 'GOOD';
+            let score = 0;
+            if (memoryMb >= thresholds.highMaxMb) {
+                band = 'CRITICAL';
+                score = 30;
+            } else if (memoryMb >= thresholds.elevatedMaxMb) {
+                band = 'HIGH';
+                score = 18;
+            } else if (memoryMb >= thresholds.goodMaxMb) {
+                band = 'ELEVATED';
+                score = 8;
+            }
+
+            return { pid, memoryMb, band, score, thresholds };
+        } catch {
+            return { pid: null, memoryMb: null, band: 'UNKNOWN', score: 0, thresholds };
+        }
+    })();
+
+    // Lightweight risk scoring: 0-100
+    let risk = 0;
+    risk += Math.min(contextPct, 100) * 0.35;               // up to 35
+    // Queue congestion: prefer heartbeat data, fall back to lane-wait logs
+    const queueDepthForRisk = heartbeatFresh ? (heartbeat.queued || 0) : gatewayQueueMaxAhead;
+    risk += Math.min(queueDepthForRisk * 8, 24);            // up to 24
+    risk += Math.min(orderingConflicts * 10, 20);           // up to 20
+    risk += Math.min(restarts * 25, 25);                    // up to 25
+    risk += Math.min(serviceRestartDisconnects * 10, 10);   // up to 10
+    risk += Math.min(noReplyEvents * 5, 10);                // up to 10
+    risk += swarmLaneWaitMaxMs >= 60000 ? 12 : swarmLaneWaitMaxMs >= 30000 ? 6 : 0;
+    risk += Math.min(embeddedTimeouts * 6, 12);             // up to 12
+    risk += gatewayMemory.score || 0;
+    risk = Math.min(100, Math.round(risk));
+
+    let band = 'LOW';
+    if (risk >= 75) band = 'CRITICAL';
+    else if (risk >= 50) band = 'HIGH';
+    else if (risk >= 25) band = 'MEDIUM';
+
+    return {
+        riskScore: risk,
+        riskBand: band,
+        lookbackMinutes: PRESSURE_LOOKBACK_MIN,
+        context: {
+            used: totalTokens,
+            limit: contextTokens,
+            pct: contextPct,
+            compactions
+        },
+        gatewayQueue,
+        events: {
+            orderingConflicts,
+            noReplyEvents,
+            restarts,
+            serviceRestartDisconnects,
+            swarmLaneWaitMaxMs,
+            embeddedTimeouts
+        },
+        gatewayMemory
+    };
+}
 
 function getAvailableModels(config) {
     const models = [];
@@ -112,6 +417,7 @@ async function getSystemData() {
         // Get cron jobs (sync) and parse status (async)
         const cronJobs = getCronJobs();
         const statusData = await parseOpenClawStatus();
+        const pressure = await getPressureSignals();
         
         return {
             gateway: {
@@ -284,6 +590,7 @@ async function getSystemData() {
                 }
             ],
             cron: cronJobs,
+            pressure,
             warnings: [
                 'State dir readable by others (chmod 700 recommended)',
                 'Reverse proxy headers not trusted (gateway.trustedProxies empty)'

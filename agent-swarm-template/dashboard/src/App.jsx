@@ -89,8 +89,9 @@ function App() {
       />
       <Stats stats={data.stats} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <KanbanBoard tasks={data.tasks} onTaskClick={setSelectedTask} />
+          <ProjectContext project={data.project} />
         </div>
         <div className="space-y-6">
           <ActiveAgents agents={data.agents.active} />
@@ -426,6 +427,61 @@ function ActivityEntry({ entry }) {
         {entry.task_id && <span className="text-gray-500"> → {entry.task_id}</span>}
       </div>
       <div className="text-gray-600">{entry.message}</div>
+    </div>
+  );
+}
+
+// Project Context Component
+function ProjectContext({ project }) {
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+      <h2 className="text-2xl font-bold text-slate-900 mb-4">📄 Project Context</h2>
+      <div className="space-y-4">
+        {project.reference && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Reference</h3>
+            <a 
+              href={project.reference} 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline text-sm break-all"
+            >
+              {project.reference}
+            </a>
+          </div>
+        )}
+        {project.description && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Description</h3>
+            <p className="text-gray-600 text-sm whitespace-pre-wrap">{project.description}</p>
+          </div>
+        )}
+        {project.tech_stack && project.tech_stack.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Tech Stack</h3>
+            <div className="flex flex-wrap gap-2">
+              {project.tech_stack.map(tech => (
+                <span key={tech} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  {tech}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {project.repo_url && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Repository</h3>
+            <a 
+              href={project.repo_url} 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-blue-600 hover:text-blue-800 hover:underline text-sm font-mono"
+            >
+              {project.repo_url}
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
