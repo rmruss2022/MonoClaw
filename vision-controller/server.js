@@ -17,40 +17,51 @@ const FRONTEND_DIR = path.join(__dirname, 'frontend');
 let backendProcess = null;
 let restartCount = 0;
 const MAX_RESTARTS = 10;
+let uptimeStart = Date.now();
 
 // Start Python backend with supervisor
 function startBackend() {
-  console.log('[Backend] Starting...');
+  console.log(`[${new Date().toISOString()}] [Backend] Starting...`);
   
-  backendProcess = spawn('bash', ['-c', `cd ${BACKEND_DIR} && source venv/bin/activate && python3 -m uvicorn api.main:app --host 127.0.0.1 --port ${BACKEND_PORT}`], {
+  backendProcess = spawn('bash', ['-c', `cd "${BACKEND_DIR}" && source venv/bin/activate && python3 -m uvicorn api.main:app --host 127.0.0.1 --port ${BACKEND_PORT}`], {
     stdio: ['ignore', 'pipe', 'pipe']
   });
   
   backendProcess.stdout.on('data', (data) => {
     const lines = data.toString().trim().split('\n');
     lines.forEach(line => {
-      if (line.includes('CHANGE') || line.includes('ERROR') || line.includes('Application startup')) {
-        console.log(`[Backend] ${line}`);
+      if (line.includes('CHANGE') || line.includes('Application startup') || line.includes('connection')) {
+        console.log(`[${new Date().toISOString()}] [Backend] ${line}`);
       }
     });
   });
   
   backendProcess.stderr.on('data', (data) => {
     const err = data.toString().trim();
-    if (!err.includes('INFO:') && !err.includes('W0000')) {
-      console.error(`[Backend] ${err}`);
+    if (!err.includes('INFO:') && !err.includes('W0000') && !err.includes('I0000')) {
+      console.error(`[${new Date().toISOString()}] [Backend] ${err}`);
     }
   });
   
   backendProcess.on('exit', (code) => {
-    console.log(`[Backend] Process exited with code ${code}`);
+    console.log(`[${new Date().toISOString()}] [Backend] Process exited with code ${code}`);
+    
+    const uptime = Date.now() - uptimeStart;
+    if (uptime > 300000) { // 5 minutes
+      restartCount = 0;
+      console.log(`[${new Date().toISOString()}] [Backend] Uptime > 5min, reset restart counter`);
+    }
+    
     restartCount++;
     
     if (restartCount < MAX_RESTARTS) {
-      console.log(`[Backend] Restarting in 3s (attempt ${restartCount}/${MAX_RESTARTS})...`);
-      setTimeout(startBackend, 3000);
+      console.log(`[${new Date().toISOString()}] [Backend] Restarting in 3s (attempt ${restartCount}/${MAX_RESTARTS})...`);
+      setTimeout(() => {
+        uptimeStart = Date.now();
+        startBackend();
+      }, 3000);
     } else {
-      console.error(`[Backend] Max restarts reached, giving up`);
+      console.error(`[${new Date().toISOString()}] [Backend] Max restarts reached, giving up`);
     }
   });
 }
@@ -85,8 +96,10 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       service: 'Vision Controller',
+      port: PORT,
       backend: `http://127.0.0.1:${BACKEND_PORT}`,
-      websocket: `ws://localhost:${BACKEND_PORT}/ws/gestures`
+      websocket: `ws://localhost:${BACKEND_PORT}/ws/gestures`,
+      uptime: Math.floor((Date.now() - uptimeStart) / 1000)
     }));
     return;
   }
@@ -124,22 +137,23 @@ const server = http.createServer((req, res) => {
 startBackend();
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[Frontend] Vision Controller running on http://127.0.0.1:${PORT}`);
-  console.log(`[Frontend] Backend WebSocket: ws://localhost:${BACKEND_PORT}/ws/gestures`);
+  console.log(`[${new Date().toISOString()}] [Frontend] Vision Controller running on http://127.0.0.1:${PORT}`);
+  console.log(`[${new Date().toISOString()}] [Frontend] Backend WebSocket: ws://localhost:${BACKEND_PORT}/ws/gestures`);
+  console.log(`[${new Date().toISOString()}] [Frontend] Health: http://127.0.0.1:${PORT}/health`);
 });
 
 // Cleanup on exit
 process.on('SIGINT', () => {
-  console.log('\n[Shutdown] Stopping servers...');
+  console.log(`\n[${new Date().toISOString()}] [Shutdown] Stopping servers...`);
   if (backendProcess) {
-    backendProcess.kill();
+    backendProcess.kill('SIGTERM');
   }
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   if (backendProcess) {
-    backendProcess.kill();
+    backendProcess.kill('SIGTERM');
   }
   process.exit(0);
 });
