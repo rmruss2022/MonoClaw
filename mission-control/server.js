@@ -200,8 +200,8 @@ async function getPressureSignals() {
         : (inferredQueueFloor > 0 ? inferredQueueFloor : null);
 
     // Diagnostic heartbeat: real-time queue telemetry (every ~30s when diagnostics enabled)
-    const heartbeat = getLatestDiagnosticHeartbeat(errLines, lookbackMs, nowMs);
-    const heartbeatAny = getLatestDiagnosticHeartbeat(errLines, Number.POSITIVE_INFINITY, nowMs);
+    const heartbeat = getLatestDiagnosticHeartbeat(gatewayLines, lookbackMs, nowMs);
+    const heartbeatAny = getLatestDiagnosticHeartbeat(gatewayLines, Number.POSITIVE_INFINITY, nowMs);
     const heartbeatAgeSec = heartbeat ? Math.max(0, Math.round((nowMs - heartbeat.ts) / 1000)) : null;
     const heartbeatFresh = heartbeatAgeSec !== null && heartbeatAgeSec < 90;
 
@@ -244,8 +244,9 @@ async function getPressureSignals() {
             highMaxMb: 1800
         };
         try {
-            const { stdout: pidStdout } = await execPromise('lsof -t -iTCP:18789 -sTCP:LISTEN');
-            const pid = parseInt((pidStdout || '').split('\n').find(Boolean)?.trim() || '', 10);
+            // Find gateway process using ps (lsof not available on all systems)
+            const { stdout: psStdout } = await execPromise('ps aux | grep "[o]penclaw-gateway" | awk \'{print $2}\'');
+            const pid = parseInt((psStdout || '').trim().split('\n')[0] || '', 10);
             if (!Number.isFinite(pid)) {
                 return { pid: null, memoryMb: null, band: 'UNKNOWN', score: 0, thresholds };
             }

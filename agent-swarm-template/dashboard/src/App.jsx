@@ -9,6 +9,8 @@ function App() {
   const [projectId, setProjectId] = useState(3); // Default to Ora AI
   const [projects, setProjects] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [orchestratorStatus, setOrchestratorStatus] = useState(null);
+  const [viewingFile, setViewingFile] = useState(null);
 
   // Load available projects
   const loadProjects = async () => {
@@ -42,6 +44,19 @@ function App() {
         completed: agentsData.agents.filter(a => a.status === 'completed'),
         all: agentsData.agents
       };
+      
+      // Fetch per-project orchestrator status
+      try {
+        const orchResponse = await fetch(`/api/projects/${projectId}/orchestrator`);
+        if (orchResponse.ok) {
+          const orchData = await orchResponse.json();
+          setOrchestratorStatus(orchData);
+        }
+      } catch (orchErr) {
+        console.error('Error loading orchestrator status:', orchErr);
+        // Set default stopped status on error
+        setOrchestratorStatus({ status: 'stopped', isRunning: false });
+      }
       
       setData(jsonData);
       setLastUpdate(new Date());
@@ -90,16 +105,21 @@ function App() {
       <Stats stats={data.stats} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         <div className="lg:col-span-2 space-y-6">
+          <ProjectPipeline project={data.project} onViewFile={setViewingFile} />
           <KanbanBoard tasks={data.tasks} onTaskClick={setSelectedTask} />
           <ProjectContext project={data.project} />
         </div>
         <div className="space-y-6">
+          <OrchestratorStatus status={orchestratorStatus} />
           <ActiveAgents agents={data.agents.active} />
           <ActivityLog log={data.activity_log} />
         </div>
       </div>
       {selectedTask && (
         <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />
+      )}
+      {viewingFile && (
+        <FileViewerModal filePath={viewingFile} onClose={() => setViewingFile(null)} />
       )}
     </div>
   );
@@ -311,6 +331,293 @@ function TaskCard({ task, onClick }) {
               {tag}
             </span>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Project Pipeline Component - Shows orchestrator configuration
+function ProjectPipeline({ project, onViewFile }) {
+  if (!project || !project.configuration) {
+    return null;
+  }
+
+  const config = project.configuration;
+  
+  const handlePathClick = (path) => {
+    if (onViewFile) {
+      onViewFile(path);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+      <h2 className="text-2xl font-bold text-slate-900 mb-4">🤖 Orchestrator Pipeline</h2>
+      
+      {/* Tech Stack */}
+      {config.tech_stack && (
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <span>⚙️</span> Tech Stack
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            {config.tech_stack.frontend && (
+              <div className="bg-blue-50 rounded-lg p-3">
+                <div className="text-xs font-semibold text-blue-600 mb-1">Frontend</div>
+                <div className="text-sm text-slate-800">{config.tech_stack.frontend}</div>
+              </div>
+            )}
+            {config.tech_stack.backend && (
+              <div className="bg-green-50 rounded-lg p-3">
+                <div className="text-xs font-semibold text-green-600 mb-1">Backend</div>
+                <div className="text-sm text-slate-800">{config.tech_stack.backend}</div>
+              </div>
+            )}
+          </div>
+          {config.tech_stack.services && config.tech_stack.services.length > 0 && (
+            <div className="mt-3 bg-purple-50 rounded-lg p-3">
+              <div className="text-xs font-semibold text-purple-600 mb-2">Services</div>
+              <div className="flex flex-wrap gap-2">
+                {config.tech_stack.services.map((service, idx) => (
+                  <span key={idx} className="text-xs bg-white px-2 py-1 rounded border border-purple-200 text-slate-700">
+                    {service}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Agent Requirements */}
+      {config.agent_requirements && (
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <span>👥</span> Agent Specializations
+          </h3>
+          <div className="space-y-3">
+            {Object.entries(config.agent_requirements).map(([agentType, skills]) => {
+              const agentColors = {
+                'designer': 'bg-pink-50 border-pink-200 text-pink-700',
+                'ios_dev': 'bg-blue-50 border-blue-200 text-blue-700',
+                'backend_dev': 'bg-green-50 border-green-200 text-green-700',
+                'qa': 'bg-orange-50 border-orange-200 text-orange-700',
+                'content': 'bg-purple-50 border-purple-200 text-purple-700'
+              };
+              
+              const agentIcons = {
+                'designer': '🎨',
+                'ios_dev': '📱',
+                'backend_dev': '⚙️',
+                'qa': '✅',
+                'content': '✍️'
+              };
+
+              const colorClass = agentColors[agentType] || 'bg-gray-50 border-gray-200 text-gray-700';
+              const icon = agentIcons[agentType] || '🤖';
+              const displayName = agentType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+              return (
+                <div key={agentType} className={`border-2 rounded-lg p-3 ${colorClass}`}>
+                  <div className="font-bold text-sm mb-2 flex items-center gap-2">
+                    <span>{icon}</span>
+                    <span>{displayName}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {skills.map((skill, idx) => (
+                      <span key={idx} className="text-xs bg-white/80 px-2 py-1 rounded border border-current/20">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* File Paths */}
+      {config.file_paths && (
+        <div>
+          <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <span>📁</span> Project Paths
+          </h3>
+          <div className="space-y-2 bg-slate-50 rounded-lg p-4">
+            {Object.entries(config.file_paths).map(([key, path]) => {
+              const displayKey = key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+              return (
+                <div key={key} className="flex items-start gap-3">
+                  <span className="text-xs font-semibold text-slate-600 min-w-[120px]">{displayKey}:</span>
+                  <button
+                    onClick={() => handlePathClick(path)}
+                    className="text-xs font-mono text-blue-600 hover:text-blue-800 hover:underline text-left break-all cursor-pointer"
+                  >
+                    {path}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Orchestrator Documentation */}
+      {config.orchestrator_docs && config.orchestrator_docs.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <span>📋</span> Orchestrator Documentation
+          </h3>
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+            <div className="space-y-2">
+              {config.orchestrator_docs.map((doc, idx) => {
+                const fullPath = config.orchestrator_docs_path ? `${config.orchestrator_docs_path}/${doc}` : doc;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handlePathClick(fullPath)}
+                    className="w-full text-left flex items-center gap-3 p-3 bg-white hover:bg-indigo-100 rounded border border-indigo-200 hover:border-indigo-400 transition-all"
+                  >
+                    <span className="text-2xl">📄</span>
+                    <div className="flex-1">
+                      <div className="font-semibold text-indigo-900">{doc}</div>
+                      <div className="text-xs text-indigo-600 font-mono">{fullPath}</div>
+                    </div>
+                    <span className="text-indigo-400">→</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reference Materials */}
+      {config.reference_materials && config.reference_materials.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <span>📚</span> Reference Materials
+          </h3>
+          <div className="space-y-2">
+            {config.reference_materials.map((ref, idx) => (
+              <div key={idx} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm text-slate-800">{ref.name}</div>
+                    <button
+                      onClick={() => handlePathClick(ref.path)}
+                      className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-mono mt-1 text-left cursor-pointer"
+                    >
+                      {ref.path}
+                    </button>
+                    {ref.contents && ref.contents.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {ref.contents.map((item, i) => (
+                          <span key={i} className="text-xs bg-white px-2 py-0.5 rounded border border-yellow-300">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs font-semibold text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                    {ref.type}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Orchestrator Status Component
+function OrchestratorStatus({ status }) {
+  if (!status) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">⚙️ Orchestrator</h2>
+        <div className="text-center text-slate-400 py-4">Loading status...</div>
+      </div>
+    );
+  }
+
+  const statusColors = {
+    'healthy': 'bg-green-100 text-green-800 border-green-200',
+    'stale': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'stopped': 'bg-red-100 text-red-800 border-red-200'
+  };
+
+  const statusIcons = {
+    'healthy': '✅',
+    'stale': '⚠️',
+    'stopped': '🛑'
+  };
+
+  const formatTimeSince = (ms) => {
+    if (!ms) return 'Never';
+    const minutes = Math.floor(ms / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d ${hours % 24}h ago`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    return 'Just now';
+  };
+
+  const lastCheckTime = status.lastCheck ? new Date(status.lastCheck).toLocaleTimeString() : 'Never';
+  const timeSince = formatTimeSince(status.timeSinceLastCheck);
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+      <h2 className="text-2xl font-bold text-slate-900 mb-4">⚙️ Orchestrator</h2>
+      
+      <div className={`border-2 rounded-lg p-4 mb-4 ${statusColors[status.status]}`}>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-lg font-bold">
+            {statusIcons[status.status]} {status.status.toUpperCase()}
+          </span>
+          <span className="text-xs font-mono">
+            {status.isRunning ? 'Running' : 'Stopped'}
+          </span>
+        </div>
+        
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Last Poll:</span>
+            <span className="font-medium">{lastCheckTime}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Poll Age:</span>
+            <span className="font-medium">{timeSince}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Active Agents:</span>
+            <span className="font-bold text-blue-600">{status.activeAgents?.length || 0}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Completed:</span>
+            <span className="font-medium">{status.completedSinceRestart || 0}</span>
+          </div>
+          {status.tokenUsage > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Token Usage:</span>
+              <span className="font-medium">{status.tokenUsage.toLocaleString()}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!status.isRunning && (
+        <div className="text-sm text-gray-600 bg-gray-50 rounded p-3">
+          <strong>Start orchestrator:</strong>
+          <code className="block mt-1 text-xs font-mono bg-white p-2 rounded">
+            cd agent-swarm-template && node orchestrator.js
+          </code>
         </div>
       )}
     </div>
@@ -648,6 +955,206 @@ function TaskModal({ task, onClose }) {
                 ))}
               </div>
             </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// File Viewer Modal
+function FileViewerModal({ filePath: initialPath, onClose }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [fileData, setFileData] = useState(null);
+  const [currentPath, setCurrentPath] = useState(initialPath);
+
+  const loadFile = async (path) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch(`/api/files/read?path=${encodeURIComponent(path)}`);
+      if (!response.ok) {
+        throw new Error(`Failed to load file: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setFileData(data);
+      setCurrentPath(path);
+    } catch (err) {
+      console.error('Error loading file:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (initialPath) {
+      loadFile(initialPath);
+    }
+  }, [initialPath]);
+
+  const handleNavigate = (newPath) => {
+    loadFile(newPath);
+  };
+
+  const handleGoUp = () => {
+    const parentPath = currentPath.split('/').slice(0, -1).join('/');
+    if (parentPath) {
+      loadFile(parentPath);
+    }
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-slate-800 text-white p-4 flex items-center justify-between">
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            {currentPath && currentPath !== '/' && (
+              <button
+                onClick={handleGoUp}
+                className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm flex-shrink-0"
+              >
+                ← Up
+              </button>
+            )}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold truncate">{currentPath.split('/').pop()}</h2>
+              <p className="text-xs text-slate-300 truncate font-mono">{currentPath}</p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="text-white hover:text-gray-300 text-2xl leading-none ml-4 flex-shrink-0"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Loading file...</p>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">❌</span>
+                <div>
+                  <h3 className="font-bold text-red-800 mb-1">Error Loading File</h3>
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && fileData && (
+            <>
+              {/* Directory Listing */}
+              {fileData.type === 'directory' && (
+                <div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <p className="text-blue-800 font-semibold">
+                      📁 Directory with {fileData.files.length} items
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {fileData.files.map((file, idx) => {
+                      const fullPath = `${currentPath}${currentPath.endsWith('/') ? '' : '/'}${file.name}`;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleNavigate(fullPath)}
+                          className="w-full flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-blue-50 hover:border-blue-300 border border-gray-200 transition-all cursor-pointer"
+                        >
+                          <span className="text-2xl">{file.isDirectory ? '📁' : '📄'}</span>
+                          <div className="flex-1 text-left">
+                            <div className="font-medium text-gray-800">{file.name}</div>
+                            {!file.isDirectory && (
+                              <div className="text-xs text-gray-500">
+                                {(file.size / 1024).toFixed(1)} KB
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-gray-400">→</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Image Display */}
+              {fileData.type === 'image' && (
+                <div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
+                    <p className="text-slate-700">
+                      <strong>Type:</strong> {fileData.mimeType} • 
+                      <strong className="ml-2">Size:</strong> {(fileData.size / 1024).toFixed(1)} KB
+                    </p>
+                  </div>
+                  <div className="flex justify-center bg-slate-100 rounded-lg p-4">
+                    <img 
+                      src={fileData.data} 
+                      alt={filePath} 
+                      className="max-w-full max-h-[600px] object-contain rounded shadow-lg"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Text Content */}
+              {fileData.type === 'text' && (
+                <div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4 flex items-center justify-between">
+                    <div className="text-slate-700">
+                      <strong>Extension:</strong> {fileData.extension} • 
+                      <strong className="ml-2">Lines:</strong> {fileData.lines} • 
+                      <strong className="ml-2">Size:</strong> {(fileData.size / 1024).toFixed(1)} KB
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(fileData.content);
+                        alert('Copied to clipboard!');
+                      }}
+                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="bg-slate-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                    {fileData.content}
+                  </pre>
+                </div>
+              )}
+
+              {/* Binary File */}
+              {fileData.type === 'binary' && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                  <div className="text-6xl mb-4">📦</div>
+                  <h3 className="text-lg font-bold text-yellow-800 mb-2">Binary File</h3>
+                  <p className="text-yellow-700">{fileData.message}</p>
+                  <p className="text-sm text-yellow-600 mt-2">
+                    Size: {(fileData.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
