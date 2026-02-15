@@ -557,6 +557,102 @@ app.get('/', (req, res) => {
   res.redirect('/dashboard.html');
 });
 
+// Context inspection endpoint
+app.get('/api/context/inspect', async (req, res) => {
+  try {
+    const { execSync } = require('child_process');
+    const os = require('os');
+    
+    // Use full path to openclaw (handles nvm installations)
+    const openclawPath = path.join(os.homedir(), '.nvm/versions/node/v22.22.0/bin/openclaw');
+    
+    // Run openclaw ctxinspect --last
+    const output = execSync(`${openclawPath} ctxinspect --last`, { 
+      encoding: 'utf8',
+      timeout: 30000,
+      maxBuffer: 10 * 1024 * 1024 // 10MB buffer
+    });
+    
+    // Parse the output to extract key metrics
+    const lines = output.split('\n');
+    const result = {
+      totalTokens: 0,
+      categories: [],
+      toolStats: [],
+      optimizationScore: 0,
+      suggestions: [],
+      messageCount: 0,
+      transcriptSize: '',
+      rawOutput: output
+    };
+    
+    // Extract summary line (messages, tokens, transcript size)
+    const summaryMatch = output.match(/\*\*Summary:\*\*\s+(\d+)\s+messages,\s+([\d,]+)\s+tokens.*?([\d.]+\s+[MKG]B)/);
+    if (summaryMatch) {
+      result.messageCount = parseInt(summaryMatch[1]);
+      result.totalTokens = parseInt(summaryMatch[2].replace(/,/g, ''));
+      result.transcriptSize = summaryMatch[3];
+    }
+    
+    // Extract token breakdown
+    const breakdownMatch = output.match(/\*\*Token Breakdown:\*\*([\s\S]*?)\n\n/);
+    if (breakdownMatch) {
+      const breakdownLines = breakdownMatch[1].split('\n').filter(l => l.includes('tokens'));
+      breakdownLines.forEach(line => {
+        const match = line.match(/- ([^:]+):\s+([\d,]+)\s+tokens/);
+        if (match) {
+          const name = match[1].trim();
+          const tokens = parseInt(match[2].replace(/,/g, ''));
+          result.categories.push({
+            name,
+            tokens,
+            percent: result.totalTokens > 0 ? (tokens / result.totalTokens * 100) : 0
+          });
+        }
+      });
+    }
+    
+    // Extract tool usage
+    const toolMatch = output.match(/\*\*Tool Usage:\*\*([\s\S]*?)\n\n/);
+    if (toolMatch) {
+      const toolLines = toolMatch[1].split('\n').filter(l => l.includes('calls'));
+      toolLines.forEach(line => {
+        const match = line.match(/- ([^:]+):\s+(\d+)\s+calls/);
+        if (match) {
+          result.toolStats.push({
+            name: match[1].trim(),
+            calls: parseInt(match[2])
+          });
+        }
+      });
+    }
+    
+    // Extract optimization score
+    const scoreMatch = output.match(/Optimization Score:.*?(\d+)\/100/);
+    if (scoreMatch) {
+      result.optimizationScore = parseInt(scoreMatch[1]);
+    }
+    
+    // Extract suggestions
+    const suggestionsSection = output.match(/\*\*💡 Optimization Suggestions:\*\*([\s\S]*?)(?=\n\*\*Optimization Score|$)/);
+    if (suggestionsSection) {
+      const suggestionLines = suggestionsSection[1].split('\n').filter(l => l.trim().match(/^\d+\./));
+      result.suggestions = suggestionLines.map(l => {
+        // Remove emoji and number prefix, keep the suggestion text
+        return l.replace(/^\d+\.\s*[🟡🟢🔴🟠]\s*/, '').trim();
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error running context inspection:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Failed to run openclaw ctxinspect. Make sure OpenClaw CLI is available.'
+    });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

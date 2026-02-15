@@ -27,6 +27,7 @@
         h1 {
             font-size: 2.5rem;
             background: linear-gradient(90deg, #00d9ff, #00ff88);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 5px;
@@ -186,6 +187,25 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+
+        .risk-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 84px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            border: 1px solid transparent;
+        }
+        .risk-pill.low { color: #00ff88; border-color: rgba(0, 255, 136, 0.5); background: rgba(0, 255, 136, 0.12); }
+        .risk-pill.medium { color: #feca57; border-color: rgba(254, 202, 87, 0.5); background: rgba(254, 202, 87, 0.12); }
+        .risk-pill.high { color: #ff9f43; border-color: rgba(255, 159, 67, 0.5); background: rgba(255, 159, 67, 0.12); }
+        .risk-pill.critical { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.5); background: rgba(255, 107, 107, 0.12); }
+        .risk-pill.trouble { color: #feca57; border-color: rgba(254, 202, 87, 0.5); background: rgba(254, 202, 87, 0.12); }
+        .risk-pill.bad { color: #ff6b6b; border-color: rgba(255, 107, 107, 0.5); background: rgba(255, 107, 107, 0.12); }
         
         /* Full Width */
         .full-width { grid-column: 1 / -1; }
@@ -369,6 +389,39 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Gateway Pressure -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">🚨</div>
+                        <div class="card-title">Gateway Pressure</div>
+                        <button id="pressureRefreshBtn" class="btn btn-secondary" style="margin-left: auto;" onclick="refreshPressureOnly()">🔄</button>
+                        <div id="riskBandPill" class="risk-pill low">LOW</div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="riskScore">-</div>
+                            <div class="stat-label">Risk Score</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="contextPressure">-</div>
+                            <div class="stat-label">Context</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="queueDepth">-</div>
+                            <div class="stat-label">Gateway Queue</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="gatewayMemory">-</div>
+                            <div class="stat-label">Gateway RAM</div>
+                        </div>
+                    </div>
+                    <div style="padding-top: 10px; display: flex; align-items: center; gap: 8px;">
+                        <span class="service-detail">Memory Health:</span>
+                        <span id="memoryHealthPill" class="risk-pill low">GOOD</span>
+                    </div>
+                    <div id="pressureEvents" class="service-detail" style="padding-top: 8px;">Loading pressure signals...</div>
+                </div>
                 
                 <!-- Services -->
                 <div class="card">
@@ -475,6 +528,7 @@
             document.getElementById('uptime').textContent = systemData.session.lastActivity;
             const modelShort = systemData.model.primary.split('/').pop().replace('claude-', '').replace('-4-5', '');
             document.getElementById('model').textContent = modelShort;
+            renderPressure(systemData.pressure || {});
             
             // Services
             // Services - App Icon Grid
@@ -744,6 +798,148 @@
             const now = new Date().toLocaleTimeString();
             document.getElementById('refreshTime').textContent = `Last updated: ${now}`;
         }
+
+        function renderPressure(pressure) {
+            const riskScore = pressure.riskScore ?? 0;
+            const riskBand = (pressure.riskBand || 'LOW').toLowerCase();
+            const contextPct = pressure.context?.pct ?? 0;
+            const laneWaitMs = pressure.events?.swarmLaneWaitMaxMs ?? 0;
+            const gatewayQueue = pressure.gatewayQueue || {};
+
+            // Heartbeat-based queue data (primary, real-time)
+            const hbFresh = !!gatewayQueue.heartbeatFresh;
+            const hbQueued = Number.isFinite(gatewayQueue.sessionQueued) ? gatewayQueue.sessionQueued : null;
+            const hbActive = Number.isFinite(gatewayQueue.sessionActive) ? gatewayQueue.sessionActive : null;
+            const hbWaiting = Number.isFinite(gatewayQueue.sessionWaiting) ? gatewayQueue.sessionWaiting : null;
+            const hbAgeSec = Number.isFinite(gatewayQueue.heartbeatAgeSec) ? gatewayQueue.heartbeatAgeSec : null;
+            const deliveryPending = Number.isFinite(gatewayQueue.deliveryPending) ? gatewayQueue.deliveryPending : 0;
+            const lastHb = gatewayQueue.lastHeartbeat || null;
+
+            // Legacy lane-wait data (fallback)
+            const queueLatest = Number.isFinite(gatewayQueue.latestAhead) ? gatewayQueue.latestAhead : null;
+            const queueMax = Number.isFinite(gatewayQueue.maxAhead) ? gatewayQueue.maxAhead : 0;
+            const queueAgeSec = Number.isFinite(gatewayQueue.telemetryAgeSec) ? gatewayQueue.telemetryAgeSec : null;
+            const queueInferred = !!gatewayQueue.inferred;
+            const queueLastObserved = Number.isFinite(gatewayQueue.lastObservedAhead) ? gatewayQueue.lastObservedAhead : null;
+            const queueLastObservedAgeSec = Number.isFinite(gatewayQueue.lastObservedAgeSec) ? gatewayQueue.lastObservedAgeSec : null;
+
+            const gatewayMemory = pressure.gatewayMemory || {};
+            const gatewayMemoryMb = gatewayMemory.memoryMb;
+            const gatewayMemoryBand = gatewayMemory.band || 'UNKNOWN';
+            const memoryDisplay = Number.isFinite(gatewayMemoryMb) ? `${gatewayMemoryMb}MB` : 'n/a';
+
+            document.getElementById('riskScore').textContent = riskScore;
+            document.getElementById('contextPressure').textContent = `${contextPct}%`;
+
+            // Gateway Queue stat: prefer heartbeat, fall back to lane-wait, then infer from silence
+            let queueDisplay, queueSource;
+            if (hbFresh && hbQueued !== null) {
+                // Real-time heartbeat data (diagnostic heartbeat every 30s)
+                queueDisplay = String(hbQueued);
+                queueSource = 'heartbeat';
+            } else if (queueLatest !== null) {
+                // Lane-wait diagnostic logged within lookback window
+                queueDisplay = `${queueInferred ? '~' : ''}${queueLatest}`;
+                queueSource = 'lane-wait';
+            } else if (lastHb && Number.isFinite(lastHb.queued)) {
+                // Stale heartbeat: show last known value with ? marker
+                queueDisplay = `${lastHb.queued}?`;
+                queueSource = 'stale-heartbeat';
+            } else if (queueLastObserved !== null && queueLastObservedAgeSec !== null && queueLastObservedAgeSec < 3600) {
+                // Recent lane-wait observation (within 1hr)
+                queueDisplay = `${queueLastObserved}?`;
+                queueSource = 'last-observed';
+            } else {
+                // No congestion signals at all = system is idle/healthy = queue is 0
+                queueDisplay = '0';
+                queueSource = 'inferred-idle';
+            }
+            document.getElementById('queueDepth').textContent = queueDisplay;
+            document.getElementById('gatewayMemory').textContent = memoryDisplay;
+
+            const pill = document.getElementById('riskBandPill');
+            pill.textContent = pressure.riskBand || 'LOW';
+            pill.className = `risk-pill ${riskBand}`;
+
+            const memoryPill = document.getElementById('memoryHealthPill');
+            let memoryHealthText = 'GOOD';
+            let memoryHealthClass = 'low';
+            if (gatewayMemoryBand === 'ELEVATED' || gatewayMemoryBand === 'HIGH') {
+                memoryHealthText = 'TROUBLE';
+                memoryHealthClass = 'trouble';
+            } else if (gatewayMemoryBand === 'CRITICAL') {
+                memoryHealthText = 'BAD';
+                memoryHealthClass = 'bad';
+            } else if (gatewayMemoryBand === 'UNKNOWN') {
+                memoryHealthText = 'UNKNOWN';
+                memoryHealthClass = 'medium';
+            }
+            memoryPill.textContent = memoryHealthText;
+            memoryPill.className = `risk-pill ${memoryHealthClass}`;
+
+            // Build pressure events detail text
+            const events = pressure.events || {};
+            const lookback = pressure.lookbackMinutes || 10;
+
+            // Heartbeat telemetry line
+            let hbLine = '';
+            if (hbFresh && hbQueued !== null) {
+                hbLine = `sessions: <code>active=${hbActive} waiting=${hbWaiting} queued=${hbQueued}</code> <code>(${hbAgeSec}s ago)</code>`;
+            } else if (lastHb) {
+                hbLine = `sessions: <code>active=${lastHb.active} waiting=${lastHb.waiting} queued=${lastHb.queued}</code> <code>(stale, ${lastHb.ageSec}s ago)</code>`;
+            } else {
+                hbLine = `sessions: <code>idle (no recent activity)</code>`;
+            }
+
+            // Delivery queue line
+            const deliveryLine = `delivery queue: <code>${deliveryPending} pending</code>`;
+
+            // Legacy lane-wait line
+            let laneLine = '';
+            if (queueLatest !== null) {
+                laneLine = `lane queueAhead: <code>${queueInferred ? '~' : ''}${queueLatest}, max ${queueMax}</code>${queueAgeSec !== null ? ` <code>(${queueAgeSec}s ago)</code>` : ''}`;
+            } else if (queueLastObserved !== null) {
+                laneLine = `lane queueAhead: <code>last seen ${queueLastObserved} (${queueLastObservedAgeSec ?? '?'}s ago)</code>`;
+            } else {
+                laneLine = `lane queueAhead: <code>none</code>`;
+            }
+
+            document.getElementById('pressureEvents').innerHTML = `
+                Last ${lookback}m • ordering conflicts: <code>${events.orderingConflicts ?? 0}</code> •
+                no-reply events: <code>${events.noReplyEvents ?? 0}</code> •
+                restarts: <code>${events.restarts ?? 0}</code> •
+                restart disconnects: <code>${events.serviceRestartDisconnects ?? 0}</code> •
+                embedded timeouts: <code>${events.embeddedTimeouts ?? 0}</code> •
+                ${hbLine} •
+                ${deliveryLine} •
+                ${laneLine} •
+                lane wait max: <code>${laneWaitMs ? `${Math.round(laneWaitMs / 1000)}s` : '0s'}</code> •
+                gateway memory: <code>${gatewayMemoryBand}${Number.isFinite(gatewayMemoryMb) ? ` (${gatewayMemoryMb}MB)` : ''}</code>
+            `;
+        }
+
+        async function refreshPressureOnly() {
+            const btn = document.getElementById('pressureRefreshBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳';
+            }
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+                if (data && data.pressure) {
+                    renderPressure(data.pressure);
+                }
+                updateRefreshTime();
+            } catch (error) {
+                console.error('Failed to refresh pressure data:', error);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🔄';
+                }
+            }
+        }
         
         // Sub-Agents
         let sessionsData = null;
@@ -972,7 +1168,8 @@
         setInterval(loadCodeStats, 60000); // Refresh code stats every minute
     </script>
     
-    <script>\n/**
+    <script>
+/**
  * Smart Hub Navigation
  * Finds existing Command Hub tab in current window or opens new one
  * Uses BroadcastChannel API to communicate between tabs
@@ -1036,5 +1233,7 @@ if (window.location.href.includes('localhost:18795')) {
             }
         }
     };
-}\n    </script>\n</body>
+}
+    </script>
+</body>
 </html>

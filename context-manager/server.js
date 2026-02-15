@@ -99,6 +99,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.url.startsWith('/api/context/inspect') && req.method === 'GET') {
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const agentId = url.searchParams.get('agent') || 'main';
+      const result = await service.getContextInspection(agentId);
+      writeJson(res, 200, result);
+      return;
+    }
+
+    if (req.url === '/api/context/agents' && req.method === 'GET') {
+      const result = await service.getActiveAgents();
+      writeJson(res, 200, result);
+      return;
+    }
+
     res.writeHead(404);
     res.end('Not found');
   } catch (error) {

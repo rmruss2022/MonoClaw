@@ -18,8 +18,8 @@ async function collectTokenData() {
         const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw status --sessions');
         
         // Parse Sessions section - find the row with highest token usage (likely the main interactive session)
-        // Format: │ agent:main:cron:... │ direct │ just now │ claude-sonnet-4-5 │ 31k/200k (15%) │
-        const sessionMatches = [...stdout.matchAll(/│\s+agent:main:([^\s│]+)\s+│\s+(\w+)\s+│\s+([^│]+?)\s+│\s+([^\s│]+)\s+│\s+([\d.]+)k\/([\d.]+)k\s+\((\d+)%\)/g)];
+        // Format: │ agent:moonshot-swarm:main │ direct │ 1m ago │ claude-sonnet-4-5 │ 58k/200k (29%) │
+        const sessionMatches = [...stdout.matchAll(/│\s+agent:[^:]+:([^\s│]+)\s+│\s+(\w+)\s+│\s+([^│]+?)\s+│\s+([^\s│]+)\s+│\s+([\d.]+)k\/([\d.]+)k\s+\((\d+)%\)/g)];
         
         if (sessionMatches.length === 0) {
             console.error('Could not parse any session data from openclaw status');

@@ -31,6 +31,10 @@
     .error { background: #3b0d0d; border: 1px solid #7f1d1d; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
     a { color: #93c5fd; }
+    .compact-card { padding: 8px; }
+    .compact-card h3 { margin: 0 0 4px 0; font-size: 14px; }
+    .compact-card .row { margin-bottom: 0; }
+    .compact-mono { font-size: 12px; line-height: 1.25; max-height: 56px; overflow: auto; }
   </style>
 </head>
 <body>
@@ -39,7 +43,7 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script type="text/babel">
-    const { useMemo, useState } = React;
+    const { useMemo, useState, useEffect } = React;
 
     async function api(url, options = {}) {
       const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
@@ -53,6 +57,11 @@
     }
 
     function App() {
+      const numberFmt = useMemo(() => new Intl.NumberFormat('en-US'), []);
+      const mbFmt = useMemo(() => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), []);
+      const fmtInt = (value) => numberFmt.format(Number(value || 0));
+      const fmtMb = (value) => mbFmt.format(Number(value || 0));
+
       const [agentId, setAgentId] = useState('main');
       const [olderThanMinutes, setOlderThanMinutes] = useState(60);
       const [confirmApply, setConfirmApply] = useState('');
@@ -62,11 +71,34 @@
       const [gateway, setGateway] = useState(null);
       const [diagnostics, setDiagnostics] = useState(null);
       const [trends, setTrends] = useState(null);
+      const [contextInspection, setContextInspection] = useState(null);
       const [range, setRange] = useState('7d');
       const [error, setError] = useState('');
       const [busy, setBusy] = useState(false);
+      const [activeAction, setActiveAction] = useState('');
       const [sortBy, setSortBy] = useState('sizeMb');
       const [sortDir, setSortDir] = useState('desc');
+      const [agentOptions, setAgentOptions] = useState([]);
+      useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          try {
+            const res = await api('/api/context/agents');
+            if (cancelled) return;
+            const agents = Array.isArray(res?.data?.agents) ? res.data.agents : [];
+            const ids = agents.map((a) => a.id).filter(Boolean);
+            const options = ids.length > 0 ? ids : ['main'];
+            setAgentOptions(options);
+            setAgentId((prev) => options.includes(prev) ? prev : options[0]);
+          } catch {
+            if (cancelled) return;
+            setAgentOptions(['main']);
+            setAgentId('main');
+          }
+        })();
+        return () => { cancelled = true; };
+      }, []);
+
 
       const sortedSessions = useMemo(() => {
         const rows = [...(report?.topSessions || [])];
@@ -80,14 +112,61 @@
         return rows;
       }, [report, sortBy, sortDir]);
 
+      useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          setBusy(true);
+          setActiveAction('report');
+          setError('');
+          setContextInspection(null);
+          try {
+            const [reportRes, trendsRes, gatewayRes, inspectionRes] = await Promise.all([
+              api(`/api/context/report?agent=${encodeURIComponent(agentId)}`),
+              api(`/api/context/trends?agent=${encodeURIComponent(agentId)}&range=${range}`),
+              api('/api/context/gateway-status'),
+              api(`/api/context/inspect?agent=${encodeURIComponent(agentId)}`)
+            ]);
+            if (cancelled) return;
+            setReport(reportRes.data);
+            setTrends(trendsRes.data);
+            setGateway(gatewayRes.data);
+            setContextInspection(inspectionRes.data);
+          } catch (e) {
+            if (cancelled) return;
+            setError(e?.payload?.error?.message || e.message);
+          } finally {
+            if (!cancelled) {
+              setBusy(false);
+              setActiveAction('');
+            }
+          }
+        })();
+        return () => { cancelled = true; };
+      }, [agentId, range]);
+
       async function runReport() {
         setBusy(true);
+        setActiveAction('report');
         setError('');
         try {
           const res = await api(`/api/context/report?agent=${encodeURIComponent(agentId)}`);
           setReport(res.data);
           const tr = await api(`/api/context/trends?agent=${encodeURIComponent(agentId)}&range=${range}`);
           setTrends(tr.data);
+        } catch (e) {
+          setError(e?.payload?.error?.message || e.message);
+        } finally {
+          setBusy(false);
+          setActiveAction('');
+        }
+      }
+
+      async function loadContextInspection() {
+        setBusy(true);
+        setError('');
+        try {
+          const res = await api(`/api/context/inspect?agent=${encodeURIComponent(agentId)}`);
+          setContextInspection(res.data);
         } catch (e) {
           setError(e?.payload?.error?.message || e.message);
         } finally {
@@ -170,6 +249,14 @@
         totalMb: Number((report?.totals?.totalTranscriptSizeMb || 0) - (beforeReport?.totals?.totalTranscriptSizeMb || 0)).toFixed(2)
       } : null;
 
+      const inspectionColor = (label) => {
+        const key = String(label || '').toLowerCase();
+        if (key.includes('browser')) return { border: '#0ea5e9', bg: '#082f49', icon: '🌐' };
+        if (key.includes('exec')) return { border: '#f59e0b', bg: '#3f2a06', icon: '🖥️' };
+        if (key.includes('read')) return { border: '#22c55e', bg: '#052e16', icon: '📄' };
+        return { border: '#8b5cf6', bg: '#2e1065', icon: '🧰' };
+      };
+
       return (
         <div className="container">
           <div className="header">
@@ -180,13 +267,20 @@
             <a href="http://localhost:18795/hub">Back to Hub</a>
           </div>
           {error && <div className="error">{error}</div>}
+          {busy && !report && (
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div className="warn">Loading context report...</div>
+              <div className="muted">Fetching report, trends, and gateway status.</div>
+            </div>
+          )}
 
           <div className="row">
             <div className="card small">
               <label>Agent</label>
               <select value={agentId} onChange={(e) => setAgentId(e.target.value)}>
-                <option value="main">main</option>
-                <option value="swarm">swarm</option>
+                {agentOptions.map((id) => (
+                  <option key={id} value={id}>{id}</option>
+                ))}
               </select>
             </div>
             <div className="card small">
@@ -196,7 +290,9 @@
             <div className="card grow">
               <label>Actions</label>
               <div className="row">
-                <button disabled={busy} onClick={runReport}>Run ctxreport</button>
+                <button disabled={busy} onClick={runReport}>
+                  {activeAction === 'report' ? 'Running ctxreport...' : 'Run ctxreport'}
+                </button>
                 <button disabled={busy} className="secondary" onClick={() => runPrune(false)}>Run ctxprune (dry-run)</button>
                 <button disabled={busy} className="secondary" onClick={checkGateway}>Gateway health</button>
                 <button disabled={busy} className="secondary" onClick={copyReport}>Copy report</button>
@@ -205,35 +301,140 @@
           </div>
 
           <div className="row">
-            <div className="card grow">
+            <div className="card grow compact-card">
               <h3>Apply Prune (requires confirmation)</h3>
               <label>Type APPLY to enable</label>
               <input value={confirmApply} onChange={(e) => setConfirmApply(e.target.value)} placeholder="APPLY" />
-              <div className="row" style={{ marginTop: 8 }}>
+              <div className="row" style={{ marginTop: 6 }}>
                 <button className="danger" disabled={busy || confirmApply !== 'APPLY' || !prune} onClick={() => runPrune(true)}>
                   Apply prune
                 </button>
                 <span className="muted">You must run dry-run first and type APPLY.</span>
               </div>
             </div>
-            <div className="card grow">
+            <div className="card grow compact-card">
               <h3>Gateway Status</h3>
               {!gateway && <div className="muted">Not checked yet.</div>}
               {gateway && (
                 <>
                   <div className={gateway.ok ? 'ok' : 'bad'}>{gateway.ok ? 'OK' : 'Unavailable'}</div>
-                  <div className="mono muted">{gateway.statusText?.slice(0, 800)}</div>
+                  <div className="mono muted compact-mono">{gateway.statusText?.slice(0, 240)}</div>
                 </>
               )}
             </div>
           </div>
 
+          {contextInspection && (
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h3>🔍 Session Context Analysis</h3>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  {contextInspection.inspectedAt && (
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      Last inspected: {new Date(contextInspection.inspectedAt).toLocaleString()}
+                    </span>
+                  )}
+                  <button className="secondary" disabled={busy} onClick={loadContextInspection}>Refresh</button>
+                </div>
+              </div>
+              <div className="row" style={{ marginBottom: 12 }}>
+                <div className="small">
+                  <div className="muted">Total Context Tokens</div>
+                  <div style={{ fontSize: 20, fontWeight: 'bold' }}>
+                    {fmtInt(contextInspection.totalContextTokens || contextInspection.totalTokens)}
+                  </div>
+                </div>
+                <div className="small">
+                  <div className="muted">Summary Tokens</div>
+                  <div style={{ fontSize: 20, fontWeight: 'bold' }}>{fmtInt(contextInspection.summaryTokens || 0)}</div>
+                </div>
+                <div className="small">
+                  <div className="muted">Messages</div>
+                  <div style={{ fontSize: 20, fontWeight: 'bold' }}>{fmtInt(contextInspection.messageCount)}</div>
+                </div>
+                <div className="small">
+                  <div className="muted">Transcript Size</div>
+                  <div style={{ fontSize: 20, fontWeight: 'bold' }}>{contextInspection.transcriptSize}</div>
+                </div>
+                <div className="small">
+                  <div className="muted">Optimization Score</div>
+                  <div style={{ fontSize: 20, fontWeight: 'bold', color: contextInspection.optimizationScore >= 80 ? '#34d399' : contextInspection.optimizationScore >= 60 ? '#fbbf24' : '#f87171' }}>
+                    {contextInspection.optimizationScore}/100
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <h3 style={{ fontSize: 14, marginBottom: 8 }}>Token Breakdown</h3>
+                <div className="row">
+                  {contextInspection.categories.filter(c => c.name !== '**Total').map(cat => (
+                    <div key={cat.name} className="small" style={{ background: '#0f172a', border: '1px solid #374151', padding: 8, borderRadius: 6 }}>
+                      <div className="muted" style={{ fontSize: 11 }}>{cat.name}</div>
+                      <div style={{ fontSize: 16, fontWeight: 'bold' }}>{fmtInt(cat.tokens)}</div>
+                      <div className="muted" style={{ fontSize: 11 }}>{cat.percent.toFixed(1)}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <h3 style={{ fontSize: 14, marginBottom: 8 }}>Tool Usage</h3>
+                <div className="row">
+                  {contextInspection.toolStats.slice(0, 10).map(tool => (
+                    <div key={tool.name} className="small" style={{ background: '#0f172a', border: '1px solid #374151', padding: 8, borderRadius: 6 }}>
+                      <div className="muted" style={{ fontSize: 11 }}>{tool.name}</div>
+                      <div style={{ fontSize: 16, fontWeight: 'bold' }}>{tool.calls} calls</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {contextInspection.toolOutputBreakdown && contextInspection.toolOutputBreakdown.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 14, marginBottom: 8 }}>🧪 Tool Output Breakdown (by tokens)</h3>
+                  <div className="row">
+                    {contextInspection.toolOutputBreakdown.map((item) => {
+                      const style = inspectionColor(item.label);
+                      return (
+                        <div
+                          key={item.label}
+                          className="small"
+                          style={{ background: style.bg, border: `1px solid ${style.border}`, padding: 10, borderRadius: 6, minWidth: 230 }}
+                        >
+                          <div style={{ fontSize: 12, marginBottom: 4 }}>{style.icon} {item.label}</div>
+                          <div style={{ fontSize: 18, fontWeight: 'bold' }}>{fmtInt(item.tokens)} tokens</div>
+                          <div className="muted" style={{ fontSize: 12 }}>{fmtInt(item.calls)} calls - {item.details}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {contextInspection.toolOutputAction && (
+                    <div className="warn" style={{ marginTop: 8 }}>Action: {contextInspection.toolOutputAction}</div>
+                  )}
+                </div>
+              )}
+              {contextInspection.topPruningTargets && contextInspection.topPruningTargets.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 14, marginBottom: 8 }}>🎯 Best Pruning Targets</h3>
+                  {contextInspection.topPruningTargets.slice(0, 3).map((target) => (
+                    <div key={`${target.rank}-${target.name}`} style={{ background: '#0f172a', border: '1px solid #374151', borderRadius: 6, padding: 10, marginBottom: 8 }}>
+                      <div style={{ fontWeight: 700 }}>
+                        {target.icon} #{target.rank}: {target.name} - {fmtInt(target.tokens)} tokens ({target.percent.toFixed(1)}%)
+                      </div>
+                      <div className="muted" style={{ fontSize: 12 }}>Action: {target.action}</div>
+                      {target.topItems && <div className="muted" style={{ fontSize: 12 }}>Top items: {target.topItems}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {report && (
             <div className="row">
-              <div className="card small"><h3>Total</h3><div>{report.totals?.totalSessions ?? 0}</div></div>
-              <div className="card small"><h3>Main</h3><div>{report.totals?.mainSessions ?? 0}</div></div>
-              <div className="card small"><h3>Sub-agent</h3><div>{report.totals?.subAgentSessions ?? 0}</div></div>
-              <div className="card small"><h3>Transcript MB</h3><div>{report.totals?.totalTranscriptSizeMb ?? 0}</div></div>
+              <div className="card small"><h3>Total</h3><div>{fmtInt(report.totals?.totalSessions)}</div></div>
+              <div className="card small"><h3>Main</h3><div>{fmtInt(report.totals?.mainSessions)}</div></div>
+              <div className="card small"><h3>Sub-agent</h3><div>{fmtInt(report.totals?.subAgentSessions)}</div></div>
+              <div className="card small"><h3>Total Session Tokens (reported)</h3><div>{fmtInt(report.totals?.totalSessionContextTokens)}</div></div>
+              <div className="card small"><h3>Total Window Tokens</h3><div>{fmtInt(report.totals?.totalContextWindowTokens)}</div></div>
+              <div className="card small"><h3>Transcript MB</h3><div>{fmtMb(report.totals?.totalTranscriptSizeMb)}</div></div>
               <div className="card grow"><h3>Last Run</h3><div className="muted">{new Date(report.generatedAt).toLocaleString()}</div></div>
             </div>
           )}
@@ -242,9 +443,9 @@
             <div className="card" style={{ marginBottom: 12 }}>
               <h3>Before vs After (Apply diff)</h3>
               <div className="row">
-                <div>Total sessions delta: <strong className={diff.totalSessions <= 0 ? 'ok' : 'warn'}>{diff.totalSessions}</strong></div>
-                <div>Sub-agent delta: <strong className={diff.subAgentSessions <= 0 ? 'ok' : 'warn'}>{diff.subAgentSessions}</strong></div>
-                <div>Size delta MB: <strong className={Number(diff.totalMb) <= 0 ? 'ok' : 'warn'}>{diff.totalMb}</strong></div>
+                <div>Total sessions delta: <strong className={diff.totalSessions <= 0 ? 'ok' : 'warn'}>{fmtInt(diff.totalSessions)}</strong></div>
+                <div>Sub-agent delta: <strong className={diff.subAgentSessions <= 0 ? 'ok' : 'warn'}>{fmtInt(diff.subAgentSessions)}</strong></div>
+                <div>Size delta MB: <strong className={Number(diff.totalMb) <= 0 ? 'ok' : 'warn'}>{fmtMb(diff.totalMb)}</strong></div>
               </div>
             </div>
           )}
@@ -253,10 +454,10 @@
             <div className="card" style={{ marginBottom: 12 }}>
               <h3>Prune Result ({prune.apply ? 'APPLY' : 'DRY RUN'})</h3>
               <div className="row">
-                <div>Pruned candidates: <strong>{prune.prunedCount}</strong></div>
-                <div>Renamed: <strong>{prune.renamedCount}</strong></div>
-                <div>Missing transcripts: <strong>{prune.missingTranscriptCount}</strong></div>
-                <div>Total MB: <strong>{prune.totalSizeMb}</strong></div>
+                <div>Pruned candidates: <strong>{fmtInt(prune.prunedCount)}</strong></div>
+                <div>Renamed: <strong>{fmtInt(prune.renamedCount)}</strong></div>
+                <div>Missing transcripts: <strong>{fmtInt(prune.missingTranscriptCount)}</strong></div>
+                <div>Total MB: <strong>{fmtMb(prune.totalSizeMb)}</strong></div>
               </div>
               {prune.backupFile && <div className="muted">Backup: {prune.backupFile}</div>}
             </div>
@@ -271,6 +472,9 @@
                   <tr>
                     <th>Session Key</th>
                     <th><button onClick={() => toggleSort('type')}>Type</button></th>
+                    <th><button onClick={() => toggleSort('activeContextTokens')}>Active Context (est)</button></th>
+                    <th><button onClick={() => toggleSort('totalSessionContextTokens')}>Session Summary Tokens (reported)</button></th>
+                    <th><button onClick={() => toggleSort('contextWindowTokens')}>Context Window Tokens</button></th>
                     <th><button onClick={() => toggleSort('sizeMb')}>Size MB</button></th>
                     <th><button onClick={() => toggleSort('ageMinutes')}>Age Minutes</button></th>
                     <th><button onClick={() => toggleSort('updatedAt')}>Updated</button></th>
@@ -281,8 +485,11 @@
                     <tr key={s.key}>
                       <td className="mono">{s.key}</td>
                       <td>{s.type}</td>
-                      <td>{s.sizeMb}</td>
-                      <td>{s.ageMinutes}</td>
+                      <td>{fmtInt(s.activeContextTokens)}</td>
+                      <td>{fmtInt(s.totalSessionContextTokens)}</td>
+                      <td>{fmtInt(s.contextWindowTokens)}</td>
+                      <td>{fmtMb(s.sizeMb)}</td>
+                      <td>{fmtInt(s.ageMinutes)}</td>
                       <td>{new Date(s.updatedAt).toLocaleString()}</td>
                     </tr>
                   ))}
