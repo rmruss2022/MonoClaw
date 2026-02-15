@@ -23,7 +23,7 @@ let uptimeStart = Date.now();
 function startBackend() {
   console.log(`[${new Date().toISOString()}] [Backend] Starting...`);
   
-  backendProcess = spawn('bash', ['-c', `cd "${BACKEND_DIR}" && source venv/bin/activate && python3 -m uvicorn api.main:app --host 127.0.0.1 --port ${BACKEND_PORT}`], {
+  backendProcess = spawn('bash', ['-c', `cd "${BACKEND_DIR}" && python3 -m uvicorn api.main:app --host 127.0.0.1 --port ${BACKEND_PORT}`], {
     stdio: ['ignore', 'pipe', 'pipe']
   });
   

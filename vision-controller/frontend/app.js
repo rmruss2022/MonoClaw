@@ -134,6 +134,17 @@ function initWebSocket() {
     };
     
     wsClient.onGestureUpdate = (data) => {
+        const seq = data.sequence || 0;
+        if (seq > 0) {
+            if (seq < lastRenderedSequence) {
+                return;
+            }
+            lastRenderedSequence = seq;
+            if (seq > lastProcessedSequence) {
+                lastProcessedSequence = seq;
+            }
+        }
+
         pendingGestureUpdate = {
             gesture: data.gesture,
             confidence: data.confidence,
@@ -158,6 +169,13 @@ function initWebSocket() {
             });
         }
     };
+
+    wsClient.onFrameAck = (data) => {
+        const seq = data.sequence || 0;
+        if (seq > lastProcessedSequence) {
+            lastProcessedSequence = seq;
+        }
+    };
     
     wsClient.onError = (error) => {
         console.error('WebSocket error:', error);
@@ -168,7 +186,8 @@ function initWebSocket() {
 
 // Start capturing and sending frames - FLUSH STALE RESULTS
 let frameSequence = 0;
-let lastAcceptedSequence = -1;
+let lastProcessedSequence = 0;
+let lastRenderedSequence = 0;
 const MAX_IN_FLIGHT_FRAMES = 2;
 
 function startFrameCapture() {
@@ -185,28 +204,13 @@ function startFrameCapture() {
     let frameCount = 0;
     let fpsStartTime = Date.now();
     
-    // Hook into gesture updates with sequence number filtering
-    const originalOnGestureUpdate = wsClient.onGestureUpdate;
-    wsClient.onGestureUpdate = (data) => {
-        const seq = data.sequence || 0;
-        
-        // ONLY accept if this is newer than the last one we processed
-        if (seq > lastAcceptedSequence) {
-            lastAcceptedSequence = seq;
-            
-            if (originalOnGestureUpdate) {
-                originalOnGestureUpdate(data);
-            }
-        }
-    };
-    
     function captureFrame(timestamp) {
         const now = performance.now();
         
         // Send frames continuously, let sequence numbers handle ordering
         if (now - lastFrameTime >= minFrameInterval) {
             if (video.readyState === video.HAVE_ENOUGH_DATA && wsClient && wsClient.ws && wsClient.ws.readyState === WebSocket.OPEN) {
-                const inFlightFrames = frameSequence - lastAcceptedSequence;
+                const inFlightFrames = frameSequence - lastProcessedSequence;
                 if (inFlightFrames > MAX_IN_FLIGHT_FRAMES) {
                     captureInterval = requestAnimationFrame(captureFrame);
                     return;
@@ -229,7 +233,7 @@ function startFrameCapture() {
                 const elapsed = Date.now() - fpsStartTime;
                 if (elapsed >= 2000) {
                     const actualFPS = Math.round((frameCount / elapsed) * 1000);
-                    console.log(`[Capture] FPS: ${actualFPS} | Seq: ${frameSequence} | Accepted: ${lastAcceptedSequence}`);
+                    console.log(`[Capture] FPS: ${actualFPS} | Sent: ${frameSequence} | Processed: ${lastProcessedSequence}`);
                     frameCount = 0;
                     fpsStartTime = Date.now();
                 }

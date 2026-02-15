@@ -1,0 +1,90 @@
+{
+  "agents": {
+    "list": [
+      {
+        "id": "moonshot-swarm",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "moonshot/kimi-k2.5"
+        }
+      },
+      {
+        "id": "orchestrator",
+        "name": "Swarm Orchestrator",
+        "workspace": "/Users/matthew/.openclaw/workspace/agent-swarm-template",
+        "model": {
+          "primary": "anthropic/claude-opus-4-6"
+        },
+        "subagents": {
+          "model": "nvidia/moonshotai/kimi-k2.5",
+          "maxConcurrent": 5,
+          "allowAgents": ["designer", "backend-dev", "frontend-dev", "content", "pm", "qa", "devops", "data"]
+        }
+      },
+      {
+        "id": "designer",
+        "name": "Design Specialist",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "nvidia/moonshotai/kimi-k2.5"
+        }
+      },
+      {
+        "id": "backend-dev",
+        "name": "Backend Developer",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "nvidia/moonshotai/kimi-k2.5"
+        }
+      },
+      {
+        "id": "frontend-dev",
+        "name": "Frontend Developer",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "nvidia/moonshotai/kimi-k2.5"
+        }
+      },
+      {
+        "id": "content",
+        "name": "Content Specialist",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "nvidia/moonshotai/kimi-k2.5"
+        }
+      },
+      {
+        "id": "pm",
+        "name": "Product Manager",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "anthropic/claude-sonnet-4-5"
+        }
+      },
+      {
+        "id": "qa",
+        "name": "Quality Assurance",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "nvidia/moonshotai/kimi-k2.5"
+        }
+      },
+      {
+        "id": "devops",
+        "name": "DevOps Specialist",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "nvidia/moonshotai/kimi-k2.5"
+        }
+      },
+      {
+        "id": "data",
+        "name": "Data Engineer",
+        "workspace": "/Users/matthew/.openclaw/workspace",
+        "model": {
+          "primary": "nvidia/moonshotai/kimi-k2.5"
+        }
+      }
+    ]
+  }
+}

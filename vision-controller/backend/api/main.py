@@ -22,21 +22,25 @@ import json
 import time
 import base64
 import sys
-import io
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
 
 import cv2
 import numpy as np
-from PIL import Image
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocketState
 from pydantic import BaseModel
 from typing import List, Dict
 
-sys.path.insert(0, '/Users/matthew/Desktop/vision-controller/backend')
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+CONFIG_DIR = PROJECT_ROOT / "config"
+COMBINED_LOG_FILE = BACKEND_ROOT / "combined.log"
+
+# Ensure local backend package imports resolve regardless of working directory.
+sys.path.insert(0, str(BACKEND_ROOT))
 from ml.hand_detector import HandDetector
 from ml.gesture_classifier import GestureClassifier
 from ml.combo_detector import ComboDetector
@@ -60,7 +64,7 @@ async def lifespan(app: FastAPI):
     app.state.combo_detector = ComboDetector(timeout_window=2.0)
     
     # Load combo definitions from config
-    config_path = '/Users/matthew/Desktop/vision-controller/config/gestures.json'
+    config_path = CONFIG_DIR / "gestures.json"
     app.state.combo_detector.load_combos_from_config(config_path)
     
     print(f"[{datetime.now().isoformat()}] ML models loaded: HandDetector (LITE/OPTIMIZED) + GestureClassifier + ComboDetector")
@@ -114,7 +118,8 @@ async def log_frontend(request: dict):
     message = request.get("message", "")
     
     # Write to shared log file
-    log_file = Path("/Users/matthew/Desktop/vision-controller/backend/combined.log")
+    COMBINED_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    log_file = COMBINED_LOG_FILE
     with open(log_file, "a") as f:
         f.write(f"[{timestamp}] [FRONTEND:{category}] {message}\n")
     
@@ -159,7 +164,7 @@ async def train_gesture(request: TrainGestureRequest):
                     )
         
         # Load existing custom gestures or create new file
-        config_path = Path("/Users/matthew/Desktop/vision-controller/config")
+        config_path = CONFIG_DIR
         custom_gestures_file = config_path / "custom_gestures.json"
         
         if custom_gestures_file.exists():
@@ -344,7 +349,13 @@ async def websocket_endpoint(websocket: WebSocket):
                                 last_gesture = None
                                 last_confidence = 0.0
                                 no_gesture_count = 0  # Reset after sending clear
-                            
+
+                            # ACK even when no hand is detected so frontend flow-control can continue.
+                            await manager.send_personal_message({
+                                "type": "frame_ack",
+                                "sequence": sequence,
+                                "timestamp": int(time.time() * 1000)
+                            }, websocket)
                             continue
 
                         hand = detected_hands[0]
@@ -417,6 +428,13 @@ async def websocket_endpoint(websocket: WebSocket):
                             # Log every 30 frames even if no change
                             if int(time.time() * 10) % 30 == 0:
                                 print(f"[SKIP] {current_gesture} (no change) | conf: {current_confidence:.2f} | total: {total_latency}ms")
+
+                        # ACK every processed frame to keep frontend sender in sync.
+                        await manager.send_personal_message({
+                            "type": "frame_ack",
+                            "sequence": sequence,
+                            "timestamp": int(time.time() * 1000)
+                        }, websocket)
                         
                         # Add gesture to combo detector
                         combo_detector.add_gesture(

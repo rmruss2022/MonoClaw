@@ -4,6 +4,17 @@
 
 This document describes how to roll back changes made during the transition to building OpenClaw from the GitHub codebase.
 
+## Transition Complete
+
+- **OpenClaw source:** `~/openclaw-src` (cloned from GitHub)
+- **Version:** 2026.2.15 (nested sub-agent orchestration enabled)
+- **Linked via:** `npm link` (replaces global npm install)
+
+To enable `openclaw update` to pull from your checkout, add to `~/.zshrc`:
+```bash
+export OPENCLAW_GIT_DIR=~/openclaw-src
+```
+
 ## OpenClaw Config Backup
 
 A backup of `openclaw.json` was created at:
