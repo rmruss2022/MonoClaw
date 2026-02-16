@@ -13,7 +13,7 @@ const { promisify } = require('util');
 
 const execAsync = promisify(exec);
 
-const PORT = 18798;
+const PORT = 18802;
 const MONOCLAW_PATH = path.join(process.env.HOME, '.openclaw/workspace/MonoClaw');
 
 // Project metadata mapping
