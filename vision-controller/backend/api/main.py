@@ -22,6 +22,7 @@ import json
 import time
 import base64
 import sys
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -32,7 +33,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocketState
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +45,13 @@ sys.path.insert(0, str(BACKEND_ROOT))
 from ml.hand_detector import HandDetector
 from ml.gesture_classifier import GestureClassifier
 from ml.combo_detector import ComboDetector
+from api.config_manager import ConfigManager
+from api.action_dispatcher import ActionDispatcher
+
+ACTION_GESTURE_WHITELIST = {"peace"}
+MAX_ACTION_EVENTS = 200
+PEACE_REPEAT_INTERVAL_SEC = 1.2
+KEYBOARD_ACTION_COOLDOWN_SEC = 5.0
 
 
 @asynccontextmanager
@@ -62,6 +70,10 @@ async def lifespan(app: FastAPI):
     )
     app.state.gesture_classifier = GestureClassifier()
     app.state.combo_detector = ComboDetector(timeout_window=2.0)
+    app.state.config_manager = ConfigManager(str(CONFIG_DIR / "gestures.json"))
+    app.state.action_dispatcher = ActionDispatcher()
+    app.state.action_events = []
+    app.state.keyboard_last_run_by_gesture = {}
     
     # Load combo definitions from config
     config_path = CONFIG_DIR / "gestures.json"
@@ -93,10 +105,132 @@ app.add_middleware(
 )
 
 
+def append_backend_log(category: str, message: str):
+    """Write a timestamped backend debug line to combined log."""
+    COMBINED_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(COMBINED_LOG_FILE, "a") as log_file:
+        log_file.write(f"[{datetime.now().isoformat()[11:23]}] [BACKEND:{category}] {message}\n")
+
+
+async def execute_gesture_action(app: FastAPI, gesture: str, confidence: float, hand: str, source: str) -> Dict[str, Any]:
+    """Execute configured gesture action with explicit debug logging."""
+    normalized_gesture = (gesture or "").strip().lower()
+    start_time = time.time()
+
+    if normalized_gesture not in ACTION_GESTURE_WHITELIST:
+        skip_msg = f"Skipping '{normalized_gesture}' from {source}: not in whitelist {sorted(ACTION_GESTURE_WHITELIST)}"
+        print(f"[ACTION] {skip_msg}")
+        append_backend_log("ACTION", skip_msg)
+        event = {
+            "status": "skipped",
+            "gesture": normalized_gesture,
+            "confidence": confidence,
+            "hand": hand,
+            "source": source,
+            "reason": "not_whitelisted",
+            "timestamp": int(time.time() * 1000),
+        }
+        app.state.action_events.append(event)
+        app.state.action_events = app.state.action_events[-MAX_ACTION_EVENTS:]
+        return event
+
+    config_manager = app.state.config_manager
+    config_manager.load()
+    action_config = config_manager.get_action(normalized_gesture)
+    if not action_config:
+        err_msg = f"No action config for gesture '{normalized_gesture}'"
+        print(f"[ACTION] {err_msg}")
+        append_backend_log("ACTION", err_msg)
+        event = {
+            "status": "failed",
+            "gesture": normalized_gesture,
+            "confidence": confidence,
+            "hand": hand,
+            "source": source,
+            "reason": "missing_config",
+            "timestamp": int(time.time() * 1000),
+        }
+        app.state.action_events.append(event)
+        app.state.action_events = app.state.action_events[-MAX_ACTION_EVENTS:]
+        return event
+
+    action_type = action_config.get("action")
+    action_params = {
+        key: value
+        for key, value in action_config.items()
+        if key not in {"action", "description"}
+    }
+
+    if action_type == "keyboard":
+        now_ts = time.time()
+        last_run_ts = app.state.keyboard_last_run_by_gesture.get(normalized_gesture, 0.0)
+        seconds_since_last_run = now_ts - last_run_ts
+        if seconds_since_last_run < KEYBOARD_ACTION_COOLDOWN_SEC:
+            remaining_sec = round(KEYBOARD_ACTION_COOLDOWN_SEC - seconds_since_last_run, 2)
+            skip_msg = (
+                f"Skipping keyboard action for '{normalized_gesture}' from {source}: "
+                f"cooldown active ({remaining_sec}s remaining)"
+            )
+            print(f"[ACTION] {skip_msg}")
+            append_backend_log("ACTION", skip_msg)
+            event = {
+                "status": "skipped",
+                "gesture": normalized_gesture,
+                "confidence": confidence,
+                "hand": hand,
+                "source": source,
+                "action_type": action_type,
+                "reason": "cooldown",
+                "cooldown_remaining_sec": remaining_sec,
+                "timestamp": int(now_ts * 1000),
+            }
+            app.state.action_events.append(event)
+            app.state.action_events = app.state.action_events[-MAX_ACTION_EVENTS:]
+            return event
+
+    pre_msg = f"Executing '{normalized_gesture}' action_type='{action_type}' params={action_params}"
+    print(f"[ACTION] {pre_msg}")
+    append_backend_log("ACTION", pre_msg)
+
+    result = await asyncio.to_thread(
+        app.state.action_dispatcher.execute,
+        action_type,
+        action_params
+    )
+    elapsed_ms = int((time.time() - start_time) * 1000)
+    post_msg = f"Result for '{normalized_gesture}': success={result.get('success')} elapsed={elapsed_ms}ms message={result.get('message')}"
+    print(f"[ACTION] {post_msg}")
+    append_backend_log("ACTION", post_msg)
+
+    if action_type == "keyboard" and result.get("success"):
+        app.state.keyboard_last_run_by_gesture[normalized_gesture] = time.time()
+
+    event = {
+        "status": "ok" if result.get("success") else "failed",
+        "gesture": normalized_gesture,
+        "confidence": confidence,
+        "hand": hand,
+        "source": source,
+        "action_type": action_type,
+        "params": action_params,
+        "result": result,
+        "elapsed_ms": elapsed_ms,
+        "timestamp": int(time.time() * 1000),
+    }
+    app.state.action_events.append(event)
+    app.state.action_events = app.state.action_events[-MAX_ACTION_EVENTS:]
+    return event
+
+
 class TrainGestureRequest(BaseModel):
     """Request model for training a custom gesture."""
     name: str
     samples: List[List[Dict[str, float]]]  # List of landmark sequences
+
+
+class GestureConfigUpdateRequest(BaseModel):
+    """Request model for updating a single gesture action config."""
+    action_config: Dict[str, Any]
 
 
 @app.get("/health")
@@ -207,6 +341,76 @@ async def train_gesture(request: TrainGestureRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/actions/recent")
+async def get_recent_action_events():
+    """Return recent action execution events for debugging."""
+    return {
+        "count": len(app.state.action_events),
+        "events": app.state.action_events[-50:]
+    }
+
+
+@app.post("/api/actions/test/{gesture}")
+async def test_action_execution(gesture: str):
+    """Manually trigger configured action for a gesture to validate command execution."""
+    normalized_gesture = gesture.strip().lower()
+    if not normalized_gesture:
+        raise HTTPException(status_code=400, detail="Gesture name cannot be empty")
+
+    return await execute_gesture_action(
+        app=app,
+        gesture=normalized_gesture,
+        confidence=1.0,
+        hand="debug",
+        source="api_test"
+    )
+
+
+@app.get("/api/config/gestures")
+async def get_gesture_config():
+    """Return full gesture configuration from backend source of truth."""
+    config_manager = app.state.config_manager
+    if not config_manager.load():
+        raise HTTPException(status_code=500, detail="Failed to load gesture configuration")
+    return config_manager.get_all()
+
+
+@app.put("/api/config/gestures/{gesture}")
+async def update_gesture_config(gesture: str, request: GestureConfigUpdateRequest):
+    """Update and persist one gesture action mapping."""
+    normalized_gesture = gesture.strip().lower()
+    if not normalized_gesture:
+        raise HTTPException(status_code=400, detail="Gesture name cannot be empty")
+    if normalized_gesture not in ACTION_GESTURE_WHITELIST:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Only {sorted(ACTION_GESTURE_WHITELIST)} can be configured in peace-only mode"
+        )
+
+    action_config = request.action_config or {}
+    action_type = action_config.get("action")
+    if not isinstance(action_type, str) or not action_type.strip():
+        raise HTTPException(status_code=400, detail="action_config.action is required")
+
+    config_manager = app.state.config_manager
+    if not config_manager.load():
+        raise HTTPException(status_code=500, detail="Failed to load current gesture configuration")
+
+    updated = config_manager.set_action(normalized_gesture, action_config)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to save gesture configuration")
+
+    # Reload combo detector definitions in case config edits include combo changes.
+    if hasattr(app.state, "combo_detector"):
+        app.state.combo_detector.load_combos_from_config(CONFIG_DIR / "gestures.json")
+
+    return {
+        "status": "success",
+        "gesture": normalized_gesture,
+        "action_config": action_config
+    }
+
+
 class ConnectionManager:
     """Manages WebSocket connections."""
 
@@ -285,6 +489,7 @@ async def websocket_endpoint(websocket: WebSocket):
     no_gesture_count = 0
     confidence_threshold = 0.7  # Only report gestures above 70% confidence
     last_emit_time = 0.0
+    last_action_time = 0.0
     min_emit_interval_sec = 0.12  # Hard cap burst rate from backend
     same_gesture_refresh_interval_sec = 0.40  # Keep UI fresh without flooding
 
@@ -297,7 +502,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
         hand_detector = app.state.hand_detector
         gesture_classifier = app.state.gesture_classifier
-        combo_detector = app.state.combo_detector
 
         while True:
             try:
@@ -399,7 +603,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 print(log_msg)
 
                                 # Write to combined log
-                                log_file = Path("/Users/matthew/Desktop/vision-controller/backend/combined.log")
+                                log_file = COMBINED_LOG_FILE
                                 with open(log_file, "a") as f:
                                     f.write(f"[{datetime.now().isoformat()[11:23]}] [BACKEND:CHANGE] {log_msg}\n")
 
@@ -424,6 +628,28 @@ async def websocket_endpoint(websocket: WebSocket):
                                     last_emit_time = now
                                     last_gesture = current_gesture
                                     last_confidence = current_confidence
+
+                                    # Fire actions on transition and periodically while stable peace is held.
+                                    should_execute_action = False
+                                    if gesture_changed:
+                                        should_execute_action = True
+                                    elif current_gesture in ACTION_GESTURE_WHITELIST and (now - last_action_time) >= PEACE_REPEAT_INTERVAL_SEC:
+                                        should_execute_action = True
+
+                                    if should_execute_action:
+                                        action_event = await execute_gesture_action(
+                                            app=app,
+                                            gesture=current_gesture,
+                                            confidence=current_confidence,
+                                            hand=result["hand"],
+                                            source="gesture_stream"
+                                        )
+                                        if action_event.get("status") == "ok":
+                                            last_action_time = now
+                                        await manager.send_personal_message({
+                                            "type": "action_executed",
+                                            "data": action_event
+                                        }, websocket)
                         else:
                             # Log every 30 frames even if no change
                             if int(time.time() * 10) % 30 == 0:
@@ -436,26 +662,7 @@ async def websocket_endpoint(websocket: WebSocket):
                             "timestamp": int(time.time() * 1000)
                         }, websocket)
                         
-                        # Add gesture to combo detector
-                        combo_detector.add_gesture(
-                            result["gesture"],
-                            result["confidence"],
-                            result["hand"]
-                        )
-                        
-                        # Check for combo matches
-                        combo_result = combo_detector.check_combos()
-                        if combo_result:
-                            await manager.send_personal_message({
-                                "type": "combo_detected",
-                                "combo_name": combo_result["name"],
-                                "sequence": combo_result["sequence"],
-                                "confidence": combo_result["confidence"],
-                                "action": combo_result["action"],
-                                "description": combo_result.get("description", ""),
-                                "matched_gestures": combo_result["matched_gestures"],
-                                "timestamp": int(combo_result["timestamp"] * 1000)
-                            }, websocket)
+                        # Combo behaviors are disabled while in peace-only behavior mode.
 
                     except Exception as e:
                         print(f"[WebSocket] ML processing error: {e}")

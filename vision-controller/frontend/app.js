@@ -35,24 +35,18 @@ async function init() {
 // Load gesture configuration
 async function loadGestureConfig() {
     try {
-        // In production, this would fetch from backend
-        // For now, load from local config
-        const response = await fetch('../config/gestures.json');
+        const response = await fetch(`${BACKEND_HTTP_URL}/api/config/gestures`);
         if (response.ok) {
             gestureConfig = await response.json();
             renderGestureConfig();
             console.log('Gesture config loaded:', Object.keys(gestureConfig).length, 'gestures');
+        } else {
+            throw new Error(`Failed to load config: ${response.status}`);
         }
     } catch (error) {
         console.error('Failed to load gesture config:', error);
-        // Use default config
-        gestureConfig = {
-            peace: { action: 'applescript', description: 'Default action' },
-            thumbs_up: { action: 'openclaw_rpc', description: 'Default action' },
-            fist: { action: 'keyboard', description: 'Default action' },
-            point: { action: 'applescript', description: 'Default action' },
-            stop: { action: 'keyboard', description: 'Default action' }
-        };
+        // Fallback for startup resilience if backend is temporarily unavailable.
+        gestureConfig = {};
         renderGestureConfig();
     }
 }
@@ -61,8 +55,21 @@ async function loadGestureConfig() {
 function renderGestureConfig() {
     const listEl = document.getElementById('gesture-config-list');
     listEl.innerHTML = '';
-    
-    for (const [gesture, config] of Object.entries(gestureConfig)) {
+
+    const editableGestureEntries = Object.entries(gestureConfig).filter(([gesture, config]) => (
+        gesture !== 'combos'
+        && config
+        && typeof config === 'object'
+        && !Array.isArray(config)
+        && typeof config.action === 'string'
+    ));
+
+    if (editableGestureEntries.length === 0) {
+        listEl.innerHTML = '<div class="gesture-action">No editable gesture mappings loaded.</div>';
+        return;
+    }
+
+    for (const [gesture, config] of editableGestureEntries) {
         const item = document.createElement('div');
         item.className = 'gesture-config-item';
         item.innerHTML = `
@@ -175,6 +182,10 @@ function initWebSocket() {
         if (seq > lastProcessedSequence) {
             lastProcessedSequence = seq;
         }
+    };
+
+    wsClient.onActionExecuted = (event) => {
+        console.log('[Action]', event);
     };
     
     wsClient.onError = (error) => {
@@ -327,6 +338,10 @@ async function checkBackendStatus() {
 function openEditModal(gesture) {
     const modal = document.getElementById('edit-modal');
     const config = gestureConfig[gesture];
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+        alert(`Gesture "${gesture}" is not editable.`);
+        return;
+    }
     
     document.getElementById('edit-gesture').value = gesture;
     document.getElementById('edit-action-type').value = config.action;
@@ -360,22 +375,24 @@ document.getElementById('edit-form')?.addEventListener('submit', async (e) => {
         const config = JSON.parse(actionConfig);
         config.action = actionType;
         config.description = description;
-        
-        // Update local config
-        gestureConfig[gesture] = config;
-        
-        // Save to backend (in production)
-        // await fetch('/api/config/gestures', { method: 'POST', body: JSON.stringify(gestureConfig) });
-        
-        // For now, save to localStorage
-        localStorage.setItem('gestureConfig', JSON.stringify(gestureConfig));
-        
-        renderGestureConfig();
+
+        const response = await fetch(`${BACKEND_HTTP_URL}/api/config/gestures/${encodeURIComponent(gesture)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action_config: config })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Backend save failed (${response.status}): ${errText}`);
+        }
+
+        // Refresh from backend to keep frontend state authoritative.
+        await loadGestureConfig();
         closeEditModal();
-        
         alert(`Saved configuration for "${gesture}"`);
     } catch (error) {
-        alert('Invalid JSON configuration: ' + error.message);
+        alert('Failed to save configuration: ' + error.message);
     }
 });
 

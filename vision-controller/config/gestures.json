@@ -1,67 +1,11 @@
 {
   "peace": {
-    "action": "applescript",
-    "script": "tell application \"System Events\" to keystroke \"d\" using command down",
-    "description": "Show Desktop (Cmd+D)"
-  },
-  "thumbs_up": {
-    "action": "openclaw_rpc",
-    "method": "/api/message",
-    "params": {
-      "action": "send",
-      "target": "telegram",
-      "message": "👍"
-    },
-    "description": "Send thumbs up to Telegram"
-  },
-  "fist": {
     "action": "keyboard",
-    "keys": ["cmd", "tab"],
-    "description": "Switch applications (Cmd+Tab)"
+    "description": "Trigger Wispr Flow (Ctrl+Space)",
+    "keys": [
+      "ctrl",
+      "space"
+    ]
   },
-  "point": {
-    "action": "applescript",
-    "script": "tell application \"Spotify\" to playpause",
-    "description": "Play/Pause Spotify"
-  },
-  "stop": {
-    "action": "keyboard",
-    "keys": ["esc"],
-    "description": "Press Escape key"
-  },
-  "combos": [
-    {
-      "name": "special_move",
-      "sequence": ["peace", "fist"],
-      "action": "applescript",
-      "script": "display notification \"Special Move Activated!\" with title \"Vision Controller\"",
-      "description": "Peace + Fist = Special move notification"
-    },
-    {
-      "name": "dismiss",
-      "sequence": ["point", "stop"],
-      "action": "keyboard",
-      "keys": ["cmd", "w"],
-      "description": "Point + Stop = Close window (Cmd+W)"
-    },
-    {
-      "name": "triple_thumbs",
-      "sequence": ["thumbs_up", "thumbs_up", "thumbs_up"],
-      "action": "openclaw_rpc",
-      "method": "/api/message",
-      "params": {
-        "action": "send",
-        "target": "telegram",
-        "message": "🎉 Triple thumbs up combo!"
-      },
-      "description": "Three thumbs up in a row = celebration message"
-    },
-    {
-      "name": "power_gesture",
-      "sequence": ["fist", "stop", "fist"],
-      "action": "applescript",
-      "script": "display notification \"Power Gesture Detected!\" with title \"Vision Controller\" sound name \"Glass\"",
-      "description": "Fist + Stop + Fist = Power gesture with sound"
-    }
-  ]
+  "combos": []
 }

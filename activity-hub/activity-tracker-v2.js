@@ -46,8 +46,15 @@ function getAgentLabel(sessionId) {
     const sessions = JSON.parse(data);
     
     for (const [key, session] of Object.entries(sessions)) {
-      if (session.sessionId === sessionId && session.label) {
-        return session.label;
+      if (session.sessionId === sessionId) {
+        // Main agent special case
+        if (key === 'agent:main:main') {
+          return '🦞 Main Agent';
+        }
+        // Return label if present
+        if (session.label) {
+          return session.label;
+        }
       }
     }
   } catch (error) {}
@@ -55,22 +62,23 @@ function getAgentLabel(sessionId) {
   return null;
 }
 
-async function postActivity(activity) {
-  try {
-    const response = await fetch(ACTIVITY_HUB_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(activity),
+function postActivity(activity) {
+  // Fire and forget - don't await to avoid blocking the scan loop
+  fetch(ACTIVITY_HUB_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(activity),
+  })
+    .then(response => {
+      if (response.ok) {
+        console.log(`✓ Posted: ${activity.action}`);
+      } else {
+        console.error(`✗ Failed to post: ${response.statusText}`);
+      }
+    })
+    .catch(error => {
+      console.error(`✗ Error posting:`, error.message);
     });
-    
-    if (response.ok) {
-      console.log(`✓ Posted: ${activity.action}`);
-    } else {
-      console.error(`✗ Failed to post: ${response.statusText}`);
-    }
-  } catch (error) {
-    console.error(`✗ Error posting:`, error.message);
-  }
 }
 
 function processTranscriptLine(line, filename, sessionId, agentLabel) {

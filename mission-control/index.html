@@ -510,9 +510,12 @@
                         <div class="service-list">
                             ${data.projects.map(proj => `
                                 <div class="service-item running">
-                                    <div>
-                                        <div class="service-name">${proj.name}</div>
-                                        <div class="service-detail">${proj.description}</div>
+                                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                                        ${proj.icon ? `<span style="font-size: 24px;">${proj.icon}</span>` : ''}
+                                        <div>
+                                            <div class="service-name">${proj.name}</div>
+                                            <div class="service-detail">${proj.description}</div>
+                                        </div>
                                     </div>
                                     ${proj.url ? `<a href="${proj.url}" target="_blank" style="color: #00d9ff; text-decoration: none;">→</a>` : ''}
                                 </div>

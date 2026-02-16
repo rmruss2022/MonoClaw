@@ -5,12 +5,13 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 18798;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'dashboard', 'dist')));
 
 // Initialize SQLite Database
 const db = new Database('swarm.db');
@@ -566,7 +567,11 @@ app.get('/api/agents', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.redirect('/dashboard.html');
+  res.sendFile(path.join(__dirname, 'dashboard', 'dist', 'index.html'));
+});
+
+app.get('/dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard', 'dist', 'index.html'));
 });
 
 // Context inspection endpoint

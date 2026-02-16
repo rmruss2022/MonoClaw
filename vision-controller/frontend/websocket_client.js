@@ -18,6 +18,7 @@ class GestureWebSocketClient {
         this.onDisconnected = null;
         this.onError = null;
         this.onFrameAck = null;
+        this.onActionExecuted = null;
     }
     
     connect() {
@@ -162,6 +163,12 @@ class GestureWebSocketClient {
             case 'frame_ack':
                 if (this.onFrameAck) {
                     this.onFrameAck(message);
+                }
+                break;
+
+            case 'action_executed':
+                if (this.onActionExecuted) {
+                    this.onActionExecuted(message.data || message);
                 }
                 break;
                 
