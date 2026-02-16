@@ -979,19 +979,22 @@
         
         function renderSubAgents() {
             if (!sessionsData || !sessionsData.sessions) {
-                document.getElementById('subAgentsList').innerHTML = '<div class="service-detail" style="padding: 10px; color: #888;">No sub-agents running</div>';
+                document.getElementById('subAgentsList').innerHTML = '<div class="service-detail" style="padding: 10px; color: #888;">No agents running</div>';
                 return;
             }
             
-            // Filter for sub-agent sessions only (contains "subagent" in key)
-            const subAgents = sessionsData.sessions.filter(s => s.key.includes('subagent'));
+            // Show main agent and sub-agents (exclude cron/hook sessions which are background tasks)
+            const agents = sessionsData.sessions.filter(s => 
+                !s.key.includes(':cron:') && 
+                !s.key.includes(':hook:')
+            );
             
-            if (subAgents.length === 0) {
-                document.getElementById('subAgentsList').innerHTML = '<div class="service-detail" style="padding: 10px; color: #888;">No sub-agents running</div>';
+            if (agents.length === 0) {
+                document.getElementById('subAgentsList').innerHTML = '<div class="service-detail" style="padding: 10px; color: #888;">No agents running</div>';
                 return;
             }
             
-            const html = subAgents.map(agent => {
+            const html = agents.map(agent => {
                 // Calculate age
                 const ageMinutes = Math.floor(agent.ageMs / 60000);
                 const ageText = ageMinutes < 1 ? 'Just now' : 
@@ -1001,11 +1004,20 @@
                 // Get model name (short version)
                 const modelShort = agent.model ? agent.model.split('/').pop().replace('claude-', '').replace('-4-5', '') : 'default';
                 
-                // Extract sub-agent ID from key (last part)
+                // Extract agent ID from key (last part)
                 const agentId = agent.key.split(':').pop().substring(0, 8);
                 
-                // Use agent label if available, otherwise fall back to ID
-                const displayName = agent.label || `sub-agent-${agentId}`;
+                // Determine display name
+                let displayName;
+                if (agent.key === 'agent:main:main') {
+                    displayName = '🦞 Main Agent';
+                } else if (agent.label) {
+                    displayName = agent.label;
+                } else if (agent.key.includes('subagent')) {
+                    displayName = `sub-agent-${agentId}`;
+                } else {
+                    displayName = agentId;
+                }
                 
                 // Format tokens if available
                 const tokenInfo = agent.totalTokens ? 

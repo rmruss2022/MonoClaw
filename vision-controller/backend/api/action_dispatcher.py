@@ -7,7 +7,11 @@ import subprocess
 import requests
 import logging
 from typing import Dict, Any, Optional
-from pynput.keyboard import Controller as KeyboardController, Key
+try:
+    from pynput.keyboard import Controller as KeyboardController, Key
+except Exception:  # pragma: no cover - runtime environment dependent
+    KeyboardController = None
+    Key = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,7 +21,7 @@ class ActionDispatcher:
     
     def __init__(self, openclaw_host: str = "localhost", openclaw_port: int = 18795):
         self.openclaw_base_url = f"http://{openclaw_host}:{openclaw_port}"
-        self.keyboard = KeyboardController()
+        self.keyboard = KeyboardController() if KeyboardController else None
         
     def execute(self, action_type: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -154,6 +158,8 @@ class ActionDispatcher:
         """
         if not keys:
             return {'success': False, 'message': 'Empty keys list'}
+        if self.keyboard is None or Key is None:
+            return {'success': False, 'message': 'Keyboard control unavailable (pynput not installed)'}
         
         try:
             # Map common key names to pynput Key objects

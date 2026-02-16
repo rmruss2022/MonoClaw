@@ -368,7 +368,10 @@ function getAvailableModels(config) {
 
 async function isGmailEnabled() {
     try {
-        const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron list --json');
+        const { stdout } = await Promise.race([
+            execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron list --json'),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('cron list timeout')), 3000))
+        ]);
         const cronData = JSON.parse(stdout);
         const gmailJob = cronData.jobs?.find(j => j.id === '3956a4f1-f07b-4ce6-869d-5d69664debb2');
         return gmailJob?.enabled || false;
@@ -398,8 +401,8 @@ async function getSystemData() {
         // Check actual service health (port-based, more reliable than LaunchAgent)
         // Run all port checks in parallel for speed
         const [voiceServerOnline, jobDashboard, ravesDashboard, tokenTracker, 
-               missionControl, activityHub, moltbookDash, monoclawDash, 
-               skillBuilderDash, dockerDash, agentSwarmDash, contextManager] = await Promise.all([
+               missionControl, activityHub, moltbookDash, agentSwarmDash, 
+               visionController, skillBuilderDash, dockerDash, monoclawDash, cannonService, contextManager] = await Promise.all([
             checkPort(18790),
             checkPort(18791),
             checkPort(18793),
@@ -409,8 +412,10 @@ async function getSystemData() {
             checkPort(18797),
             checkPort(18798),
             checkPort(18799),
+            checkPort(18803),
             checkPort(9092),
-            checkPort(5173),
+            checkPort(18802),
+            checkPort(18801),
             checkPort(18800)
         ]);
         const voiceHealth = voiceServerOnline ? 'healthy' : 'down';
@@ -510,9 +515,14 @@ async function getSystemData() {
                     detail: monoclawDash ? `Port 18798` : 'Stopped'
                 },
                 {
+                    name: 'Vision Controller',
+                    running: visionController,
+                    detail: visionController ? `Port 18799` : 'Stopped'
+                },
+                {
                     name: 'Skill Builder Dashboard',
                     running: skillBuilderDash,
-                    detail: skillBuilderDash ? `Port 18799` : 'Stopped'
+                    detail: skillBuilderDash ? `Port 18803` : 'Stopped'
                 },
                 {
                     name: 'Docker Agent Dashboard',
@@ -522,7 +532,12 @@ async function getSystemData() {
                 {
                     name: 'Agent Swarm Dashboard',
                     running: agentSwarmDash,
-                    detail: agentSwarmDash ? `Port 5173` : 'Stopped'
+                    detail: agentSwarmDash ? `Port 18798` : 'Stopped'
+                },
+                {
+                    name: 'Cannon Celebration',
+                    running: cannonService,
+                    detail: cannonService ? `Port 18801` : 'Stopped'
                 },
                 {
                     name: 'Context Manager',
@@ -547,47 +562,74 @@ async function getSystemData() {
                 {
                     name: 'Job Search Tracker',
                     description: '11 companies tracked, 3 excited about',
-                    url: 'http://127.0.0.1:18791'
+                    url: 'http://127.0.0.1:18791',
+                    icon: '💼'
                 },
                 {
                     name: 'NYC Raves',
                     description: '24 events this week, genre filtering',
-                    url: 'http://127.0.0.1:18793'
+                    url: 'http://127.0.0.1:18793',
+                    icon: '🎧'
                 },
                 {
                     name: 'Token Usage Tracker',
                     description: 'Real-time token monitoring with charts',
-                    url: 'http://127.0.0.1:18794'
+                    url: 'http://127.0.0.1:18794',
+                    icon: '🪙'
                 },
                 {
                     name: 'Mission Control',
                     description: 'System status and command hub',
-                    url: 'http://127.0.0.1:18795'
+                    url: 'http://127.0.0.1:18795',
+                    icon: '🎛️'
                 },
                 {
                     name: 'Activity Hub',
                     description: 'Track all agent activity and sessions',
-                    url: 'http://127.0.0.1:18796'
+                    url: 'http://127.0.0.1:18796',
+                    icon: '📊'
+                },
+                {
+                    name: 'Agent Swarm Dashboard',
+                    description: '4 active projects, agent orchestration',
+                    url: 'http://127.0.0.1:18798',
+                    icon: '🤖'
                 },
                 {
                     name: 'MonoClaw Dashboard',
                     description: '19 active projects, quick launch buttons',
-                    url: 'http://127.0.0.1:18798'
+                    url: 'http://127.0.0.1:18802',
+                    icon: '🦞'
+                },
+                {
+                    name: 'Vision Controller',
+                    description: 'Real-time hand gesture recognition with WebSocket',
+                    url: 'http://127.0.0.1:18799',
+                    icon: '👋'
                 },
                 {
                     name: 'Skill Builder',
                     description: 'Auto-discover services, generate documentation',
-                    url: 'http://127.0.0.1:18799'
+                    url: 'http://127.0.0.1:18803',
+                    icon: '🔧'
+                },
+                {
+                    name: 'Cannon Celebration',
+                    description: 'Fire celebratory cannon with confetti and sound',
+                    url: 'http://127.0.0.1:18801',
+                    icon: '🎉'
                 },
                 {
                     name: 'Context Manager',
                     description: 'Session bloat reports and safe prune controls',
-                    url: 'http://127.0.0.1:18800'
+                    url: 'http://127.0.0.1:18800',
+                    icon: '📝'
                 },
                 {
                     name: 'Docker Agent System',
                     description: 'Container-based agent runtime with WebSocket API',
-                    url: 'http://127.0.0.1:9092'
+                    url: 'http://127.0.0.1:9092',
+                    icon: '🐳'
                 }
             ],
             cron: cronJobs,
