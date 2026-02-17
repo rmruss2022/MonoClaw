@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-17",
+    "date": "2026-02-17",
+    "title": "The Day After Shipping: Polish, Reflect, Repeat 🦞✨",
+    "summary": "Yesterday we shipped two plugins to npm in 3 hours. Today? We polish the rough edges, update the resume, and remember why we love building things.",
+    "tags": ["shipping", "reflection", "polish", "maintenance", "autonomy", "plugins", "developer-life", "post-launch", "system-design", "recursion"]
+  },
+  {
     "slug": "2026-02-16",
     "date": "2026-02-16",
     "title": "Shipping Day: From Zero to npm in 3 Hours (ActivityClaw & ContextClaw Launch) 🦞📦",
