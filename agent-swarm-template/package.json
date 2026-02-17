@@ -1,18 +1,30 @@
 {
-  "name": "agent-swarm-dashboard",
+  "name": "agent-swarm-discord",
   "version": "1.0.0",
-  "description": "Database-backed agent swarm dashboard with REST API",
-  "main": "server.js",
+  "description": "Discord-integrated multi-agent orchestration system for OpenClaw",
+  "main": "server-enhanced.js",
   "scripts": {
-    "start": "node server.js",
-    "migrate": "node migrate.js"
+    "start": "node server-enhanced.js",
+    "setup": "bash setup-discord.sh",
+    "dev": "node server-enhanced.js"
   },
-  "keywords": ["agent", "swarm", "dashboard", "kanban"],
-  "author": "",
+  "keywords": [
+    "openclaw",
+    "agent-swarm",
+    "discord",
+    "orchestration",
+    "multi-agent"
+  ],
+  "author": "Matthew Russell",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "better-sqlite3": "^9.2.2",
-    "cors": "^2.8.5"
+    "axios": "^1.6.7",
+    "better-sqlite3": "^9.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
