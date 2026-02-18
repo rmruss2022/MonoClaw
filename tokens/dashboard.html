@@ -372,7 +372,7 @@
             <!-- Spending Trend Chart -->
             <div class="section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <div class="section-title">📈 Trend (Last 12 Hours)</div>
+                    <div class="section-title">📈 Hourly Trend (Last 48 Hours)</div>
                     <div style="display: flex; gap: 10px;">
                         <button class="btn secondary" onclick="setChartView('cost')" id="costBtn">💰 Cost</button>
                         <button class="btn secondary" onclick="setChartView('tokens')" id="tokensBtn">🔢 Tokens</button>
@@ -565,9 +565,16 @@
         }
         
         function renderTrendChart(data) {
+            console.log('[Chart] renderTrendChart called with', data.length, 'data points');
+            console.log('[Chart] First data point:', data[0]);
+            console.log('[Chart] Last data point:', data[data.length - 1]);
+            
             const ctx = document.getElementById('trendChart').getContext('2d');
             
-            if (trendChart) trendChart.destroy();
+            if (trendChart) {
+                console.log('[Chart] Destroying existing chart');
+                trendChart.destroy();
+            }
             
             const labels = data.map(d => {
                 // Parse hour format: "2026-02-08 15:00"
@@ -697,6 +704,11 @@
                     scales
                 }
             });
+            
+            console.log('[Chart] Chart created successfully with', labels.length, 'labels');
+            console.log('[Chart] Labels:', labels);
+            console.log('[Chart] Costs:', costs);
+            console.log('[Chart] Tokens:', tokens);
         }
         
         async function loadAllData() {
