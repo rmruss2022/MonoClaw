@@ -69,7 +69,7 @@ async function getCostSummary() {
             ORDER BY total_cost DESC
         `, [Date.now() - 24 * 60 * 60 * 1000]);
         
-        // Hourly spending trend (last 12 hours)
+        // Hourly spending trend (last 48 hours to show historical data)
         const hourlyTrend = await query(`
             SELECT 
                 strftime('%Y-%m-%d %H:00', timestamp/1000, 'unixepoch', 'localtime') as hour,
@@ -79,7 +79,7 @@ async function getCostSummary() {
             WHERE timestamp >= ?
             GROUP BY strftime('%Y-%m-%d %H:00', timestamp/1000, 'unixepoch', 'localtime')
             ORDER BY hour ASC
-        `, [Date.now() - 12 * 60 * 60 * 1000]);
+        `, [Date.now() - 48 * 60 * 60 * 1000]);
         
         // Total spending periods
         const todayStart = new Date();
