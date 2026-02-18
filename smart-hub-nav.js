@@ -4,7 +4,7 @@
  * Uses BroadcastChannel API to communicate between tabs
  */
 
-const HUB_URL = 'http://localhost:18795/hub';
+const HUB_URL = 'http://localhost:18802/hub';
 const HUB_CHANNEL = 'openclaw-hub-channel';
 
 function navigateToHub(event) {
@@ -45,7 +45,7 @@ function navigateToHub(event) {
 }
 
 // If this page IS the hub, respond to pings
-if (window.location.href.includes('localhost:18795')) {
+if (window.location.href.includes('localhost:18802')) {
     const bc = new BroadcastChannel(HUB_CHANNEL);
     bc.onmessage = (e) => {
         if (e.data.type === 'hub-ping') {

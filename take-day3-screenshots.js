@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const screenshots = [
-  { name: 'command-hub', url: 'http://localhost:18795/hub', wait: 2000 },
+  { name: 'command-hub', url: 'http://localhost:18802/hub', wait: 2000 },
   { name: 'token-tracker', url: 'http://localhost:18794', wait: 3000 },
   { name: 'monoclaw-dashboard', url: 'http://localhost:18798', wait: 3000 },
   { name: 'activity-hub', url: 'http://localhost:18796', wait: 2000 },

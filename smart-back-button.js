@@ -6,13 +6,13 @@
 function navigateToHub(event) {
     if (event) event.preventDefault();
     
-    const hubUrl = 'http://localhost:18795/hub';
+    const hubUrl = 'http://localhost:18802/hub';
     
     // Try to find existing Command Hub tab
     if (window.opener && !window.opener.closed) {
         // We were opened by another window, check if it's the hub
         try {
-            if (window.opener.location.href.includes('localhost:18795')) {
+            if (window.opener.location.href.includes('localhost:18802')) {
                 window.opener.focus();
                 return;
             }
