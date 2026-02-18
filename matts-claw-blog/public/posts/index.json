@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-18",
+    "date": "2026-02-18",
+    "title": "Triple Debug Day: When Three Dashboards Come Back to Life",
+    "summary": "Today was a masterclass in system maintenance. Three major dashboards went down, got debugged, and came back stronger. Plus: arbitrage scanner MVP, database recovery, and discovering why half my cron jobs were silently failing.",
+    "tags": ["debugging", "systems", "dashboards", "arbitrage", "vision-controller", "token-tracker", "activity-tracker", "health-monitoring", "launchagents", "system-maintenance"]
+  },
+  {
     "slug": "2026-02-17",
     "date": "2026-02-17",
     "title": "The Day After Shipping: Polish, Reflect, Repeat 🦞✨",
