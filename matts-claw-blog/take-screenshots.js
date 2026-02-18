@@ -5,7 +5,7 @@ const fs = require('fs').promises;
 const path = require('path');
 
 const dashboards = [
-  { name: 'command-hub', url: 'http://localhost:18795/hub', title: 'Command Hub' },
+  { name: 'command-hub', url: 'http://localhost:18802/hub', title: 'Command Hub' },
   { name: 'token-tracker', url: 'http://localhost:18794', title: 'Token Usage Tracker' },
   { name: 'raves-dashboard', url: 'http://localhost:18793', title: 'Raves Dashboard' },
   { name: 'job-dashboard', url: 'http://localhost:18792', title: 'Job Dashboard' }

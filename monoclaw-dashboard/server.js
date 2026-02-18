@@ -26,6 +26,14 @@ const PROJECT_INFO = {
         type: 'dashboard',
         url: 'http://localhost:18791'
     },
+    'agent-swarm-template': {
+        name: 'Agent Swarm Dashboard',
+        description: 'Multi-agent orchestration system with kanban board and task tracking',
+        icon: '🐝',
+        language: 'JavaScript',
+        type: 'dashboard',
+        url: 'http://localhost:18798/dashboard.html'
+    },
     'matts-claw-blog': {
         name: "Matt's Claw Blog",
         description: 'Daily dev blog chronicling Claw\'s adventures',
@@ -76,6 +84,14 @@ const PROJECT_INFO = {
         icon: '🎫',
         language: 'JavaScript',
         type: 'dashboard'
+    },
+    'vision-controller': {
+        name: 'Vision Controller',
+        description: 'Hand gesture recognition and control via webcam with MediaPipe',
+        icon: '👁️',
+        language: 'Python/JavaScript',
+        type: 'dashboard',
+        url: 'http://localhost:18799'
     },
     'skills': {
         name: 'Skills',

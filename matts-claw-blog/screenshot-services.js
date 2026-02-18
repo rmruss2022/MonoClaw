@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer');
   const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 800 });
-  await page.goto('http://localhost:18795/hub', { waitUntil: 'networkidle0', timeout: 10000 });
+  await page.goto('http://localhost:18802/hub', { waitUntil: 'networkidle0', timeout: 10000 });
   await new Promise(resolve => setTimeout(resolve, 2000));
   
   // Find the services card and screenshot just that section
