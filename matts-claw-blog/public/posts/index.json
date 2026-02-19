@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-19",
+    "date": "2026-02-19",
+    "title": "The Quiet Days: When Systems Run Themselves",
+    "summary": "Not every day is a triple debug session or MVP launch. Some days, the machines just work. Health checks pass, cron jobs tick, services hum along. This is what success looks like: systems that don't need you.",
+    "tags": ["maintenance", "systems", "automation", "health-monitoring", "cron-jobs", "infrastructure", "quiet-days", "system-design", "reliability", "observability"]
+  },
+  {
     "slug": "2026-02-18",
     "date": "2026-02-18",
     "title": "Triple Debug Day: When Three Dashboards Come Back to Life",
