@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-19T20:19:25.388876Z",
+  "lastUpdated": "2026-02-11T21:01:36.084Z",
   "companies": [
     {
       "id": "daylight",
@@ -15,17 +15,17 @@
       "process": "Unknown",
       "profitable": null,
       "inOffice": null,
-      "vibe": "Excited \u2b50",
+      "vibe": "Excited ⭐",
       "interviews": [
         {
           "date": "2026-02-05",
           "type": "Call with Jason Badeaux",
           "completed": true,
-          "notes": "Discussed OpenClaw and integrations I've built \u2014 now have a live demo to show him",
+          "notes": "Discussed OpenClaw and integrations I've built — now have a live demo to show him",
           "interviewer": {
             "name": "Jason Badeaux",
             "linkedin": "https://www.linkedin.com/in/jasonbadeaux/",
-            "summary": "**Jason Badeaux** - Team member at Daylight\n\nActive in Daylight's recent fundraising efforts - posted about their $75M Series B led by Framework Ventures. Working on building Daylight's decentralized energy network that powers distributed solar + storage systems.\n\n\ud83d\udd17 https://www.linkedin.com/in/jasonbadeaux/"
+            "summary": "**Jason Badeaux** - Team member at Daylight\n\nActive in Daylight's recent fundraising efforts - posted about their $75M Series B led by Framework Ventures. Working on building Daylight's decentralized energy network that powers distributed solar + storage systems.\n\n🔗 https://www.linkedin.com/in/jasonbadeaux/"
           }
         },
         {
@@ -54,10 +54,10 @@
       "status": "active",
       "urgent": true,
       "action": "Hear back from Kelsey",
-      "process": "HR \u2192 Coding challenge",
+      "process": "HR → Coding challenge",
       "profitable": null,
       "inOffice": null,
-      "vibe": "Very excited \u2b50\u2b50",
+      "vibe": "Very excited ⭐⭐",
       "interviews": [
         {
           "date": "2026-02-04",
@@ -91,25 +91,108 @@
       "name": "Figure",
       "description": "Blockchain/investing platform - Software Engineer, Originations",
       "recruiter": "Tyler Ichikawa / Emily Ku",
-      "stage": "Live Coding TOMORROW (Feb 19)",
+      "stage": "Live Coding - Schedule via Greenhouse",
       "stageNum": 3,
       "status": "active",
       "urgent": true,
-      "action": "\u26a0\ufe0f INTERVIEW TOMORROW 12:30 PM",
-      "process": "HR screen \u2192 Initial interview \u2192 Live coding \u2192 Team",
+      "action": "Availability submitted - awaiting interview confirmation",
+      "process": "HR screen → Initial interview → Live coding → Team",
       "profitable": null,
       "inOffice": null,
-      "vibe": "Moving forward \u2b50",
+      "vibe": "Moving forward ⭐",
       "interviews": [
         {
-          "date": "2026-02-19",
+          "date": "2026-02-05",
+          "time": "14:30",
+          "type": "Intro call with Tyler Ichikawa",
+          "completed": true,
+          "notes": "Discussed role and what's involved",
+          "interviewer": {
+            "name": "Tyler Ichikawa",
+            "title": "Technical Recruiter",
+            "linkedin": "https://www.linkedin.com/in/tyler-ichikawa-talent/",
+            "summary": "**Tyler Ichikawa** - Technical Recruiter at Figure\n\nHighly competent and experienced recruiter who excels at all stages of the recruiting pipeline - from sourcing and candidate communications to crafting recruiting experiences, negotiations, and closing. Focused on technical talent acquisition for Figure's blockchain/fintech platform.\n\n🔗 https://www.linkedin.com/in/tyler-ichikawa-talent/"
+          }
+        },
+        {
+          "date": "2026-02-06",
+          "type": "Submitted availability",
+          "completed": true,
+          "notes": "Sent times for interview next week"
+        },
+        {
+          "date": "2026-02-11",
           "time": "12:30",
+          "type": "Interview with Figure Lending",
+          "completed": true,
+          "notes": "Interview completed - moved forward!",
+          "interviewer": {
+            "name": null,
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "14:28",
+          "type": "Tyler follow-up - moving forward",
+          "completed": true,
+          "notes": "Tyler confirmed next step: 1hr live coding with Perry Donnafield. Choose your language, no prep needed. ⚠️ AI usage prohibited",
+          "interviewer": {
+            "name": "Tyler Ichikawa",
+            "title": "Technical Recruiter",
+            "linkedin": "https://www.linkedin.com/in/tyler-ichikawa-talent/",
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:36",
+          "type": "Emily Ku - scheduling email received",
+          "completed": true,
+          "notes": "Emily sent Greenhouse scheduling link for live coding. Recommended: Tuesday 2/17 at 10 AM or 2 PM EST",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "TBD",
           "type": "Live Coding Session with Perry Donnafield",
           "completed": false,
-          "notes": "1-hour live coding via Google Meet: https://meet.google.com/imn-owre-bko | \u26a0\ufe0f AI PROHIBITED",
+          "notes": "1-hour live coding - choose language, everything set up on call. ⚠️ AI prohibited. Schedule via: https://app2.greenhouse.io/availability/3945b956377a0a7db81883a07123dba4 | Recommended times: Tue 2/17 (10 AM or 2 PM), Wed 2/18 (10 AM-4 PM), Thu 2/19 (10 AM-4 PM), Fri 2/20 (10 AM-1 PM)",
           "interviewer": {
             "name": "Perry Donnafield",
-            "title": "Engineer",
+            "title": "Principal Software Engineer",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:37",
+          "type": "Submitted availability to Emily Ku",
+          "completed": true,
+          "notes": "Submitted Greenhouse availability for next week. Also requested Holly email for follow-up.",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:40",
+          "type": "Received Holly Wendt contact info from Emily",
+          "completed": true,
+          "notes": "Emily provided Holly Wendt email: hwendt@figure.com",
+          "interviewer": {
+            "name": "Emily Ku",
+            "title": "Recruiter",
+            "email": "eku@figure.com",
             "linkedin": null,
             "summary": null
           }
@@ -126,11 +209,11 @@
       "stageNum": 4,
       "status": "active",
       "urgent": true,
-      "action": "Interview Friday 2/13 at 1:00 PM EST (\u26a0\ufe0f 30 min after Traba)",
-      "process": "Call \u2192 Take-home \u2192 Interview with Ayush \u2192 ?",
+      "action": "Interview Friday 2/13 at 1:00 PM EST (⚠️ 30 min after Traba)",
+      "process": "Call → Take-home → Interview with Ayush → ?",
       "profitable": null,
       "inOffice": null,
-      "vibe": "Very great \u2b50\u2b50",
+      "vibe": "Very great ⭐⭐",
       "interviews": [
         {
           "date": "2026-02-04",
@@ -156,7 +239,7 @@
           "time": "13:00",
           "type": "Interview with Ayush Mathur",
           "completed": false,
-          "notes": "Senior Full Stack Engineer interview. Microsoft Teams: https://teams.microsoft.com/l/meetup-join/19%3ameeting_N2JjMGExOGQtZDI0Yi00NWE4LWExMDQtOTBiZWY4N2JmM2Rm%40thread.v2/0?context=%7b%22Tid%22%3a%2221e8d93f-3f06-4b05-ba71-c21c34d4d5c5%22%2c%22Oid%22%3a%2256f9ec29-1cc0-49dc-bad5-336c9aa09cd8%22%7d | \u26a0\ufe0f SCHEDULING NOTE: 30 min after Traba interview ends",
+          "notes": "Senior Full Stack Engineer interview. Microsoft Teams: https://teams.microsoft.com/l/meetup-join/19%3ameeting_N2JjMGExOGQtZDI0Yi00NWE4LWExMDQtOTBiZWY4N2JmM2Rm%40thread.v2/0?context=%7b%22Tid%22%3a%2221e8d93f-3f06-4b05-ba71-c21c34d4d5c5%22%2c%22Oid%22%3a%2256f9ec29-1cc0-49dc-bad5-336c9aa09cd8%22%7d | ⚠️ SCHEDULING NOTE: 30 min after Traba interview ends",
           "interviewer": {
             "name": "Ayush Mathur",
             "linkedin": null,
@@ -175,7 +258,7 @@
       "status": "active",
       "urgent": true,
       "action": "Schedule coding interview",
-      "process": "Technical coding/debugging \u2192 Hiring eng manager team fit \u2192 Virtual onsite (coding, system design, values/culture)",
+      "process": "Technical coding/debugging → Hiring eng manager team fit → Virtual onsite (coding, system design, values/culture)",
       "profitable": true,
       "inOffice": "2-3 days",
       "vibe": null,
@@ -198,10 +281,10 @@
       "status": "active",
       "urgent": true,
       "action": "Systems Design interview Feb 13",
-      "process": "Initial \u2192 Systems Design \u2192 Onsite \u2192 CEO/Founders",
+      "process": "Initial → Systems Design → Onsite → CEO/Founders",
       "profitable": null,
       "inOffice": null,
-      "vibe": "Going great \u2b50\u2b50",
+      "vibe": "Going great ⭐⭐",
       "interviews": [
         {
           "date": "2026-02-11",
@@ -282,7 +365,7 @@
       "status": "active",
       "urgent": true,
       "action": "Schedule interview call",
-      "process": "1hr senior software (Galen Chang) \u2192 HR screen \u2192 1hr VP of Eng system design \u2192 Onsite 4hr",
+      "process": "1hr senior software (Galen Chang) → HR screen → 1hr VP of Eng system design → Onsite 4hr",
       "profitable": null,
       "inOffice": null,
       "interviews": []
@@ -327,7 +410,7 @@
       "status": "active",
       "urgent": false,
       "action": "Follow up with Yennaedo",
-      "process": "Internal recruiter \u2192 Technical Zoom \u2192 System Design \u2192 Onsite",
+      "process": "Internal recruiter → Technical Zoom → System Design → Onsite",
       "profitable": null,
       "inOffice": null,
       "interviews": []
@@ -357,7 +440,7 @@
       "status": "active",
       "urgent": false,
       "action": "Follow up with Brady",
-      "process": "Intro call \u2192 CoderPad eval \u2192 System design \u2192 Founders discussion",
+      "process": "Intro call → CoderPad eval → System design → Founders discussion",
       "profitable": null,
       "inOffice": null,
       "interviews": []
@@ -397,220 +480,60 @@
       "url": "https://www.glossgenius.com",
       "description": "Front-end role. Backend uses Scala/Go, interested in integrating AI into workflow",
       "recruiter": "Brianna Lechner (b.lechner@glossgenius.com)",
-      "stage": "REJECTED",
-      "stageNum": 0,
-      "status": "rejected",
-      "urgent": false,
-      "action": "CLOSED",
-      "process": "Initial interviews \u2192 Culture fit \u2192 REJECTED",
+      "stage": "Technical Round - Schedule",
+      "stageNum": 3,
+      "status": "active",
+      "urgent": true,
+      "action": "Submit availability for CoderPad live coding",
+      "process": "Initial interviews → Culture fit → Technical (CoderPad)",
       "profitable": null,
       "inOffice": null,
-      "vibe": "REJECTED \u274c",
+      "vibe": "Going well ⭐",
       "interviews": [
         {
-          "date": "2026-02-17",
-          "type": "Rejection email received",
+          "date": "2026-02-XX",
+          "type": "First interview with Trevor and Connor",
           "completed": true,
-          "notes": "Brianna: 'After debriefing on several candidates we've decided not to move forward with your candidacy. We'd love to keep in touch as we continue to scale.'",
+          "notes": "Went well, talked about soccer",
+          "interviewer": {
+            "name": "Trevor and Connor",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-XX",
+          "type": "Culture fit with Holly",
+          "completed": true,
+          "notes": "Talked about culture, moved me onto technical round",
+          "interviewer": {
+            "name": "Holly",
+            "linkedin": null,
+            "summary": null
+          }
+        },
+        {
+          "date": "2026-02-11",
+          "time": "15:05",
+          "type": "Technical interview details from Brianna",
+          "completed": true,
+          "notes": "Email received with CoderPad live coding details. 20-35 min, medium LeetCode level. Submit availability: https://www.gem.com/scheduling/availability/5087b20b-d82d-4b2c-8a99-e579edcbb2a8",
           "interviewer": {
             "name": "Brianna Lechner",
             "email": "b.lechner@glossgenius.com",
             "linkedin": null,
             "summary": null
           }
-        }
-      ]
-    },
-    {
-      "id": "payme-kinetic",
-      "name": "PayMe (Kinetic)",
-      "url": "https://kineticapps.ai/",
-      "description": "Payment infrastructure. Paid project assignment to evaluate skills.",
-      "recruiter": "Jack Ablon (ja@kineticapps.io)",
-      "stage": "Project Assignment Ready",
-      "stageNum": 2,
-      "status": "active",
-      "urgent": true,
-      "action": "Pick Saturday or Sunday to start project",
-      "process": "Project demo video \u2192 Paid project \u2192 Interview",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": "Excited - paid project \u2b50",
-      "interviews": [
-        {
-          "date": "2026-02-16",
-          "type": "Project demo video sent",
-          "completed": true,
-          "notes": "Sent 40k line OpenClaw integration demo video. Team reviewed and liked it.",
-          "interviewer": null
         },
         {
-          "date": "2026-02-19",
-          "type": "Project assignment ready - awaiting start time",
+          "date": "TBD",
+          "type": "Technical/Pair Programming Interview (CoderPad)",
           "completed": false,
-          "notes": "Jack will send prompt when Matthew picks Sat or Sun start time. Notion: https://kinetic-apps.notion.site/PayMe-Founding-Engineer-Virtual-Project-Matthew-Russell-30b1a161b0c9809486b8f79dec828703",
+          "notes": "20-35 min live coding. Practice medium LeetCode. Interview window: 9:30am-5:30pm ET. Collaborative environment, can look up docs.",
           "interviewer": {
-            "name": "Jack Ablon",
-            "email": "ja@kineticapps.io",
-            "linkedin": "https://www.linkedin.com/in/jackablon/",
-            "summary": null
-          }
-        }
-      ]
-    },
-    {
-      "id": "fun-xyz",
-      "name": "Fun.xyz",
-      "url": "https://fun.xyz",
-      "description": "Modern payment infrastructure for fast-growing fintechs. Product Engineer role (React/TypeScript SDK).",
-      "recruiter": "Daniel Earnshaw (daniel@eostalent.co) - EO Talent",
-      "stage": "Awaiting Team Feedback",
-      "stageNum": 2,
-      "status": "active",
-      "urgent": false,
-      "action": "Awaiting feedback (likely early next week after ETH Denver)",
-      "process": "Initial call \u2192 Profile review \u2192 Interview",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": "Good fit - chose Product over Backend \u2b50",
-      "interviews": [
-        {
-          "date": "2026-02-16",
-          "time": "12:00",
-          "type": "Call with Daniel Earnshaw",
-          "completed": true,
-          "notes": "Discussed both Product Engineer and Backend roles. Matthew chose Product Engineer role - React/TypeScript SDK focus, work across stack and disciplines.",
-          "interviewer": {
-            "name": "Daniel Earnshaw",
-            "email": "daniel@eostalent.co",
+            "name": "Brianna Lechner",
+            "email": "b.lechner@glossgenius.com",
             "linkedin": null,
-            "summary": null
-          }
-        },
-        {
-          "date": "2026-02-18",
-          "type": "Profile sent to team",
-          "completed": true,
-          "notes": "Daniel sent Matthew's profile + web3 projects (Blackjack dApp, Copy Trader) to Fun.xyz team. Awaiting feedback likely early next week due to ETH Denver.",
-          "interviewer": null
-        }
-      ]
-    },
-    {
-      "id": "capital-one",
-      "name": "Capital One",
-      "description": "Senior Software Engineer, Backend (R232773)",
-      "recruiter": "Workday / careers@capitalone.com",
-      "stage": "Online Assessment Required",
-      "stageNum": 1,
-      "status": "active",
-      "urgent": true,
-      "action": "Complete online assessment via Workday",
-      "process": "Application \u2192 Online assessment \u2192 ?",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": null,
-      "interviews": [
-        {
-          "date": "2026-02-18",
-          "type": "Assessment email received",
-          "completed": false,
-          "notes": "Must log into Workday portal to get testing link: https://capitalone.wd12.myworkdayjobs.com/Capital_One | Email from CapitalOneHRWorkday",
-          "interviewer": null
-        }
-      ]
-    },
-    {
-      "id": "outtake",
-      "name": "Outtake",
-      "description": "Senior Software Engineer. Series B, $40M funding.",
-      "recruiter": "Anna Healy (anna@integritypowersearch.com) - Integrity Power Search",
-      "stage": "JD Received",
-      "stageNum": 1,
-      "status": "active",
-      "urgent": true,
-      "action": "Respond to Anna with interest",
-      "process": "TBD",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": null,
-      "interviews": [
-        {
-          "date": "2026-02-16",
-          "time": "12:30",
-          "type": "Call with Anna Healy",
-          "completed": true,
-          "notes": "Initial call. Anna sent 3 JD PDFs including Outtake.",
-          "interviewer": {
-            "name": "Anna Healy",
-            "email": "anna@integritypowersearch.com",
-            "phone": "203-885-3601",
-            "title": "Director, Technology & Product",
-            "linkedin": "https://www.linkedin.com/in/anna-healy/",
-            "summary": null
-          }
-        }
-      ]
-    },
-    {
-      "id": "phoebe",
-      "name": "Phoebe",
-      "description": "Full Stack Engineer, Founding Team",
-      "recruiter": "Anna Healy (anna@integritypowersearch.com) - Integrity Power Search",
-      "stage": "JD Received",
-      "stageNum": 1,
-      "status": "active",
-      "urgent": true,
-      "action": "Respond to Anna with interest",
-      "process": "TBD",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": null,
-      "interviews": [
-        {
-          "date": "2026-02-16",
-          "time": "12:30",
-          "type": "Call with Anna Healy",
-          "completed": true,
-          "notes": "Initial call. Anna sent 3 JD PDFs including Phoebe.",
-          "interviewer": {
-            "name": "Anna Healy",
-            "email": "anna@integritypowersearch.com",
-            "phone": "203-885-3601",
-            "title": "Director, Technology & Product",
-            "linkedin": "https://www.linkedin.com/in/anna-healy/",
-            "summary": null
-          }
-        }
-      ]
-    },
-    {
-      "id": "evidenza",
-      "name": "Evidenza",
-      "description": "Senior Fullstack Engineer",
-      "recruiter": "Anna Healy (anna@integritypowersearch.com) - Integrity Power Search",
-      "stage": "JD Received",
-      "stageNum": 1,
-      "status": "active",
-      "urgent": true,
-      "action": "Respond to Anna with interest",
-      "process": "TBD",
-      "profitable": null,
-      "inOffice": null,
-      "vibe": null,
-      "interviews": [
-        {
-          "date": "2026-02-16",
-          "time": "12:30",
-          "type": "Call with Anna Healy",
-          "completed": true,
-          "notes": "Initial call. Anna sent 3 JD PDFs including Evidenza.",
-          "interviewer": {
-            "name": "Anna Healy",
-            "email": "anna@integritypowersearch.com",
-            "phone": "203-885-3601",
-            "title": "Director, Technology & Product",
-            "linkedin": "https://www.linkedin.com/in/anna-healy/",
             "summary": null
           }
         }

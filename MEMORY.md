@@ -26,28 +26,11 @@
 - `anthropic/claude-sonnet-4-5` (alias: sonnet) - previous default
 - `anthropic/claude-opus-4-6` (alias: opus) - for complex analysis
 
-## Job Search Pipeline (Active: Feb 11, 2026)
+## Job Search Pipeline
 
-**⚠️ Friday 2/13 - Back-to-Back Interviews**:
-- Traba: 11:30 AM-12:30 PM with Austin Carter (Systems Design, Google Meet)
-- Cerula: 1:00 PM-2:00 PM with Ayush Mathur (30-min gap only!)
-
-**Live Coding Stage**:
-- Figure: Awaiting confirmation after Greenhouse booking (recommend Tue 2/17 10 AM or 2 PM, AI prohibited)
-
-**Technical Rounds**:
-- Gloss Genius: CoderPad pair programming (Python/medium LeetCode level), awaiting scheduling via Gem
-
-**Pipeline**:
-- PayMe/Kinetic: Project assignment coming from Jack Ablon (EOD 2/12)
-- Outtake: Awaiting follow-up from Anna Healy (Integrity Power Search)
-- **Fun.xyz** (NEW 2/12): Product Engineer, React/TypeScript SDK focus. Daniel Earnshaw (EO Talent) - calendly.com/daniel-eostalent/30min
-
-**Recruiter Contacts**:
-- Shirly Ribak (Rare Capital): shirly@rare-capital.com
-- Holly Wendt (Figure): hwendt@figure.com
-- Brianna Lechner (Gloss Genius): b.lechner@glossgenius.com
-- Emily Ku (Figure): eku@figure.com
+**Status**: Active job search, multiple opportunities in pipeline
+**Location**: Jobs dashboard at http://localhost:3003
+**Memory**: Check daily memory files for interview details and follow-ups
 
 ## Technical Preferences
 
@@ -59,6 +42,12 @@
 
 ## System Architecture
 
+**Environment Security** (Updated Feb 20, 2026):
+- **API Keys**: Stored in `~/.openclaw/.env` (600 permissions)
+- **Gateway Launch**: Via wrapper script `~/.openclaw/gateway-wrapper.sh` that sources .env
+- **LaunchAgent**: `~/Library/LaunchAgents/ai.openclaw.gateway.plist` - no keys exposed
+- **Why**: Removed hardcoded keys from openclaw.json and plist files for security
+
 **Gmail Integration** (Updated Feb 12, 2026):
 - **Polling-based** (not push) - Every 10 minutes via cron
 - **Cron ID**: `3956a4f1-f07b-4ce6-869d-5d69664debb2`
@@ -68,19 +57,69 @@
 - **Delivery**: Urgent emails only to Telegram (5574760589)
 - **Trade-off**: 10-min delay acceptable for non-critical emails
 
+## Active Services & Dashboards
+
+**Core Infrastructure:**
+- **Voice Server** (port 18790) - Edge TTS, manual posting for webchat
+- **Activity Tracker V3** (LaunchAgent) - Polls session transcripts every 5s
+- **Token Tracker** (port 18791) - Cost tracking, $558.63/month current
+- **ActivityHub/ActivityClaw** (port 18796) - Activity monitoring & logging
+- **ContextClaw** (port 18792) - Context management
+
+**Command & Control:**
+- **Mission Control** (port 18795) - Central hub, links to all dashboards
+- **MonoClaw Dashboard** (port 18802) - System overview
+
+**Project Dashboards:**
+- **Agent Swarm Dashboard** (port 18798) - Kanban board for agent orchestration
+- **Jobs Dashboard** (port 3003) - Job application tracking
+- **Raves Dashboard** (port 3004) - Social/events tracking
+- **Moltbook Dashboard** (port 18794) - [Purpose TBD]
+- **Arbitrage Scanner** (port 3005) - Prediction market arbitrage detection
+- **Vision Controller** (port 18799 + backend 9000) - Gesture detection via webcam
+
+**Automation:**
+- **Daily Blog Generator** - Cron job at 6:00 PM, auto-generates & deploys posts
+- **Gmail Scanner** - Cron job every 10 minutes, alerts urgent emails via Telegram
+- **LaunchAgents** - Activity tracker, token collector, voice server
+
 ## Projects Active
 
+**Arbitrage Scanner** (Feb 17-18, 2026)
+- Status: MVP complete, needs matcher.ts rewrite
+- Location: `/Users/matthew/.openclaw/workspace/arbitrage-scanner/`
+- URL: http://localhost:3005/dashboard.html
+- Stack: TypeScript + Node.js + SQLite + React + Tailwind
+- Features: Multi-platform market scanning (Polymarket, Kalshi), fuzzy event matching, arbitrage detection
+- Issue: False positives in event matching (287 matches, incorrect pairs)
+- Solution: Created `CODEX_PROMPT.md` with entity-extraction algorithm spec
+- File to rewrite: `src/core/matcher.ts`
+- Next: Feed CODEX_PROMPT.md to Cursor for matcher rewrite
+
+**Daily Blog System** (Feb 17, 2026)
+- Status: Production, auto-generating posts
+- Location: `/Users/matthew/.openclaw/workspace/matts-claw-blog/`
+- Schedule: Cron job at 6:00 PM daily
+- Features: Reads memory files, generates blog post, deploys to GitHub → Vercel
+- Posts: 11+ total published
+- Format: JSON posts with title, content, tags, image prompts
+
+**Ora Health Community Redesign** (Feb 18, 2026)
+- Status: Ready for implementation
+- Location: `/Users/matthew/.openclaw/workspace/ora-health/`
+- App root: `/Users/matthew/.openclaw/workspace/ora-health/ora-health/`
+- Prompt: `CODEX_COMMUNITY_PROMPT.md` (8KB design spec)
+- Design: Single scrollable screen with letters at top + unified feed
+- Next: Open in Cursor, feed prompt to implement redesign
+
+## Projects On Hold
+
 **Agent Swarm Dashboard** (Feb 11, 2026)
-- Status: Backend complete, validation testing in progress
+- Status: Backend complete, paused after validation issues
 - Location: `/Users/matthew/.openclaw/workspace/agent-swarm-template/`
-- URL: http://localhost:3001/dashboard.html
-- Stack: React + Tailwind + Express + SQLite
-- Features: Kanban board, agent tracking, activity log, REST API
-- Database: swarm.db (SQLite) with 4 tables
-- Demo project: iOS Banking App (12 tasks, 25% complete)
-- Test project: CLI Weather Dashboard (Project ID 2, awaiting task creation fix)
-- Known issue: POST /api/tasks returns null (blocking validation)
-- Next: Fix task API, spawn agents, test Product→Dev→QA pipeline, report via Telegram
+- URL: http://localhost:18798/dashboard.html
+- Known issue: POST /api/tasks returns null
+- Next: Resume when needed for agent orchestration work
 
 ## Projects Completed
 
