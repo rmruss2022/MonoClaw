@@ -7,6 +7,7 @@ from app.core.auth import get_current_user
 from app.core.db import get_db
 from app.models.entities import User
 from app.models.entities import Settlement
+from app.models.entities import UserSettlementPreference
 from app.schemas.matching import ClaimOutcomeRequest, MatchResultResponse, MatchRunResponse, OngoingClaimResponse
 from app.services.matching.engine import explain_for_settlement, latest_results, run_match
 from app.services.matching.preferences import (
@@ -94,6 +95,14 @@ def settlement_detail(settlement_id: UUID, db: Session = Depends(get_db), user: 
     settlement = db.get(Settlement, settlement_id)
     if not settlement:
         raise HTTPException(status_code=404, detail="Settlement not found")
+    pref = (
+        db.query(UserSettlementPreference)
+        .filter(
+            UserSettlementPreference.user_id == user.id,
+            UserSettlementPreference.settlement_id == settlement_id,
+        )
+        .first()
+    )
     emit_event(db, "settlement_viewed", user.id, {"settlement_id": str(settlement_id)})
     db.commit()
     return {
@@ -108,6 +117,9 @@ def settlement_detail(settlement_id: UUID, db: Session = Depends(get_db), user: 
         "payout_max_cents": settlement.payout_max_cents,
         "deadline": settlement.deadline,
         "states": (settlement.eligibility_predicates or {}).get("states", []),
+        "claim_status": pref.claim_status if pref else None,
+        "claim_submitted_at": pref.claim_submitted_at if pref else None,
+        "claim_outcome_at": pref.claim_outcome_at if pref else None,
     }
 
 

@@ -41,6 +41,9 @@ export type SettlementDetail = {
   payout_max_cents?: number | null;
   deadline?: string | null;
   states?: string[];
+  claim_status?: "submitted" | "paid_out" | "not_paid_out" | null;
+  claim_submitted_at?: string | null;
+  claim_outcome_at?: string | null;
 };
 
 export type AuthUser = {

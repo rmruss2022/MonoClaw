@@ -1,86 +1,74 @@
 # Claude Handoff: PayMe-Lite
 
-## What this app is
+## Project snapshot
 
-PayMe-Lite is a mock-first prototype that helps users find class-action settlements they are likely eligible for.
+PayMe-Lite is a mock-first settlement matching prototype.
 
-Core user flow:
+Current user flow:
 1. Sign up / log in
-2. Complete onboarding profile
-3. Optionally connect Gmail + bank (mock integrations)
-4. Run matching
-5. Review ranked settlements, pin items, open claim forms
+2. Complete onboarding
+3. Connect Gmail and bank (or skip)
+4. See ranked matches
+5. Open claim forms, confirm submission, track claim progress
 
-The app now also tracks claim feedback:
-- Opening a claim form triggers an in-app confirmation modal
-- If user confirms submission, the claim moves into ongoing claims
-- Ongoing claims can be marked `paid_out` or `not_paid_out`
-- Claim lifecycle emits events with match context for ML feedback signals
+Key UX now live:
+- Matches page has tabs: `Matches` and `Ongoing Claims`
+- Single bottom CTA: `Find New Settlements` (reruns match)
+- Settlement details include back button and claim progress block
 
 ---
 
-## Stack and architecture
+## Tech and architecture
 
 - Frontend: React + TypeScript + Vite
 - Backend: FastAPI + Pydantic + SQLAlchemy
-- DB: PostgreSQL (pgvector enabled)
-- Migrations: Alembic
+- DB: PostgreSQL (+ pgvector extension enabled)
 - Infra: Docker Compose (`db`, `api`, `web`)
-- Testing: Pytest (API), Vitest + RTL (web)
+- Migrations: Alembic
+- Tests: Pytest + Vitest/RTL
 
-Backend is layered:
-- routes -> services -> persistence/model layer
-- request-time matching reads only `user_features` and settlement indices (not raw Gmail/Plaid rows)
+Architecture shape:
+- routes -> services -> persistence
+- request-time matching reads `user_features` + indices only
+- ingestion jobs (Gmail/Plaid) update derived features asynchronously through API-triggered sync flows
 
 ---
 
-## Important features currently implemented
+## Implemented capabilities
 
-### 1) Auth + session
-- JWT auth (`/auth/signup`, `/auth/login`, `/auth/me`)
-- Session persistence in frontend via context + local token hydration
-- Route guards for public/protected pages
+### Auth and session
+- JWT auth endpoints: `/auth/signup`, `/auth/login`, `/auth/me`
+- Session persistence in frontend context (`AppContext`)
 
-### 2) Onboarding + feature derivation
-- Onboarding writes user profile and onboarding-derived `user_features`
-- Brand selections create features like `merchant:amazon`
+### Matching engine
+- Deterministic experiment routing (`rules_only`, `rules_vector`, `rules_vector_ranker`)
+- Persisted `match_runs` + `match_results`
+- Pinned-first ordering, then score descending
 
-### 3) Mock Gmail + Plaid ingest
-- `MOCK_GMAIL=true` and `MOCK_PLAID=true` read fixture files
-- Dedupe inserts and derive evidence/features
-- Sync updates user sync timestamps and feature set
+### Integrations (currently mock-first)
+- Gmail sync endpoint reads fixture and derives evidence/features
+- Plaid sync endpoint reads fixture and derives transaction features
 
-### 4) Matching engine
-- Match pipeline supports deterministic experiment variant routing
-- Persists `match_runs` + `match_results`
-- Results are ordered with pinned items first, then score
-- UI shows summary, accuracy %, payout, deadline, states, claim links
+### Admin observability
+- Admin endpoints for users, settlements, overview stats, per-user stats, events
+- Frontend admin dashboard wired to those endpoints
 
-### 5) Admin observability
-- Admin APIs and frontend admin page for:
-  - users
-  - settlements
-  - overview stats
-  - user stats
-  - events
-
-### 6) Claim tracking + ML feedback loop
-- New claim lifecycle endpoints:
+### Claim tracking
+- Endpoints:
   - `POST /settlements/{id}/claim/opened`
   - `POST /settlements/{id}/claim/submitted`
-  - `POST /settlements/{id}/claim/outcome` (`paid_out` | `not_paid_out`)
+  - `POST /settlements/{id}/claim/outcome`
   - `GET /claims/ongoing`
-- Match results now include claim status fields
-- Events emitted:
+- Event stream:
   - `claim_form_opened`
   - `claim_submitted`
   - `claim_paid_out`
   - `claim_not_paid_out`
-- Event payload includes match context (`run_id`, `score`, `score_bucket`) for downstream training/analysis
+- Match + settlement detail payloads include claim status timestamps
 
 ---
 
-## Data model notes (high-value tables)
+## Core data tables to know
 
 - `users`
 - `settlements`
@@ -88,39 +76,73 @@ Backend is layered:
 - `user_features`
 - `match_runs`
 - `match_results`
-- `user_settlement_preferences` (includes pinning + claim status fields)
+- `user_settlement_preferences` (pin + claim lifecycle fields)
 - `events`
 - `experiment_exposures`
-- `gmail_messages` + `gmail_evidence`
+- `gmail_messages`, `gmail_evidence`
 - `plaid_transactions`
 
-Claim tracking columns live in `user_settlement_preferences`:
+Claim lifecycle fields live on `user_settlement_preferences`:
 - `claim_status`
 - `claim_submitted_at`
 - `claim_outcome_at`
 - `claim_feedback_json`
 
-Migration: `apps/api/alembic/versions/0004_claim_feedback.py`
+---
+
+## Agent Team Session: Target Workstreams
+
+The next phase is a multi-agent build. These are the primary tracks:
+
+### Track 1: Matching ML feedback loop (productionized)
+- Define training dataset contract from events + outcomes
+- Add export endpoint/job for labeled samples (features + context + outcome)
+- Add offline training pipeline and evaluation job (`precision@k`, calibration, drift)
+- Add safe weight publish path and runtime rollout strategy
+- Add tests for data integrity, reproducibility, and no-label leakage
+
+### Track 2: Real Gmail integration
+- OAuth flow + token storage + refresh handling
+- Incremental sync strategy and ingestion jobs
+- Feature extraction from real messages with privacy controls
+- Consent UX, revoke/disconnect, and audit events
+- Mock mode remains as fallback for local/dev/test
+
+### Track 3: Real Plaid integration
+- Link token, public token exchange, access token management
+- Account + transaction sync (initial + incremental)
+- Feature extraction into `user_features`
+- Reconnect/reauth/error states + observability
+- Preserve mock mode fallback for local/dev/test
+
+### Track 4: New autofill agent service
+- New service (queue worker) that consumes autofill jobs
+- Reads user profile + settlement context from API/DB
+- Uses browser automation to open claim sites and fill forms
+- Logs progress and step-level outcomes (`queued`, `running`, `blocked`, `done`, `failed`)
+- Writes execution artifacts and emits events for traceability
+
+### Track 5: Settlement gateway + payout flow
+- Attorney-facing workflow to link settlement bank account
+- New approval pipeline/table for users approved by attorneys
+- Payout execution workflow from attorney account to approved claimants
+- Clear states: `matched -> submitted -> approved -> paid`
+- Full reconciliation, audit logs, and idempotent payouts
 
 ---
 
-## Frontend state model
+## Suggested service additions (next)
 
-App-wide state is centralized in:
-- `apps/web/src/context/AppContext.tsx`
+- `apps/autofill-agent` (new worker service)
+- Optional future:
+  - `apps/gateway` (attorney/ops API boundary)
+  - `apps/workers` (scheduled sync/training/export jobs)
 
-It handles:
-- auth/session
-- matches and sync actions
-- admin data
-- claim modal state
-- ongoing claims and outcome updates
-
-Global shell with nav + modal mount point:
-- `apps/web/src/components/AppShell.tsx`
-
-Claim confirmation modal:
-- `apps/web/src/components/ClaimSubmissionModal.tsx`
+Potential new tables:
+- `autofill_jobs`, `autofill_job_steps`, `autofill_artifacts`
+- `attorney_accounts`, `settlement_accounts`
+- `claim_approvals`, `payout_batches`, `payout_transfers`
+- `ml_feedback_samples` (or materialized export view)
 
 ---
 
@@ -137,15 +159,10 @@ If ports conflict:
 API_PORT=18000 WEB_PORT=15173 DB_PORT=15432 docker compose up --build
 ```
 
-### Default large test user
+### Large test user
 - Username: `large_test_user`
 - Email: `large_test_user@example.com`
-- Password comes from `.env` (`MOCK_PROVISION_PASSWORD`)
-
-### Force migrations
-```bash
-docker compose exec -T api sh -lc 'cd /workspace/apps/api && alembic upgrade head'
-```
+- Password: from `.env` (`MOCK_PROVISION_PASSWORD`)
 
 ### Run tests
 Backend:
@@ -160,21 +177,25 @@ docker compose exec -T web sh -lc 'cd /workspace/apps/web && npm run test && npm
 
 ---
 
-## Operational gotchas
+## Known constraints and guardrails
 
-1. Backend tests are schema-isolated in the same Postgres instance (`TEST_DB_SCHEMA=payme_test`) to protect live dev data.
-2. If frontend shows `Failed to fetch` after new DB fields are added, run Alembic migrations in the API container.
-3. Claim flow relies on `window.open` + immediate in-app modal; popup blockers can affect the external tab behavior.
-4. Fixture size affects sync payload volume for any user who runs sync (signup alone does not auto-ingest large fixtures).
+1. Tests use isolated schema (`payme_test`) in same DB instance; do not bypass.
+2. Keep mock integrations available while real Gmail/Plaid are developed.
+3. Avoid scanning raw Gmail/Plaid rows at request-time; derive and consume `user_features`.
+4. All payout-related operations must be strongly idempotent and fully auditable.
+5. Any autofill browser worker must record deterministic progress and failure reasons.
 
 ---
 
-## Where to start if continuing development
+## Recommended starting points for contributors
 
-1. Read `README.md` for setup and feature-level docs.
-2. Start from `apps/api/app/api/routes/matching.py` + `apps/api/app/services/matching/`.
-3. In frontend, begin with `apps/web/src/context/AppContext.tsx` then `MatchesPage` and `SettlementCard`.
-4. Validate quickly with:
-   - log in as `large_test_user`
-   - open claim form -> confirm submitted -> mark outcome
-   - verify events in admin page.
+- Matching + claims:
+  - `apps/api/app/services/matching/`
+  - `apps/api/app/api/routes/matching.py`
+- Integrations:
+  - `apps/api/app/services/ingestion/gmail_sync.py`
+  - `apps/api/app/services/ingestion/plaid_sync.py`
+- Frontend orchestration:
+  - `apps/web/src/context/AppContext.tsx`
+  - `apps/web/src/pages/MatchesPage.tsx`
+  - `apps/web/src/pages/SettlementDetailPage.tsx`

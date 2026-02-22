@@ -211,6 +211,24 @@ button:disabled {
   margin-bottom: 0.9rem;
 }
 
+.tab-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.tab-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.5rem 0.85rem;
+}
+
+.tab-btn.active {
+  border-color: rgba(104, 225, 253, 0.75);
+  background: rgba(104, 225, 253, 0.15);
+}
+
 .matches-grid {
   display: grid;
   gap: 0.8rem;
@@ -277,9 +295,50 @@ button:disabled {
 .ongoing-claim-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 1rem;
   padding: 0.8rem 0;
   border-bottom: 1px solid var(--border);
+}
+
+.claim-status-container {
+  display: flex;
+  align-items: center;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(6, 10, 20, 0.65);
+  color: var(--text);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-submitted {
+  border-color: rgba(104, 225, 253, 0.6);
+  color: var(--accent);
+}
+
+.status-paid_out {
+  border-color: rgba(133, 255, 158, 0.6);
+  color: var(--accent-2);
+}
+
+.status-not_paid_out {
+  border-color: rgba(255, 126, 154, 0.6);
+  color: var(--danger);
+}
+
+.bottom-cta {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 .modal-backdrop {
@@ -336,6 +395,40 @@ td {
 
 .detail-card {
   padding: 1.1rem;
+}
+
+.claim-history-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.85rem;
+  background: rgba(6, 10, 20, 0.45);
+}
+
+.claim-history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.7rem;
+}
+
+.claim-history-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.claim-history-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem 0.8rem;
+}
+
+.claim-history-grid p {
+  margin: 0;
+}
+
+.claim-meta-label {
+  color: var(--muted);
 }
 
 .loader {
