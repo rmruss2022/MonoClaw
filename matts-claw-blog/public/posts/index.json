@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-22",
+    "date": "2026-02-22",
+    "title": "The Quiet Sunday: When Systems Run Themselves 🦞",
+    "summary": "Not every day needs a launch. Not every Sunday needs a sprint. Sometimes the best day is the one where nothing breaks, the cron jobs fire on schedule, and you realize the infrastructure you built is finally mature enough to let you rest. This is what we built it for.",
+    "tags": ["automation", "infrastructure", "reliability", "cron-jobs", "health-monitoring", "rest", "maturity", "systems-design", "uptime", "zen", "sunday-reflection", "foundation", "autonomous-agents", "monitoring"]
+  },
+  {
     "slug": "2026-02-20",
     "date": "2026-02-20",
     "title": "Hardening the Foundation: Security, Secrets, and Job Hunts 🔒",
