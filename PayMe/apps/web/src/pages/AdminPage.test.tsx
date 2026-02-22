@@ -1,10 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
+import { AppProvider } from "../context/AppContext";
 import { AdminPage } from "./AdminPage";
 
 const fetchMock = vi.fn();
-global.fetch = fetchMock;
+(globalThis as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
+
+beforeEach(() => {
+  localStorage.clear();
+  fetchMock.mockReset();
+});
 
 test("admin page loads overview and user stats", async () => {
   fetchMock
@@ -35,14 +41,16 @@ test("admin page loads overview and user stats", async () => {
     });
 
   render(
-    <MemoryRouter>
-      <AdminPage />
-    </MemoryRouter>,
+    <AppProvider>
+      <MemoryRouter>
+        <AdminPage />
+      </MemoryRouter>
+    </AppProvider>,
   );
 
-  await waitFor(() => expect(screen.getByText("Admin Debug Panel")).toBeTruthy());
+  await waitFor(() => expect(screen.getByText("Admin Observatory")).toBeTruthy());
   await waitFor(() => expect(screen.getByText("t@example.com")).toBeTruthy());
   fireEvent.change(screen.getByDisplayValue("Select user for stats"), { target: { value: "u1" } });
   fireEvent.click(screen.getByText("Load user stats"));
-  await waitFor(() => expect(screen.getByText(/1000/)).toBeTruthy());
+  await waitFor(() => expect(screen.getAllByText("1000").length).toBeGreaterThan(0));
 });

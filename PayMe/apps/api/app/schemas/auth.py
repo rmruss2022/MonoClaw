@@ -1,4 +1,5 @@
 from datetime import date
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -29,3 +30,5 @@ class MeResponse(BaseModel):
     last_name: str | None = None
     state: str | None = None
     dob: date | None = None
+    gmail_synced_at: datetime | None = None
+    plaid_synced_at: datetime | None = None

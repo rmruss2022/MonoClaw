@@ -139,6 +139,10 @@ class UserSettlementPreference(Base):
     starred: Mapped[bool] = mapped_column(Boolean, default=False)
     pinned: Mapped[bool] = mapped_column(Boolean, default=False)
     pinned_order: Mapped[int | None] = mapped_column(Integer)
+    claim_status: Mapped[str | None] = mapped_column(String(30))
+    claim_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claim_outcome_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claim_feedback_json: Mapped[dict | None] = mapped_column(JSON)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

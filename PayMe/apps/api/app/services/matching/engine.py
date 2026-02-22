@@ -24,9 +24,10 @@ VARIANTS = ["rules_only", "rules_vector", "rules_vector_ranker"]
 
 
 def _load_ranker_weights() -> dict:
-    weights_path = Path("/workspace/artifacts/weights.json")
+    # Prefer current working directory for tests/scripts, then fall back to workspace root.
+    weights_path = Path("artifacts/weights.json")
     if not weights_path.exists():
-        weights_path = Path("artifacts/weights.json")
+        weights_path = Path("/workspace/artifacts/weights.json")
     if not weights_path.exists():
         return {
             "rules_confidence": 0.65,
@@ -193,6 +194,16 @@ def latest_results(db: Session, user_id: UUID) -> list[dict]:
                 "settlement_id": settlement.id,
                 "title": settlement.title,
                 "score": result.score,
+                "summary_text": settlement.summary_text,
+                "claim_url": settlement.claim_url,
+                "website_url": settlement.website_url,
+                "payout_min_cents": settlement.payout_min_cents,
+                "payout_max_cents": settlement.payout_max_cents,
+                "deadline": settlement.deadline,
+                "states": (settlement.eligibility_predicates or {}).get("states", []),
+                "claim_status": pref.claim_status if pref else None,
+                "claim_submitted_at": pref.claim_submitted_at if pref else None,
+                "claim_outcome_at": pref.claim_outcome_at if pref else None,
                 "reasons_json": result.reasons_json,
                 "missing_features_json": result.missing_features_json,
                 "pinned": bool(pref and pref.pinned),

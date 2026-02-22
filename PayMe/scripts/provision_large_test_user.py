@@ -1,6 +1,7 @@
 import argparse
 from datetime import date
 from datetime import datetime, timedelta, UTC
+import os
 import random
 
 from sqlalchemy import and_, func, select
@@ -80,11 +81,13 @@ def ensure_fixtures(email_count: int, txn_count: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Provision large test user and data.")
-    parser.add_argument("--username", default="large_test_user")
-    parser.add_argument("--email", default="large_test_user@example.com")
-    parser.add_argument("--password", default="password123")
-    parser.add_argument("--emails", type=int, default=1000)
-    parser.add_argument("--transactions", type=int, default=1000)
+    parser.add_argument("--username", default=os.getenv("MOCK_PROVISION_USERNAME", "large_test_user"))
+    parser.add_argument("--email", default=os.getenv("MOCK_PROVISION_EMAIL", "large_test_user@example.com"))
+    parser.add_argument("--password", default=os.getenv("MOCK_PROVISION_PASSWORD", "password123"))
+    parser.add_argument("--emails", type=int, default=int(os.getenv("MOCK_PROVISION_EMAILS", "1000")))
+    parser.add_argument(
+        "--transactions", type=int, default=int(os.getenv("MOCK_PROVISION_TRANSACTIONS", "1000"))
+    )
     parser.add_argument("--auto", action="store_true")
     args = parser.parse_args()
 

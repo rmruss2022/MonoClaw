@@ -1,14 +1,7 @@
 import { apiFetch } from "../api";
-import { MatchReasonSummary } from "./MatchReasonSummary";
 import { Link } from "react-router-dom";
-
-type Match = {
-  settlement_id: string;
-  title: string;
-  score: number;
-  pinned: boolean;
-  reasons_json: { matched_features?: string[]; confidence_breakdown?: Record<string, number> };
-};
+import { useApp } from "../context/AppContext";
+import { Match } from "../types";
 
 type Props = {
   item: Match;
@@ -16,20 +9,56 @@ type Props = {
 };
 
 export function SettlementCard({ item, onChange }: Props) {
+  const { beginClaimFlow } = useApp();
+  const scoreValue = Math.round(item.score * 100);
+  const scorePercent = `${scoreValue}%`;
+  const accuracyClass = scoreValue > 80 ? "accuracy-high" : "accuracy-mid";
+  const payout = (() => {
+    const min = item.payout_min_cents ?? null;
+    const max = item.payout_max_cents ?? null;
+    if (min === null && max === null) return "Unknown";
+    const toUsd = (cents: number) => `$${(cents / 100).toLocaleString()}`;
+    if (min !== null && max !== null) return `${toUsd(min)} - ${toUsd(max)}`;
+    if (min !== null) return `${toUsd(min)}+`;
+    return `Up to ${toUsd(max as number)}`;
+  })();
+
   const togglePin = async () => {
     const method = item.pinned ? "DELETE" : "POST";
     await apiFetch(`/settlements/${item.settlement_id}/pin`, { method });
     await onChange();
   };
 
+  const deadlineText = item.deadline ? new Date(item.deadline).toLocaleDateString() : "Not specified";
+
   return (
-    <article style={{ border: "1px solid #ddd", marginBottom: 12, padding: 12, borderRadius: 8 }}>
-      <h3>{item.pinned ? "📌 " : ""}{item.title}</h3>
-      <Link to={`/settlements/${item.settlement_id}`}>View details</Link>
-      <p>Score: {item.score.toFixed(2)}</p>
-      <MatchReasonSummary reasons={item.reasons_json} />
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button onClick={togglePin}>{item.pinned ? "Unpin" : "Pin"}</button>
+    <article className="match-card">
+      <div className="row">
+        <h3>{item.pinned ? "📌 " : ""}{item.title}</h3>
+        <button className="ghost-btn pin-btn" onClick={togglePin}>
+          {item.pinned ? "Unpin" : "Pin"}
+        </button>
+      </div>
+      <p className={`accuracy-line ${accuracyClass}`}>Accuracy: {scorePercent}</p>
+      {item.claim_status ? <p className="claim-status">Claim status: {item.claim_status.replace("_", " ")}</p> : null}
+      {item.summary_text ? <p className="muted">{item.summary_text}</p> : null}
+      <p className="muted">Estimated payout: {payout}</p>
+      <p className="muted">Deadline: {deadlineText}</p>
+      {item.states?.length ? <p className="muted">States: {item.states.join(", ")}</p> : <p className="muted">States: All</p>}
+      <div className="toolbar action-stack">
+        <Link to={`/settlements/${item.settlement_id}`}>
+          <button className="ghost-btn">View details</button>
+        </Link>
+        {item.claim_url ? (
+          <button
+            className="claim-btn"
+            onClick={() =>
+              beginClaimFlow({ settlementId: item.settlement_id, title: item.title, claimUrl: item.claim_url || null })
+            }
+          >
+            Open Claim Form
+          </button>
+        ) : null}
       </div>
     </article>
   );

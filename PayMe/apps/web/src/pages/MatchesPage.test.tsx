@@ -1,10 +1,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
+import { AppProvider } from "../context/AppContext";
 import { MatchesPage } from "./MatchesPage";
 
 const fetchMock = vi.fn();
-global.fetch = fetchMock;
+(globalThis as { fetch: typeof fetch }).fetch = fetchMock as unknown as typeof fetch;
+
+beforeEach(() => {
+  localStorage.clear();
+  fetchMock.mockReset();
+});
 
 test("matches render and pin triggers API", async () => {
   fetchMock
@@ -38,11 +44,15 @@ test("matches render and pin triggers API", async () => {
     });
 
   render(
-    <MemoryRouter>
-      <MatchesPage />
-    </MemoryRouter>
+    <AppProvider>
+      <MemoryRouter>
+        <MatchesPage />
+      </MemoryRouter>
+    </AppProvider>
   );
   await waitFor(() => expect(screen.getByText(/Pinned Settlement/)).toBeTruthy());
   fireEvent.click(screen.getByText("Unpin"));
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/settlements/1/pin", expect.anything()));
+  await waitFor(() =>
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/settlements\/1\/pin$/), expect.anything())
+  );
 });

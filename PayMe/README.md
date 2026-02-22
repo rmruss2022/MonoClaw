@@ -48,7 +48,7 @@ API_PORT=18000 WEB_PORT=15173 DB_PORT=15432 docker compose up --build
 Default seeded large test user (auto-provisioned on first boot):
 - Username: `large_test_user`
 - Email: `large_test_user@example.com`
-- Password: `password123`
+- Password: `PayMe2026!` (or the value of `MOCK_PROVISION_PASSWORD`)
 
 ## API Flow
 
@@ -125,6 +125,10 @@ pip install -e '.[dev]'
 pytest -q
 ```
 
+Test isolation note:
+- Backend tests use the same Postgres instance but force a dedicated schema (`TEST_DB_SCHEMA`, default `payme_test`).
+- This keeps tests from touching live app data and drops the test schema at the end of the test session.
+
 Frontend:
 
 ```bash
@@ -158,6 +162,22 @@ python scripts/provision_large_test_user.py --emails 1000 --transactions 1000
 ```
 
 Auto-provision runs on container startup in `docker-compose.yml`.
+
+Configure startup mock provisioning via `.env`:
+
+```env
+PROVISION_LARGE_TEST_USER=true
+MOCK_PROVISION_USERNAME=large_test_user
+MOCK_PROVISION_EMAIL=large_test_user@example.com
+MOCK_PROVISION_PASSWORD=password123
+MOCK_PROVISION_EMAILS=1000
+MOCK_PROVISION_TRANSACTIONS=1000
+```
+
+Important behavior:
+- Signup itself does **not** generate 1000 mock rows.
+- The onboarding sync actions (`/integrations/gmail/sync`, `/integrations/plaid/sync`) ingest from fixture files.
+- If fixture files are 1000-row fixtures, any user who runs sync can ingest up to that size.
 
 ## Backups and Restore
 

@@ -7,11 +7,9 @@ type Props = {
 
 export function MatchReasonSummary({ reasons }: Props) {
   const matched = reasons.matched_features || [];
-  const confidence = reasons.confidence_breakdown?.rules ?? 0;
   return (
-    <div>
-      <div>Matched features: {matched.join(", ") || "none"}</div>
-      <div>Rules confidence: {confidence.toFixed(2)}</div>
+    <div className="stack">
+      <div className="muted">Matched features: {matched.join(", ") || "none"}</div>
     </div>
   );
 }

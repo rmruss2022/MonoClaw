@@ -1,3 +1,5 @@
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+
 export function getToken() {
   return localStorage.getItem("token") || "";
 }
@@ -7,7 +9,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   headers.set("Content-Type", "application/json");
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const res = await fetch(path, { ...init, headers });
+  const requestPath = path.startsWith("/") ? path : `/${path}`;
+  const url = API_BASE_URL ? `${API_BASE_URL}${requestPath}` : requestPath;
+  const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const payload = await res.json().catch(() => ({}));
     throw new Error(payload.detail || "Request failed");

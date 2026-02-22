@@ -1,11 +1,14 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../api";
+import { AppShell } from "../components/AppShell";
+import { useApp } from "../context/AppContext";
 
 const BRANDS = ["Amazon", "Uber", "AT&T", "Paramount", "Meta", "Coca-Cola", "TikTok", "Poppy", "Walmart"];
 
 export function OnboardingPage() {
   const navigate = useNavigate();
+  const { user, refreshUser } = useApp();
   const [stage, setStage] = useState<"profile" | "sync">("profile");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -15,8 +18,8 @@ export function OnboardingPage() {
   const [payoutType, setPayoutType] = useState("venmo");
   const [payoutValue, setPayoutValue] = useState("");
   const [frequency, setFrequency] = useState("weekly");
-  const [gmailSynced, setGmailSynced] = useState(false);
-  const [bankSynced, setBankSynced] = useState(false);
+  const [gmailSynced, setGmailSynced] = useState(Boolean(user?.gmail_synced_at));
+  const [bankSynced, setBankSynced] = useState(Boolean(user?.plaid_synced_at));
   const [skipped, setSkipped] = useState(false);
   const [syncing, setSyncing] = useState<null | "gmail" | "bank">(null);
   const [error, setError] = useState("");
@@ -50,6 +53,7 @@ export function OnboardingPage() {
     try {
       await apiFetch("/integrations/gmail/sync", { method: "POST" });
       setGmailSynced(true);
+      await refreshUser();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -63,6 +67,7 @@ export function OnboardingPage() {
     try {
       await apiFetch("/integrations/plaid/sync", { method: "POST" });
       setBankSynced(true);
+      await refreshUser();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -72,50 +77,83 @@ export function OnboardingPage() {
 
   const continueToMatches = async () => {
     setError("");
-    await apiFetch("/match/run", { method: "POST" });
-    navigate("/matches");
+    try {
+      await apiFetch("/match/run", { method: "POST" });
+      navigate("/matches");
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   return (
-    <main>
-      <h1>Onboarding</h1>
-      {stage === "profile" ? (
-        <form onSubmit={submit}>
-          <input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-          <input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-          <input placeholder="State" value={state} onChange={(e) => setState(e.target.value)} />
-          <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
-          <div>
-            {BRANDS.map((brand) => (
-              <label key={brand} style={{ marginRight: 12 }}>
-                <input type="checkbox" checked={brands.includes(brand)} onChange={() => toggleBrand(brand)} />
-                {brand}
-              </label>
-            ))}
-          </div>
-          <input placeholder="Payout type" value={payoutType} onChange={(e) => setPayoutType(e.target.value)} />
-          <input placeholder="Payout value" value={payoutValue} onChange={(e) => setPayoutValue(e.target.value)} />
-          <input placeholder="Finance check frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)} />
-          <button type="submit">Finish onboarding</button>
-        </form>
-      ) : (
-        <section>
-          <p>Connect Gmail and bank before first matching, or skip with lower confidence.</p>
-          <button onClick={runGmailSync} disabled={syncing !== null || gmailSynced}>
-            {gmailSynced ? "Gmail Connected" : syncing === "gmail" ? "Connecting Gmail..." : "Connect Gmail"}
-          </button>
-          <button onClick={runBankSync} disabled={syncing !== null || bankSynced} style={{ marginLeft: 8 }}>
-            {bankSynced ? "Bank Connected" : syncing === "bank" ? "Connecting Bank..." : "Connect Bank"}
-          </button>
-          <button onClick={() => setSkipped(true)} style={{ marginLeft: 8 }}>Skip for now</button>
-          <div style={{ marginTop: 12 }}>
+    <AppShell
+      title="Personalize your eligibility graph"
+      subtitle="We use onboarding and sync evidence to produce fast, explainable match ranking."
+    >
+      <section className="panel stack">
+        {stage === "profile" ? (
+          <form className="stack" onSubmit={submit}>
+            <div className="form-grid">
+              <input placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              <input placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              <input placeholder="State" value={state} onChange={(e) => setState(e.target.value)} />
+              <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
+              <input placeholder="Payout type" value={payoutType} onChange={(e) => setPayoutType(e.target.value)} />
+              <input
+                placeholder="Payout value"
+                value={payoutValue}
+                onChange={(e) => setPayoutValue(e.target.value)}
+              />
+              <input
+                placeholder="Finance check frequency"
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value)}
+              />
+            </div>
+            <div>
+              <p className="muted">Brands purchased</p>
+              <div className="chips">
+                {BRANDS.map((brand) => (
+                  <button
+                    key={brand}
+                    type="button"
+                    className={`chip ${brands.includes(brand) ? "active" : ""}`}
+                    onClick={() => toggleBrand(brand)}
+                  >
+                    {brand}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button type="submit">Finish onboarding</button>
+          </form>
+        ) : (
+          <section className="stack">
+            <p className="muted">
+              Connect Gmail and bank for stronger confidence signals before your first matching run.
+            </p>
+            <div className="toolbar">
+              {!gmailSynced ? (
+                <button onClick={runGmailSync} disabled={syncing !== null}>
+                  {syncing === "gmail" ? "Connecting Gmail..." : "Connect Gmail"}
+                </button>
+              ) : null}
+              {!bankSynced ? (
+                <button onClick={runBankSync} disabled={syncing !== null}>
+                  {syncing === "bank" ? "Connecting Bank..." : "Connect Bank"}
+                </button>
+              ) : null}
+              <button className="ghost-btn" onClick={() => setSkipped(true)}>
+                Skip for now
+              </button>
+            </div>
             <button onClick={continueToMatches} disabled={!(skipped || (gmailSynced && bankSynced))}>
               Run first match
             </button>
-          </div>
-        </section>
-      )}
-      {error && <p>{error}</p>}
-    </main>
+          </section>
+        )}
+        {error ? <p className="error">{error}</p> : null}
+      </section>
+    </AppShell>
   );
 }

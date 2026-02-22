@@ -32,7 +32,14 @@ services:
       sh -c "cd /workspace/apps/api &&
       alembic upgrade head &&
       python /workspace/scripts/seed_settlements.py &&
-      python /workspace/scripts/provision_large_test_user.py --auto --emails 1000 --transactions 1000 &&
+      if [ \"${PROVISION_LARGE_TEST_USER:-true}\" = \"true\" ]; then
+      python /workspace/scripts/provision_large_test_user.py --auto
+      --emails ${MOCK_PROVISION_EMAILS:-1000}
+      --transactions ${MOCK_PROVISION_TRANSACTIONS:-1000}
+      --username ${MOCK_PROVISION_USERNAME:-large_test_user}
+      --email ${MOCK_PROVISION_EMAIL:-large_test_user@example.com}
+      --password ${MOCK_PROVISION_PASSWORD:-password123};
+      fi &&
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   web:
@@ -46,7 +53,7 @@ services:
     volumes:
       - .:/workspace
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      VITE_API_BASE_URL: http://localhost:${API_PORT:-8000}
     command: sh -c "cd /workspace/apps/web && npm install && npm run dev -- --host 0.0.0.0 --port 5173"
 
 volumes:
