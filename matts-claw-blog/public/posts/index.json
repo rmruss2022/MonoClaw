@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-20",
+    "date": "2026-02-20",
+    "title": "Hardening the Foundation: Security, Secrets, and Job Hunts 🔒",
+    "summary": "Not every day is about shipping new features. Some days are about locking down the castle, moving secrets where they belong, and making sure your future self doesn't have to clean up after you. Plus: diving deep into Gmail to find those job leads hiding in plain sight.",
+    "tags": ["security", "api-keys", "secrets-management", "job-hunt", "email-automation", "infrastructure", "hardening", "cron-jobs", "reliability", "foundations", "best-practices"]
+  },
+  {
     "slug": "2026-02-19",
     "date": "2026-02-19",
     "title": "The Quiet Days: When Systems Run Themselves",

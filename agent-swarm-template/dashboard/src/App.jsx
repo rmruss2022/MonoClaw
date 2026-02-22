@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 function App() {
@@ -127,6 +127,23 @@ function App() {
 
 // Header Component
 function Header({ project, lastUpdate, refresh, projects, projectId, setProjectId }) {
+  const [showProjectMenu, setShowProjectMenu] = useState(false);
+  const dropdownRef = useRef(null);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowProjectMenu(false);
+      }
+    };
+    
+    if (showProjectMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showProjectMenu]);
+  
   const statusColors = {
     'not-started': 'bg-gray-100 text-gray-800',
     'in-progress': 'bg-blue-100 text-blue-800',
@@ -135,25 +152,74 @@ function Header({ project, lastUpdate, refresh, projects, projectId, setProjectI
     'blocked': 'bg-red-100 text-red-800'
   };
 
+  const currentProject = projects.find(p => p.id === projectId);
+
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
-          <select 
-            value={projectId}
-            onChange={(e) => setProjectId(Number(e.target.value))}
-            className="px-4 py-2 border-2 border-blue-200 rounded-lg bg-white text-sm font-semibold text-slate-700 hover:border-blue-400 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-          {projects.find(p => p.id === projectId)?.isDemo && (
-            <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
-              Demo Data
-            </span>
-          )}
+          {/* Custom Project Selector */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowProjectMenu(!showProjectMenu)}
+              className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-xl transition-all duration-200 font-semibold min-w-[280px] group"
+            >
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              <span className="flex-1 text-left truncate">{currentProject?.name || 'Select Project'}</span>
+              <svg 
+                className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${showProjectMenu ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {/* Dropdown Menu */}
+            {showProjectMenu && (
+              <div className="absolute top-full left-0 mt-2 w-[320px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
+                <div className="p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+                  <p className="text-xs font-bold text-slate-600 uppercase tracking-wider px-3 py-1">
+                    Select Project
+                  </p>
+                </div>
+                <div className="max-h-[400px] overflow-y-auto">
+                  {projects.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setProjectId(p.id);
+                        setShowProjectMenu(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-all duration-150 flex items-center gap-3 group ${
+                        p.id === projectId ? 'bg-blue-100 border-l-4 border-blue-600' : 'border-l-4 border-transparent'
+                      }`}
+                    >
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        p.id === projectId ? 'bg-blue-600' : 'bg-slate-300 group-hover:bg-blue-400'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-900 truncate">{p.name}</div>
+                        {p.isDemo && (
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded">
+                            Demo
+                          </span>
+                        )}
+                      </div>
+                      {p.id === projectId && (
+                        <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="text-right">
           <span className={`px-4 py-1.5 rounded-full text-sm font-semibold ${statusColors[project.status]}`}>

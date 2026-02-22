@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: payme
+      POSTGRES_USER: payme
+      POSTGRES_PASSWORD: payme
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://payme:payme@db:5432/payme
+      LOG_FILE_PATH: /var/log/app.jsonl
+      PYTHONPATH: /workspace/apps/api
+    depends_on:
+      - db
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - .:/workspace
+      - app_logs:/var/log
+    command: >
+      sh -c "cd /workspace/apps/api &&
+      alembic upgrade head &&
+      python /workspace/scripts/seed_settlements.py &&
+      python /workspace/scripts/provision_large_test_user.py --auto --emails 1000 --transactions 1000 &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    volumes:
+      - .:/workspace
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    command: sh -c "cd /workspace/apps/web && npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+
+volumes:
+  pg_data:
+  app_logs:

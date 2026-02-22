@@ -1,0 +1,28 @@
+.env
+apps/web/node_modules
+apps/web/dist
+apps/api/.venv
+apps/api/__pycache__
+apps/api/.pytest_cache
+**/__pycache__
+artifacts
+*.pyc
+*.pyo
+*.log
+
+# Local databases / dumps
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.sql.gz
+*.dump
+
+# Runtime and backup outputs
+backups/*.sql
+backups/*.sql.sha256
+backups/latest.txt
+!backups/.gitkeep
+
+# Local app logs
+app.jsonl
