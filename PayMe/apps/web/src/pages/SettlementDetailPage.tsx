@@ -22,7 +22,7 @@ export function SettlementDetailPage() {
     <AppShell title={detail.title} subtitle={`Status: ${detail.status}`}>
       <article className="detail-card stack">
         <div>
-          <button className="ghost-btn" onClick={() => navigate("/matches")}>
+          <button className="ghost-btn" onClick={() => navigate("/")}>
             Back to Matches
           </button>
         </div>

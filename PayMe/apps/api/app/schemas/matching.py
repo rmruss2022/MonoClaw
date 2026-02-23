@@ -42,3 +42,13 @@ class OngoingClaimResponse(BaseModel):
     claim_submitted_at: datetime | None = None
     claim_outcome_at: datetime | None = None
     score: float | None = None
+
+
+class ClaimHistoryResponse(BaseModel):
+    settlement_id: UUID
+    title: str
+    claim_url: str | None = None
+    claim_status: str
+    claim_submitted_at: datetime | None = None
+    claim_outcome_at: datetime | None = None
+    amount_paid_cents: int | None = None

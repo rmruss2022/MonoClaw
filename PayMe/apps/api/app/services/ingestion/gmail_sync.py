@@ -9,12 +9,51 @@ from app.core.settings import settings
 from app.models.entities import GmailEvidence, GmailMessage, User, UserFeature
 from app.services.events.service import emit_event
 
+# ---------------------------------------------------------------------------
+# Public dispatcher — call this from route handlers.
+# ---------------------------------------------------------------------------
+
+
+def sync_gmail(db: Session, user: User) -> dict:
+    """Dispatch to mock or real Gmail sync based on OAuth connection status.
+    
+    If user has connected Gmail OAuth → use real sync.
+    If user has NOT connected Gmail → use mock sync.
+    Connected users always use real sync, even when mock mode is enabled.
+    """
+    # Check if user has a valid Gmail OAuth token.
+    from app.models.entities import GmailOAuthToken  # noqa: PLC0415
+    token = db.scalar(
+        select(GmailOAuthToken).where(
+            and_(
+                GmailOAuthToken.user_id == user.id,
+                GmailOAuthToken.revoked_at.is_(None)
+            )
+        )
+    )
+
+    # Connected user -> real sync regardless of global mock flag.
+    if token is not None:
+        from app.services.ingestion.gmail_real import sync_gmail_real  # noqa: PLC0415
+        return sync_gmail_real(db, user)
+
+    # No connection: allow mock fallback behavior.
+    if settings.mock_gmail:
+        return sync_gmail_mock(db, user)
+    return {"status": "not_connected", "message": "Connect Gmail OAuth first to run real sync."}
+
+
 BRAND_MAP = {
     "amazon": "merchant:amazon",
     "uber": "merchant:uber",
     "at&t": "merchant:at&t",
     "paramount": "merchant:paramount",
     "walmart": "merchant:walmart",
+    "united airlines": "merchant:united_airlines",
+    "united air": "merchant:united_airlines",
+    "mcdonald": "merchant:mcdonald_s",
+    "starbucks": "merchant:starbucks",
+    "kfc": "merchant:kfc",
 }
 
 

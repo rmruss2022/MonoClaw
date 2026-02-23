@@ -19,6 +19,7 @@ from app.models.entities import (
     User,
     UserFeature,
 )
+from app.services.ml.feedback import export_labeled_samples, get_labeled_dataset
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -210,3 +211,73 @@ def stats_for_user(user_id: UUID, db: Session = Depends(get_db)):
         "plaid_transactions": db.scalar(select(func.count(PlaidTransaction.id)).where(PlaidTransaction.user_id == user_id))
         or 0,
     }
+
+
+# ---------------------------------------------------------------------------
+# Track 1: ML feedback loop endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/ml/export-labeled")
+def ml_export_labeled(db: Session = Depends(get_db)):
+    """Materialize labeled training samples from match results + claim outcomes.
+
+    Upserts rows into ml_feedback_samples and returns the count and sample list.
+    """
+    _require_admin_enabled()
+    samples = export_labeled_samples(db)
+    return {
+        "count": len(samples),
+        "samples": samples,
+    }
+
+
+@router.get("/ml/dataset")
+def ml_dataset(db: Session = Depends(get_db)):
+    """Return all rows from ml_feedback_samples for offline training consumption."""
+    _require_admin_enabled()
+    rows = get_labeled_dataset(db)
+    return {
+        "count": len(rows),
+        "rows": rows,
+    }
+
+
+@router.post("/ml/train")
+def ml_train(db: Session = Depends(get_db)):
+    """Export labeled data, train the ranker, and auto-promote weights if metrics improve.
+
+    Steps:
+      1. Materialise labeled samples via export_labeled_samples (upserts ml_feedback_samples)
+      2. Write feedback_export.json so train_ranker can read it
+      3. Run training: new weights are only promoted to artifacts/weights.json when
+         precision@5 strictly beats the currently active model
+      4. Return {promoted, weights_version, new_metrics, previous_metrics}
+    """
+    _require_admin_enabled()
+    import json as _json
+    import sys
+
+    # 1. Materialise labels
+    samples = export_labeled_samples(db)
+
+    # 2. Resolve artifacts dir (container vs local dev)
+    _artifacts = Path("/workspace/artifacts") if Path("/workspace").exists() else Path("artifacts")
+    _artifacts.mkdir(parents=True, exist_ok=True)
+    (_artifacts / "feedback_export.json").write_text(
+        _json.dumps(samples, indent=2, default=str), encoding="utf-8"
+    )
+
+    # 3. Import and run trainer (sys.path ensures it's findable in the container)
+    _scripts = "/workspace/scripts"
+    if _scripts not in sys.path:
+        sys.path.insert(0, _scripts)
+
+    try:
+        import train_ranker  # type: ignore[import]  # noqa: PLC0415
+
+        return train_ranker.main(artifacts_dir=_artifacts)
+    except ImportError as exc:
+        raise HTTPException(status_code=500, detail=f"Trainer module not available: {exc}") from exc
+    except SystemExit as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

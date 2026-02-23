@@ -11,7 +11,11 @@ def _token(client):
     ).json()["access_token"]
 
 
-def test_admin_endpoints_expose_core_data(client):
+def test_admin_endpoints_expose_core_data(client, monkeypatch):
+    import app.services.ingestion.gmail_sync as _gmail_mod
+    import app.services.ingestion.plaid_sync as _plaid_mod
+    monkeypatch.setattr(_gmail_mod.settings, "mock_gmail", True)
+    monkeypatch.setattr(_plaid_mod.settings, "mock_plaid", True)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
     client.post(

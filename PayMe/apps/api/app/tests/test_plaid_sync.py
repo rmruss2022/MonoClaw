@@ -11,7 +11,9 @@ def _token(client):
     ).json()["access_token"]
 
 
-def test_plaid_sync_inserts_transactions_and_features_idempotent(client):
+def test_plaid_sync_inserts_transactions_and_features_idempotent(client, monkeypatch):
+    import app.services.ingestion.plaid_sync as _mod
+    monkeypatch.setattr(_mod.settings, "mock_plaid", True)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
     first = client.post("/integrations/plaid/sync", headers=headers)

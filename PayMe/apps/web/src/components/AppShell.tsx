@@ -6,6 +6,12 @@ import { ClaimSubmissionModal } from "./ClaimSubmissionModal";
 export function AppShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
   const { user, isAuthenticated, logout, claimPrompt, confirmClaimSubmitted, dismissClaimPrompt } = useApp();
   const location = useLocation();
+  const role = user?.role ?? "user";
+
+  const canSeeMatches = isAuthenticated && role !== "attorney";
+  const canSeeAdmin = isAuthenticated && (role === "admin" || role === "super_user");
+  const canSeeGateway = isAuthenticated && (role === "attorney" || role === "admin" || role === "super_user");
+  const canSeeQueue = isAuthenticated && (role === "admin" || role === "super_user");
 
   return (
     <div className="app-frame">
@@ -15,18 +21,30 @@ export function AppShell({ title, subtitle, children }: { title: string; subtitl
           <p className="brand-sub">Settlement Intelligence Console</p>
         </div>
         <nav className="nav-links">
+          {canSeeMatches && (
+            <Link className={location.pathname === "/" ? "active" : ""} to="/">
+              Matches
+            </Link>
+          )}
+          {canSeeAdmin && (
+            <Link className={location.pathname === "/admin" ? "active" : ""} to="/admin">
+              Admin
+            </Link>
+          )}
+          {canSeeGateway && (
+            <Link className={location.pathname === "/gateway" ? "active" : ""} to="/gateway">
+              Gateway
+            </Link>
+          )}
+          {canSeeQueue && (
+            <Link className={location.pathname === "/queue" ? "active" : ""} to="/queue">
+              Queue
+            </Link>
+          )}
           {isAuthenticated && (
-            <>
-              <Link className={location.pathname === "/matches" ? "active" : ""} to="/matches">
-                Matches
-              </Link>
-              <Link className={location.pathname === "/admin" ? "active" : ""} to="/admin">
-                Admin
-              </Link>
-              <button className="ghost-btn" onClick={logout}>
-                Sign out {user?.username ? `(${user.username})` : ""}
-              </button>
-            </>
+            <button className="ghost-btn" onClick={logout}>
+              Sign out {user?.username ? `(${user.username})` : ""}
+            </button>
           )}
         </nav>
       </header>

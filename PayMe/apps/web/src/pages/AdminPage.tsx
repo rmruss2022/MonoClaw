@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { useApp } from "../context/AppContext";
+import { apiFetch } from "../api";
+import { MlSample } from "../types";
 
 export function AdminPage() {
   const {
@@ -15,6 +17,10 @@ export function AdminPage() {
   } = useApp();
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [error, setError] = useState("");
+  const [mlSamples, setMlSamples] = useState<MlSample[] | null>(null);
+  const [mlCount, setMlCount] = useState(0);
+  const [mlLoading, setMlLoading] = useState(false);
+  const [exportJson, setExportJson] = useState("");
 
   const load = async () => {
     setError("");
@@ -35,6 +41,33 @@ export function AdminPage() {
       await loadUserStatsFromContext(selectedUser);
     } catch (err) {
       setError((err as Error).message);
+    }
+  };
+
+  const loadDataset = async () => {
+    setMlLoading(true);
+    try {
+      const data = await apiFetch<{ count: number; rows: MlSample[] }>("/admin/ml/dataset");
+      setMlSamples(data.rows);
+      setMlCount(data.count);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setMlLoading(false);
+    }
+  };
+
+  const exportLabeled = async () => {
+    setMlLoading(true);
+    try {
+      const data = await apiFetch<{ count: number; samples: MlSample[] }>("/admin/ml/export-labeled");
+      setExportJson(JSON.stringify(data, null, 2));
+      setMlSamples(data.samples);
+      setMlCount(data.count);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setMlLoading(false);
     }
   };
 
@@ -147,6 +180,74 @@ export function AdminPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="panel stack">
+        <h2>ML Feedback</h2>
+        <div className="toolbar">
+          <button onClick={loadDataset} disabled={mlLoading}>
+            {mlLoading ? "Loading..." : "Load Dataset"}
+          </button>
+          <button onClick={exportLabeled} disabled={mlLoading} className="ghost-btn">
+            Export & Label
+          </button>
+        </div>
+        {mlSamples !== null && (
+          <>
+            <div className="ml-stats-grid">
+              <article className="stat-card">
+                <h3>Total</h3>
+                <p>{mlCount}</p>
+              </article>
+              <article className="stat-card">
+                <h3>Pending</h3>
+                <p>{mlSamples.filter(s => s.label === null).length}</p>
+              </article>
+              <article className="stat-card">
+                <h3>Paid Out</h3>
+                <p>{mlSamples.filter(s => s.outcome === 'paid_out').length}</p>
+              </article>
+              <article className="stat-card">
+                <h3>Not Paid</h3>
+                <p>{mlSamples.filter(s => s.outcome === 'not_paid_out').length}</p>
+              </article>
+              <article className="stat-card">
+                <h3>Ignored</h3>
+                <p>{mlSamples.filter(s => s.outcome === 'ignored').length}</p>
+              </article>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Settlement</th>
+                  <th>Outcome</th>
+                  <th>Label</th>
+                  <th>Confidence</th>
+                  <th>Similarity</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mlSamples.slice(0, 50).map((s, i) => (
+                  <tr key={i}>
+                    <td title={s.settlement_id}>{s.settlement_id.slice(0, 8)}…</td>
+                    <td>{s.outcome}</td>
+                    <td>{s.label === null ? "pending" : s.label === 1 ? "✓ positive" : "negative"}</td>
+                    <td>{(s.rules_confidence * 100).toFixed(1)}%</td>
+                    <td>{(s.similarity * 100).toFixed(1)}%</td>
+                    <td>{new Date(s.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {exportJson && (
+              <details>
+                <summary className="muted" style={{ cursor: 'pointer' }}>Raw JSON</summary>
+                <pre className="json-pre">{exportJson}</pre>
+              </details>
+            )}
+          </>
+        )}
       </section>
     </AppShell>
   );

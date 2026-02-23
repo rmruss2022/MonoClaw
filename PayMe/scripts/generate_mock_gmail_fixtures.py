@@ -14,6 +14,10 @@ def build_messages(count: int, seed: int = 42) -> list[dict]:
         ("paramountplus.com", "Paramount+", "Monthly streaming subscription charge"),
         ("att.com", "AT&T", "Billing statement available"),
         ("meta.com", "Meta", "Account purchase confirmation"),
+        ("unitedairlines.com", "United Airlines", "Your United Airlines flight receipt and baggage fee summary"),
+        ("mcdonalds.com", "McDonald's", "Your McDonald's order receipt and charges"),
+        ("starbucks.com", "Starbucks", "Your Starbucks order receipt and reward points"),
+        ("kfc.com", "KFC", "Your KFC order confirmation and receipt"),
     ]
     base_time = datetime.now(UTC)
     messages = []

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { apiFetch } from "../api";
 import { Link } from "react-router-dom";
 import { useApp } from "../context/AppContext";
@@ -9,7 +10,9 @@ type Props = {
 };
 
 export function SettlementCard({ item, onChange }: Props) {
-  const { beginClaimFlow } = useApp();
+  const { beginClaimFlow, enqueueAutofillJob } = useApp();
+  const [autofillQueued, setAutofillQueued] = useState(false);
+  const [autofillMsg, setAutofillMsg] = useState("");
   const scoreValue = Math.round(item.score * 100);
   const scorePercent = `${scoreValue}%`;
   const accuracyClass = scoreValue > 80 ? "accuracy-high" : "accuracy-mid";
@@ -27,6 +30,16 @@ export function SettlementCard({ item, onChange }: Props) {
     const method = item.pinned ? "DELETE" : "POST";
     await apiFetch(`/settlements/${item.settlement_id}/pin`, { method });
     await onChange();
+  };
+
+  const handleAutofill = async () => {
+    try {
+      await enqueueAutofillJob(item.settlement_id);
+      setAutofillQueued(true);
+      setAutofillMsg("Autofill job queued!");
+    } catch (err) {
+      setAutofillMsg((err as Error).message || "Failed to queue autofill");
+    }
   };
 
   const deadlineText = item.deadline ? new Date(item.deadline).toLocaleDateString() : "Not specified";
@@ -59,6 +72,15 @@ export function SettlementCard({ item, onChange }: Props) {
             Open Claim Form
           </button>
         ) : null}
+        <button
+          className="ghost-btn"
+          onClick={handleAutofill}
+          disabled={autofillQueued}
+          style={{ fontSize: '0.85rem' }}
+        >
+          {autofillQueued ? "Autofill Queued ✓" : "Start Autofill"}
+        </button>
+        {autofillMsg ? <p className="muted" style={{ fontSize: '0.8rem', margin: '0.25rem 0 0' }}>{autofillMsg}</p> : null}
       </div>
     </article>
   );

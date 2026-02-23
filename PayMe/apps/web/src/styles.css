@@ -437,3 +437,44 @@ td {
   place-items: center;
   color: var(--muted);
 }
+
+/* Wizard */
+.wizard-steps { display:flex; gap:0.5rem; align-items:center; justify-content:center; margin-bottom:1.5rem; }
+.wizard-step { display:flex; flex-direction:column; align-items:center; gap:0.3rem; }
+.wizard-step-dot { width:32px; height:32px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.85rem; color:var(--muted); transition:all 0.2s; }
+.wizard-step.active .wizard-step-dot { background:var(--accent); color:#07090f; }
+.wizard-step.done .wizard-step-dot { background:var(--accent-2); color:#07090f; }
+.wizard-step-label { font-size:0.72rem; color:var(--muted); white-space:nowrap; }
+.wizard-step.active .wizard-step-label { color:var(--text); }
+.wizard-connector { flex:1; height:1px; background:var(--border); max-width:40px; }
+
+/* Integration cards */
+.integration-card { display:flex; align-items:flex-start; gap:1rem; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem; margin-bottom:1rem; }
+.integration-card .int-icon { font-size:2rem; line-height:1; flex-shrink:0; }
+.integration-card .int-body { flex:1; }
+.integration-card .int-body h3 { margin:0 0 0.25rem; font-size:1rem; }
+.integration-card .int-body p { margin:0 0 0.75rem; color:var(--muted); font-size:0.9rem; }
+.connected-badge { display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.75rem; background:rgba(133,255,158,0.15); border:1px solid rgba(133,255,158,0.5); border-radius:999px; color:var(--accent-2); font-weight:700; font-size:0.85rem; }
+
+/* Autofill jobs */
+.autofill-job-card { background:var(--card); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:12px; padding:0.9rem 1rem; margin-bottom:0.75rem; }
+.autofill-job-card.status-queued { border-left-color:#ffd166; }
+.autofill-job-card.status-running { border-left-color:var(--accent); }
+.autofill-job-card.status-done { border-left-color:var(--accent-2); }
+.autofill-job-card.status-failed { border-left-color:var(--danger); }
+.autofill-job-card.status-blocked { border-left-color:#ff9e5e; }
+.job-meta { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; font-size:0.85rem; color:var(--muted); margin-top:0.4rem; }
+
+/* ML dashboard */
+.ml-stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:0.75rem; margin-bottom:1rem; }
+
+/* Gateway */
+.gateway-frame { max-width:960px; margin:0 auto; padding:1.5rem 1rem; }
+.gateway-key-input { font-family:monospace; letter-spacing:0.05em; }
+.claimant-row { display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0; border-bottom:1px solid var(--border); gap:0.75rem; flex-wrap:wrap; }
+.json-pre { font-family:monospace; font-size:0.78rem; background:rgba(6,10,20,0.7); border:1px solid var(--border); border-radius:8px; padding:0.75rem; overflow:auto; max-height:400px; white-space:pre-wrap; }
+
+/* Payout banner */
+.payout-banner { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:0.75rem 1rem; margin-bottom:1rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
+.payout-banner .payout-range { font-size:1.1rem; font-weight:700; color:var(--accent-2); }
+.payout-banner .payout-label { font-size:0.85rem; color:var(--muted); }

@@ -32,3 +32,9 @@ class MeResponse(BaseModel):
     dob: date | None = None
     gmail_synced_at: datetime | None = None
     plaid_synced_at: datetime | None = None
+    gmail_oauth_connected: bool = False
+    plaid_linked: bool = False
+    plaid_institution_name: str | None = None
+    plaid_balance_available_cents: int | None = None
+    plaid_balance_current_cents: int | None = None
+    role: str = "user"

@@ -41,11 +41,11 @@ test("admin page loads overview and user stats", async () => {
     });
 
   render(
-    <AppProvider>
-      <MemoryRouter>
+    <MemoryRouter>
+      <AppProvider>
         <AdminPage />
-      </MemoryRouter>
-    </AppProvider>,
+      </AppProvider>
+    </MemoryRouter>,
   );
 
   await waitFor(() => expect(screen.getByText("Admin Observatory")).toBeTruthy());

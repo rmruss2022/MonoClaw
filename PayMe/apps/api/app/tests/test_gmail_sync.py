@@ -11,7 +11,9 @@ def _token(client):
     ).json()["access_token"]
 
 
-def test_gmail_sync_idempotent(client):
+def test_gmail_sync_idempotent(client, monkeypatch):
+    import app.services.ingestion.gmail_sync as _mod
+    monkeypatch.setattr(_mod.settings, "mock_gmail", True)
     token = _token(client)
     headers = {"Authorization": f"Bearer {token}"}
     first = client.post("/integrations/gmail/sync", headers=headers)

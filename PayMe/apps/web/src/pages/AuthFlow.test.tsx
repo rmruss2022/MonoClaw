@@ -14,26 +14,25 @@ beforeEach(() => {
   fetchMock.mockReset();
 });
 
-test("signup form submits and navigates", async () => {
-  fetchMock.mockResolvedValue({
-    ok: true,
-    json: async () => ({ access_token: "t" })
-  });
+test("signup form submits and advances to step 2", async () => {
+  fetchMock
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t" }) })
+    .mockResolvedValueOnce({ ok: true, json: async () => ({ id: "u1", username: "matt", email: "matt@example.com", gmail_oauth_connected: false, plaid_linked: false }) });
   render(
-    <AppProvider>
-      <MemoryRouter initialEntries={["/signup"]}>
+    <MemoryRouter initialEntries={["/signup"]}>
+      <AppProvider>
         <Routes>
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/onboarding" element={<div>Onboarding Target</div>} />
         </Routes>
-      </MemoryRouter>
-    </AppProvider>
+      </AppProvider>
+    </MemoryRouter>
   );
   fireEvent.change(screen.getByPlaceholderText("Username"), { target: { value: "matt" } });
   fireEvent.change(screen.getByPlaceholderText("Email"), { target: { value: "matt@example.com" } });
   fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "password123" } });
   fireEvent.click(screen.getByText("Create account"));
-  await waitFor(() => expect(screen.getByText("Onboarding Target")).toBeTruthy());
+  await waitFor(() => expect(screen.getByText("About You")).toBeTruthy());
+  expect(screen.getByPlaceholderText("First name")).toBeTruthy();
 });
 
 test("login form renders and calls API", async () => {
@@ -42,14 +41,14 @@ test("login form renders and calls API", async () => {
     json: async () => ({ access_token: "t" })
   });
   render(
-    <AppProvider>
-      <MemoryRouter initialEntries={["/login"]}>
+    <MemoryRouter initialEntries={["/login"]}>
+      <AppProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/matches" element={<div>Matches Target</div>} />
+          <Route path="/" element={<div>Matches Target</div>} />
         </Routes>
-      </MemoryRouter>
-    </AppProvider>
+      </AppProvider>
+    </MemoryRouter>
   );
   fireEvent.change(screen.getByPlaceholderText("Username or email"), { target: { value: "matt" } });
   fireEvent.change(screen.getByPlaceholderText("Password"), { target: { value: "password123" } });
@@ -57,31 +56,22 @@ test("login form renders and calls API", async () => {
   await waitFor(() => expect(fetchMock).toHaveBeenCalled());
 });
 
-test("onboarding submits then skip runs first match", async () => {
+test("onboarding submits profile and navigates to home", async () => {
   fetchMock
-    .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({})
-    })
-    .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({})
-    });
+    .mockResolvedValueOnce({ ok: true, json: async () => ({}) })   // POST /onboarding
+    .mockResolvedValueOnce({ ok: true, json: async () => ({}) });  // POST /match/run
   render(
-    <AppProvider>
-      <MemoryRouter initialEntries={["/onboarding"]}>
+    <MemoryRouter initialEntries={["/onboarding"]}>
+      <AppProvider>
         <Routes>
           <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/matches" element={<div>Matches Target</div>} />
+          <Route path="/" element={<div>Matches Target</div>} />
         </Routes>
-      </MemoryRouter>
-    </AppProvider>
+      </AppProvider>
+    </MemoryRouter>
   );
   fireEvent.change(screen.getByPlaceholderText("First name"), { target: { value: "Matt" } });
   fireEvent.change(screen.getByPlaceholderText("Last name"), { target: { value: "H" } });
   fireEvent.click(screen.getByText("Finish onboarding"));
-  await waitFor(() => expect(screen.getByText("Skip for now")).toBeTruthy());
-  fireEvent.click(screen.getByText("Skip for now"));
-  fireEvent.click(screen.getByText("Run first match"));
   await waitFor(() => expect(screen.getByText("Matches Target")).toBeTruthy());
 });

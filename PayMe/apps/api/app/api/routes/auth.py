@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user
@@ -33,5 +34,35 @@ def login_route(payload: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=MeResponse)
-def me_route(user: User = Depends(get_current_user)):
-    return MeResponse.model_validate(user)
+def me_route(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.models.entities import GmailOAuthToken, PlaidItem  # noqa: PLC0415
+
+    gmail_connected = (
+        db.scalar(
+            select(GmailOAuthToken).where(
+                GmailOAuthToken.user_id == user.id,
+                GmailOAuthToken.revoked_at == None,  # noqa: E711
+            )
+        )
+        is not None
+    )
+    plaid_item = db.scalar(
+        select(PlaidItem).where(
+            PlaidItem.user_id == user.id,
+            PlaidItem.status == "active",
+        )
+    )
+    plaid_linked = plaid_item is not None
+    plaid_institution_name = plaid_item.institution_name if plaid_item else None
+    plaid_balance_available_cents = plaid_item.balance_available_cents if plaid_item else None
+    plaid_balance_current_cents = plaid_item.balance_current_cents if plaid_item else None
+    return MeResponse.model_validate(user).model_copy(
+        update={
+            "gmail_oauth_connected": gmail_connected,
+            "plaid_linked": plaid_linked,
+            "plaid_institution_name": plaid_institution_name,
+            "plaid_balance_available_cents": plaid_balance_available_cents,
+            "plaid_balance_current_cents": plaid_balance_current_cents,
+            "role": user.role,
+        }
+    )

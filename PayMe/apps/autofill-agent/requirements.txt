@@ -1,0 +1,9 @@
+playwright>=1.41.0
+httpx>=0.26.0
+sqlalchemy[asyncio]>=2.0.0
+psycopg[binary]>=3.1.0
+pydantic-settings>=2.0.0
+tenacity>=8.2.0
+anthropic>=0.30.0
+nodriver>=0.40.0
+pillow>=10.0.0

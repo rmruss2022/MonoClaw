@@ -14,7 +14,11 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const res = await fetch(url, { ...init, headers });
   if (!res.ok) {
     const payload = await res.json().catch(() => ({}));
-    throw new Error(payload.detail || "Request failed");
+    const detail = payload.detail;
+    const message = Array.isArray(detail)
+      ? detail.map((d: { msg?: string }) => d.msg ?? String(d)).join("; ")
+      : detail || "Request failed";
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }

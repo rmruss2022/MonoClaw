@@ -16,7 +16,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(usernameOrEmail, password);
-      navigate("/matches");
+      navigate("/");
     } catch (err) {
       setError((err as Error).message);
     } finally {

@@ -30,11 +30,11 @@ def _load_ranker_weights() -> dict:
         weights_path = Path("/workspace/artifacts/weights.json")
     if not weights_path.exists():
         return {
-            "rules_confidence": 0.65,
-            "similarity": 0.2,
-            "payout": 0.1,
-            "urgency": 0.03,
-            "ease": 0.02,
+            "rules_confidence": settings.ranker_default_rules_confidence_weight,
+            "similarity": settings.ranker_default_similarity_weight,
+            "payout": settings.ranker_default_payout_weight,
+            "urgency": settings.ranker_default_urgency_weight,
+            "ease": settings.ranker_default_ease_weight,
         }
     return json.loads(weights_path.read_text(encoding="utf-8"))
 
@@ -46,6 +46,35 @@ def assign_variant(user_id: UUID, experiment_key: str) -> str:
 
 
 def get_or_create_exposure(db: Session, user_id: UUID, experiment_key: str) -> str:
+    forced_variant = (settings.matching_variant or "").strip()
+    if forced_variant and forced_variant in VARIANTS:
+        exposure = db.scalar(
+            select(ExperimentExposure).where(
+                and_(
+                    ExperimentExposure.user_id == user_id,
+                    ExperimentExposure.experiment_key == experiment_key,
+                )
+            )
+        )
+        if exposure:
+            if exposure.variant != forced_variant:
+                exposure.variant = forced_variant
+                emit_event(
+                    db,
+                    "experiment_exposed",
+                    user_id,
+                    {"experiment_key": experiment_key, "variant": forced_variant, "forced": True},
+                )
+            return forced_variant
+        db.add(ExperimentExposure(user_id=user_id, experiment_key=experiment_key, variant=forced_variant))
+        emit_event(
+            db,
+            "experiment_exposed",
+            user_id,
+            {"experiment_key": experiment_key, "variant": forced_variant, "forced": True},
+        )
+        return forced_variant
+
     exposure = db.scalar(
         select(ExperimentExposure).where(
             and_(
@@ -91,7 +120,7 @@ def run_match(db: Session, user: User, top_n: int = 20) -> MatchRun:
     hit_settlement_ids = {row.settlement_id for row in index_rows}
 
     settlements = db.scalars(select(Settlement)).all()
-    candidate_rows: list[tuple[Settlement, float, list[str], list[str]]] = []
+    candidate_rows: list[tuple[Settlement, float, list[str], list[str], dict]] = []
     weights = _load_ranker_weights()
     for settlement in settlements:
         predicates = settlement.eligibility_predicates or {}
@@ -130,12 +159,26 @@ def run_match(db: Session, user: User, top_n: int = 20) -> MatchRun:
         if not state_ok:
             missing.append("state")
         if required_ok and state_ok:
-            candidate_rows.append((settlement, score, matched, missing))
+            candidate_rows.append(
+                (
+                    settlement,
+                    score,
+                    matched,
+                    missing,
+                    {
+                        "rules_confidence": rules_confidence,
+                        "similarity": similarity,
+                        "payout": payout_signal,
+                        "urgency": urgency_signal,
+                        "ease": ease_signal,
+                    },
+                )
+            )
 
     candidate_rows.sort(key=lambda x: x[1], reverse=True)
     run.candidate_count = len(candidate_rows)
 
-    for settlement, score, matched, missing in candidate_rows[:top_n]:
+    for settlement, score, matched, missing, feature_signals in candidate_rows[:top_n]:
         db.add(
             MatchResult(
                 run_id=run.id,
@@ -145,7 +188,14 @@ def run_match(db: Session, user: User, top_n: int = 20) -> MatchRun:
                 reasons_json={
                     "matched_features": matched,
                     "predicate_passes": {"state": user.state},
-                    "confidence_breakdown": {"rules": score},
+                    # Store component signals explicitly so ML feedback exports can
+                    # train on true match-time features (not post-mix final score).
+                    "confidence_breakdown": {"rules": feature_signals["rules_confidence"]},
+                    "similarity": feature_signals["similarity"],
+                    "payout": feature_signals["payout"],
+                    "urgency": feature_signals["urgency"],
+                    "ease": feature_signals["ease"],
+                    "score": score,
                 },
                 missing_features_json=missing,
             )
@@ -154,7 +204,11 @@ def run_match(db: Session, user: User, top_n: int = 20) -> MatchRun:
     run.result_count = min(top_n, len(candidate_rows))
     run.completed_at = datetime.now(UTC)
     user.first_match_completed_at = run.completed_at
-    run.metadata_json = {"feature_count": len(feature_keys), "variant": variant}
+    run.metadata_json = {
+        "feature_count": len(feature_keys),
+        "variant": variant,
+        "weights_version": weights.get("_version"),
+    }
     emit_event(
         db,
         "match_run_completed",

@@ -34,7 +34,15 @@ def test_rules_match_run_persists(client):
     db = TestingSessionLocal()
     try:
         assert db.scalar(select(MatchRun.id).limit(1)) is not None
-        assert db.scalar(select(MatchResult.id).limit(1)) is not None
+        match_result = db.scalar(select(MatchResult).limit(1))
+        assert match_result is not None
+        reasons = match_result.reasons_json or {}
+        assert "confidence_breakdown" in reasons
+        assert "rules" in reasons["confidence_breakdown"]
+        assert "similarity" in reasons
+        assert "payout" in reasons
+        assert "urgency" in reasons
+        assert "ease" in reasons
     finally:
         db.close()
 

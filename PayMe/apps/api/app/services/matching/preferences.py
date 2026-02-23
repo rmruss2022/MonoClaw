@@ -3,7 +3,13 @@ from datetime import UTC, datetime
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.orm import Session
 
-from app.models.entities import MatchResult, Settlement, UserSettlementPreference
+from app.models.entities import (
+    ClaimApproval,
+    MatchResult,
+    PayoutTransfer,
+    Settlement,
+    UserSettlementPreference,
+)
 from app.services.events.service import emit_event
 
 
@@ -115,6 +121,63 @@ def list_ongoing_claims(db: Session, user_id):
                 "claim_submitted_at": pref.claim_submitted_at,
                 "claim_outcome_at": pref.claim_outcome_at,
                 "score": latest_score,
+            }
+        )
+    return rows
+
+
+def list_claim_history(db: Session, user_id) -> list[dict]:
+    """Return resolved claims (paid_out or not_paid_out) ordered by outcome date."""
+    prefs = db.scalars(
+        select(UserSettlementPreference)
+        .where(
+            and_(
+                UserSettlementPreference.user_id == user_id,
+                UserSettlementPreference.claim_status.in_(["paid_out", "not_paid_out"]),
+            )
+        )
+        .order_by(desc(UserSettlementPreference.claim_outcome_at))
+    ).all()
+
+    rows = []
+    for pref in prefs:
+        settlement = db.get(Settlement, pref.settlement_id)
+
+        # Look up the completed payout transfer amount, if any
+        approval = db.scalar(
+            select(ClaimApproval).where(
+                and_(
+                    ClaimApproval.user_id == user_id,
+                    ClaimApproval.settlement_id == pref.settlement_id,
+                    ClaimApproval.status == "paid",
+                )
+            )
+        )
+        amount_paid_cents = None
+        if approval is not None:
+            transfer = db.scalar(
+                select(PayoutTransfer)
+                .where(
+                    and_(
+                        PayoutTransfer.approval_id == approval.id,
+                        PayoutTransfer.status == "completed",
+                    )
+                )
+                .order_by(PayoutTransfer.created_at.desc())
+                .limit(1)
+            )
+            if transfer is not None:
+                amount_paid_cents = transfer.amount_cents
+
+        rows.append(
+            {
+                "settlement_id": pref.settlement_id,
+                "title": settlement.title if settlement else "Unknown settlement",
+                "claim_url": settlement.claim_url if settlement else None,
+                "claim_status": pref.claim_status,
+                "claim_submitted_at": pref.claim_submitted_at,
+                "claim_outcome_at": pref.claim_outcome_at,
+                "amount_paid_cents": amount_paid_cents,
             }
         )
     return rows

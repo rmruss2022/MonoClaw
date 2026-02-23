@@ -7,8 +7,36 @@ from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from app.core.settings import settings
-from app.models.entities import PlaidTransaction, User, UserFeature
+from app.models.entities import PlaidItem, PlaidTransaction, User, UserFeature
 from app.services.events.service import emit_event
+
+
+def sync_plaid(db: Session, user: User) -> dict:
+    """Dispatcher: routes to mock or real Plaid sync based on connection status.
+    
+    If user has connected Plaid → use real sync.
+    If user has NOT connected Plaid → use mock sync.
+    Connected users always use real sync, even when mock mode is enabled.
+    """
+    # Check if user has an active Plaid item.
+    plaid_item = db.scalar(
+        select(PlaidItem).where(
+            and_(
+                PlaidItem.user_id == user.id,
+                PlaidItem.status == "active",
+            )
+        )
+    )
+
+    # Connected user -> real sync regardless of global mock flag.
+    if plaid_item is not None:
+        from app.services.ingestion.plaid_real import sync_plaid_real
+        return sync_plaid_real(db, user)
+
+    # No connection: allow mock fallback behavior.
+    if settings.mock_plaid:
+        return sync_plaid_mock(db, user)
+    return {"status": "not_connected", "message": "Connect a bank account first to run real sync."}
 
 
 def _read_fixture_transactions() -> list[dict]:
@@ -66,6 +94,14 @@ def sync_plaid_mock(db: Session, user: User) -> dict:
 
     now = datetime.now(UTC)
     user.plaid_synced_at = now
+
+    # Write mock balance to PlaidItem so the frontend can display it
+    plaid_item = db.scalar(
+        select(PlaidItem).where(and_(PlaidItem.user_id == user.id, PlaidItem.status == "active"))
+    )
+    if plaid_item is not None:
+        plaid_item.balance_available_cents = 247_83  # $247.83 mock available balance
+        plaid_item.balance_current_cents = 312_47   # $312.47 mock current balance
     for key, count in feature_counts.items():
         confidence = min(0.95, 0.75 + min(0.2, count * 0.04))
         feature = db.scalar(

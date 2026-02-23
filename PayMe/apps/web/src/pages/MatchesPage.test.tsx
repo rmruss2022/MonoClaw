@@ -44,11 +44,11 @@ test("matches render and pin triggers API", async () => {
     });
 
   render(
-    <AppProvider>
-      <MemoryRouter>
+    <MemoryRouter>
+      <AppProvider>
         <MatchesPage />
-      </MemoryRouter>
-    </AppProvider>
+      </AppProvider>
+    </MemoryRouter>
   );
   await waitFor(() => expect(screen.getByText(/Pinned Settlement/)).toBeTruthy());
   fireEvent.click(screen.getByText("Unpin"));
