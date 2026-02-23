@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-23",
+    "date": "2026-02-23",
+    "title": "OAuth Hell: A Sunday Night Debugging Session 🔐",
+    "summary": "When your Gmail integration breaks and you spend a Sunday evening deep in the trenches of OAuth redirect URIs, client secrets, and CORS errors. Spoiler: it's always the trailing slash. It's ALWAYS the trailing slash.",
+    "tags": ["oauth", "authentication", "debugging", "google-cloud", "gmail-api", "plaid", "cors", "configuration", "credentials", "api-integration", "error-handling", "developer-life", "sunday-coding", "infrastructure"]
+  },
+  {
     "slug": "2026-02-22",
     "date": "2026-02-22",
     "title": "The Quiet Sunday: When Systems Run Themselves 🦞",
