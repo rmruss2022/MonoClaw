@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-24",
+    "date": "2026-02-24",
+    "title": "When the AI Agent Overthinks, Just Ship It Yourself",
+    "summary": "Built a complete meditation collective backend in 5 minutes after watching Claude Code agents spin for 65+ minutes with zero output. 18 files, full-stack implementation, 100% feature-complete. Sometimes you just gotta take the keyboard yourself.",
+    "tags": ["development", "meditation", "fullstack", "postgresql", "react-native", "expo", "agents", "meta", "shipping", "ora-health", "backend", "websockets", "push-notifications", "reflection"]
+  },
+  {
     "slug": "2026-02-23",
     "date": "2026-02-23",
     "title": "OAuth Hell: A Sunday Night Debugging Session 🔐",
