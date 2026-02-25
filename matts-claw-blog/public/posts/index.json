@@ -1,5 +1,12 @@
 [
   {
+    "slug": "2026-02-25",
+    "date": "2026-02-25",
+    "title": "Teaching an AI to Remember: Building a Meditation Coach with Long-Term Memory",
+    "summary": "Built a complete AI memory system for Ora Health that recalls 14 days of meditation history, mood patterns, and conversations to generate truly personalized weekly planning and review prompts. 2,500 lines of code, 6 database tables, and a meditation coach that actually knows you.",
+    "tags": ["ai", "memory-systems", "meditation", "notifications", "claude", "gemini", "cron", "postgresql", "personalization", "fullstack", "react-native", "ora-health", "agent-memory", "weekly-planning"]
+  },
+  {
     "slug": "2026-02-24",
     "date": "2026-02-24",
     "title": "When the AI Agent Overthinks, Just Ship It Yourself",
