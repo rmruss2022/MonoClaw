@@ -76,7 +76,7 @@
 - **Raves Dashboard** (port 3004) - Social/events tracking
 - **Moltbook Dashboard** (port 18794) - [Purpose TBD]
 - **Arbitrage Scanner** (port 3005) - Prediction market arbitrage detection
-- **Vision Controller** (port 18799 + backend 9000) - Gesture detection via webcam
+- **Vision Controller** (port 18799 + backend 9000) - Gesture detection via webcam + gesture window manager (headless mode via `run_headless.py`)
 
 **Automation:**
 - **Daily Blog Generator** - Cron job at 6:00 PM, auto-generates & deploys posts
@@ -84,6 +84,37 @@
 - **LaunchAgents** - Activity tracker, token collector, voice server
 
 ## Projects Active
+
+**Doctor Strange Hand Lab** (Feb 21-28, 2026)
+- Status: Complete, both modes working
+- Location: `/Users/matthew/.openclaw/workspace/doctor-strange-hand-lab/`
+- Stack: Vanilla JS + Vite + Three.js + MediaPipe HandLandmarker
+- Run: `cd doctor-strange-hand-lab && npm run dev`
+- Features:
+  - **Arcane Shield mode**: Hand-tracked mandala with petal rosettes, star polygons, seed-of-life, glyphs, shards, particle system, UnrealBloomPass bloom
+  - **Astral Wireframe mode**: GPU-deformed icosahedron following index finger, second hand pinch controls spin speed, palm rotation controls morph, pinch-then-open-palm triggers fragment explosion with shockwaves/tendrils/particle trails
+  - Two-hand resonance bridge (lightning arc between hands in shield mode)
+  - CSS `mix-blend-mode: screen` composites effects over webcam feed
+- Architecture: `main.js` (renderer + frame loop), `handTracking.js` (MediaPipe), `shieldScene.js` (mandala), `wireframeScene.js` (artifact + explosion)
+
+**Gesture Window Manager** (Feb 28, 2026)
+- Status: Backend complete, tested and working
+- Location: `/Users/matthew/.openclaw/workspace/vision-controller/`
+- Run: `cd vision-controller/backend && python3 -u run_headless.py` (from Terminal.app for camera access)
+- Test: `python3 test_snap.py` (interactive snap testing, no camera needed)
+- Stack: Python + FastAPI + MediaPipe + OpenCV + PyObjC (Quartz + Accessibility API)
+- Features:
+  - Headless mode captures webcam directly via OpenCV, no browser needed
+  - Point (1 finger) = select frontmost window + full screen snap
+  - Peace (2 fingers) = half screen snap (hand position = left/right)
+  - Four fingers = quarter screen snap (hand position = quadrant)
+  - Open palm = deselect window
+  - Auto-detects all monitors via Quartz CGDisplayBounds
+  - Moves/resizes windows via macOS Accessibility API (AXUIElement)
+- Display layout: External 1920x1080 at (-1920,0) LEFT, MacBook 1512x982 at (0,0) RIGHT
+- Permissions: Camera + Accessibility required in System Settings
+- New files: `position_tracker.py`, `window_manager.py`, `window_mode_state_machine.py`, `run_headless.py`, `test_snap.py`
+- Extends existing vision-controller (added `four_fingers` gesture, window mode in main.py WebSocket handler)
 
 **Arbitrage Scanner** (Feb 17-18, 2026)
 - Status: MVP complete, needs matcher.ts rewrite
