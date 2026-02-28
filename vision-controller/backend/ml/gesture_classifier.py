@@ -13,7 +13,7 @@ class GestureClassifier:
     """Classifies hand gestures from MediaPipe landmarks"""
     
     def __init__(self):
-        self.gesture_names = ['peace', 'thumbs_up', 'fist', 'point', 'stop', 'unknown']
+        self.gesture_names = ['peace', 'thumbs_up', 'fist', 'point', 'stop', 'four_fingers', 'unknown']
         self.custom_gestures = {}
         self.load_custom_gestures()
         
@@ -247,6 +247,13 @@ class GestureClassifier:
             },
             'stop': {
                 'thumb': True,
+                'index': True,
+                'middle': True,
+                'ring': True,
+                'pinky': True
+            },
+            'four_fingers': {
+                'thumb': False,
                 'index': True,
                 'middle': True,
                 'ring': True,

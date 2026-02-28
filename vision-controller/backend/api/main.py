@@ -47,8 +47,10 @@ from ml.gesture_classifier import GestureClassifier
 from ml.combo_detector import ComboDetector
 from api.config_manager import ConfigManager
 from api.action_dispatcher import ActionDispatcher
+from api.window_mode_state_machine import WindowModeStateMachine
 
 ACTION_GESTURE_WHITELIST = {"peace"}
+WINDOW_MODE_GESTURES = {"point", "peace", "four_fingers", "stop", "fist", "thumbs_up"}
 MAX_ACTION_EVENTS = 200
 PEACE_REPEAT_INTERVAL_SEC = 1.2
 KEYBOARD_ACTION_COOLDOWN_SEC = 5.0
@@ -74,6 +76,8 @@ async def lifespan(app: FastAPI):
     app.state.action_dispatcher = ActionDispatcher()
     app.state.action_events = []
     app.state.keyboard_last_run_by_gesture = {}
+    app.state.window_mode_enabled = True
+    app.state.window_state_machine = WindowModeStateMachine()
     
     # Load combo definitions from config
     config_path = CONFIG_DIR / "gestures.json"
@@ -366,6 +370,29 @@ async def test_action_execution(gesture: str):
     )
 
 
+@app.post("/api/window-mode/toggle")
+async def toggle_window_mode():
+    """Toggle window management mode on/off."""
+    app.state.window_mode_enabled = not app.state.window_mode_enabled
+    if not app.state.window_mode_enabled:
+        app.state.window_state_machine = WindowModeStateMachine()
+    status = "enabled" if app.state.window_mode_enabled else "disabled"
+    print(f"[WindowMode] {status}")
+    return {"window_mode": status}
+
+
+@app.get("/api/window-mode/status")
+async def window_mode_status():
+    """Return current window mode state."""
+    sm = app.state.window_state_machine
+    return {
+        "enabled": app.state.window_mode_enabled,
+        "state": sm.state,
+        "selected_pid": sm.selected_pid,
+        "selected_owner": sm.selected_owner,
+    }
+
+
 @app.get("/api/config/gestures")
 async def get_gesture_config():
     """Return full gesture configuration from backend source of truth."""
@@ -579,6 +606,22 @@ async def websocket_endpoint(websocket: WebSocket):
                         
                         # Reset no-gesture counter if we detect a hand
                         no_gesture_count = 0
+
+                        if app.state.window_mode_enabled and current_confidence >= confidence_threshold:
+                            wm_result = app.state.window_state_machine.process(
+                                current_gesture,
+                                current_confidence,
+                                landmarks_tuples,
+                            )
+                            wm_action = wm_result.get("action", "none")
+                            if wm_action not in ("none", "debouncing", "holding", "snap_held"):
+                                print(f"[WindowMode] {wm_result}")
+                                await manager.send_personal_message({
+                                    "type": "window_mode",
+                                    "data": wm_result,
+                                    "gesture": current_gesture,
+                                    "timestamp": int(time.time() * 1000),
+                                }, websocket)
 
                         gesture_changed = current_gesture != last_gesture
                         confidence_high = current_confidence >= confidence_threshold

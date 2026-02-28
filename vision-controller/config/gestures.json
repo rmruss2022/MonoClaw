@@ -7,5 +7,17 @@
       "space"
     ]
   },
+  "point": {
+    "action": "window_management",
+    "description": "Select window + full screen snap"
+  },
+  "four_fingers": {
+    "action": "window_management",
+    "description": "Quarter screen snap (quadrant by hand position)"
+  },
+  "stop": {
+    "action": "window_management",
+    "description": "Deselect window"
+  },
   "combos": []
 }
