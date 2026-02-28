@@ -1,22 +1,17 @@
 #!/usr/bin/env node
 /**
  * NYC Raves Dashboard Server
- * NOW WITH SQLITE PERSISTENCE
+ * SQLite persistence with week-based grouping
  */
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
-const db = require('./lib/db');
+const { getAllEvents, getEventsByWeek, getAllWeeks, getEventsGroupedByWeek } = require('./lib/db');
 
-const PORT = 18793;
+const PORT = 3004;
 const ROOT_DIR = __dirname;
 const START_TIME = Date.now();
-
-// Request logging
-const requestLog = [];
-const MAX_LOG_SIZE = 50;
 
 const mimeTypes = {
   '.html': 'text/html',
@@ -40,40 +35,56 @@ const server = http.createServer((req, res) => {
   
   const cleanUrl = req.url.split('?')[0];
   
-  // API endpoints
+  // API: Get all events
   if (cleanUrl === '/api/events' && req.method === 'GET') {
-    db.getRecentEvents(100, (err, events) => {
-      if (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
-        return;
-      }
+    try {
+      const events = getAllEvents();
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true, events }));
-    });
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
     return;
   }
   
-  if (cleanUrl === '/api/events' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => body += chunk);
-    req.on('end', () => {
-      try {
-        const event = JSON.parse(body);
-        db.insertEvent(event, (err, id) => {
-          if (err) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: err.message }));
-            return;
-          }
-          res.writeHead(201, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true, id }));
-        });
-      } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid JSON' }));
-      }
-    });
+  // API: Get events grouped by week
+  if (cleanUrl === '/api/events/by-week' && req.method === 'GET') {
+    try {
+      const grouped = getEventsGroupedByWeek();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, weeks: grouped }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+  
+  // API: Get all week start dates
+  if (cleanUrl === '/api/weeks' && req.method === 'GET') {
+    try {
+      const weeks = getAllWeeks();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, weeks }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+  
+  // API: Get events for a specific week
+  if (cleanUrl.startsWith('/api/events/week/') && req.method === 'GET') {
+    try {
+      const weekStart = cleanUrl.replace('/api/events/week/', '');
+      const events = getEventsByWeek(weekStart);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, weekStart, events }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
     return;
   }
   
@@ -81,8 +92,6 @@ const server = http.createServer((req, res) => {
   let filePath = path.join(ROOT_DIR, cleanUrl === '/' ? 'dashboard.html' : cleanUrl);
   const extname = path.extname(filePath);
   const contentType = mimeTypes[extname] || 'application/octet-stream';
-  
-  console.log(`[${new Date().toISOString()}] Request: ${req.url} -> ${filePath}`);
   
   fs.readFile(filePath, (err, content) => {
     if (err) {
@@ -106,5 +115,6 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`🎵 NYC Raves Dashboard running at http://127.0.0.1:${PORT}`);
   console.log(`✅ SQLite persistence enabled`);
+  console.log(`📅 Week-based grouping active`);
   console.log(`   Uptime: ${Math.floor((Date.now() - START_TIME) / 1000)}s`);
 });

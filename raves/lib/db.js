@@ -1,123 +1,111 @@
-const sqlite3 = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', 'raves.db');
+const dbPath = path.join(__dirname, '..', 'events.db');
+const db = new Database(dbPath);
 
-let db = null;
+// Create events table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS events (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    venue TEXT NOT NULL,
+    date TEXT NOT NULL,
+    dayOfWeek TEXT NOT NULL,
+    genres TEXT NOT NULL,
+    description TEXT NOT NULL,
+    topPick INTEGER DEFAULT 0,
+    week_start TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
 
-function getDb() {
-  if (!db) {
-    db = new sqlite3.Database(DB_PATH);
-    
-    // Create tables
-    db.run(`
-      CREATE TABLE IF NOT EXISTS events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        venue TEXT,
-        date TEXT,
-        time TEXT,
-        genres TEXT,
-        artists TEXT,
-        url TEXT,
-        source TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    
-    db.run(`
-      CREATE TABLE IF NOT EXISTS event_views (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id INTEGER,
-        viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (event_id) REFERENCES events(id)
-      )
-    `);
-    
-    db.run(`
-      CREATE INDEX IF NOT EXISTS idx_events_date ON events(date);
-      CREATE INDEX IF NOT EXISTS idx_events_genres ON events(genres);
-    `);
-  }
-  
-  return db;
+  CREATE INDEX IF NOT EXISTS idx_date ON events(date);
+  CREATE INDEX IF NOT EXISTS idx_week_start ON events(week_start);
+  CREATE INDEX IF NOT EXISTS idx_venue ON events(venue);
+`);
+
+// Helper: Get Monday of the week for a given date
+function getWeekStart(dateString) {
+  const date = new Date(dateString);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+  const monday = new Date(date.setDate(diff));
+  return monday.toISOString().split('T')[0];
 }
 
-function insertEvent(event, callback) {
-  const db = getDb();
-  db.run(`
-    INSERT INTO events (name, venue, date, time, genres, artists, url, source)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
+// Insert or update event
+function upsertEvent(event) {
+  const weekStart = getWeekStart(event.date);
+  const stmt = db.prepare(`
+    INSERT INTO events (id, name, venue, date, dayOfWeek, genres, description, topPick, week_start)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      venue = excluded.venue,
+      date = excluded.date,
+      dayOfWeek = excluded.dayOfWeek,
+      genres = excluded.genres,
+      description = excluded.description,
+      topPick = excluded.topPick,
+      week_start = excluded.week_start
+  `);
+  
+  stmt.run(
+    event.id,
     event.name,
     event.venue,
     event.date,
-    event.time,
-    JSON.stringify(event.genres || []),
-    JSON.stringify(event.artists || []),
-    event.url,
-    event.source || 'manual'
-  ], function(err) {
-    if (callback) callback(err, this.lastID);
-  });
+    event.dayOfWeek,
+    JSON.stringify(event.genres),
+    event.description,
+    event.topPick ? 1 : 0,
+    weekStart
+  );
 }
 
-function getRecentEvents(limit = 50, callback) {
-  const db = getDb();
-  db.all(`
-    SELECT 
-      id,
-      name,
-      venue,
-      date,
-      time,
-      genres,
-      artists,
-      url,
-      source,
-      created_at
-    FROM events
-    ORDER BY date DESC, created_at DESC
-    LIMIT ?
-  `, [limit], (err, rows) => {
-    if (err) {
-      callback(err, []);
-      return;
-    }
-    
-    // Parse JSON fields
-    const events = rows.map(row => ({
-      ...row,
-      genres: JSON.parse(row.genres || '[]'),
-      artists: JSON.parse(row.artists || '[]')
-    }));
-    
-    callback(null, events);
-  });
+// Get all events
+function getAllEvents() {
+  const stmt = db.prepare('SELECT * FROM events ORDER BY date ASC, name ASC');
+  const rows = stmt.all();
+  return rows.map(row => ({
+    ...row,
+    genres: JSON.parse(row.genres),
+    topPick: row.topPick === 1
+  }));
 }
 
-function searchEvents(query, callback) {
-  const db = getDb();
-  const searchTerm = `%${query}%`;
-  
-  db.all(`
-    SELECT *
-    FROM events
-    WHERE name LIKE ? OR venue LIKE ? OR genres LIKE ? OR artists LIKE ?
-    ORDER BY date DESC
-    LIMIT 50
-  `, [searchTerm, searchTerm, searchTerm, searchTerm], callback);
+// Get events by week
+function getEventsByWeek(weekStart) {
+  const stmt = db.prepare('SELECT * FROM events WHERE week_start = ? ORDER BY date ASC, name ASC');
+  const rows = stmt.all(weekStart);
+  return rows.map(row => ({
+    ...row,
+    genres: JSON.parse(row.genres),
+    topPick: row.topPick === 1
+  }));
 }
 
-function logEventView(eventId, callback) {
-  const db = getDb();
-  db.run('INSERT INTO event_views (event_id) VALUES (?)', [eventId], callback);
+// Get all weeks
+function getAllWeeks() {
+  const stmt = db.prepare('SELECT DISTINCT week_start FROM events ORDER BY week_start DESC');
+  return stmt.all().map(row => row.week_start);
+}
+
+// Get events grouped by week
+function getEventsGroupedByWeek() {
+  const weeks = getAllWeeks();
+  return weeks.map(weekStart => ({
+    weekStart,
+    events: getEventsByWeek(weekStart)
+  }));
 }
 
 module.exports = {
-  getDb,
-  insertEvent,
-  getRecentEvents,
-  searchEvents,
-  logEventView
+  db,
+  getWeekStart,
+  upsertEvent,
+  getAllEvents,
+  getEventsByWeek,
+  getAllWeeks,
+  getEventsGroupedByWeek
 };

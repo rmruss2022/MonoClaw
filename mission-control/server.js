@@ -424,6 +424,7 @@ async function getSystemData() {
         const cronJobs = getCronJobs();
         const statusData = await parseOpenClawStatus();
         const pressure = await getPressureSignals();
+        const codeStats = await getCodeStats();
         
         return {
             gateway: {
@@ -567,9 +568,15 @@ async function getSystemData() {
                 },
                 {
                     name: 'NYC Raves',
-                    description: '24 events this week, genre filtering',
-                    url: 'http://127.0.0.1:18793',
+                    description: 'SQLite-powered • Week-based views • 38 events',
+                    url: 'http://127.0.0.1:3004',
                     icon: '🎧'
+                },
+                {
+                    name: 'To-Do Studio',
+                    description: 'Tagged tasks • Cached backlog • Top tags view',
+                    url: 'http://127.0.0.1:3000',
+                    icon: '📋'
                 },
                 {
                     name: 'Token Usage Tracker',
@@ -634,6 +641,7 @@ async function getSystemData() {
             ],
             cron: cronJobs,
             pressure,
+            codeStats,
             warnings: [
                 'State dir readable by others (chmod 700 recommended)',
                 'Reverse proxy headers not trusted (gateway.trustedProxies empty)'

@@ -2,9 +2,18 @@
 
 A dashboard system that tracks weekly rave recommendations from the #rave-rex Discord channel in NYC Rave Girls server.
 
+**✨ Now with SQLite persistence and week-based grouping!**
+
 ## Components
 
-### 1. Parser (`parser.js`)
+### 1. Database (`lib/db.js`)
+SQLite persistent storage with:
+- Event storage with automatic week calculation
+- Week-based querying
+- Genre filtering
+- Fast lookups with indexes
+
+### 2. Parser (`parser.js`)
 Extracts event data from Discord message format:
 - Event name and venue
 - Date and day of week
@@ -12,34 +21,61 @@ Extracts event data from Discord message format:
 - Description with lineup/vibe info
 - Top pick detection
 
-### 2. Dashboard (`dashboard.html`)
+### 3. Dashboard (`dashboard.html`)
 Visual interface showing:
-- Weekly events organized by day
-- Genre filtering
-- Top picks highlighting
-- Event details modal
+- **Week navigation** - Browse events by week
+- Events grouped by day
+- Genre filtering (multi-select)
+- Event counts per week/day
 - Mobile-responsive design
 
-### 3. Server (`server.js`)
-HTTP server on port **18793**: http://localhost:18793
+### 4. Server (`server.js`)
+HTTP server on port **3004**: http://localhost:3004
 
-### 4. Data (`events.json`)
-Structured JSON with all parsed events
+API endpoints:
+- `GET /api/events` - All events
+- `GET /api/events/by-week` - Events grouped by week
+- `GET /api/weeks` - List of all weeks
+- `GET /api/events/week/:weekStart` - Events for specific week
+
+### 5. Data Storage
+- `events.db` - SQLite database (persistent)
+- `events.json` - Original JSON source (for migration)
 
 ## Setup
 
-1. Parser installed at: `~/.openclaw/workspace/raves/parser.js`
-2. Server auto-starts and monitored by `jobs/health-check.sh`
-3. Dashboard accessible at http://localhost:18793
+1. **Install dependencies**: `npm install better-sqlite3`
+2. **Migrate existing data**: `node migrate-to-sqlite.js`
+3. **Start server**: `node server.js` (or use LaunchAgent)
+4. **Dashboard**: http://localhost:3004
 
 ## Updating Events
 
-### Manual Update
+### Adding New Events
+Create a script to add new events (see `add-new-events.js` for example):
+
+```javascript
+const { upsertEvent } = require('./lib/db');
+
+upsertEvent({
+  id: "unique-id",
+  name: "Event Name",
+  venue: "Venue Name",
+  date: "2026-02-27",
+  dayOfWeek: "Friday",
+  genres: ["House", "Techno"],
+  description: "Event description...",
+  topPick: false
+});
+```
+
+### Manual Update (Legacy)
 When you see a new weekly post in #rave-rex:
 
 1. Save the message text to `raves/raw-message.txt`
 2. Run parser: `cd raves && node parser.js raw-message.txt > events.json`
-3. Dashboard auto-refreshes
+3. Run migration: `node migrate-to-sqlite.js`
+4. Dashboard auto-refreshes
 
 ### Automatic Update (Future)
 To enable automatic parsing of new Discord messages:

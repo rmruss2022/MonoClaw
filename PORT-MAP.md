@@ -8,7 +8,9 @@
 |-------|------------------------|---------------------------------------------|-----------|
 | 18790 | Voice Server           | `~/.openclaw/voice-server/`                | ✅ Running |
 | 18791 | Jobs Tracker           | `~/.openclaw/workspace/jobs/`              | ✅ Running |
-| 18793 | Raves                  | `~/.openclaw/workspace/raves/`             | ✅ Running |
+| 3000  | To-Do Studio (Frontend)| `~/Desktop/todo-service/frontend/`         | ✅ Running |
+| 3004  | Raves (SQLite)         | `~/.openclaw/workspace/raves/`             | ✅ Running |
+| 4001  | To-Do Studio (Backend) | `~/Desktop/todo-service/backend/`          | ✅ Running |
 | 18794 | Token Tracker          | `~/.openclaw/workspace/tokens/`            | ✅ Running |
 | 18795 | Mission Control        | `~/.openclaw/workspace/mission-control/`   | ✅ Running |
 | 18796 | Activity Hub           | `~/.openclaw/workspace/activity-hub/`      | ✅ Running |

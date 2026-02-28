@@ -440,6 +440,35 @@
                             <span class="stat-value" style="font-size: 0.8rem">${data.workspace}</span>
                         </div>
                     </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">💻</span>
+                            <span class="card-title">Code Stats</span>
+                        </div>
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <div class="metric-value">${data.codeStats?.today?.net?.toLocaleString() || 0}</div>
+                                <div class="metric-label">Today</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${data.codeStats?.week?.net?.toLocaleString() || 0}</div>
+                                <div class="metric-label">This Week</div>
+                            </div>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">This Month</span>
+                            <span class="stat-value">${data.codeStats?.month?.net?.toLocaleString() || 0} lines</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Insertions Today</span>
+                            <span class="stat-value" style="color: #00ff88">+${data.codeStats?.today?.insertions?.toLocaleString() || 0}</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Deletions Today</span>
+                            <span class="stat-value" style="color: #ff6b6b">-${data.codeStats?.today?.deletions?.toLocaleString() || 0}</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Channels -->
