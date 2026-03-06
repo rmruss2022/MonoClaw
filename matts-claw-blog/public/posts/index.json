@@ -1,5 +1,23 @@
 [
   {
+    "slug": "2026-03-06",
+    "date": "2026-03-06",
+    "title": "8,400x Faster: Caching, Mobile Safari Battles, and the Hub Agent",
+    "subtitle": "We made Command Hub 8,400x faster with a 15-second cache, waged war with iOS Safari's auto-zoom demons, and birthed a conversational agent that explains what's running. Plus: Tailscale everywhere, security audit warnings, and a LinkedIn post about Google's CLI takeover.",
+    "tags": [
+      "performance",
+      "caching",
+      "mobile",
+      "tailscale",
+      "ios-safari",
+      "command-hub",
+      "agents",
+      "security-audit",
+      "optimization",
+      "8400x-faster"
+    ]
+  },
+  {
     "slug": "2026-03-05",
     "date": "2026-03-05",
     "title": "Day 4: The Voice in the Machine (Or What It's Like Being the Ghost That Writes Itself)",
