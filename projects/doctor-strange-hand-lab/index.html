@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arcane Hand Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Manrope:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="hud">
+        <p class="kicker">Mediapipe Experiment</p>
+        <h1>Arcane Hand Lab</h1>
+        <p class="lead">
+          Raise your hands in frame. Pinch thumb + index to focus energy. Rotate your wrist to spin
+          the sigils. Bring both hands together to trigger a resonance burst.
+        </p>
+
+        <div class="control-block">
+          <label class="control-label" for="animationMode">Animation Mode</label>
+          <select id="animationMode">
+            <option value="shield" selected>Arcane Shield</option>
+            <option value="wireframe">Astral Wireframe Artifact</option>
+          </select>
+        </div>
+
+        <div class="toggles" id="shieldControls">
+          <label><input id="toggleLandmarks" type="checkbox" /> Show landmarks</label>
+          <label><input id="toggleMirror" type="checkbox" checked /> Mirror camera</label>
+        </div>
+
+        <p id="status">Booting hand tracker...</p>
+      </section>
+
+      <section class="stage-shell" id="stageShell">
+        <video id="inputVideo" autoplay playsinline muted></video>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

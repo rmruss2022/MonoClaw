@@ -1,0 +1,36 @@
+{
+  "generatedAt": 1772698246321,
+  "generatedAtISO": "2026-03-05T08:10:46.321Z",
+  "expiresAt": 1772701846321,
+  "services": {
+    "total": 9,
+    "online": 8,
+    "offline": 1,
+    "details": {
+      "Gateway": true,
+      "Voice Server": true,
+      "Token Tracker": true,
+      "Mission Control": true,
+      "Activity Hub": true,
+      "Vision Controller": false,
+      "MonoClaw": true,
+      "Raves": true,
+      "Arbitrage Scanner": true
+    }
+  },
+  "cron": {
+    "total": 0,
+    "healthy": 0,
+    "failed": 0,
+    "disabled": 0,
+    "recentErrors": []
+  },
+  "activityDb": {
+    "sizeInMB": 2.55,
+    "totalRecords": 1125,
+    "ageInDays": "0.0"
+  },
+  "session": null,
+  "model": "unknown",
+  "pressure": null
+}

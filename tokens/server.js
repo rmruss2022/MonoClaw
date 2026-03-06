@@ -100,7 +100,7 @@ const server = http.createServer((req, res) => {
     }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`📊 Token Usage Dashboard running at http://127.0.0.1:${PORT}`);
     console.log(`✅ Using SQLite database: ${DB_FILE}`);
 });

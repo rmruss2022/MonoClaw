@@ -1,0 +1,30 @@
+{
+  "date": "2026-03-05",
+  "timestamp": 1772694236252,
+  "stats": {
+    "total_activities": 9513,
+    "oldest_timestamp": 1771926296815,
+    "newest_timestamp": 1772694226093,
+    "unique_categories": 4,
+    "unique_agents": 2914
+  },
+  "categories": [
+    {
+      "category": "command",
+      "count": 9288
+    },
+    {
+      "category": "file-create",
+      "count": 132
+    },
+    {
+      "category": "file-read",
+      "count": 80
+    },
+    {
+      "category": "file-edit",
+      "count": 13
+    }
+  ],
+  "note": "Daily snapshot before cleanup"
+}

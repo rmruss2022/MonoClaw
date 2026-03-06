@@ -1,0 +1,34 @@
+{
+  "date": "2026-02-15",
+  "timestamp": 1771124840518,
+  "stats": {
+    "total_activities": 25807,
+    "oldest_timestamp": 1770574117099,
+    "newest_timestamp": 1771124671329,
+    "unique_categories": 5,
+    "unique_agents": 1948
+  },
+  "categories": [
+    {
+      "category": "command",
+      "count": 19424
+    },
+    {
+      "category": "file-read",
+      "count": 3107
+    },
+    {
+      "category": "file-create",
+      "count": 1725
+    },
+    {
+      "category": "file-edit",
+      "count": 1549
+    },
+    {
+      "category": "test",
+      "count": 2
+    }
+  ],
+  "note": "Daily snapshot before cleanup"
+}

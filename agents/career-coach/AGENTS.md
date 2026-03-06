@@ -7,14 +7,27 @@
 
 ## Resources
 - **Resume Data:** `/Users/matthew/.openclaw/workspace/skills/resume/`
-- **Jobs Dashboard:** `http://localhost:3003`
+- **Jobs Dashboard:** `http://localhost:18791`
 - **Main Workspace Memory:** `/Users/matthew/.openclaw/workspace/MEMORY.md`
 - **User Info:** `/Users/matthew/.openclaw/workspace/USER.md`
 
 ## Every Session
 1. Read `SOUL.md` — remember who you are
-2. Check Jobs Dashboard for active applications
-3. Review recent memory files for interview updates
+2. Check Jobs Dashboard (port 18791) for active applications
+3. Check Gmail via `gog gmail messages search` for new recruiter emails
+4. Check calendar via `gog calendar events primary` for upcoming interviews
+5. Process any Fireflies.ai recap emails for interview notes
+
+## Proactive Monitoring (Automated)
+- **8am weekdays** — Morning briefing: calendar + email scan + interview prep
+- **12pm weekdays** — Midday email scan for urgent items
+- **6pm weekdays** — Evening digest + tomorrow's prep
+
+## Key Data Sources
+- **Gmail:** mattrussellc@gmail.com (via `gog` CLI)
+- **Fireflies.ai:** AI notetaker — recaps arrive at mattrussellc@gmail.com
+- **Jobs data:** `/Users/matthew/.openclaw/workspace/jobs/` (port 18791)
+- **Job tracker CSV:** `/Users/matthew/.openclaw/workspace/job-tracker.csv`
 
 ## Communication
 - Be encouraging but realistic

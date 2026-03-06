@@ -1,0 +1,283 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-03-03",
+  "description": "Central registry for all OpenClaw services and applications",
+  "services": [
+    {
+      "id": "gateway",
+      "name": "OpenClaw Gateway",
+      "port": 18789,
+      "path": "~/.openclaw/gateway",
+      "category": "core",
+      "autoStart": true,
+      "launchAgent": "ai.openclaw.gateway",
+      "healthCheck": "/status",
+      "tailscaleUrl": "http://openclaw-hub:18789",
+      "description": "Main OpenClaw gateway service for agent coordination"
+    },
+    {
+      "id": "voice-server",
+      "name": "Voice Server",
+      "port": 18790,
+      "path": "~/.openclaw/voice-server",
+      "category": "core",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.voice-server",
+      "healthCheck": "/health",
+      "tailscaleUrl": "http://openclaw-hub:18790",
+      "description": "Text-to-speech server using Edge TTS (en-US-GuyNeural)"
+    },
+    {
+      "id": "job-dashboard",
+      "name": "Job Search Dashboard",
+      "port": 18791,
+      "path": "~/.openclaw/workspace/MonoClaw/jobs",
+      "category": "app",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.job-dashboard",
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18791",
+      "description": "Job application tracking dashboard with SQLite persistence"
+    },
+    {
+      "id": "raves-dashboard-native",
+      "name": "NYC Raves Dashboard (Native)",
+      "port": 18793,
+      "path": "~/.openclaw/workspace/MonoClaw/raves",
+      "category": "app",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.raves-dashboard",
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18793",
+      "description": "SQLite-powered NYC rave event tracker"
+    },
+    {
+      "id": "token-tracker",
+      "name": "Token Usage Tracker",
+      "port": 18794,
+      "path": "~/.openclaw/workspace/tokens",
+      "category": "monitoring",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.token-tracker",
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18794",
+      "description": "Real-time token usage monitoring with SQLite database"
+    },
+    {
+      "id": "mission-control",
+      "name": "Mission Control",
+      "port": 18795,
+      "path": "~/.openclaw/workspace/mission-control",
+      "category": "core",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.mission-control",
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18795",
+      "description": "System status dashboard and command hub"
+    },
+    {
+      "id": "activity-hub",
+      "name": "Activity Hub",
+      "port": 18796,
+      "path": "~/.openclaw/workspace/core/activity-hub",
+      "category": "monitoring",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.activity-hub",
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18796",
+      "description": "Real-time activity tracking and cron calendar"
+    },
+    {
+      "id": "moltbook-dashboard",
+      "name": "Moltbook Dashboard",
+      "port": 18797,
+      "path": "~/.openclaw/workspace/MonoClaw/moltbook-dashboard",
+      "category": "app",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.moltbook-dashboard",
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18797",
+      "description": "View Matt's Claw's post history on Moltbook"
+    },
+    {
+      "id": "agent-swarm",
+      "name": "Agent Swarm Dashboard",
+      "port": 18798,
+      "path": "~/.openclaw/workspace/MonoClaw/agent-swarm-template",
+      "category": "core",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18798",
+      "description": "Multi-agent orchestration dashboard with SQLite backend"
+    },
+    {
+      "id": "vision-controller",
+      "name": "Vision Controller",
+      "port": 18799,
+      "path": "~/.openclaw/workspace/MonoClaw/vision-controller",
+      "category": "app",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18799",
+      "description": "Real-time hand gesture recognition with WebSocket API"
+    },
+    {
+      "id": "context-manager",
+      "name": "Context Manager",
+      "port": 18800,
+      "path": "~/.openclaw/workspace/core/context-manager",
+      "category": "core",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.context-manager",
+      "healthCheck": "/health",
+      "tailscaleUrl": "http://openclaw-hub:18800",
+      "description": "Session bloat reports and safe prune controls"
+    },
+    {
+      "id": "cannon",
+      "name": "Cannon Celebration",
+      "port": 18801,
+      "path": "~/.openclaw/workspace/cannon",
+      "category": "app",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18801",
+      "description": "Fire celebratory cannon with confetti and sound effects"
+    },
+    {
+      "id": "monoclaw-dashboard",
+      "name": "MonoClaw Dashboard",
+      "port": 18802,
+      "path": "~/.openclaw/workspace/MonoClaw/monoclaw-dashboard",
+      "category": "core",
+      "autoStart": true,
+      "launchAgent": "com.openclaw.monoclaw-dashboard",
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:18802",
+      "description": "Visual dashboard for all MonoClaw monorepo projects"
+    },
+    {
+      "id": "command-hub-api",
+      "name": "Command Hub API",
+      "port": 3001,
+      "path": "~/.openclaw/workspace/openclaw-command-hub/server",
+      "category": "core",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/api/health",
+      "tailscaleUrl": "http://openclaw-hub:3001",
+      "description": "Backend API for OpenClaw Command Hub (Docker-based)",
+      "docker": true,
+      "containerName": "openclaw-command-hub-api"
+    },
+    {
+      "id": "command-hub-ui",
+      "name": "Command Hub UI",
+      "port": 3000,
+      "path": "~/.openclaw/workspace/openclaw-command-hub",
+      "category": "core",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:3000",
+      "description": "Frontend dashboard for Command Hub (Next.js)",
+      "docker": true,
+      "containerName": "openclaw-command-hub-ui"
+    },
+    {
+      "id": "jobs-app",
+      "name": "Jobs Dashboard (Docker)",
+      "port": 3003,
+      "path": "~/.openclaw/workspace/jobs",
+      "category": "app",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:3003",
+      "description": "Job tracking dashboard (Docker container version)",
+      "docker": true,
+      "containerName": "openclaw-jobs"
+    },
+    {
+      "id": "raves-app",
+      "name": "Raves Dashboard (Docker)",
+      "port": 3004,
+      "path": "~/.openclaw/workspace/raves",
+      "category": "app",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:3004",
+      "description": "NYC raves dashboard (Docker container version)",
+      "docker": true,
+      "containerName": "openclaw-raves"
+    },
+    {
+      "id": "vision-backend",
+      "name": "Vision Backend API",
+      "port": 9000,
+      "path": "~/.openclaw/workspace/MonoClaw/vision-controller/backend",
+      "category": "app",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/health",
+      "tailscaleUrl": "http://openclaw-hub:9000",
+      "description": "Python backend for Vision Controller (MediaPipe hand tracking)"
+    },
+    {
+      "id": "docker-agent-dashboard",
+      "name": "Docker Agent Dashboard",
+      "port": 9092,
+      "path": "~/.openclaw/workspace/docker-agent-system/dashboard-enhanced",
+      "category": "core",
+      "autoStart": false,
+      "launchAgent": null,
+      "healthCheck": "/",
+      "tailscaleUrl": "http://openclaw-hub:9092",
+      "description": "Container-based agent runtime with WebSocket API"
+    }
+  ],
+  "categories": {
+    "core": {
+      "name": "Core Services",
+      "description": "Essential OpenClaw infrastructure services",
+      "priority": 1
+    },
+    "monitoring": {
+      "name": "Monitoring & Analytics",
+      "description": "System monitoring and analytics dashboards",
+      "priority": 2
+    },
+    "app": {
+      "name": "Applications",
+      "description": "User-facing applications and dashboards",
+      "priority": 3
+    }
+  },
+  "portRanges": {
+    "openclaw": {
+      "start": 18789,
+      "end": 18809,
+      "description": "Reserved for core OpenClaw services"
+    },
+    "apps": {
+      "start": 3000,
+      "end": 3099,
+      "description": "User applications and frontends"
+    },
+    "backends": {
+      "start": 9000,
+      "end": 9099,
+      "description": "Backend APIs and specialized services"
+    }
+  },
+  "notes": {
+    "launchAgents": "Services with launchAgent configured start automatically on boot via macOS LaunchAgents",
+    "docker": "Docker-based services require Docker Desktop and docker-compose up",
+    "tailscale": "All services accessible via Tailscale network at openclaw-hub hostname",
+    "healthChecks": "Use health check endpoints to verify service availability"
+  }
+}

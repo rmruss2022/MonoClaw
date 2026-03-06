@@ -1,0 +1,318 @@
+{
+  "lastUpdated": "2026-02-06T20:37:00-05:00",
+  "companies": [
+    {
+      "id": "daylight",
+      "name": "Daylight",
+      "url": "https://godaylight.com",
+      "description": "DeFi network on solar panel/battery systems - homeowners earn when feeding energy to grid. Raised $75M (Framework Ventures)",
+      "recruiter": "Marty",
+      "stage": "Post-Interview",
+      "stageNum": 2,
+      "status": "active",
+      "urgent": true,
+      "action": "Follow up after interview",
+      "process": "Unknown",
+      "profitable": null,
+      "inOffice": null,
+      "vibe": "Excited ⭐",
+      "interviews": [
+        {
+          "date": "2026-02-05",
+          "type": "Call with Jason Badeaux",
+          "completed": true,
+          "notes": "Discussed OpenClaw and integrations I've built — now have a live demo to show him",
+          "interviewer": {
+            "name": "Jason Badeaux",
+            "linkedin": null,
+            "summary": "Jason Badeaux - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:45.532Z"
+          }
+        },
+        {
+          "date": "2026-02-06",
+          "time": "14:00",
+          "type": "Interview with Sean (Principal Eng)",
+          "completed": true,
+          "notes": "Discussed company, PPV model. Role is Python/Django backend - client onboarding, regulatory compliance, heavy backend work",
+          "interviewer": {
+            "name": "Sean",
+            "linkedin": null,
+            "summary": "Sean - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:47.670Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "metronome",
+      "name": "Metronome AI",
+      "description": "Usage-based billing platform",
+      "recruiter": "Travis",
+      "stage": "Schedule Coding Interview",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": true,
+      "action": "Schedule coding interview",
+      "process": "Technical coding/debugging → Hiring eng manager team fit → Virtual onsite (coding, system design, values/culture)",
+      "profitable": true,
+      "inOffice": "2-3 days",
+      "vibe": null,
+      "interviews": [
+        {
+          "date": "2026-02-03",
+          "type": "Recruiter Call",
+          "completed": true,
+          "notes": "Recruiter call completed",
+          "interviewer": {
+            "name": "Recruiter Call",
+            "linkedin": null,
+            "summary": "Recruiter Call - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:49.708Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "trillium",
+      "name": "Trillium",
+      "description": "",
+      "recruiter": "Michael",
+      "stage": "Schedule Interview",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": true,
+      "action": "Schedule interview call",
+      "process": "1hr senior software (Galen Chang) → HR screen → 1hr VP of Eng system design → Onsite 4hr",
+      "profitable": null,
+      "inOffice": null,
+      "notes": "",
+      "interviews": []
+    },
+    {
+      "id": "heron",
+      "name": "Heron AI",
+      "description": "AI document intake - ingest docs into CRM with analysis & metadata",
+      "recruiter": "Meg",
+      "stage": "Post-Interview",
+      "stageNum": 2,
+      "status": "active",
+      "urgent": true,
+      "action": "Hear back from Kelsey",
+      "process": "HR → Coding challenge",
+      "profitable": null,
+      "inOffice": null,
+      "vibe": "Very excited ⭐⭐",
+      "interviews": [
+        {
+          "date": "2026-02-04",
+          "time": "13:30",
+          "type": "Call with Meg Marks",
+          "completed": true,
+          "notes": "Meg introduced company - really great",
+          "interviewer": {
+            "name": "Meg Marks",
+            "linkedin": null,
+            "summary": "Meg Marks - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:51.728Z"
+          }
+        },
+        {
+          "date": "2026-02-05",
+          "time": "16:00",
+          "type": "Call with Kelsey (Head of HR)",
+          "completed": true,
+          "notes": "Discussed company, role, exploratory feel. Sent nice follow-up email",
+          "interviewer": {
+            "name": "Kelsey",
+            "linkedin": null,
+            "summary": "Kelsey - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:53.763Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "figure",
+      "name": "Figure",
+      "description": "Blockchain/investing platform",
+      "recruiter": "Tyler",
+      "stage": "Scheduling Interview",
+      "stageNum": 2,
+      "status": "active",
+      "urgent": false,
+      "action": "Wait for interview confirmation",
+      "process": "HR screen → Coding → Team",
+      "profitable": null,
+      "inOffice": null,
+      "vibe": "Wait and see 🤷",
+      "interviews": [
+        {
+          "date": "2026-02-05",
+          "time": "14:30",
+          "type": "Intro call with Tyler Ichikawa",
+          "completed": true,
+          "notes": "Discussed role and what's involved",
+          "interviewer": {
+            "name": "Tyler Ichikawa",
+            "linkedin": null,
+            "summary": "Tyler Ichikawa - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:55.802Z"
+          }
+        },
+        {
+          "date": "2026-02-06",
+          "type": "Submitted availability",
+          "completed": true,
+          "notes": "Sent times for interview next week"
+        }
+      ]
+    },
+    {
+      "id": "cerula",
+      "name": "Cerula",
+      "description": "Healthcare - cancer patients",
+      "recruiter": "Steph",
+      "stage": "Take-home Submitted",
+      "stageNum": 3,
+      "status": "active",
+      "urgent": true,
+      "action": "Hear back from Steph on take-home",
+      "process": "Call → Take-home → ?",
+      "profitable": null,
+      "inOffice": null,
+      "vibe": "Very great ⭐⭐",
+      "interviews": [
+        {
+          "date": "2026-02-04",
+          "time": "16:00",
+          "type": "Call with Steph Shaw",
+          "completed": true,
+          "notes": "Deep mission, helping cancer patients",
+          "interviewer": {
+            "name": "Steph Shaw",
+            "linkedin": null,
+            "summary": "Steph Shaw - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:57.901Z"
+          }
+        },
+        {
+          "date": "2026-02-06",
+          "type": "Take-home submitted",
+          "completed": true,
+          "notes": "Completed and submitted take-home assignment"
+        }
+      ]
+    },
+    {
+      "id": "ramp",
+      "name": "Ramp",
+      "description": "",
+      "recruiter": "John",
+      "stage": "Waiting",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": false,
+      "action": "Wait for the 9th",
+      "process": "",
+      "profitable": null,
+      "inOffice": null,
+      "notes": "",
+      "interviews": []
+    },
+    {
+      "id": "overjet",
+      "name": "Overjet",
+      "description": "Dentist AI CRM",
+      "recruiter": "Tahmid",
+      "stage": "Follow Up",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": false,
+      "action": "Follow up with Tahmid",
+      "process": "",
+      "profitable": null,
+      "inOffice": null,
+      "notes": "",
+      "interviews": []
+    },
+    {
+      "id": "eliseai",
+      "name": "EliseAI",
+      "description": "AI Assistant for Property Management",
+      "recruiter": "Yennaedo",
+      "stage": "Follow Up",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": false,
+      "action": "Follow up with Yennaedo",
+      "process": "Internal recruiter → Technical Zoom → System Design → Onsite",
+      "profitable": null,
+      "inOffice": null,
+      "notes": "",
+      "interviews": []
+    },
+    {
+      "id": "numeric",
+      "name": "Numeric AI",
+      "description": "Financial Data Automation for Accounting Teams",
+      "recruiter": "Yennaedo",
+      "stage": "Follow Up",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": false,
+      "action": "Follow up with Yennaedo",
+      "process": "4 stages",
+      "profitable": null,
+      "inOffice": null,
+      "notes": "",
+      "interviews": []
+    },
+    {
+      "id": "rain",
+      "name": "Rain.xyz",
+      "description": "Web3 NFT Infrastructure and APIs",
+      "recruiter": "Brady",
+      "stage": "Follow Up",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": false,
+      "action": "Follow up with Brady",
+      "process": "Intro call → CoderPad eval → System design → Founders discussion",
+      "profitable": null,
+      "inOffice": null,
+      "notes": "",
+      "interviews": []
+    },
+    {
+      "id": "yarn",
+      "name": "Yarn",
+      "description": "",
+      "recruiter": "Shirly",
+      "stage": "Post-Intro",
+      "stageNum": 1,
+      "status": "active",
+      "urgent": false,
+      "action": "",
+      "process": "",
+      "profitable": null,
+      "inOffice": null,
+      "vibe": "Too early to tell",
+      "interviews": [
+        {
+          "date": "2026-02-05",
+          "time": "10:00",
+          "type": "Intro call with Shirly",
+          "completed": true,
+          "notes": "Intro call",
+          "interviewer": {
+            "name": "Shirly",
+            "linkedin": null,
+            "summary": "Shirly - LinkedIn profile not found",
+            "researchedAt": "2026-02-07T02:48:59.929Z"
+          }
+        }
+      ]
+    }
+  ]
+}

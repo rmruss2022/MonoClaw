@@ -10,11 +10,10 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 # Services to check (name:port:restart_script:health_endpoint)
 SERVICES=(
     "Voice Server:18790:/Users/matthew/.openclaw/voice-server/server.js:/health"
-    "Job Dashboard:18791:/Users/matthew/.openclaw/workspace/jobs/server.js:/"
-    "Raves Dashboard:18793:/Users/matthew/.openclaw/workspace/raves/server.js:/"
     "Token Tracker:18794:/Users/matthew/.openclaw/workspace/tokens/server.js:/"
-    "Mission Control:18795:/Users/matthew/.openclaw/workspace/mission-control/server.js:/"
-    "Context Manager:18800:/Users/matthew/.openclaw/workspace/context-manager/server.js:/"
+    "Context Manager:18792:/Users/matthew/.openclaw/workspace/core/context-manager/server.js:/"
+    "Raves Dashboard:3004:/Users/matthew/.openclaw/workspace/projects/raves/server.js:/"
+    "Mission Control:18795:/Users/matthew/.openclaw/workspace/core/mission-control/server.js:/"
 )
 
 RESTARTS=0
@@ -60,11 +59,10 @@ if [ $RESTARTS -eq 0 ]; then
     echo "✅ All services healthy — no restarts needed."
     echo ""
     echo "- Voice Server (18790) ✓"
-    echo "- Job Dashboard (18791) ✓"
-    echo "- Raves Dashboard (18793) ✓"
-    echo "- Token Tracker (18794) ✓"
+    echo "- Token Tracker (18791) ✓"
+    echo "- Context Manager (18792) ✓"
+    echo "- Raves Dashboard (3004) ✓"
     echo "- Mission Control (18795) ✓"
-    echo "- Context Manager (18800) ✓"
 else
     echo "[$TIMESTAMP] ⚠️  Restarted $RESTARTS service(s)" >> "$LOG_FILE"
     echo "⚠️  Health check complete — $RESTARTS service(s) restarted."

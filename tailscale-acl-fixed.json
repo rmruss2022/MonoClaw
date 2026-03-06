@@ -1,0 +1,35 @@
+{
+  "hosts": {
+    "openclaw-hub": "100.107.120.47",
+    "matthew-iphone": "100.104.4.13"
+  },
+  "acls": [
+    {
+      "action": "accept",
+      "src": ["matthew-iphone"],
+      "dst": [
+        "openclaw-hub:18789",
+        "openclaw-hub:18790",
+        "openclaw-hub:18794",
+        "openclaw-hub:18795",
+        "openclaw-hub:18796",
+        "openclaw-hub:18799",
+        "openclaw-hub:18800",
+        "openclaw-hub:18802",
+        "openclaw-hub:3004",
+        "openclaw-hub:3005"
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "src": "matthew-iphone",
+      "accept": [
+        "openclaw-hub:18795",
+        "openclaw-hub:18796",
+        "openclaw-hub:3004",
+        "openclaw-hub:3005"
+      ]
+    }
+  ]
+}

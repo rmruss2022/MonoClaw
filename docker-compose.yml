@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Backend API for Command Hub
+  command-hub-api:
+    image: node:22-alpine
+    container_name: openclaw-command-hub-api
+    working_dir: /app
+    command: node index.js
+    ports:
+      - "0.0.0.0:3001:3001"
+    environment:
+      - NODE_ENV=production
+      - HOME=/app
+    volumes:
+      - ./core/openclaw-command-hub/server:/app
+      - ~/.openclaw:/app/.openclaw:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - openclaw-net
+
+  # Frontend Dashboard (when UI is built)
+  command-hub-ui:
+    image: node:22-alpine
+    container_name: openclaw-command-hub-ui
+    working_dir: /app
+    command: npm run dev
+    ports:
+      - "0.0.0.0:3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://openclaw-hub:3001
+    volumes:
+      - ./core/openclaw-command-hub:/app
+    depends_on:
+      - command-hub-api
+    restart: unless-stopped
+    networks:
+      - openclaw-net
+
+  # Mission Control Dashboard
+  mission-control:
+    image: node:22-alpine
+    container_name: openclaw-mission-control
+    working_dir: /app
+    command: node server.js
+    ports:
+      - "0.0.0.0:18795:18795"
+    volumes:
+      - ./core/mission-control:/app
+      - ~/.openclaw:/root/.openclaw:ro
+    restart: unless-stopped
+    networks:
+      - openclaw-net
+
+  # Activity Hub
+  activity-hub:
+    image: node:22-alpine
+    container_name: openclaw-activity-hub
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "0.0.0.0:18796:18796"
+    volumes:
+      - ./core/activity-hub:/app
+      - ~/.openclaw:/root/.openclaw
+    restart: unless-stopped
+    networks:
+      - openclaw-net
+
+  # MonoClaw Dashboard
+  monoclaw:
+    image: node:22-alpine
+    container_name: openclaw-monoclaw
+    working_dir: /app
+    command: sh -c "npm install && npm start"
+    ports:
+      - "0.0.0.0:18802:18802"
+    volumes:
+      - ./MonoClaw:/app
+      - ~/.openclaw:/root/.openclaw
+    restart: unless-stopped
+    networks:
+      - openclaw-net
+
+  # Raves Dashboard
+  raves:
+    image: node:22-alpine
+    container_name: openclaw-raves
+    working_dir: /app
+    command: sh -c "npm install && node server.js"
+    ports:
+      - "0.0.0.0:3004:3004"
+    volumes:
+      - ./projects/raves:/app
+      - ~/.openclaw:/root/.openclaw
+    restart: unless-stopped
+    networks:
+      - openclaw-net
+
+  # Jobs Dashboard  
+  jobs:
+    image: node:22-alpine
+    container_name: openclaw-jobs
+    working_dir: /app
+    command: sh -c "npm install && npm start"
+    ports:
+      - "0.0.0.0:3003:3003"
+    volumes:
+      - ./projects/jobs:/app
+      - ~/.openclaw:/root/.openclaw
+    restart: unless-stopped
+    networks:
+      - openclaw-net
+
+networks:
+  openclaw-net:
+    driver: bridge
+    
+volumes:
+  openclaw-data:
+    driver: local

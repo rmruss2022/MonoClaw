@@ -49,7 +49,7 @@ const server = http.createServer((req, res) => {
     });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`🎉 Cannon Celebration System running at http://127.0.0.1:${PORT}`);
     console.log(`   Fire the cannon: http://127.0.0.1:${PORT}/`);
     console.log(`   Quick launcher: http://127.0.0.1:${PORT}/launcher.html`);

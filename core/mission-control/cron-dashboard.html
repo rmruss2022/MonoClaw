@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron Dashboard - Mission Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        .header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+        }
+        .header h1 {
+            font-size: 24px;
+            color: #00ff88;
+            margin-bottom: 5px;
+        }
+        .header .subtitle {
+            font-size: 12px;
+            color: #666;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .stat-card .label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-card.success .value { color: #00ff88; }
+        .stat-card.error .value { color: #ff4444; }
+        .stat-card.warning .value { color: #ffaa00; }
+        
+        .cron-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .cron-item {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .cron-item.error {
+            border-color: #ff4444;
+        }
+        .cron-item.success {
+            border-color: #00ff88;
+        }
+        .cron-header {
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .cron-header:hover {
+            background: #222;
+        }
+        .cron-header .left {
+            flex: 1;
+        }
+        .cron-header .name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .cron-header .meta {
+            font-size: 12px;
+            color: #888;
+        }
+        .cron-header .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-badge.success {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        .status-badge.error {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+        .status-badge.disabled {
+            background: rgba(136, 136, 136, 0.2);
+            color: #888;
+        }
+        .expand-icon {
+            font-size: 20px;
+            color: #666;
+            transition: transform 0.2s;
+        }
+        .cron-item.expanded .expand-icon {
+            transform: rotate(90deg);
+        }
+        .cron-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .cron-item.expanded .cron-details {
+            max-height: 1000px;
+        }
+        .cron-details-content {
+            padding: 15px;
+            border-top: 1px solid #333;
+            background: #151515;
+        }
+        .detail-row {
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .detail-row .label {
+            color: #888;
+            display: inline-block;
+            min-width: 150px;
+        }
+        .detail-row .value {
+            color: #e0e0e0;
+        }
+        .logs-section {
+            margin-top: 15px;
+            padding: 10px;
+            background: #0a0a0a;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: 'SF Mono', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .logs-section pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #ff4444;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+        .last-update {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 11px;
+            color: #666;
+            background: #1a1a1a;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🦞 Cron Job Dashboard</h1>
+        <div class="subtitle">Real-time monitoring of all scheduled tasks</div>
+    </div>
+
+    <div class="stats-grid" id="stats">
+        <div class="stat-card">
+            <div class="label">Total Jobs</div>
+            <div class="value">--</div>
+        </div>
+        <div class="stat-card success">
+            <div class="label">Healthy</div>
+            <div class="value">--</div>
+        </div>
+        <div class="stat-card error">
+            <div class="label">Failing</div>
+            <div class="value">--</div>
+        </div>
+        <div class="stat-card warning">
+            <div class="label">Disabled</div>
+            <div class="value">--</div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">Loading cron jobs...</div>
+    <div class="cron-list" id="cronList" style="display: none;"></div>
+
+    <div class="last-update" id="lastUpdate">Last updated: Never</div>
+
+    <script>
+        function formatDate(ms) {
+            if (!ms) return 'Never';
+            const date = new Date(ms);
+            const now = Date.now();
+            const diff = now - ms;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+            
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDuration(ms) {
+            if (!ms) return '--';
+            if (ms < 1000) return `${ms}ms`;
+            if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+            return `${(ms / 60000).toFixed(1)}m`;
+        }
+
+        function formatSchedule(schedule) {
+            if (schedule.kind === 'cron') {
+                return `Cron: ${schedule.expr}`;
+            } else if (schedule.kind === 'every') {
+                const mins = schedule.everyMs / 60000;
+                if (mins < 60) return `Every ${mins} min`;
+                const hours = mins / 60;
+                return `Every ${hours} hr`;
+            } else if (schedule.kind === 'at') {
+                return `At: ${formatDate(schedule.at)}`;
+            }
+            return 'Unknown';
+        }
+
+        function toggleCronDetails(id) {
+            const item = document.getElementById(`cron-${id}`);
+            item.classList.toggle('expanded');
+        }
+
+        async function loadCrons() {
+            try {
+                const response = await fetch('/api/cron');
+                const data = await response.json();
+                
+                // Update stats
+                const total = data.jobs.length;
+                const healthy = data.jobs.filter(j => j.enabled && j.state?.lastStatus === 'ok').length;
+                const failing = data.jobs.filter(j => j.enabled && j.state?.lastStatus === 'error').length;
+                const disabled = data.jobs.filter(j => !j.enabled).length;
+                
+                const statsCards = document.querySelectorAll('.stat-card .value');
+                statsCards[0].textContent = total;
+                statsCards[1].textContent = healthy;
+                statsCards[2].textContent = failing;
+                statsCards[3].textContent = disabled;
+                
+                // Sort by most recent run
+                const sorted = data.jobs.sort((a, b) => {
+                    const aTime = a.state?.lastRunAtMs || 0;
+                    const bTime = b.state?.lastRunAtMs || 0;
+                    return bTime - aTime;
+                });
+                
+                // Render cron list
+                const list = document.getElementById('cronList');
+                list.innerHTML = sorted.map(job => {
+                    const status = !job.enabled ? 'disabled' : (job.state?.lastStatus === 'ok' ? 'success' : 'error');
+                    const hasError = job.state?.lastError || job.state?.lastDeliveryError;
+                    
+                    return `
+                        <div class="cron-item ${status}" id="cron-${job.id}">
+                            <div class="cron-header" onclick="toggleCronDetails('${job.id}')">
+                                <div class="left">
+                                    <div class="name">${job.name}</div>
+                                    <div class="meta">
+                                        ${formatSchedule(job.schedule)} • Last run: ${formatDate(job.state?.lastRunAtMs)}
+                                        ${job.state?.lastDurationMs ? ` • ${formatDuration(job.state.lastDurationMs)}` : ''}
+                                    </div>
+                                </div>
+                                <div class="status">
+                                    <span class="status-badge ${status}">${status}</span>
+                                    <span class="expand-icon">›</span>
+                                </div>
+                            </div>
+                            <div class="cron-details">
+                                <div class="cron-details-content">
+                                    <div class="detail-row">
+                                        <span class="label">Job ID:</span>
+                                        <span class="value">${job.id}</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="label">Agent:</span>
+                                        <span class="value">${job.agentId}</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="label">Next run:</span>
+                                        <span class="value">${formatDate(job.state?.nextRunAtMs)}</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="label">Consecutive errors:</span>
+                                        <span class="value">${job.state?.consecutiveErrors || 0}</span>
+                                    </div>
+                                    ${job.state?.lastRunStatus ? `
+                                    <div class="detail-row">
+                                        <span class="label">Last run status:</span>
+                                        <span class="value">${job.state.lastRunStatus}</span>
+                                    </div>
+                                    ` : ''}
+                                    ${hasError ? `
+                                    <div class="logs-section">
+                                        <strong>Error Log:</strong>
+                                        <pre>${job.state?.lastError || job.state?.lastDeliveryError}</pre>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('loading').style.display = 'none';
+                list.style.display = 'flex';
+                
+                document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+                console.error('Failed to load crons:', error);
+                document.getElementById('loading').textContent = 'Error loading cron jobs';
+            }
+        }
+
+        // Load immediately and refresh every 10 seconds
+        loadCrons();
+        setInterval(loadCrons, 10000);
+    </script>
+</body>
+</html>
