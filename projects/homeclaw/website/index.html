@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeClaw — Your Home. Your Models. Your Data.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #1a1a24;
+      --border: #2a2a3a;
+      --accent: #7c5cff;
+      --accent2: #00e5ff;
+      --accent3: #ff5c8a;
+      --text: #f0f0ff;
+      --muted: #888899;
+      --success: #00e5a0;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(124,92,255,0.15);
+    }
+    .logo {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-weight: 800; font-size: 1.2rem; letter-spacing: -0.03em;
+    }
+    .logo-icon { font-size: 1.5rem; }
+    .logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      color: var(--muted); text-decoration: none; font-size: 0.9rem; font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent);
+      color: white; border: none; padding: 0.5rem 1.2rem;
+      border-radius: 8px; font-weight: 600; font-size: 0.9rem;
+      cursor: pointer; text-decoration: none;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 800px; height: 800px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,92,255,0.12) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: rgba(124,92,255,0.15);
+      border: 1px solid rgba(124,92,255,0.3);
+      border-radius: 100px;
+      padding: 0.4rem 1rem;
+      font-size: 0.8rem; font-weight: 600; color: var(--accent);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    h1 {
+      font-size: clamp(2.8rem, 7vw, 6rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      max-width: 900px;
+      margin-bottom: 1.5rem;
+    }
+    h1 .gradient {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(1rem, 2vw, 1.25rem);
+      color: var(--muted);
+      max-width: 600px;
+      margin-bottom: 2.5rem;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 4rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: white; border: none; padding: 0.9rem 2rem;
+      border-radius: 12px; font-weight: 700; font-size: 1rem;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+      box-shadow: 0 0 30px rgba(124,92,255,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(124,92,255,0.5); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text); border: 1px solid var(--border);
+      padding: 0.9rem 2rem; border-radius: 12px;
+      font-weight: 600; font-size: 1rem;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── PUCK VISUAL ── */
+    .puck-demo {
+      position: relative;
+      width: 280px; height: 280px;
+      margin: 0 auto 2rem;
+    }
+    .puck-body {
+      width: 180px; height: 180px;
+      background: linear-gradient(145deg, #1e1e2e, #12121c);
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow:
+        0 0 0 1px rgba(124,92,255,0.1),
+        0 20px 60px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .puck-logo { font-size: 3.5rem; }
+    .puck-ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 2px solid transparent;
+      animation: spin-ring 4s linear infinite;
+    }
+    .puck-ring-1 {
+      width: 210px; height: 210px;
+      border-top-color: var(--accent);
+      border-right-color: rgba(124,92,255,0.2);
+      animation-duration: 6s;
+    }
+    .puck-ring-2 {
+      width: 250px; height: 250px;
+      border-bottom-color: var(--accent2);
+      border-left-color: rgba(0,229,255,0.2);
+      animation-direction: reverse;
+      animation-duration: 9s;
+    }
+    .puck-ring-3 {
+      width: 280px; height: 280px;
+      border-top-color: rgba(255,92,138,0.3);
+      animation-duration: 14s;
+    }
+    @keyframes spin-ring {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+    .puck-led {
+      position: absolute;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent);
+      bottom: 30px; left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 0 12px var(--accent);
+      animation: led-pulse 2s ease-in-out infinite;
+    }
+    @keyframes led-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 12px var(--accent); }
+      50% { opacity: 0.6; box-shadow: 0 0 6px var(--accent); }
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex; gap: 3rem; justify-content: center; flex-wrap: wrap;
+      padding: 2rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-size: 2rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .stat-label { font-size: 0.8rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── SECTIONS ── */
+    section { padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    h2 {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800; letter-spacing: -0.03em;
+      margin-bottom: 1rem; line-height: 1.1;
+    }
+    .section-sub {
+      color: var(--muted); font-size: 1.1rem;
+      max-width: 600px; margin-bottom: 3rem; line-height: 1.7;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .flow {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0; position: relative;
+    }
+    .flow::before {
+      content: '';
+      position: absolute;
+      top: 40px; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), var(--border), transparent);
+    }
+    .flow-step {
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+    .flow-num {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.2rem;
+      font-weight: 800; font-size: 1rem; color: var(--accent);
+      position: relative; z-index: 1;
+    }
+    .flow-step h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .flow-step p { font-size: 0.875rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── TABBED FEATURES ── */
+    .features-tabs {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; align-items: center; gap: 0.4rem;
+    }
+    .tab-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(124,92,255,0.05);
+    }
+    .tab-btn.active {
+      background: rgba(124,92,255,0.15);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .tab-emoji { font-size: 1rem; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feature-card:hover { border-color: rgba(124,92,255,0.4); transform: translateY(-3px); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .feature-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .feature-tag {
+      display: inline-block;
+      margin-top: 0.6rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.65rem; font-weight: 600;
+      background: rgba(124,92,255,0.15);
+      color: var(--accent);
+    }
+    .tab-integrations {
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .tab-integrations-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+    .tab-integrations-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .tab-int-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.2rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    /* ── MODES ── */
+    .modes-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 6rem 2rem;
+    }
+    .modes-inner { max-width: 1100px; margin: 0 auto; }
+    .modes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .mode-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .mode-card:hover {
+      border-color: rgba(124,92,255,0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .mode-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.6rem;
+    }
+    .mode-emoji { font-size: 1.5rem; }
+    .mode-name { font-size: 1rem; font-weight: 700; }
+    .mode-trigger {
+      font-size: 0.7rem;
+      color: var(--accent2);
+      font-weight: 500;
+      margin-bottom: 0.6rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mode-actions {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .mode-actions li {
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+    }
+    .mode-actions li::before {
+      content: '>';
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── DEVELOPER SECTION ── */
+    .dev-section { max-width: 1100px; margin: 0 auto; padding: 6rem 2rem; }
+    .code-demos {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .code-demo {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+    }
+    .code-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.8rem 1rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .code-dot:nth-child(1) { background: #ff5f57; }
+    .code-dot:nth-child(2) { background: #febc2e; }
+    .code-dot:nth-child(3) { background: #28c840; }
+    .code-filename { margin-left: 0.5rem; font-size: 0.8rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+    pre {
+      padding: 1.5rem; overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem; line-height: 1.7;
+    }
+    .k { color: #7c5cff; }
+    .s { color: #00e5a0; }
+    .c { color: #888899; font-style: italic; }
+    .f { color: #00e5ff; }
+    .n { color: #ff9d3f; }
+
+    /* ── INTEGRATIONS ── */
+    .integrations-section { background: var(--surface); padding: 5rem 2rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .integrations-inner { max-width: 1100px; margin: 0 auto; }
+    .int-category {
+      margin-bottom: 1.5rem;
+    }
+    .int-category-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+    .integrations-grid {
+      display: flex; flex-wrap: wrap; gap: 0.5rem;
+    }
+    .integration-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.8rem; font-weight: 500; color: var(--text);
+      transition: all 0.2s;
+    }
+    .integration-chip:hover {
+      border-color: var(--accent);
+      background: rgba(124,92,255,0.1);
+      color: var(--accent);
+    }
+    .integration-chip.more {
+      background: transparent; color: var(--accent);
+      border-color: rgba(124,92,255,0.3);
+    }
+
+    /* ── MODEL PICKER ── */
+    .model-section {
+      background: linear-gradient(135deg, rgba(124,92,255,0.05), rgba(0,229,255,0.05));
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .model-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem; margin-top: 2rem;
+    }
+    .model-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem;
+      transition: all 0.2s;
+    }
+    .model-card:hover { border-color: var(--accent2); }
+    .model-card.local { border-color: rgba(0,229,160,0.3); }
+    .model-type {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--success); margin-bottom: 0.5rem;
+    }
+    .model-type.cloud { color: var(--accent2); }
+    .model-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .model-card p { font-size: 0.8rem; color: var(--muted); }
+    .model-privacy {
+      display: flex; align-items: center; gap: 0.4rem;
+      margin-top: 0.8rem; font-size: 0.75rem; color: var(--success);
+    }
+
+    /* ── VS TABLE ── */
+    .vs-table {
+      width: 100%; border-collapse: collapse; margin-top: 2rem;
+      font-size: 0.9rem;
+    }
+    .vs-table th {
+      padding: 1rem; text-align: left;
+      border-bottom: 2px solid var(--border);
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+    }
+    .vs-table th.ours { color: var(--accent); }
+    .vs-table td { padding: 0.9rem 1rem; border-bottom: 1px solid var(--border); }
+    .vs-table tr:last-child td { border-bottom: none; }
+    .vs-table td:first-child { color: var(--muted); font-size: 0.85rem; }
+    .check { color: var(--success); font-weight: 700; }
+    .cross { color: #ff5c8a; }
+    .partial { color: var(--accent2); }
+
+    /* ── PRICING ── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem; margin-top: 2rem;
+    }
+    .pricing-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px; padding: 2rem;
+      position: relative;
+    }
+    .pricing-card.featured {
+      border-color: var(--accent);
+      box-shadow: 0 0 40px rgba(124,92,255,0.15);
+    }
+    .featured-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: white;
+      padding: 0.3rem 1rem; border-radius: 100px;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .price { font-size: 3rem; font-weight: 900; letter-spacing: -0.04em; }
+    .price span { font-size: 1rem; font-weight: 400; color: var(--muted); }
+    .pricing-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .pricing-card .sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 1.5rem; }
+    .pricing-features { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+    .pricing-features li { font-size: 0.9rem; display: flex; gap: 0.6rem; align-items: flex-start; }
+    .pricing-features li::before { content: '\2713'; color: var(--success); font-weight: 700; flex-shrink: 0; }
+    .pricing-btn {
+      display: block; width: 100%; margin-top: 1.5rem;
+      padding: 0.8rem; border-radius: 10px;
+      text-align: center; font-weight: 700; font-size: 0.95rem;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .pricing-btn.primary { background: var(--accent); color: white; }
+    .pricing-btn.primary:hover { opacity: 0.9; }
+    .pricing-btn.outline { border: 1px solid var(--border); color: var(--text); }
+    .pricing-btn.outline:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── MOBILE APP ── */
+    #mobile-app { max-width: 1100px; margin: 0 auto; padding: 6rem 2rem; }
+    .mobile-layout {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 5rem; align-items: center; margin-top: 3rem;
+    }
+    /* Phone mockup */
+    .phone-mockup-wrap { display: flex; justify-content: center; }
+    .phone-frame {
+      width: 260px;
+      background: #0d0d14;
+      border: 2px solid #2a2a3a;
+      border-radius: 40px;
+      padding: 14px;
+      box-shadow: 0 0 0 1px #1a1a24, 0 30px 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.04);
+      position: relative;
+    }
+    .phone-frame::before {
+      content: '';
+      display: block;
+      width: 70px; height: 6px;
+      background: #1a1a24;
+      border-radius: 3px;
+      margin: 0 auto 12px;
+    }
+    .phone-screen {
+      background: #0a0a12;
+      border-radius: 28px;
+      padding: 16px 14px 18px;
+      min-height: 480px;
+      display: flex; flex-direction: column; gap: 12px;
+      overflow: hidden;
+    }
+    .phone-mode-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(124,92,255,0.2);
+      border: 1px solid rgba(124,92,255,0.4);
+      border-radius: 100px;
+      padding: 5px 14px;
+      font-size: 0.75rem; font-weight: 700; color: #c4b5fd;
+      align-self: flex-start;
+    }
+    .phone-pill-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #7c5cff;
+      animation: pulse 2s infinite;
+    }
+    .phone-quick-actions {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px;
+    }
+    .phone-action-btn {
+      background: #1a1a26;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 10px 4px;
+      text-align: center;
+      font-size: 0.6rem; color: #888899;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .phone-action-btn span:first-child { font-size: 1.1rem; }
+    .phone-energy-wrap {
+      background: #111118;
+      border: 1px solid #2a2a3a;
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .phone-energy-label { font-size: 0.6rem; color: #888899; margin-bottom: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .phone-energy-graph {
+      display: flex; align-items: flex-end; gap: 4px; height: 40px;
+    }
+    .energy-bar {
+      flex: 1; border-radius: 3px 3px 0 0;
+      background: linear-gradient(to top, #7c5cff, #00e5ff);
+      opacity: 0.7;
+    }
+    .phone-notif {
+      background: #111118;
+      border: 1px solid #2a2a3a;
+      border-left: 3px solid #00e5a0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.68rem; color: #c0c0d8;
+    }
+    .phone-notif-icon { font-size: 1rem; flex-shrink: 0; }
+    .phone-status-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 2px 0;
+    }
+    .phone-status-time { font-size: 0.6rem; color: #555566; font-family: 'JetBrains Mono', monospace; }
+    .phone-status-icons { font-size: 0.65rem; color: #555566; }
+    /* Feature list */
+    .app-feature-list { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+    .app-feature-list li {
+      display: flex; gap: 0.8rem; align-items: flex-start;
+      font-size: 0.95rem;
+    }
+    .app-feature-list li .feat-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+    .app-feature-list li .feat-text strong { display: block; font-weight: 700; color: var(--text); }
+    .app-feature-list li .feat-text span { font-size: 0.85rem; color: var(--muted); }
+    /* App store badges */
+    .app-store-badges {
+      display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2.5rem;
+    }
+    .store-badge {
+      display: inline-flex; flex-direction: column; align-items: flex-start;
+      background: #111118;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      padding: 0.65rem 1.2rem;
+      text-decoration: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+    .store-badge:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(124,92,255,0.15); }
+    .store-badge .badge-store { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .store-badge .badge-when { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+    .tech-note {
+      margin-top: 2rem;
+      font-size: 0.8rem; color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0.7rem 1rem;
+      background: rgba(124,92,255,0.05);
+      border: 1px solid rgba(124,92,255,0.15);
+      border-radius: 8px;
+      display: inline-block;
+    }
+    @media (max-width: 768px) {
+      .mobile-layout { grid-template-columns: 1fr; gap: 3rem; }
+      .phone-frame { width: 230px; }
+    }
+
+    /* ── CTA ── */
+    .final-cta {
+      text-align: center; padding: 8rem 2rem;
+      background: radial-gradient(ellipse at center, rgba(124,92,255,0.08) 0%, transparent 70%);
+    }
+    .final-cta h2 { font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 1.5rem; }
+    .final-cta p { color: var(--muted); font-size: 1.1rem; max-width: 500px; margin: 0 auto 2.5rem; }
+    .final-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+      gap: 1rem;
+      max-width: 1100px; margin: 0 auto;
+    }
+    .footer-logo { font-weight: 800; font-size: 1.1rem; }
+    .footer-logo span { color: var(--accent); }
+    .footer-links { display: flex; gap: 1.5rem; list-style: none; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { color: var(--muted); font-size: 0.8rem; }
+
+    /* ── FEATURES SIMPLE GRID ── */
+    .features-grid-8 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+    @media (min-width: 900px) {
+      .features-grid-8 { grid-template-columns: repeat(4, 1fr); }
+    }
+    .feature-card-simple {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card-simple::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .feature-card-simple:hover { border-color: rgba(124,92,255,0.4); transform: translateY(-3px); }
+    .feature-card-simple:hover::before { opacity: 1; }
+    .feature-card-emoji { font-size: 1.8rem; margin-bottom: 0.75rem; display: block; }
+    .feature-card-simple h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .feature-card-simple p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+
+    /* ── WHO IT'S FOR ── */
+    .who-section {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 6rem 2rem;
+    }
+    .who-inner { max-width: 1100px; margin: 0 auto; }
+
+    /* ── MAKER SECTION ── */
+    .maker-section {
+      background: linear-gradient(180deg, var(--bg) 0%, #0d0d18 100%);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 6rem 2rem;
+    }
+    .maker-inner { max-width: 1100px; margin: 0 auto; }
+    .maker-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      margin-top: 3rem;
+    }
+    @media (max-width: 900px) { .maker-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .maker-grid { grid-template-columns: 1fr; } }
+    .maker-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+    }
+    .maker-card:hover { border-color: rgba(0,229,255,0.4); transform: translateY(-2px); }
+    .maker-card-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .maker-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .maker-card p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+    .maker-code-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-top: 2.5rem;
+    }
+    @media (max-width: 800px) { .maker-code-row { grid-template-columns: 1fr; } }
+    .maker-code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .maker-code-label {
+      padding: 0.6rem 1rem;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem; font-weight: 600; color: var(--accent2);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .maker-pre {
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem; line-height: 1.7;
+      overflow-x: auto; margin: 0;
+    }
+    .maker-cta-row {
+      display: flex; flex-wrap: wrap; gap: 2rem; justify-content: center;
+      margin-top: 3rem;
+      padding: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+    .maker-stat { text-align: center; font-size: 0.85rem; color: var(--muted); }
+    .maker-stat span { display: block; font-size: 1.6rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent2), var(--success));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .persona-card--featured {
+      border-color: rgba(0,229,255,0.25);
+      background: linear-gradient(135deg, var(--surface) 0%, rgba(0,229,255,0.04) 100%);
+    }
+    .persona-card--featured:hover { border-color: rgba(0,229,255,0.5); }
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+      margin-top: 3rem;
+    }
+    @media (min-width: 1100px) {
+      .persona-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    .persona-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: all 0.2s;
+    }
+    .persona-card:hover {
+      border-color: rgba(124,92,255,0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .persona-icon { font-size: 2.5rem; margin-bottom: 1rem; display: block; }
+    .persona-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.6rem; }
+    .persona-card p { font-size: 0.875rem; color: var(--muted); line-height: 1.65; margin-bottom: 1.25rem; }
+    .persona-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .persona-tag {
+      background: rgba(124,92,255,0.12);
+      border: 1px solid rgba(124,92,255,0.2);
+      border-radius: 100px;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .who-stats-bar {
+      display: flex; gap: 3rem; justify-content: center; flex-wrap: wrap;
+      margin-top: 4rem;
+      padding: 2.5rem 1rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 16px;
+    }
+    .who-stats-bar .stat { text-align: center; }
+    .who-stats-bar .stat-num {
+      font-size: 2rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 0.25rem;
+    }
+    .who-stats-bar .stat-label { font-size: 0.78rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; max-width: 160px; line-height: 1.4; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 1rem; }
+      .nav-links { display: none; }
+      .flow::before { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .features-grid-8 { grid-template-columns: repeat(2, 1fr); }
+      .code-demos { grid-template-columns: 1fr; }
+      .modes-grid { grid-template-columns: 1fr; }
+      .persona-grid { grid-template-columns: repeat(2, 1fr); }
+      footer { flex-direction: column; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .features-grid-8 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <span class="logo-icon">&#x1F99E;</span>
+    <span>Home<span>Claw</span></span>
+  </div>
+  <ul class="nav-links">
+    <li><a href="#how-it-works">How it works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#modes">Modes</a></li>
+    <li><a href="#developer">Developer</a></li>
+    <li><a href="#integrations">Integrations</a></li>
+    <li><a href="#models">Models</a></li>
+    <li><a href="#mobile-app">Mobile App</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+  </ul>
+  <a href="#early-access" class="nav-cta">Join Waitlist &rarr;</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+
+  <div class="puck-demo">
+    <div class="puck-ring puck-ring-3"></div>
+    <div class="puck-ring puck-ring-2"></div>
+    <div class="puck-ring puck-ring-1"></div>
+    <div class="puck-body">
+      <span class="puck-logo">&#x1F99E;</span>
+      <div class="puck-led"></div>
+    </div>
+  </div>
+
+  <div class="hero-badge">
+    <span class="badge-dot"></span>
+    Coming 2026 &middot; Open Source
+  </div>
+
+  <h1>Your home.<br><span class="gradient">Your models.</span><br>Your data.</h1>
+
+  <p class="hero-sub">
+    The AI-native home automation platform built for developers who refuse to hand their private conversations to Amazon, Google, or Apple. Plug in a PuckNode. Connect your own LLM. Own everything.
+  </p>
+
+  <div class="hero-actions">
+    <a href="#early-access" class="btn-primary">Join the Waitlist</a>
+    <a href="https://github.com/homeclaw" class="btn-secondary">&#9733; Star on GitHub</a>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-num">25M+</div>
+    <div class="stat-label">Target developers in the US</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">$49</div>
+    <div class="stat-label">PuckNode starting price</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">Local processing, zero cloud</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">80+</div>
+    <div class="stat-label">Built-in integrations</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">MIT</div>
+    <div class="stat-label">Open source license</div>
+  </div>
+</div>
+
+<!-- WHO IT'S FOR -->
+<div class="who-section">
+  <div class="who-inner">
+    <p class="section-label">Who it's for</p>
+    <h2>Built for the people tired of<br>being the product</h2>
+    <p class="section-sub">2 million households already run local-first smart home software. They proved the demand. We built the product they actually deserve.</p>
+
+    <div class="persona-grid">
+      <div class="persona-card">
+        <span class="persona-icon">&#x1F468;&#x200D;&#x1F4BB;</span>
+        <h3>Developers and Engineers</h3>
+        <p>You have Hue lights, a Nest, and an Echo you don't fully trust. You want clean APIs, real extensibility, and zero data harvesting. Something you can actually build on.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">REST API</span>
+          <span class="persona-tag">Open Source</span>
+          <span class="persona-tag">Self-hosted</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <span class="persona-icon">&#x1F510;</span>
+        <h3>Privacy-First Professionals</h3>
+        <p>Doctors, lawyers, journalists, executives. You have conversations at home that matter. You want voice assistant convenience without the surveillance business model.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">Local-only</span>
+          <span class="persona-tag">No cloud</span>
+          <span class="persona-tag">Auditable</span>
+        </div>
+      </div>
+
+      <div class="persona-card persona-card--featured">
+        <span class="persona-icon">&#x1F6E0;&#xFE0F;</span>
+        <h3>Makers &amp; AI Tinkerers</h3>
+        <p>You don't just use products. You build with them. Wire custom ESP32 sensors into HomeClaw. Write automations in real JavaScript. Turn your workshop, homelab, or grow tent into a HomeClaw-powered system nobody else has built yet.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">ESP32 / ESPHome</span>
+          <span class="persona-tag">MQTT</span>
+          <span class="persona-tag">Ollama</span>
+          <span class="persona-tag">SDK</span>
+          <span class="persona-tag">Open Source</span>
+        </div>
+      </div>
+
+      <div class="persona-card">
+        <span class="persona-icon">🎮</span>
+        <h3>Streamers &amp; Content Creators</h3>
+        <p>You already control lights and alerts for stream. HomeClaw ties your entire home to your stream state — go live triggers your scene, donations pulse your lights, raid alerts shake the room.</p>
+        <div class="persona-tags">
+          <span class="persona-tag">OBS Studio</span>
+          <span class="persona-tag">Twitch</span>
+          <span class="persona-tag">Stream Deck</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="who-stats-bar">
+      <div class="stat">
+        <div class="stat-num">2M+</div>
+        <div class="stat-label">active local-first smart home users globally</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">$537B</div>
+        <div class="stat-label">smart home market size by 2030</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">1M+</div>
+        <div class="stat-label">members in r/selfhosted alone</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">21K</div>
+        <div class="stat-label">open source contributors to Home Assistant in one year</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <p class="section-label">How it works</p>
+  <h2>From plug-in to intelligent<br>home in 15 minutes</h2>
+  <p class="section-sub">No YAML. No cloud accounts. No 40-hour setup. Just plug in, connect to your network, point to your LLM, and start talking to your home.</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <h3>Plug in a PuckNode</h3>
+      <p>Drop it into any outlet. Built-in 3-mic array picks up voice from across the room. USB passthrough so you don't lose the outlet.</p>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <h3>Install HomeClaw Hub</h3>
+      <p>One command on your Mac, Linux box, or Raspberry Pi. Hub auto-discovers PuckNodes on your network.</p>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <h3>Connect your model</h3>
+      <p>Point to Ollama running locally, or any API: OpenAI, Anthropic, Groq, Mistral. Swap models anytime.</p>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <h3>Add your devices</h3>
+      <p>Hue lights, Nest thermostat, Sonos speakers, smart plugs &mdash; connect via 80+ built-in integrations or build your own.</p>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">5</div>
+      <h3>Talk to your home</h3>
+      <p>Natural language understood by a real LLM, not a keyword matcher. &quot;Run my movie night routine&quot; just works.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <p class="section-label">Features</p>
+  <h2>Everything a developer<br>actually wants</h2>
+  <p class="section-sub">Eight categories of intelligence, all running on your hardware, all orchestrated by your own LLM.</p>
+
+  <div class="features-grid-8">
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x1F3B5;</span>
+      <h3>Music that reads the room</h3>
+      <p>Shifts what's playing based on time of day, your calendar, and what you're doing. No manual scene switching.</p>
+      <span class="feature-tag">AI</span>
+    </div>
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x1F4A1;</span>
+      <h3>Circadian lighting</h3>
+      <p>Automatically adjusts color temperature from bright morning white to warm amber at night. Backed by sleep science.</p>
+      <span class="feature-tag">Automation</span>
+    </div>
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x1F321;&#xFE0F;</span>
+      <h3>Comfort on autopilot</h3>
+      <p>Knows when you're arriving home from your calendar. Your home is already at the right temperature when you walk in.</p>
+      <span class="feature-tag">AI</span>
+    </div>
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x1F4C5;</span>
+      <h3>Calendar awareness</h3>
+      <p>Your home knows your schedule. Lights shift for video calls. DND activates before meetings. Thermostat stabilizes for guests.</p>
+      <span class="feature-tag">Integration</span>
+    </div>
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x2705;</span>
+      <h3>Voice task capture</h3>
+      <p>Say it out loud and it goes straight into your task app. Zero friction, completely hands-free.</p>
+      <span class="feature-tag">Productivity</span>
+    </div>
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x1F512;</span>
+      <h3>100% local processing</h3>
+      <p>Wake word detection runs on the device itself. Audio never leaves your network unless you configure a cloud API.</p>
+      <span class="feature-tag">Privacy</span>
+    </div>
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x1F3AE;</span>
+      <h3>Developer-grade APIs</h3>
+      <p>Every device, every event, every state is a REST endpoint. Real-time WebSocket updates. Build whatever you want.</p>
+      <span class="feature-tag">Developer</span>
+    </div>
+
+    <div class="feature-card-simple">
+      <span class="feature-card-emoji">&#x1F3E0;</span>
+      <h3>Presence intelligence</h3>
+      <p>Knows which room you're in and activates the right devices in the right places automatically.</p>
+      <span class="feature-tag">Smart</span>
+    </div>
+  </div>
+
+</section>
+
+<!-- MAKER SECTION -->
+<div class="maker-section">
+  <div class="maker-inner">
+    <p class="section-label">Built for Makers</p>
+    <h2>Your home. Your hardware.<br>Your imagination.</h2>
+    <p class="section-sub">Makers don't just use HomeClaw. They extend it into things we never planned. Here's what's already being built.</p>
+
+    <div class="maker-grid">
+      <div class="maker-card">
+        <div class="maker-card-icon">🌱</div>
+        <h3>Custom sensor networks</h3>
+        <p>Wire any ESP32 or Arduino sensor — soil moisture, CO2, particulates, temperature, UV — into HomeClaw over MQTT. A $4 chip becomes a first-class HomeClaw device.</p>
+      </div>
+      <div class="maker-card">
+        <div class="maker-card-icon">🖨️</div>
+        <h3>3D printer integration</h3>
+        <p>OctoPrint + HomeClaw. Print starts → lights shift, DND on. Print fails → notification + light flash. Long prints scheduled around your energy rate window automatically.</p>
+      </div>
+      <div class="maker-card">
+        <div class="maker-card-icon">🔬</div>
+        <h3>Workshop automation</h3>
+        <p>Laser cutter on → exhaust fan activates, air quality monitoring starts. CNC running → hearing protection reminder. Machine off → 10-minute cooldown fan, then back to normal.</p>
+      </div>
+      <div class="maker-card">
+        <div class="maker-card-icon">🖥️</div>
+        <h3>Homelab integration</h3>
+        <p>Proxmox, TrueNAS, UniFi — all talking to HomeClaw. Server overheating → fan override + alert. UPS on battery → switch to power-save mode. NAS array spinning up → pause the vacuum.</p>
+      </div>
+      <div class="maker-card">
+        <div class="maker-card-icon">⚡</div>
+        <h3>Circuit-level energy monitoring</h3>
+        <p>CT clamps per breaker. HomeClaw knows when the dryer finished, the EV is fully charged, and which room left a space heater on. Granular energy intelligence no commercial system can touch.</p>
+      </div>
+      <div class="maker-card">
+        <div class="maker-card-icon">📡</div>
+        <h3>RF and SDR projects</h3>
+        <p>Weather station data, ADS-B aircraft positions, LoRa sensor nodes — all pipeable into HomeClaw. The RF makers are going to do something here nobody predicted.</p>
+      </div>
+    </div>
+
+    <div class="maker-code-row">
+      <div class="maker-code-block">
+        <div class="maker-code-label">Any sensor → HomeClaw in minutes</div>
+        <pre class="maker-pre"><span class="c"># ESPHome config — CO2 sensor on ESP32</span>
+sensor:
+  - platform: scd4x
+    co2:
+      name: "Office CO2"
+      on_value_range:
+        above: 1000
+        then:
+          - homeassistant.event:  <span class="c"># fires HomeClaw webhook</span>
+              event_type: high_co2_alert</pre>
+      </div>
+      <div class="maker-code-block">
+        <div class="maker-code-label">HomeClaw automation responds in JS</div>
+        <pre class="maker-pre"><span class="k">automation</span>(<span class="s">'high-co2-response'</span>, {
+  <span class="k">trigger</span>: event(<span class="s">'high_co2_alert'</span>),
+  <span class="k">action</span>: <span class="k">async</span> (ctx) => {
+    <span class="k">await</span> ctx.notify(<span class="s">'CO2 is high — opening vent'</span>)
+    <span class="k">await</span> ctx.device(<span class="s">'office-vent'</span>).open()
+    <span class="k">await</span> ctx.lights(<span class="s">'office'</span>).pulse(<span class="s">'#ffaa00'</span>)
+  }
+})</pre>
+      </div>
+    </div>
+
+    <div class="maker-cta-row">
+      <div class="maker-stat"><span>800K+</span> members in r/homeassistant</div>
+      <div class="maker-stat"><span>3,000+</span> community integrations in Home Assistant</div>
+      <div class="maker-stat"><span>$3-10</span> ESP32 chip becomes a HomeClaw device</div>
+      <div class="maker-stat"><span>MIT</span> license — fork it, extend it, ship it</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODES -->
+<div class="modes-section" id="modes">
+  <div class="modes-inner">
+    <p class="section-label">The Modes System</p>
+    <h2>One state configures<br>your entire environment</h2>
+    <p class="section-sub">Every feature connects through HomeClaw's Mode system. Named states that configure lighting, music, climate, security, and notifications &mdash; all at once, automatically.</p>
+
+    <div class="modes-grid">
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F305;</span>
+          <span class="mode-name">Morning</span>
+        </div>
+        <div class="mode-trigger">trigger: wake time from calendar</div>
+        <ul class="mode-actions">
+          <li>Sunrise simulation + circadian lighting begins</li>
+          <li>Morning briefing: schedule, weather, tasks</li>
+          <li>Coffee maker starts automatically</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F3AF;</span>
+          <span class="mode-name">Deep Work</span>
+        </div>
+        <div class="mode-trigger">trigger: calendar block or "focus mode"</div>
+        <ul class="mode-actions">
+          <li>Focus lighting at 5000K, lo-fi music</li>
+          <li>DND on PuckNode LED, surfaces top tasks</li>
+          <li>Notifications silenced, door locked</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F4F9;</span>
+          <span class="mode-name">Meeting</span>
+        </div>
+        <div class="mode-trigger">trigger: 5 min before calendar event</div>
+        <ul class="mode-actions">
+          <li>Video-optimized lighting, music pauses</li>
+          <li>Thermostat holds stable, DND enabled</li>
+          <li>Post-meeting: "Next event at 3pm, 47 min free"</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F319;</span>
+          <span class="mode-name">Evening</span>
+        </div>
+        <div class="mode-trigger">trigger: sunset or configurable time</div>
+        <ul class="mode-actions">
+          <li>Circadian shift: lights warm to 2700K</li>
+          <li>Music shifts to evening playlists</li>
+          <li>Task recap and tomorrow preview</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F634;</span>
+          <span class="mode-name">Sleep</span>
+        </div>
+        <div class="mode-trigger">trigger: bedtime schedule</div>
+        <ul class="mode-actions">
+          <li>All lights off, thermostat to 65-68&deg;F</li>
+          <li>Security armed, doors locked</li>
+          <li>30-min wind-down ramp before activation</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F3D6;&#xFE0F;</span>
+          <span class="mode-name">Weekend</span>
+        </div>
+        <div class="mode-trigger">trigger: Saturday-Sunday, no work events</div>
+        <ul class="mode-actions">
+          <li>Later wake schedule, relaxed lighting</li>
+          <li>Different music profiles loaded</li>
+          <li>Thermostat schedule shifts for leisure</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F6EB;</span>
+          <span class="mode-name">Away</span>
+        </div>
+        <div class="mode-trigger">trigger: last person leaves</div>
+        <ul class="mode-actions">
+          <li>Thermostat setback, security on</li>
+          <li>Lights off, robot vacuum starts</li>
+          <li>Random light schedule simulates occupancy</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F44B;</span>
+          <span class="mode-name">Guest</span>
+        </div>
+        <div class="mode-trigger">trigger: manual or calendar "guests" event</div>
+        <ul class="mode-actions">
+          <li>Guest WiFi isolated from HomeClaw control</li>
+          <li>Common areas managed, private spaces excluded</li>
+          <li>Temperature adjusted for extra occupancy</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F3CB;&#xFE0F;</span>
+          <span class="mode-name">Workout</span>
+        </div>
+        <div class="mode-trigger">trigger: wearable detects exercise</div>
+        <ul class="mode-actions">
+          <li>Energizing music, cooler temperature</li>
+          <li>No interruptions during session</li>
+          <li>Hydration reminder after completion</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F6A8;</span>
+          <span class="mode-name">On-Call</span>
+        </div>
+        <div class="mode-trigger">trigger: PagerDuty integration</div>
+        <ul class="mode-actions">
+          <li>Extended office lighting, alert-ready mode</li>
+          <li>Family DND in other rooms</li>
+          <li>Quiet house except your workspace</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F3AC;</span>
+          <span class="mode-name">Movie Night</span>
+        </div>
+        <div class="mode-trigger">trigger: "movie night" voice command</div>
+        <ul class="mode-actions">
+          <li>Lights dim to 5%, bias lighting on</li>
+          <li>Music off, thermostat holds stable</li>
+          <li>Full DND, no interruptions</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F389;</span>
+          <span class="mode-name">Party</span>
+        </div>
+        <div class="mode-trigger">trigger: "party mode" voice command</div>
+        <ul class="mode-actions">
+          <li>Color scenes + music-reactive lighting</li>
+          <li>DJ Mode manages the queue all night</li>
+          <li>Thermostat adjusted for higher occupancy</li>
+        </ul>
+      </div>
+
+      <div class="mode-card">
+        <div class="mode-header">
+          <span class="mode-emoji">&#x1F6D1;</span>
+          <span class="mode-name">Emergency</span>
+        </div>
+        <div class="mode-trigger">trigger: smoke/CO detector or panic word</div>
+        <ul class="mode-actions">
+          <li>All lights full white immediately</li>
+          <li>Emergency contacts alerted</li>
+          <li>Doors unlocked for evacuation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEVELOPER -->
+<section class="dev-section" id="developer">
+  <p class="section-label">Developer First</p>
+  <h2>Real code. Real APIs.<br>Not YAML.</h2>
+  <p class="section-sub">HomeClaw treats developers as first-class citizens. Full CLI, REST + WebSocket API, and automation scripting in JavaScript. Everything is scriptable, everything is subscribable.</p>
+
+  <div class="code-demos">
+    <div class="code-demo">
+      <div class="code-header">
+        <div class="code-dot"></div>
+        <div class="code-dot"></div>
+        <div class="code-dot"></div>
+        <span class="code-filename">terminal</span>
+      </div>
+      <pre><span class="c"># Control devices from any terminal</span>
+$ <span class="f">homeclaw</span> lights office <span class="s">--brightness 80</span> <span class="s">--kelvin 4000</span>
+<span class="c">&#x2713; Office lights set to 80%, 4000K</span>
+
+$ <span class="f">homeclaw</span> mode <span class="s">deep-work</span>
+<span class="c">&#x2713; Deep Work mode activated
+  &gt; Lights: 5000K focus profile
+  &gt; Music: lo-fi instrumental
+  &gt; DND: enabled on all PuckNodes</span>
+
+$ <span class="f">homeclaw</span> status
+<span class="n">Mode:</span>     Deep Work
+<span class="n">Rooms:</span>    Office (occupied), Kitchen (empty)
+<span class="n">Climate:</span>  72&deg;F &rarr; target 71&deg;F
+<span class="n">Music:</span>    lo-fi beats &mdash; Spotify
+<span class="n">Next:</span>     Standup in 47 minutes
+
+$ <span class="f">homeclaw</span> webhook list
+<span class="n">1.</span> github/pr-merged  &rarr; lights.flash(green)
+<span class="n">2.</span> github/ci-failed  &rarr; lights.flash(red)
+<span class="n">3.</span> pagerduty/on-call &rarr; mode.set(on-call)</pre>
+    </div>
+
+    <div class="code-demo">
+      <div class="code-header">
+        <div class="code-dot"></div>
+        <div class="code-dot"></div>
+        <div class="code-dot"></div>
+        <span class="code-filename">deploy-celebration.js</span>
+      </div>
+      <pre><span class="c">// Celebrate successful deploys with your home</span>
+<span class="k">import</span> { HomeClaw } <span class="k">from</span> <span class="s">'@homeclaw/sdk'</span>
+
+<span class="k">const</span> hc = <span class="k">new</span> <span class="f">HomeClaw</span>({ host: <span class="s">'localhost:8420'</span> })
+
+<span class="c">// Listen for GitHub deploy webhooks</span>
+hc.<span class="f">on</span>(<span class="s">'webhook:github/deploy'</span>, <span class="k">async</span> (event) => {
+  <span class="k">const</span> { repo, status, author } = event.payload
+
+  <span class="k">if</span> (status === <span class="s">'success'</span>) {
+    <span class="c">// Flash office lights green</span>
+    <span class="k">await</span> hc.lights.<span class="f">flash</span>(<span class="s">'office'</span>, {
+      color: <span class="s">'#00e5a0'</span>, times: <span class="n">3</span>
+    })
+    <span class="c">// Announce it</span>
+    <span class="k">await</span> hc.<span class="f">say</span>(
+      <span class="s">`Deploy to ${repo} succeeded.`</span>
+    )
+  } <span class="k">else</span> {
+    <span class="c">// Flash red &#x2014; something broke</span>
+    <span class="k">await</span> hc.lights.<span class="f">flash</span>(<span class="s">'office'</span>, {
+      color: <span class="s">'#ff5c8a'</span>, times: <span class="n">5</span>
+    })
+  }
+})</pre>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<div class="integrations-section" id="integrations">
+  <div class="integrations-inner">
+    <p class="section-label">Integrations</p>
+    <h2>Works with everything<br>you already have</h2>
+    <p class="section-sub">80+ built-in integrations on day one. Every major platform, every major protocol, grouped by what they do.</p>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F3B5; Music &amp; Audio</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Spotify</div>
+        <div class="integration-chip">Apple Music</div>
+        <div class="integration-chip">YouTube Music</div>
+        <div class="integration-chip">Tidal</div>
+        <div class="integration-chip">Plex</div>
+        <div class="integration-chip">Sonos</div>
+        <div class="integration-chip">Chromecast Audio</div>
+        <div class="integration-chip">AirPlay 2</div>
+        <div class="integration-chip">Snapcast</div>
+        <div class="integration-chip">MQTT Amplifiers</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F4A1; Lighting</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Philips Hue</div>
+        <div class="integration-chip">LIFX</div>
+        <div class="integration-chip">Govee</div>
+        <div class="integration-chip">Nanoleaf</div>
+        <div class="integration-chip">WiZ</div>
+        <div class="integration-chip">Kasa Smart</div>
+        <div class="integration-chip">WLED</div>
+        <div class="integration-chip">Shelly Dimmers</div>
+        <div class="integration-chip">Zigbee Bulbs</div>
+        <div class="integration-chip">Lutron Cas&eacute;ta</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F321;&#xFE0F; Climate &amp; Air Quality</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Nest</div>
+        <div class="integration-chip">Ecobee</div>
+        <div class="integration-chip">Honeywell T6 Pro</div>
+        <div class="integration-chip">Sensibo</div>
+        <div class="integration-chip">Mitsubishi MELCloud</div>
+        <div class="integration-chip">Daikin</div>
+        <div class="integration-chip">Fujitsu</div>
+        <div class="integration-chip">Airthings</div>
+        <div class="integration-chip">Bosch BMP280</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F4C5; Calendar &amp; Productivity</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Google Calendar</div>
+        <div class="integration-chip">Apple Calendar</div>
+        <div class="integration-chip">Outlook/Exchange</div>
+        <div class="integration-chip">Fantastical</div>
+        <div class="integration-chip">Notion</div>
+        <div class="integration-chip">Calendly</div>
+        <div class="integration-chip">Things 3</div>
+        <div class="integration-chip">Todoist</div>
+        <div class="integration-chip">Linear</div>
+        <div class="integration-chip">Obsidian</div>
+        <div class="integration-chip">Jira</div>
+        <div class="integration-chip">OmniFocus</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F3E0; Security &amp; Presence</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Ring</div>
+        <div class="integration-chip">Arlo</div>
+        <div class="integration-chip">Eufy</div>
+        <div class="integration-chip">Unifi Protect</div>
+        <div class="integration-chip">Frigate NVR</div>
+        <div class="integration-chip">August Lock</div>
+        <div class="integration-chip">Schlage</div>
+        <div class="integration-chip">Yale Lock</div>
+        <div class="integration-chip">Life360</div>
+        <div class="integration-chip">OwnTracks</div>
+        <div class="integration-chip">Apple Find My</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F9D8; Health &amp; Wearables</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Oura Ring</div>
+        <div class="integration-chip">Whoop</div>
+        <div class="integration-chip">Apple HealthKit</div>
+        <div class="integration-chip">Garmin Connect</div>
+        <div class="integration-chip">Fitbit</div>
+        <div class="integration-chip">Eight Sleep</div>
+        <div class="integration-chip">Withings</div>
+        <div class="integration-chip">Strava</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F50B; Energy &amp; Power</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Emporia Vue</div>
+        <div class="integration-chip">Sense</div>
+        <div class="integration-chip">Tesla Powerwall</div>
+        <div class="integration-chip">Enphase Solar</div>
+        <div class="integration-chip">SolarEdge</div>
+        <div class="integration-chip">Tesla Charger</div>
+        <div class="integration-chip">ChargePoint</div>
+        <div class="integration-chip">Wallbox</div>
+        <div class="integration-chip">Shelly Plugs</div>
+        <div class="integration-chip">TP-Link Kasa</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F3AE; Developer Tools</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">GitHub</div>
+        <div class="integration-chip">GitLab</div>
+        <div class="integration-chip">Linear</div>
+        <div class="integration-chip">Jira</div>
+        <div class="integration-chip">PagerDuty</div>
+        <div class="integration-chip">OpsGenie</div>
+        <div class="integration-chip">Datadog</div>
+        <div class="integration-chip">Grafana + InfluxDB</div>
+        <div class="integration-chip">Node-RED</div>
+        <div class="integration-chip">Stream Deck</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F4FA; Streaming</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">OBS Studio</div>
+        <div class="integration-chip">Twitch EventSub</div>
+        <div class="integration-chip">YouTube Live</div>
+        <div class="integration-chip">Elgato Stream Deck</div>
+        <div class="integration-chip">StreamElements</div>
+        <div class="integration-chip">Streamlabs</div>
+        <div class="integration-chip">Discord (server activity)</div>
+      </div>
+    </div>
+
+    <div class="int-category">
+      <div class="int-category-label">&#x1F4E1; Protocols &amp; Infrastructure</div>
+      <div class="integrations-grid">
+        <div class="integration-chip">Zigbee (USB)</div>
+        <div class="integration-chip">Z-Wave (USB)</div>
+        <div class="integration-chip">MQTT</div>
+        <div class="integration-chip">REST API</div>
+        <div class="integration-chip">WebSocket API</div>
+        <div class="integration-chip">Webhooks</div>
+        <div class="integration-chip">Google Maps API</div>
+        <div class="integration-chip">OpenWeatherMap</div>
+        <div class="integration-chip">IQAir/PurpleAir</div>
+        <div class="integration-chip more">+ Community SDK &rarr;</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODELS -->
+<section id="models" class="model-section" style="padding: 6rem 2rem;">
+  <div style="max-width:1100px; margin:0 auto;">
+    <p class="section-label">Model Freedom</p>
+    <h2>Your AI. Not ours.</h2>
+    <p class="section-sub">HomeClaw is model-agnostic. Run a completely offline Llama 3 on your Mac Mini. Or use GPT-4o for richer responses. Or both &mdash; route different commands to different models.</p>
+
+    <div class="model-cards">
+      <div class="model-card local">
+        <div class="model-type">&#x1F7E2; Local &mdash; Zero cloud</div>
+        <h3>Ollama + Llama 3.1</h3>
+        <p>Full offline operation. Voice stays on your LAN. Best for privacy purists.</p>
+        <div class="model-privacy">&#x2713; No data ever leaves your network</div>
+      </div>
+      <div class="model-card local">
+        <div class="model-type">&#x1F7E2; Local &mdash; Zero cloud</div>
+        <h3>Ollama + Mistral 7B</h3>
+        <p>Fast local inference. Great balance of speed and intelligence for home commands.</p>
+        <div class="model-privacy">&#x2713; No data ever leaves your network</div>
+      </div>
+      <div class="model-card local">
+        <div class="model-type">&#x1F7E2; Local &mdash; Zero cloud</div>
+        <h3>Ollama + Gemma 2</h3>
+        <p>Google's open weights model, running entirely on your hardware.</p>
+        <div class="model-privacy">&#x2713; No data ever leaves your network</div>
+      </div>
+      <div class="model-card">
+        <div class="model-type cloud">&#x2601;&#xFE0F; Cloud API &mdash; Optional</div>
+        <h3>OpenAI GPT-4o</h3>
+        <p>For richer understanding and complex multi-step automations. You pay OpenAI directly.</p>
+        <div class="model-privacy" style="color:var(--accent2);">&#x26A1; Best response quality</div>
+      </div>
+      <div class="model-card">
+        <div class="model-type cloud">&#x2601;&#xFE0F; Cloud API &mdash; Optional</div>
+        <h3>Anthropic Claude</h3>
+        <p>Excellent reasoning, great for context-aware automations and long conversation memory.</p>
+        <div class="model-privacy" style="color:var(--accent2);">&#x26A1; Best for complex reasoning</div>
+      </div>
+      <div class="model-card">
+        <div class="model-type cloud">&#x2601;&#xFE0F; Cloud API &mdash; Optional</div>
+        <h3>Groq (Ultra-fast)</h3>
+        <p>Sub-200ms response times via Groq's LPU inference. Best for snappy, real-time responses.</p>
+        <div class="model-privacy" style="color:var(--accent2);">&#x26A1; Fastest inference available</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VS TABLE -->
+<section>
+  <p class="section-label">Why HomeClaw</p>
+  <h2>The honest comparison</h2>
+  <p class="section-sub">We're not for everyone. We're for the people who care about the details.</p>
+
+  <table class="vs-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Amazon Echo</th>
+        <th>Google Home</th>
+        <th>Home Assistant</th>
+        <th class="ours">HomeClaw</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Your voice data on their servers</td>
+        <td><span class="check">&#x2713;</span> Always</td>
+        <td><span class="check">&#x2713;</span> Always</td>
+        <td class="cross">&#x2717; N/A</td>
+        <td><span class="cross">&#x2717; Never</span></td>
+      </tr>
+      <tr>
+        <td>Works fully offline</td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+      </tr>
+      <tr>
+        <td>Bring your own LLM</td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="partial">~</span> Limited</td>
+        <td><span class="check">&#x2713;</span> Any model</td>
+      </tr>
+      <tr>
+        <td>Setup time for non-expert</td>
+        <td>5 min</td>
+        <td>5 min</td>
+        <td>20&ndash;40 hrs</td>
+        <td><span class="check">15 min</span></td>
+      </tr>
+      <tr>
+        <td>Open source</td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span> MIT</td>
+      </tr>
+      <tr>
+        <td>Calendar-aware automation</td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="partial">~</span> Basic</td>
+        <td><span class="partial">~</span> Plugin</td>
+        <td><span class="check">&#x2713;</span> Native</td>
+      </tr>
+      <tr>
+        <td>Natural language automations</td>
+        <td><span class="partial">~</span> Basic</td>
+        <td><span class="partial">~</span> Basic</td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="check">&#x2713;</span> Full LLM</td>
+      </tr>
+      <tr>
+        <td>Developer CLI + API</td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="check">&#x2713;</span></td>
+        <td><span class="check">&#x2713;</span> First-class</td>
+      </tr>
+      <tr>
+        <td>Modes system</td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="cross">&#x2717;</span></td>
+        <td><span class="partial">~</span> Manual</td>
+        <td><span class="check">&#x2713;</span> 13+ built-in</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- MOBILE APP -->
+<section id="mobile-app">
+  <p class="section-label">Mobile App</p>
+  <h2>Your home in your pocket</h2>
+  <p class="section-sub">Not a dashboard of switches. HomeClaw's app is context-aware and proactive — it knows what's happening at home, what's on your calendar, and surfaces the right controls at the right time.</p>
+
+  <div class="mobile-layout">
+    <!-- Phone mockup (CSS-only) -->
+    <div class="phone-mockup-wrap">
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="phone-status-row">
+            <span class="phone-status-time">9:41</span>
+            <span class="phone-status-icons">●●● ▲</span>
+          </div>
+          <div class="phone-mode-pill">
+            <div class="phone-pill-dot"></div>
+            Deep Work &#x1F3AF;
+          </div>
+          <div class="phone-quick-actions">
+            <div class="phone-action-btn">
+              <span>&#x1F4A1;</span>
+              <span>Lights</span>
+            </div>
+            <div class="phone-action-btn">
+              <span>&#x1F3B5;</span>
+              <span>Music</span>
+            </div>
+            <div class="phone-action-btn">
+              <span>&#x1F319;</span>
+              <span>Evening</span>
+            </div>
+          </div>
+          <div class="phone-energy-wrap">
+            <div class="phone-energy-label">Energy — last 8h</div>
+            <div class="phone-energy-graph">
+              <div class="energy-bar" style="height:30%"></div>
+              <div class="energy-bar" style="height:45%"></div>
+              <div class="energy-bar" style="height:38%"></div>
+              <div class="energy-bar" style="height:60%"></div>
+              <div class="energy-bar" style="height:52%"></div>
+              <div class="energy-bar" style="height:70%"></div>
+              <div class="energy-bar" style="height:55%"></div>
+              <div class="energy-bar" style="height:80%"></div>
+            </div>
+          </div>
+          <div class="phone-notif">
+            <span class="phone-notif-icon">&#x23F0;</span>
+            <span>Next: Standup in 18 min</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature highlights -->
+    <div>
+      <ul class="app-feature-list">
+        <li>
+          <span class="feat-icon">&#x1F5FA;&#xFE0F;</span>
+          <div class="feat-text">
+            <strong>Geofencing — local, no cloud</strong>
+            <span>Home reacts before you arrive. Location processed on-device, never sent to a server.</span>
+          </div>
+        </li>
+        <li>
+          <span class="feat-icon">&#x1F4CD;</span>
+          <div class="feat-text">
+            <strong>Live Activity &amp; Lock Screen widget</strong>
+            <span>Current mode, active rooms, and energy draw — always visible without unlocking.</span>
+          </div>
+        </li>
+        <li>
+          <span class="feat-icon">&#x1F514;</span>
+          <div class="feat-text">
+            <strong>Intelligent notifications</strong>
+            <span>CI failed &#x2192; lights turn red. Package delivered &#x2192; camera snapshot. Actionable, not spammy.</span>
+          </div>
+        </li>
+        <li>
+          <span class="feat-icon">&#x231A;</span>
+          <div class="feat-text">
+            <strong>Apple Watch complication + one-tap mode switch</strong>
+            <span>Glance at your wrist, switch modes without pulling out your phone.</span>
+          </div>
+        </li>
+        <li>
+          <span class="feat-icon">&#x1F3B5;</span>
+          <div class="feat-text">
+            <strong>Full music control with mood selector</strong>
+            <span>"More energizing" / "wind it down" / "focus mode" — not just play/pause.</span>
+          </div>
+        </li>
+        <li>
+          <span class="feat-icon">&#x1F512;</span>
+          <div class="feat-text">
+            <strong>Remote access via encrypted tunnel</strong>
+            <span>WireGuard-based, self-hosted. No HomeClaw servers in the middle.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="app-store-badges">
+        <div class="store-badge">
+          <span class="badge-store">&#xF8FF; App Store</span>
+          <span class="badge-when">Coming Q4 2026</span>
+        </div>
+        <div class="store-badge">
+          <span class="badge-store">&#x25B6; Google Play</span>
+          <span class="badge-when">Coming Q4 2026</span>
+        </div>
+      </div>
+
+      <p class="tech-note">Built with React Native + Expo. Open source. Self-hosted remote access.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <p class="section-label">Pricing</p>
+  <h2>Simple. Transparent.<br>No gotchas.</h2>
+  <p class="section-sub">The software is always free and open source. You only pay for hardware and optional cloud features.</p>
+
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <h3>Hub Software</h3>
+      <div class="price">$0<span> forever</span></div>
+      <p class="sub">MIT licensed. Self-hosted. Always.</p>
+      <ul class="pricing-features">
+        <li>Full HomeClaw Hub</li>
+        <li>All 80+ integrations</li>
+        <li>Local LLM support</li>
+        <li>REST + WebSocket API</li>
+        <li>Automation engine + CLI</li>
+        <li>All 13 modes built-in</li>
+      </ul>
+      <a href="#" class="pricing-btn outline">Download Free</a>
+    </div>
+
+    <div class="pricing-card featured">
+      <div class="featured-badge">Most Popular</div>
+      <h3>PuckNode Starter</h3>
+      <div class="price">$129<span> one-time</span></div>
+      <p class="sub">3-pack PuckNodes + free Hub</p>
+      <ul class="pricing-features">
+        <li>3 &times; PuckNode devices</li>
+        <li>3-mic beamforming array</li>
+        <li>USB-A passthrough</li>
+        <li>IR blaster built-in</li>
+        <li>LED ring indicator</li>
+        <li>HomeClaw Hub (free)</li>
+      </ul>
+      <a href="#early-access" class="pricing-btn primary">Pre-order &mdash; Ships Q3 2026</a>
+    </div>
+
+    <div class="pricing-card">
+      <h3>HomeClaw Cloud</h3>
+      <div class="price">$4.99<span>/month</span></div>
+      <p class="sub">Optional. Cancel anytime.</p>
+      <ul class="pricing-features">
+        <li>Remote access (secure tunnel)</li>
+        <li>Settings sync across homes</li>
+        <li>Mobile push notifications</li>
+        <li>Automated cloud backup</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="#" class="pricing-btn outline">Start Free Trial</a>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<div class="final-cta" id="early-access">
+  <h2>Your home shouldn't<br>spy on you.</h2>
+  <p>Join 3,000+ developers on the waitlist. First batch of PuckNodes ships Q3 2026. Early access to the open source Hub available now.</p>
+  <div class="final-actions">
+    <a href="#" class="btn-primary">Join the Waitlist</a>
+    <a href="https://github.com/homeclaw" class="btn-secondary">View on GitHub</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">&#x1F99E; Home<span>Claw</span></div>
+  <ul class="footer-links">
+    <li><a href="#">Docs</a></li>
+    <li><a href="#">GitHub</a></li>
+    <li><a href="#">Discord</a></li>
+    <li><a href="#">Blog</a></li>
+    <li><a href="#">Privacy</a></li>
+  </ul>
+  <span class="footer-copy">&copy; 2026 HomeClaw. Open Source, MIT License.</span>
+</footer>
+
+
+</body>
+</html>

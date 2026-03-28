@@ -1,0 +1,29 @@
+CLINICAL NOTES — Summit Joint & Bone Center
+Date of Service: 02/27/2026
+Provider: Angela Moretti, MD, FAAOS
+Patient: RW-20260227-1134
+
+CHIEF COMPLAINT:
+Severe right knee pain and functional limitation despite prolonged conservative management.
+
+HISTORY OF PRESENT ILLNESS:
+Patient is a 67-year-old female with a longstanding history of bilateral knee osteoarthritis, right worse than left, presenting for surgical evaluation. She reports progressive right knee pain over the past 4+ years, now constant and rated 8-9/10 with weight-bearing activity. She is unable to walk more than one block, climb stairs without a railing, or perform household tasks without significant pain. Night pain disrupts sleep 4-5 nights per week. Over the past 18 months, she has exhausted conservative measures including: supervised physical therapy (two separate 8-week courses), intra-articular corticosteroid injections x3 (last injection 01/15/2026 with less than 2 weeks of partial relief), hyaluronic acid viscosupplementation (Synvisc-One x2 series), unloader knee brace worn daily, acetaminophen 1000 mg TID, and topical diclofenac gel. Functional status continues to decline.
+
+PAST MEDICAL HISTORY:
+Bilateral knee osteoarthritis, hypertension, type 2 diabetes (A1c 6.8%), obesity (BMI 31.2). No prior knee surgery.
+
+MEDICATIONS:
+Metformin 1000 mg BID, amlodipine 5 mg daily, acetaminophen 1000 mg TID, topical diclofenac 1% gel BID to right knee.
+
+PHYSICAL EXAMINATION:
+Right knee: moderate effusion, palpable osteophytes along medial and lateral joint lines. Range of motion 5-100 degrees (limited by pain). Crepitus throughout arc of motion. Varus alignment approximately 8 degrees. Ligaments stable to varus/valgus stress testing. No instability on anterior/posterior drawer. Gait: antalgic with shortened stance phase on right. Patient ambulates with single-point cane.
+
+IMAGING:
+Weight-bearing AP, lateral, and Merchant view radiographs of right knee obtained 02/27/2026 demonstrate Kellgren-Lawrence Grade IV changes: complete loss of medial compartment joint space, subchondral sclerosis and cyst formation, large marginal osteophytes, and mild lateral subluxation. Patellofemoral joint shows Grade III changes.
+
+ASSESSMENT/PLAN:
+1. Primary osteoarthritis, right knee — M17.11
+Requesting right total knee arthroplasty (CPT 27447). Patient has failed comprehensive conservative management over 18 months and has end-stage radiographic disease with significant functional impairment.
+
+MEDICAL NECESSITY:
+Total knee arthroplasty is medically necessary for this patient with Kellgren-Lawrence Grade IV right knee osteoarthritis who has exhausted all appropriate conservative therapies over an 18-month period, including physical therapy, multiple corticosteroid injections, viscosupplementation, bracing, and oral/topical analgesics. She has progressive functional decline, constant pain, and radiographic evidence of end-stage joint destruction. BMI of 31.2 is within acceptable surgical range. Diabetes is well controlled with A1c 6.8%. Surgical intervention is the remaining viable treatment option to restore function and relieve pain.

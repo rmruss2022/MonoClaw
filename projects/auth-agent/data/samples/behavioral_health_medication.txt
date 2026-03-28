@@ -1,0 +1,34 @@
+CLINICAL NOTES — Compass Behavioral Health Center
+Date of Service: 03/22/2026
+Provider: Lisa Fernandez, MD
+Patient: NR-20260322-1340
+
+CHIEF COMPLAINT:
+Treatment-resistant major depressive disorder; request for esketamine nasal spray (Spravato).
+
+HISTORY OF PRESENT ILLNESS:
+Patient is a 28-year-old female with a 7-year history of recurrent major depressive disorder presenting for evaluation of esketamine nasal spray therapy. Her current depressive episode has persisted for 14 months despite multiple adequate medication trials. She reports persistent depressed mood, anhedonia, fatigue, insomnia (sleeping 3-4 hours per night with frequent awakenings), poor concentration, feelings of worthlessness, psychomotor retardation, and passive suicidal ideation without plan or intent. She has lost 15 lbs unintentionally over the past 4 months. She is unable to maintain consistent employment and has been on short-term disability since January 2026. PHQ-9 score today: 22/27 (severe depression). Columbia Suicide Severity Rating Scale: ideation present, no plan or intent, no recent attempt.
+
+Medication history (adequate dose and duration documented):
+- Sertraline 200 mg daily x 10 weeks — minimal response
+- Escitalopram 20 mg daily x 12 weeks — partial response, then relapse
+- Venlafaxine XR 225 mg daily x 8 weeks — not tolerated (severe nausea, hypertension)
+- Current: duloxetine 60 mg daily x 6 weeks with aripiprazole 5 mg augmentation x 4 weeks — PHQ-9 improved from 25 to 22, deemed inadequate response
+
+She is engaged in weekly cognitive behavioral therapy with a licensed psychologist (since October 2025). No history of substance use disorder, psychosis, or aneurysmal vascular disease. No contraindications to esketamine.
+
+PAST MEDICAL HISTORY:
+Major depressive disorder, recurrent, severe (F33.2), generalized anxiety disorder, insomnia. No prior psychiatric hospitalizations. No history of substance abuse.
+
+MEDICATIONS:
+Duloxetine 60 mg daily, aripiprazole 5 mg daily, trazodone 100 mg nightly PRN insomnia, hydroxyzine 25 mg BID PRN anxiety.
+
+PHYSICAL EXAMINATION:
+Vitals: BP 122/76, HR 68, BMI 21.8. General: thin-appearing, fatigued, psychomotor slowing noted. Psychiatric: appearance appropriate but poorly groomed, mood "empty," affect flat and constricted, speech low volume with increased latency, thought process linear, thought content notable for passive death wish ("sometimes I think everyone would be better off"), no active suicidal plan or intent, no auditory or visual hallucinations, no delusions, insight fair, judgment fair. Cognition: oriented x4, attention mildly impaired (serial 7s with 2 errors).
+
+ASSESSMENT/PLAN:
+1. Major depressive disorder, recurrent episode, severe without psychotic features — F33.2
+Meets FDA criteria for treatment-resistant depression (TRD): failure of two adequate antidepressant trials in current episode. Requesting prior authorization for Spravato (esketamine) 56 mg nasal spray (J3490), to be administered in-office per REMS protocol, in conjunction with continued oral antidepressant (duloxetine 60 mg). Initial phase: twice weekly x 4 weeks, then weekly x 4 weeks, then weekly or biweekly maintenance per clinical response.
+
+MEDICAL NECESSITY:
+Esketamine (Spravato) is medically necessary for this patient with treatment-resistant major depressive disorder who has failed adequate trials of two SSRIs, one SNRI, and antipsychotic augmentation without achieving remission. Her PHQ-9 of 22 reflects severe, persistent depression despite ongoing pharmacotherapy and psychotherapy. She has significant functional impairment (unable to work, on disability) and passive suicidal ideation. Esketamine is FDA-approved specifically for treatment-resistant depression in conjunction with an oral antidepressant and has demonstrated rapid-onset antidepressant effects in the SUSTAIN and TRANSFORM clinical trial programs. This patient has no contraindications, meets REMS eligibility criteria, and will be administered and monitored in a certified healthcare setting per protocol.

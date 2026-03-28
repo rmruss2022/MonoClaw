@@ -1,0 +1,4 @@
+node_modules/
+.DS_Store
+SITE_PROMPT.txt
+*.log

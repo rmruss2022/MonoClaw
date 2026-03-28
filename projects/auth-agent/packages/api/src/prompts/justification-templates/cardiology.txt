@@ -1,0 +1,57 @@
+SPECIALTY CONTEXT: CARDIOLOGY PROCEDURES
+(Stress tests, echocardiograms, cardiac catheterization, nuclear imaging)
+
+## Key Clinical Guidelines to Reference
+- AHA/ACC Appropriate Use Criteria for cardiac imaging
+- ACC/AHA Guidelines for Exercise Testing
+- ASNC Imaging Guidelines for nuclear cardiology
+- ASE Guidelines for echocardiography
+
+## Cardiology-Specific Documentation Points
+
+For NUCLEAR CARDIAC STRESS TEST (CPT 78452):
+- Pre-test probability of CAD (use ACC/AHA risk stratification)
+- Cardiac risk factors: hypertension, diabetes, hyperlipidemia, smoking, family history, obesity
+- Symptom description: chest pain characteristics (typical angina, atypical, non-cardiac), exertional dyspnea
+- Functional class (NYHA or CCS angina class)
+- Resting ECG findings (if abnormal, document why standard exercise treadmill is insufficient)
+- Reason for pharmacologic vs exercise stress (functional limitation, LBBB, pacemaker, beta-blocker use)
+- Prior cardiac testing and results
+- Why stress testing will change management (medication adjustment, referral for catheterization)
+
+For ECHOCARDIOGRAM (CPT 93306):
+- Clinical indication: new murmur, heart failure symptoms, valve disease monitoring
+- Symptoms: dyspnea, edema, syncope, palpitations with hemodynamic concern
+- Physical exam: S3/S4, murmur grade and characteristics, JVD, peripheral edema
+- BNP/NT-proBNP levels if available
+- Prior echo findings if surveillance study (valve gradients, EF, chamber size)
+- Interval change in symptoms since last study
+- How results will guide medication or surgical management
+
+For CARDIAC CATHETERIZATION (CPT 93458, 93459):
+- Non-invasive test results suggesting significant ischemia
+- Symptoms refractory to optimal medical therapy
+- Risk stratification results (high-risk Duke treadmill score, large perfusion defect)
+- LVEF if known
+- Prior revascularization history
+- ACS presentation details if applicable
+
+For VASCULAR STUDIES — DUPLEX (CPT 93971):
+- Symptoms: leg swelling, pain, skin changes
+- Risk factors for DVT: recent surgery, immobility, cancer, prior DVT
+- Wells score or clinical probability assessment
+- D-dimer results if obtained
+- Physical exam findings: unilateral edema, calf tenderness, Homans sign
+
+## Payer-Specific Notes for Cardiology PAs
+- United Healthcare: Follows AUC criteria closely; requires risk factor documentation and pre-test probability assessment
+- Aetna: Wants documentation of why non-invasive testing first; references ACC/AHA appropriateness criteria
+- Cigna: Requires intermediate or high pre-test probability for stress testing; wants functional limitation documented
+- Humana: Generally approves with adequate symptom and risk factor documentation
+- BCBS: Emphasize guideline-concordant indications; document that results will change management
+
+## Common Denial Reasons and How to Preempt Them
+1. "Low pre-test probability" → Document all risk factors, calculate and state Framingham or ACC risk score
+2. "Routine screening not covered" → Emphasize this is diagnostic, not screening — cite specific symptoms and clinical concern
+3. "Repeat study too soon" → Document interval change in symptoms or clinical status since last study
+4. "Exercise treadmill sufficient" → Explain why nuclear/pharmacologic is needed (abnormal baseline ECG, functional limitation, prior equivocal results)
