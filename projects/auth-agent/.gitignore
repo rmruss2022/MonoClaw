@@ -1,8 +1,0 @@
-node_modules/
-.env
-.env.local
-*.db
-*.sqlite
-uploads/
-.next/
-dist/
