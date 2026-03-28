@@ -1,0 +1,47 @@
+Read /Users/matthew/.openclaw/workspace/monoclaw/projects/homeclaw/website/index.html.
+
+Make these three specific changes:
+
+CHANGE 1 — Simplify the features section.
+Replace the existing features grid with 8 cleaner cards. Each card: emoji icon, short punchy title, ONE sentence description, category tag. No bullet lists inside cards.
+
+The 8 features:
+1. emoji 🎵, title "Music that reads the room", desc "Shifts what's playing based on time of day, your calendar, and what you're doing. No manual scene switching.", tag "AI"
+2. emoji 💡, title "Circadian lighting", desc "Automatically adjusts color temperature from bright morning white to warm amber at night. Backed by sleep science.", tag "Automation"
+3. emoji 🌡️, title "Comfort on autopilot", desc "Knows when you're arriving home from your calendar. Your home is already at the right temperature when you walk in.", tag "AI"
+4. emoji 📅, title "Calendar awareness", desc "Your home knows your schedule. Lights shift for video calls. DND activates before meetings. Thermostat stabilizes for guests.", tag "Integration"
+5. emoji ✅, title "Voice task capture", desc "Say it out loud and it goes straight into your task app. Zero friction, completely hands-free.", tag "Productivity"
+6. emoji 🔒, title "100% local processing", desc "Wake word detection runs on the device itself. Audio never leaves your network unless you configure a cloud API.", tag "Privacy"
+7. emoji 🎮, title "Developer-grade APIs", desc "Every device, every event, every state is a REST endpoint. Real-time WebSocket updates. Build whatever you want.", tag "Developer"
+8. emoji 🏠, title "Presence intelligence", desc "Knows which room you're in and activates the right devices in the right places automatically.", tag "Smart"
+
+CHANGE 2 — Add a "Who it's for" section between the stats bar and the How It Works section.
+
+Section label: "Who it's for"
+Heading: "Built for the people tired of being the product"
+Subtext: "2 million households already run local-first smart home software. They proved the demand. We built the product they actually deserve."
+
+Three persona cards in a row:
+
+Card 1: icon 👨‍💻, title "Developers and Engineers", desc "You have Hue lights, a Nest, and an Echo you don't fully trust. You want clean APIs, real extensibility, and zero data harvesting. Something you can actually build on.", tags: REST API, Open Source, Self-hosted
+
+Card 2: icon 🔐, title "Privacy-First Professionals", desc "Doctors, lawyers, journalists, executives. You have conversations at home that matter. You want voice assistant convenience without the surveillance business model.", tags: Local-only, No cloud, Auditable
+
+Card 3: icon 🛠️, title "Makers and AI Tinkerers", desc "Already running Ollama locally. Building weekend projects. You want a platform to experiment on with real hardware and a clean SDK. HomeClaw is your home OS.", tags: Ollama, SDK, Open Source
+
+Below the cards, add a 4-item stats row styled like the hero stats bar:
+- stat: "2M+", label: "active local-first smart home users globally"
+- stat: "$537B", label: "smart home market size by 2030"  
+- stat: "1M+", label: "members in r/selfhosted alone"
+- stat: "21K", label: "open source contributors to Home Assistant in one year"
+
+Keep ALL other existing content exactly as-is. Only make these two changes.
+Write the complete updated file to /Users/matthew/.openclaw/workspace/monoclaw/projects/homeclaw/website/index.html
+
+When done run: openclaw system event --text "HomeClaw site updated - simplified features and who its for section live at localhost:3020" --mode now
+
+ADDITIONAL CHANGE — Add Streamers as a 4th persona card:
+icon 🎮, title "Streamers and Content Creators", desc "You already control your lights, alerts, and audio for stream. HomeClaw ties your entire home environment to your stream state — go live triggers your scene, donations pulse your lights, raid alerts shake the room.", tags: Stream Deck, Twitch, OBS
+
+Also add these streaming-specific integrations to the integrations grid under a new "Streaming" category:
+OBS Studio, Twitch EventSub, YouTube Live, Elgato Stream Deck, StreamElements, Streamlabs, Discord (server activity)

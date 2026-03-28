@@ -1,0 +1,59 @@
+SPECIALTY CONTEXT: NEUROLOGY PROCEDURES
+(Brain/spine MRI, nerve conduction studies, EEG, EMG)
+
+## Key Clinical Guidelines to Reference
+- ACR Appropriateness Criteria for neuroimaging
+- AAN Practice Parameters and Clinical Practice Guidelines
+- AANEM guidelines for electrodiagnostic studies
+- International Headache Society (ICHD-3) classification criteria
+
+## Neurology-Specific Documentation Points
+
+For BRAIN MRI (CPT 70553):
+- Headache classification per ICHD-3 criteria
+- Duration and frequency of headaches (chronic vs episodic)
+- Failed medication trials: list each preventive and abortive medication with dose, duration, and response
+- Red flag symptoms: sudden onset, worst headache of life, focal neurologic deficits, papilledema, seizure onset
+- Change in headache pattern warranting imaging
+- Neurologic examination findings (visual field deficits, cranial nerve abnormalities)
+- Impact on work/ADLs: missed work days, disability
+- For MS workup: clinical episodes, exam findings suggesting demyelination
+- For tumor surveillance: prior imaging dates and findings
+
+For NERVE CONDUCTION STUDIES / EMG (CPT 95910, 95907-95913):
+- Distribution of symptoms (dermatomal vs stocking-glove vs focal)
+- Duration of neuropathic symptoms (numbness, tingling, weakness, pain)
+- Clinical exam findings: sensory loss pattern, motor weakness, reflex changes
+- Differential diagnosis being evaluated
+- Why electrodiagnostic study will change management
+- Prior relevant imaging (spine MRI if radiculopathy suspected)
+- Relevant labs (B12, glucose/A1c, TSH, ESR for neuropathy workup)
+- Number of nerves/muscles to be tested with clinical justification
+
+For SPINE MRI — CERVICAL/LUMBAR (CPT 72141, 72148):
+- Radicular symptom pattern with dermatomal correlation
+- Duration of symptoms and failed conservative treatment
+- Neurologic deficits on examination
+- Progressive neurologic symptoms warranting urgent imaging
+- Prior imaging and interval change
+- Red flags: myelopathy signs, progressive weakness, bowel/bladder changes
+
+For EEG (CPT 95816, 95819):
+- Seizure history: type, frequency, duration, witnesses
+- Prior medications tried for seizure control
+- Need for classification or medication adjustment
+- Driving restrictions or safety concerns
+- Spell characterization if diagnosis uncertain
+
+## Payer-Specific Notes for Neurology PAs
+- United Healthcare: Requires documented failure of 2+ migraine preventives before advanced imaging; strict on NCS medical necessity
+- Aetna: References ACR Appropriateness Criteria explicitly; wants imaging to change management plan
+- Cigna: Requires symptom duration thresholds before approving imaging; wants neurologic exam documented
+- Humana: Generally approves MRI brain with adequate headache documentation
+- BCBS: Varies significantly; focus on red flags and guideline adherence
+
+## Common Denial Reasons and How to Preempt Them
+1. "Routine headache — imaging not indicated" → Document red flags, failed treatments, change in pattern, or ICHD-3 criteria requiring workup
+2. "NCS not medically necessary" → Specify how results will change management and list differential diagnosis
+3. "Insufficient conservative treatment before MRI" → List all treatments with dates, doses, and why imaging is now needed to guide next steps
+4. "Duplicate imaging" → Explain clinical change since prior study or why new study with different protocol is needed

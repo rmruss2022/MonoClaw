@@ -1,0 +1,26 @@
+CLINICAL NOTES — Coastal Neurology Specialists
+Date of Service: 03/18/2026
+Provider: Rebecca Huang, MD, FAAN
+Patient: AK-20260318-1501
+
+CHIEF COMPLAINT:
+Chronic migraine with recent change in aura pattern; follow-up and imaging request.
+
+HISTORY OF PRESENT ILLNESS:
+Patient is a 34-year-old female with a 12-year history of migraine with aura, now meeting criteria for chronic migraine (15+ headache days per month for the past 7 months). Current headache frequency is 18-22 days per month, with 8-10 meeting full migraine criteria (moderate-severe intensity, unilateral, throbbing, with photophobia, phonophobia, and nausea). She reports a notable change in her aura pattern over the past 3 months: previously experienced typical visual scotomata lasting 20-30 minutes, but now reports new persistent visual trailing phenomena, brief episodes of right-hand numbness lasting up to 45 minutes, and one episode of transient expressive aphasia lasting approximately 10 minutes (02/28/2026). No headache-free periods longer than 2 consecutive days. She has failed adequate trials of three preventive medications: topiramate 100 mg BID (6 months, discontinued for cognitive side effects and paresthesias), propranolol ER 160 mg daily (4 months, inadequate response), and amitriptyline 75 mg nightly (3 months, weight gain and sedation without benefit). Currently on fremanezumab 225 mg monthly injection with partial response.
+
+PAST MEDICAL HISTORY:
+Chronic migraine with aura (G43.709), anxiety disorder (generalized), iron deficiency anemia.
+
+MEDICATIONS:
+Fremanezumab 225 mg SQ monthly, sumatriptan 100 mg PRN (limited to 8 doses/month), ondansetron 4 mg PRN for nausea, sertraline 100 mg daily, ferrous sulfate 325 mg daily.
+
+PHYSICAL EXAMINATION:
+Vitals: BP 118/72, HR 68. Neurologic: alert, oriented x4, fluent speech, no paraphasic errors. Cranial nerves II-XII intact. Visual fields full to confrontation. Fundoscopic exam: no papilledema. Motor 5/5 throughout, sensation intact to light touch and pinprick. Cerebellar: finger-to-nose and heel-to-shin intact, no dysmetria. Romberg negative. Reflexes 2+ and symmetric. Gait normal including tandem.
+
+ASSESSMENT/PLAN:
+1. Chronic migraine with aura, intractable — G43.709
+Requesting MRI Brain with and without contrast (CPT 70553) to evaluate for secondary causes of headache given new neurological symptoms (hemisensory aura, transient aphasia) representing a significant change from prior baseline aura pattern.
+
+MEDICAL NECESSITY:
+MRI Brain with and without contrast is medically necessary to exclude secondary pathology in a patient with chronic migraine whose aura pattern has undergone a clinically significant change, now including hemisensory symptoms and transient expressive aphasia. These new neurological features warrant imaging to rule out structural lesion, demyelinating disease, cerebral venous thrombosis, or vascular malformation. The patient has also been refractory to three classes of preventive therapy, further supporting advanced neuroimaging to ensure no underlying structural etiology is contributing to treatment resistance. This is consistent with AAN/AHS practice guidelines recommending imaging when headache pattern changes or new neurological features develop.

@@ -1,0 +1,27 @@
+CLINICAL NOTES — Bayside Rehabilitation & Physical Therapy
+Date of Service: 03/16/2026
+Provider: Karen Whitmore, MD
+Patient: EF-20260316-0915
+
+CHIEF COMPLAINT:
+Post-operative right knee stiffness, pain, and functional limitation following total knee arthroplasty.
+
+HISTORY OF PRESENT ILLNESS:
+Patient is a 55-year-old female presenting 4 weeks status post right total knee arthroplasty (performed 02/16/2026 by Dr. Angela Moretti at Summit Surgical Center) for end-stage right knee osteoarthritis. Her post-operative course has been uncomplicated without infection, DVT, or wound complications. Surgical staples were removed at 2 weeks. She completed 2 weeks of home health physical therapy (6 visits) and has transitioned to outpatient rehabilitation. Current complaints include persistent right knee stiffness, difficulty with stair negotiation, inability to perform sit-to-stand from standard chair height without upper extremity assistance, and generalized right lower extremity weakness. Pain is rated 5/10 with activity, 2/10 at rest, managed with acetaminophen and intermittent ice. She is ambulating with a front-wheeled walker for household distances and requires standby assistance for most ADLs. She has not yet returned to driving or work (office-based employment).
+
+PAST MEDICAL HISTORY:
+Right total knee arthroplasty (02/16/2026), osteoarthritis bilateral knees, hypertension, hypothyroidism.
+
+MEDICATIONS:
+Acetaminophen 1000 mg TID, aspirin 81 mg daily (DVT prophylaxis per surgeon protocol), levothyroxine 75 mcg daily, lisinopril 10 mg daily.
+
+PHYSICAL EXAMINATION:
+Right knee: well-healed surgical incision, no erythema, drainage, or signs of infection. Moderate periarticular swelling (2+ on 0-4 scale). Patellar mobility mildly restricted. Range of motion: active 0-85 degrees (passive 0-92 degrees). Quadriceps strength 3+/5 (MMT), hamstrings 4-/5. Knee extension lag 5 degrees with active straight leg raise. Gait: ambulating with front-wheeled walker, step-to pattern on stairs, stance phase shortened on right. Balance: single-leg stance right <5 seconds. Functional: Timed Up and Go 24 seconds (impaired). Unable to ascend/descend stairs reciprocally. Requires armrest to rise from standard chair.
+
+ASSESSMENT/PLAN:
+1. Status post right total knee arthroplasty — Z96.651
+2. Right knee stiffness — M25.661
+Requesting 12 visits of outpatient physical therapy over 6 weeks (CPT 97110 — therapeutic exercise; CPT 97140 — manual therapy; CPT 97530 — therapeutic activities). Treatment goals: ROM to 0-120 degrees, quad strength 4+/5, independent ambulation without assistive device, independent stair negotiation, return to work and driving.
+
+MEDICAL NECESSITY:
+Outpatient physical therapy is medically necessary for this patient at 4 weeks post total knee arthroplasty who has not yet achieved functional milestones expected at this stage of recovery. Current ROM of 0-85 degrees is below the 0-110+ degree range typically expected at 4 weeks. Quadriceps strength deficit (3+/5) and 5-degree extension lag indicate significant weakness requiring supervised progressive strengthening. She remains dependent on an assistive device for ambulation, cannot negotiate stairs safely, and is unable to perform occupational or driving tasks. Skilled physical therapy intervention is required to restore ROM through manual therapy and progressive stretching, rebuild lower extremity strength, normalize gait mechanics, and achieve functional independence. Without adequate rehabilitation, she is at risk for arthrofibrosis, chronic stiffness, and prolonged disability.

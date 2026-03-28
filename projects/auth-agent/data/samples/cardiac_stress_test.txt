@@ -1,0 +1,31 @@
+CLINICAL NOTES — Heartland Cardiology Associates
+Date of Service: 03/20/2026
+Provider: Michael Petrov, MD, FACC
+Patient: GH-20260320-1045
+
+CHIEF COMPLAINT:
+Atypical chest pain, evaluation of cardiac risk.
+
+HISTORY OF PRESENT ILLNESS:
+Patient is a 58-year-old male referred by his primary care physician for evaluation of atypical chest pain present for approximately 2 months. He describes intermittent substernal chest pressure lasting 5-15 minutes, occurring 2-3 times per week, sometimes with exertion (climbing stairs, brisk walking) but also at rest. He denies radiation to the arm or jaw. Associated symptoms include occasional mild dyspnea and diaphoresis during episodes. No syncope or presyncope. He has a sedentary lifestyle and works a desk job. He quit smoking 5 years ago (25 pack-year history). Family history is significant for premature CAD: father had MI at age 54, brother had CABG at age 60. Resting EKG obtained today shows normal sinus rhythm with nonspecific ST-T wave changes in the inferolateral leads. Prior resting EKG from 09/2025 was normal. Chest X-ray unremarkable.
+
+PAST MEDICAL HISTORY:
+Essential hypertension (10 years), hyperlipidemia (on statin, not at LDL goal), former tobacco use, sedentary lifestyle, obesity (BMI 30.1).
+
+MEDICATIONS:
+Metoprolol succinate 50 mg daily, atorvastatin 40 mg daily (LDL 138 at last check), aspirin 81 mg daily, amlodipine 5 mg daily.
+
+PHYSICAL EXAMINATION:
+Vitals: BP 144/90 (right arm), HR 72 regular, SpO2 98% on RA. BMI 30.1. General: well-appearing male in no acute distress. Cardiovascular: regular rate and rhythm, S1/S2 normal, no murmurs, rubs, or gallops. No JVD. Carotid upstrokes brisk without bruit. Lungs: clear to auscultation bilaterally. Abdomen: soft, non-tender, obese, no bruits. Extremities: no edema, peripheral pulses 2+ symmetric.
+
+RISK ASSESSMENT:
+ACC/AHA 10-year ASCVD risk score: 18.4% (intermediate-high risk). Duke Clinical Score suggests intermediate pretest probability for obstructive CAD given atypical symptoms, age, sex, and risk factor profile. New EKG changes from prior baseline.
+
+ASSESSMENT/PLAN:
+1. Atypical chest pain — R07.9
+2. Essential hypertension — I10
+3. Hyperlipidemia — E78.5
+Requesting myocardial perfusion imaging with pharmacologic or exercise stress (nuclear cardiac stress test, CPT 78452) to evaluate for inducible ischemia.
+
+MEDICAL NECESSITY:
+Nuclear stress testing is medically necessary for this intermediate-to-high risk patient with new-onset atypical chest pain, multiple cardiac risk factors (hypertension, hyperlipidemia, former smoking, family history of premature CAD, sedentary lifestyle, obesity), and new nonspecific ST-T wave changes on resting EKG not present on prior study. His 10-year ASCVD risk of 18.4% places him in a category where functional testing is appropriate per ACC/AHA Chest Pain Guidelines (2021). Identification or exclusion of inducible ischemia is essential to guide further management and risk stratification.

@@ -1,0 +1,31 @@
+CLINICAL NOTES — Meridian Internal Medicine Group
+Date of Service: 03/05/2026
+Provider: Samuel Okafor, MD
+Patient: LP-20260305-0923
+
+CHIEF COMPLAINT:
+Obesity management; request for pharmacologic weight loss therapy.
+
+HISTORY OF PRESENT ILLNESS:
+Patient is a 45-year-old female with class II obesity (BMI 38.2, weight 231 lbs, height 5'6") presenting for evaluation of anti-obesity pharmacotherapy. She has a documented history of obesity for over 10 years with multiple weight-related comorbidities. Over the past 12 months, she has been enrolled in a structured physician-supervised weight management program including dietary counseling with a registered dietitian (monthly visits), a calorie-restricted meal plan (1,500 kcal/day), and a progressive exercise regimen (150 min/week moderate-intensity aerobic activity). Despite documented adherence, she has achieved only a 4.2% body weight reduction (10 lbs), which is below the clinically meaningful threshold of 5%. She has also previously trialed phentermine/topiramate ER for 3 months with discontinuation due to palpitations and paresthesias. Orlistat was trialed for 4 months with poor tolerability (GI side effects) and minimal additional weight loss.
+
+PAST MEDICAL HISTORY:
+Obesity (E66.01), essential hypertension (on two agents), obstructive sleep apnea (on CPAP since 2023, AHI on diagnostic PSG was 28), prediabetes (fasting glucose 118, A1c 5.9%), GERD.
+
+MEDICATIONS:
+Losartan 100 mg daily, hydrochlorothiazide 25 mg daily, omeprazole 20 mg daily, CPAP therapy nightly.
+
+PHYSICAL EXAMINATION:
+Vitals: BP 142/88, HR 78, BMI 38.2. General: well-appearing, obese habitus with central adiposity. Neck circumference 42 cm. Cardiovascular: RRR, no murmurs. Lungs: CTA bilaterally. Abdomen: obese, soft, non-tender, no organomegaly. Extremities: no edema. Skin: no acanthosis nigricans.
+
+LABORATORY DATA (02/20/2026):
+Fasting glucose 118 mg/dL, HbA1c 5.9%, fasting lipid panel: TC 228, LDL 148, HDL 42, TG 190. TSH 2.1 (normal). Comprehensive metabolic panel within normal limits. Hepatic function panel normal.
+
+ASSESSMENT/PLAN:
+1. Obesity, class II, with obesity-related comorbidities — E66.01
+2. Essential hypertension — I10
+3. Obstructive sleep apnea — G47.33
+Requesting prior authorization for semaglutide (Ozempic/Wegovy) 0.25 mg subcutaneous injection weekly, titrating per standard protocol to 2.4 mg weekly (J0274). GLP-1 receptor agonist therapy for chronic weight management.
+
+MEDICAL NECESSITY:
+Semaglutide is medically necessary for this patient with class II obesity (BMI 38.2) and multiple obesity-related comorbidities including hypertension requiring two medications, obstructive sleep apnea, prediabetes, and dyslipidemia. She has completed 12 months of structured lifestyle intervention with insufficient weight loss (<5% total body weight). Prior pharmacotherapy trials with phentermine/topiramate and orlistat were either not tolerated or ineffective. GLP-1 receptor agonist therapy is supported by Level 1 evidence for clinically significant weight reduction and improvement of cardiometabolic risk factors in this patient population.
