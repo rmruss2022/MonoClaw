@@ -1,0 +1,164 @@
+{
+  "items": [
+    {
+      "id": "8cca753f-d29b-499b-9b3b-c33548b8e32a",
+      "title": "Follow up with Ray",
+      "notes": "",
+      "list": "active",
+      "status": "todo",
+      "tags": [
+        "relationships"
+      ],
+      "priority": 1,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.024Z",
+      "updatedAt": "2026-03-30T04:08:57.024Z",
+      "completedAt": null
+    },
+    {
+      "id": "be786dd2-e684-4fc6-8f44-7e6ab7c53c01",
+      "title": "Restart nami backend and verify smoke tests pass",
+      "notes": "",
+      "list": "active",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 1,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.038Z",
+      "updatedAt": "2026-03-30T04:08:57.038Z",
+      "completedAt": null
+    },
+    {
+      "id": "a37c1f5a-d18d-4940-9f14-ae5e8be34923",
+      "title": "Test community feed + reactions on iOS",
+      "notes": "",
+      "list": "active",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.053Z",
+      "updatedAt": "2026-03-30T04:08:57.053Z",
+      "completedAt": null
+    },
+    {
+      "id": "ca867beb-2027-4ce7-b8ca-bd4d7d133702",
+      "title": "Test daily reflection screen on device",
+      "notes": "",
+      "list": "active",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.065Z",
+      "updatedAt": "2026-03-30T04:08:57.065Z",
+      "completedAt": null
+    },
+    {
+      "id": "fa66585c-18a3-4caf-a38c-f0219a881c22",
+      "title": "Test collective session join/leave on iOS",
+      "notes": "",
+      "list": "active",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.076Z",
+      "updatedAt": "2026-03-30T04:08:57.076Z",
+      "completedAt": null
+    },
+    {
+      "id": "022fbf44-31dd-4e9a-a940-088137ae25fa",
+      "title": "Test voice agent on iOS (native should work)",
+      "notes": "",
+      "list": "active",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.086Z",
+      "updatedAt": "2026-03-30T04:08:57.086Z",
+      "completedAt": null
+    },
+    {
+      "id": "c5eba644-c8dd-4b30-a5be-bf7d1965e1eb",
+      "title": "Decide app name: nami vs Ora Club — unify everywhere",
+      "notes": "",
+      "list": "active",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.095Z",
+      "updatedAt": "2026-03-30T04:08:57.095Z",
+      "completedAt": null
+    },
+    {
+      "id": "449a86d4-3582-45a8-bb3c-f1d68d75038f",
+      "title": "Wire up forgot password or disable button",
+      "notes": "",
+      "list": "backlog",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.103Z",
+      "updatedAt": "2026-03-30T04:08:57.103Z",
+      "completedAt": null
+    },
+    {
+      "id": "f4ce2520-4911-451a-956b-7e0ae6fc3204",
+      "title": "Meditation room complete → auto-post to feed",
+      "notes": "",
+      "list": "backlog",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.109Z",
+      "updatedAt": "2026-03-30T04:08:57.109Z",
+      "completedAt": null
+    },
+    {
+      "id": "5d27c46a-7d68-4040-b931-430297c5fd5b",
+      "title": "Get shareable Expo Go / TestFlight build link",
+      "notes": "",
+      "list": "backlog",
+      "status": "todo",
+      "tags": [
+        "side-project"
+      ],
+      "priority": 0,
+      "dueDate": null,
+      "createdAt": "2026-03-30T04:08:57.115Z",
+      "updatedAt": "2026-03-30T04:08:57.115Z",
+      "completedAt": null
+    }
+  ],
+  "tags": [
+    "work",
+    "health",
+    "personal",
+    "finance",
+    "learning",
+    "relationships",
+    "side-project",
+    "home"
+  ]
+}

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Todos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f13;--surface:#18181f;--surface2:#21212b;--border:#2e2e3a;
+  --accent:#7c5cff;--accent2:#00e5ff;--success:#22c55e;--warn:#f59e0b;--danger:#ef4444;--blocked:#f97316;
+  --text:#f0f0f8;--muted:#6b6b7e;
+  --todo:#7c5cff;--inprog:#00e5ff;--done:#22c55e;--block:#f97316;
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;height:100vh;display:flex;flex-direction:column}
+
+/* NAV */
+header{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.5rem;background:var(--surface);border-bottom:1px solid var(--border);gap:1rem;flex-shrink:0}
+.logo{font-weight:700;font-size:1.1rem;letter-spacing:-.03em}
+.logo span{color:var(--accent)}
+.stats-row{display:flex;gap:1rem}
+.stat{text-align:center}
+.stat-n{font-size:1.1rem;font-weight:700;color:var(--accent)}
+.stat-l{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.header-btn{background:var(--accent);border:none;color:#fff;padding:.45rem 1rem;border-radius:8px;font-weight:600;font-size:.85rem;cursor:pointer;transition:.15s}
+.header-btn:hover{opacity:.85}
+
+/* LAYOUT */
+main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:200px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar-section{padding:.75rem 1rem .25rem;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.nav-item{padding:.5rem 1rem;cursor:pointer;border-radius:0;border-left:3px solid transparent;transition:.15s;display:flex;align-items:center;justify-content:space-between;font-size:.85rem}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(124,92,255,.12);border-left-color:var(--accent);color:var(--accent)}
+.nav-badge{font-size:.65rem;background:var(--surface2);padding:.1rem .35rem;border-radius:10px;color:var(--muted)}
+.nav-item.active .nav-badge{background:rgba(124,92,255,.2);color:var(--accent)}
+.tag-list{padding:0 .75rem .5rem;display:flex;flex-direction:column;gap:.15rem}
+.tag-item{padding:.35rem .5rem;cursor:pointer;border-radius:6px;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;transition:.15s}
+.tag-item:hover,.tag-item.active{background:var(--surface2);color:var(--text)}
+.tag-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:.75rem;padding:.65rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.status-tabs{display:flex;gap:.25rem}
+.tab{padding:.3rem .75rem;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:500;color:var(--muted);border:1px solid transparent;transition:.15s}
+.tab:hover{background:var(--surface2);color:var(--text)}
+.tab.active{background:rgba(124,92,255,.15);border-color:rgba(124,92,255,.3);color:var(--accent)}
+.tab[data-s="in-progress"].active{background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.3);color:var(--inprog)}
+.tab[data-s="completed"].active{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--success)}
+.tab[data-s="blocked"].active{background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.3);color:var(--blocked)}
+.search{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.35rem .75rem;color:var(--text);font-size:.85rem;outline:none;transition:.15s}
+.search:focus{border-color:var(--accent)}
+.search::placeholder{color:var(--muted)}
+
+/* ITEMS LIST */
+.list-area{flex:1;overflow-y:auto;padding:.75rem 1.25rem}
+.empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+.empty-icon{font-size:2.5rem;margin-bottom:.75rem}
+.empty h3{font-size:1rem;color:var(--text);margin-bottom:.35rem}
+
+/* ITEM CARD */
+.item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.85rem 1rem;margin-bottom:.5rem;display:flex;gap:.75rem;align-items:flex-start;transition:.15s;position:relative}
+.item:hover{border-color:rgba(124,92,255,.3)}
+.item.completed{opacity:.55}
+.item-check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:2px;transition:.15s}
+.item-check:hover{border-color:var(--success)}
+.item.completed .item-check{background:var(--success);border-color:var(--success)}
+.item-check svg{display:none}
+.item.completed .item-check svg{display:block}
+.item-body{flex:1;min-width:0}
+.item-title{font-weight:500;font-size:.9rem;margin-bottom:.3rem;line-height:1.4}
+.item.completed .item-title{text-decoration:line-through;color:var(--muted)}
+.item-notes{font-size:.8rem;color:var(--muted);margin-bottom:.4rem;line-height:1.5}
+.item-meta{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.status-pill{padding:.15rem .5rem;border-radius:100px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.s-todo{background:rgba(124,92,255,.15);color:var(--todo)}
+.s-in-progress{background:rgba(0,229,255,.12);color:var(--inprog)}
+.s-completed{background:rgba(34,197,94,.12);color:var(--success)}
+.s-blocked{background:rgba(249,115,22,.12);color:var(--blocked)}
+.tag-chip{background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:.1rem .45rem;font-size:.65rem;color:var(--muted)}
+.priority-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.p-0{background:var(--muted)}
+.p-1{background:var(--warn)}
+.p-2{background:var(--danger)}
+.due-date{font-size:.7rem;color:var(--muted)}
+.due-date.overdue{color:var(--danger)}
+.item-actions{display:flex;gap:.25rem;opacity:0;transition:.15s}
+.item:hover .item-actions{opacity:1}
+.icon-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:.2rem .35rem;border-radius:6px;font-size:.8rem;transition:.15s}
+.icon-btn:hover{background:var(--surface2);color:var(--text)}
+
+/* PRIORITY indicator bar */
+.item.p1{border-left:3px solid var(--warn)}
+.item.p2{border-left:3px solid var(--danger)}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem}
+.overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:520px;padding:1.5rem;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.modal h2{font-size:1.05rem;font-weight:700;margin-bottom:1.25rem}
+.form-group{margin-bottom:.9rem}
+label{display:block;font-size:.78rem;font-weight:600;color:var(--muted);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em}
+input[type=text],input[type=date],textarea,select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;color:var(--text);font-size:.9rem;font-family:inherit;outline:none;transition:.15s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical;min-height:70px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.tags-select{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.35rem}
+.tag-toggle{padding:.25rem .6rem;border-radius:100px;font-size:.72rem;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:.15s}
+.tag-toggle.on{background:rgba(124,92,255,.2);border-color:rgba(124,92,255,.5);color:var(--accent)}
+.modal-actions{display:flex;justify-content:flex-end;gap:.65rem;margin-top:1.25rem}
+.btn{padding:.5rem 1.1rem;border-radius:8px;font-weight:600;font-size:.85rem;cursor:pointer;border:none;transition:.15s}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2);color:var(--text)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{opacity:.85}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">◈ <span>Todo</span></div>
+  <div class="stats-row" id="statsRow">
+    <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">Total</div></div>
+    <div class="stat"><div class="stat-n" id="sActive">0</div><div class="stat-l">Active</div></div>
+    <div class="stat"><div class="stat-n" id="sToday">0</div><div class="stat-l">Done Today</div></div>
+    <div class="stat"><div class="stat-n" id="sBlocked">0</div><div class="stat-l">Blocked</div></div>
+  </div>
+  <button class="header-btn" onclick="openModal()">+ New Item</button>
+</header>
+
+<main>
+  <div class="sidebar">
+    <div class="sidebar-section">Lists</div>
+    <div class="nav-item active" data-list="all" onclick="setList(this)">
+      All Items <span class="nav-badge" id="b-all">0</span>
+    </div>
+    <div class="nav-item" data-list="active" onclick="setList(this)">
+      Active <span class="nav-badge" id="b-active">0</span>
+    </div>
+    <div class="nav-item" data-list="backlog" onclick="setList(this)">
+      Backlog <span class="nav-badge" id="b-backlog">0</span>
+    </div>
+    <div class="nav-item" data-list="cache" onclick="setList(this)">
+      Cache <span class="nav-badge" id="b-cache">0</span>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:.5rem">Tags</div>
+    <div class="tag-list" id="tagList"></div>
+  </div>
+
+  <div class="content">
+    <div class="toolbar">
+      <div class="status-tabs">
+        <div class="tab active" data-s="all" onclick="setStatus(this)">All</div>
+        <div class="tab" data-s="todo" onclick="setStatus(this)">Todo</div>
+        <div class="tab" data-s="in-progress" onclick="setStatus(this)">In Progress</div>
+        <div class="tab" data-s="completed" onclick="setStatus(this)">Completed</div>
+        <div class="tab" data-s="blocked" onclick="setStatus(this)">Blocked</div>
+      </div>
+      <input class="search" type="text" id="searchInput" placeholder="Search…" oninput="render()">
+    </div>
+    <div class="list-area" id="listArea"></div>
+  </div>
+</main>
+
+<!-- New/Edit Modal -->
+<div class="overlay hidden" id="overlay" onclick="closeOnBg(event)">
+  <div class="modal">
+    <h2 id="modalTitle">New Item</h2>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="fTitle" placeholder="What needs doing?">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="fNotes" placeholder="Optional details…"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>List</label>
+        <select id="fList">
+          <option value="active">Active</option>
+          <option value="backlog">Backlog</option>
+          <option value="cache">Cache</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fStatus">
+          <option value="todo">Todo</option>
+          <option value="in-progress">In Progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="fPriority">
+          <option value="0">Normal</option>
+          <option value="1">High</option>
+          <option value="2">Urgent</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Due Date</label>
+        <input type="date" id="fDue">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Tags (Life Events)</label>
+      <div class="tags-select" id="tagToggles"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let state = { items: [], tags: [], list: 'all', status: 'all', editId: null, activeTag: null };
+
+async function api(method, path, body) {
+  const r = await fetch(path, {
+    method,
+    headers: body ? {'Content-Type':'application/json'} : {},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  return r.json();
+}
+
+async function load() {
+  const [data, stats] = await Promise.all([
+    api('GET', '/api/items'),
+    api('GET', '/api/stats')
+  ]);
+  state.items = data.items;
+  state.tags = data.tags;
+  updateStats(stats);
+  updateBadges();
+  renderTags();
+  render();
+}
+
+function updateStats(s) {
+  document.getElementById('sTotal').textContent = s.total;
+  document.getElementById('sActive').textContent = s.byList?.active || 0;
+  document.getElementById('sToday').textContent = s.completedToday;
+  document.getElementById('sBlocked').textContent = s.byStatus?.blocked || 0;
+}
+
+function updateBadges() {
+  const counts = { all: state.items.length, active: 0, backlog: 0, cache: 0 };
+  state.items.forEach(i => counts[i.list] = (counts[i.list]||0)+1);
+  ['all','active','backlog','cache'].forEach(l => {
+    const el = document.getElementById('b-'+l);
+    if (el) el.textContent = counts[l]||0;
+  });
+}
+
+function renderTags() {
+  const el = document.getElementById('tagList');
+  el.innerHTML = '';
+  // Count usages
+  const counts = {};
+  state.items.forEach(i => (i.tags||[]).forEach(t => counts[t]=(counts[t]||0)+1));
+  state.tags.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'tag-item' + (state.activeTag === t ? ' active' : '');
+    div.innerHTML = `<span class="tag-dot"></span>${t} <span style="margin-left:auto;font-size:.65rem;color:var(--muted)">${counts[t]||0}</span>`;
+    div.onclick = () => { state.activeTag = state.activeTag === t ? null : t; renderTags(); render(); };
+    el.appendChild(div);
+  });
+}
+
+function render() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  let items = state.items;
+  if (state.list !== 'all') items = items.filter(i => i.list === state.list);
+  if (state.status !== 'all') items = items.filter(i => i.status === state.status);
+  if (state.activeTag) items = items.filter(i => (i.tags||[]).includes(state.activeTag));
+  if (q) items = items.filter(i => i.title.toLowerCase().includes(q) || (i.notes||'').toLowerCase().includes(q));
+
+  const el = document.getElementById('listArea');
+  if (!items.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">✓</div><h3>Nothing here</h3><p style="color:var(--muted);font-size:.85rem">Add something to get started</p></div>`;
+    return;
+  }
+
+  el.innerHTML = items.map(item => {
+    const sc = `s-${item.status.replace(' ','-')}`;
+    const pl = item.priority > 0 ? `p${item.priority}` : '';
+    const tags = (item.tags||[]).map(t => `<span class="tag-chip">${t}</span>`).join('');
+    const due = item.dueDate ? (() => {
+      const d = new Date(item.dueDate); const now = new Date();
+      const over = d < now && item.status !== 'completed';
+      return `<span class="due-date ${over?'overdue':''}">${over?'⚠ ':''}${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`;
+    })() : '';
+    const pdot = `<span class="priority-dot p-${item.priority}" title="${['Normal','High','Urgent'][item.priority]}"></span>`;
+    return `
+    <div class="item ${item.status==='completed'?'completed':''} ${pl}" data-id="${item.id}">
+      <div class="item-check" onclick="toggleDone('${item.id}')">
+        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="item-body">
+        <div class="item-title">${esc(item.title)}</div>
+        ${item.notes ? `<div class="item-notes">${esc(item.notes)}</div>` : ''}
+        <div class="item-meta">
+          ${pdot}
+          <span class="status-pill ${sc}">${item.status}</span>
+          ${tags}
+          ${due}
+        </div>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="openModal('${item.id}')" title="Edit">✎</button>
+        <button class="icon-btn" onclick="cycleStatus('${item.id}')" title="Next status">↺</button>
+        <button class="icon-btn" onclick="deleteItem('${item.id}')" title="Delete" style="color:var(--danger)">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function setList(el) {
+  document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  state.list = el.dataset.list;
+  render();
+}
+
+function setStatus(el) {
+  document.querySelectorAll('.tab').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  state.status = el.dataset.s;
+  render();
+}
+
+async function toggleDone(id) {
+  const item = state.items.find(i => i.id === id);
+  const newStatus = item.status === 'completed' ? 'todo' : 'completed';
+  await api('PATCH', `/api/items/${id}`, { status: newStatus });
+  await load();
+}
+
+async function cycleStatus(id) {
+  const item = state.items.find(i => i.id === id);
+  const cycle = ['todo','in-progress','blocked','completed'];
+  const next = cycle[(cycle.indexOf(item.status)+1) % cycle.length];
+  await api('PATCH', `/api/items/${id}`, { status: next });
+  await load();
+}
+
+async function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  await api('DELETE', `/api/items/${id}`);
+  await load();
+}
+
+// Modal
+function openModal(id) {
+  state.editId = id || null;
+  const item = id ? state.items.find(i => i.id === id) : null;
+  document.getElementById('modalTitle').textContent = id ? 'Edit Item' : 'New Item';
+  document.getElementById('fTitle').value = item?.title || '';
+  document.getElementById('fNotes').value = item?.notes || '';
+  document.getElementById('fList').value = item?.list || (state.list !== 'all' ? state.list : 'active');
+  document.getElementById('fStatus').value = item?.status || 'todo';
+  document.getElementById('fPriority').value = item?.priority || '0';
+  document.getElementById('fDue').value = item?.dueDate ? item.dueDate.split('T')[0] : '';
+
+  // Tag toggles
+  const sel = item?.tags || [];
+  document.getElementById('tagToggles').innerHTML = state.tags.map(t =>
+    `<button class="tag-toggle ${sel.includes(t)?'on':''}" onclick="toggleTag(this,'${t}')">${t}</button>`
+  ).join('') + `<button class="tag-toggle" onclick="addCustomTag()">+ new</button>`;
+
+  document.getElementById('overlay').classList.remove('hidden');
+  document.getElementById('fTitle').focus();
+}
+
+function toggleTag(btn, tag) {
+  btn.classList.toggle('on');
+}
+
+async function addCustomTag() {
+  const t = prompt('New tag:');
+  if (!t) return;
+  await api('POST', '/api/tags', { tag: t.toLowerCase().trim() });
+  await load();
+  openModal(state.editId);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.add('hidden');
+  state.editId = null;
+}
+
+function closeOnBg(e) { if (e.target.id === 'overlay') closeModal(); }
+
+async function saveItem() {
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { document.getElementById('fTitle').focus(); return; }
+  const tags = [...document.querySelectorAll('.tag-toggle.on')].map(b => b.textContent);
+  const body = {
+    title,
+    notes: document.getElementById('fNotes').value.trim(),
+    list: document.getElementById('fList').value,
+    status: document.getElementById('fStatus').value,
+    priority: parseInt(document.getElementById('fPriority').value),
+    dueDate: document.getElementById('fDue').value || null,
+    tags,
+  };
+  if (state.editId) {
+    await api('PATCH', `/api/items/${state.editId}`, body);
+  } else {
+    await api('POST', '/api/items', body);
+  }
+  closeModal();
+  await load();
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'n' && !['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) openModal();
+});
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
