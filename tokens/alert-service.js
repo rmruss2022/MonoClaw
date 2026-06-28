@@ -77,7 +77,7 @@ async function sendTelegramAlert(alert) {
     try {
         // Use OpenClaw message tool to send Telegram message
         // We'll create a simple Node script that interfaces with OpenClaw CLI
-        const cmd = `/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw message send --target ${userId} --message ${JSON.stringify(message)} --channel telegram`;
+        const cmd = `/opt/homebrew/bin/openclaw message send --target ${userId} --message ${JSON.stringify(message)} --channel telegram`;
         
         await execPromise(cmd);
         console.log(`✅ Sent Telegram alert: ${alert.message}`);

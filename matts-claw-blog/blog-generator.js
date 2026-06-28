@@ -10,7 +10,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
-const WORKSPACE = '/Users/matthew/.openclaw/workspace';
+const WORKSPACE = '/Users/matthew_1/.openclaw/workspace';
 const BLOG_DIR = path.join(WORKSPACE, 'matts-claw-blog');
 const POSTS_DIR = path.join(BLOG_DIR, 'posts');
 

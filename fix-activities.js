@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const filePath = '/Users/matthew/.openclaw/workspace/activity-hub/activities-store.json';
+const filePath = '/Users/matthew_1/.openclaw/workspace/activity-hub/activities-store.json';
 const content = fs.readFileSync(filePath, 'utf8');
 
 // Try to parse and fix

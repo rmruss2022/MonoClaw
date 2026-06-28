@@ -6,11 +6,11 @@ const ContextStorage = require('./context-storage');
 
 const execFileAsync = promisify(execFile);
 
-const OPENCLAW_BIN = process.env.OPENCLAW_BIN || '/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw';
+const OPENCLAW_BIN = process.env.OPENCLAW_BIN || '/opt/homebrew/bin/openclaw';
 const MAX_STDERR = 4096;
 const COMMAND_TIMEOUT_MS = Number(process.env.CONTEXT_COMMAND_TIMEOUT_MS || 30000);
 const AGENT_RE = /^[a-zA-Z0-9_-]+$/;
-const OPENCLAW_HOME = process.env.OPENCLAW_HOME || '/Users/matthew/.openclaw';
+const OPENCLAW_HOME = process.env.OPENCLAW_HOME || '/Users/matthew_1/.openclaw';
 
 function trimStderr(stderr = '') {
   if (!stderr) return '';

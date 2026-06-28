@@ -9,9 +9,9 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const SESSIONS_DIR = '/Users/matthew/.openclaw/agents/main/sessions';
+const SESSIONS_DIR = '/Users/matthew_1/.openclaw/agents/main/sessions';
 const ACTIVITY_HUB_API = 'http://localhost:18796/api/activity/log';
-const SESSIONS_JSON = '/Users/matthew/.openclaw/agents/main/sessions/sessions.json';
+const SESSIONS_JSON = '/Users/matthew_1/.openclaw/agents/main/sessions/sessions.json';
 const POLL_INTERVAL = 2000; // Check for new sessions every 2 seconds
 
 // Track which sessions we're already monitoring

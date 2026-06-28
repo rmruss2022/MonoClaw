@@ -15,7 +15,7 @@ const sqlite3 = require('sqlite3').verbose();
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 const DB_FILE = path.join(__dirname, 'token-costs.db');
 const SCHEMA_FILE = path.join(__dirname, 'db-schema.sql');
-const OPENCLAW_BIN = '/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw';
+const OPENCLAW_BIN = '/opt/homebrew/bin/openclaw';
 
 // Load configuration
 let config;

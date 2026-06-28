@@ -15,7 +15,7 @@ const DATA_FILE = path.join(__dirname, 'usage-history.json');
 
 async function collectTokenData() {
     try {
-        const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw status --sessions');
+        const { stdout } = await execPromise('/opt/homebrew/bin/openclaw status --sessions');
         
         // Parse Sessions section - find the row with highest token usage (likely the main interactive session)
         // Format: │ agent:moonshot-swarm:main │ direct │ 1m ago │ claude-sonnet-4-5 │ 58k/200k (29%) │

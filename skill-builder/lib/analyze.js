@@ -200,7 +200,7 @@ async function analyzeService(service) {
 
   // Analyze README
   if (service.path || service.metadata?.hasReadme) {
-    const readme = await analyzeReadme(service.path || path.join('/Users/matthew/.openclaw/workspace/skills', service.name));
+    const readme = await analyzeReadme(service.path || path.join('/Users/matthew_1/.openclaw/workspace/skills', service.name));
     if (readme) {
       analysis.readme = readme;
       analysis.description = readme.description || readme.overview?.split('\n')[0];
@@ -208,7 +208,7 @@ async function analyzeService(service) {
   }
 
   // Check existing skill
-  const skillPath = path.join('/Users/matthew/.openclaw/workspace/skills', service.name);
+  const skillPath = path.join('/Users/matthew_1/.openclaw/workspace/skills', service.name);
   const skill = await analyzeSkillFile(skillPath);
   analysis.existingSkill = skill;
 

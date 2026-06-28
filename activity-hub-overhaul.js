@@ -14,7 +14,7 @@ const { exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
-const SESSIONS_DIR = '/Users/matthew/.openclaw/agents/main/sessions';
+const SESSIONS_DIR = '/Users/matthew_1/.openclaw/agents/main/sessions';
 const ACTIVITIES_FILE = path.join(__dirname, 'activity-hub/activities-store.json');
 
 // Color scheme for activity types
@@ -38,7 +38,7 @@ const ACTIVITY_ICONS = {
 
 async function getAgentLabels() {
     try {
-        const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
+        const { stdout } = await execPromise('/opt/homebrew/bin/openclaw sessions list --json');
         const data = JSON.parse(stdout);
         
         const labelMap = {};

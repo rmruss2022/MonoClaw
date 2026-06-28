@@ -5,7 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
-const execPromise = util.promisify(exec);
+const _exec = util.promisify(exec);
+const EXEC_ENV = { ...process.env, PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + (process.env.PATH || "") };
+const execPromise = (cmd, opts) => _exec(cmd, { env: EXEC_ENV, ...opts });
 
 const PORT = 18795;
 const HOME_DIR = process.env.HOME || '/Users/matthew';
@@ -374,7 +376,7 @@ function getAvailableModels(config) {
 async function isGmailEnabled() {
     try {
         const { stdout } = await Promise.race([
-            execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron list --json'),
+            execPromise('/opt/homebrew/bin/openclaw cron list --json'),
             new Promise((_, reject) => setTimeout(() => reject(new Error('cron list timeout')), 3000))
         ]);
         const cronData = JSON.parse(stdout);
@@ -389,7 +391,7 @@ async function isGmailEnabled() {
 async function toggleGmail(enabled) {
     try {
         const enableFlag = enabled ? 'true' : 'false';
-        await execPromise(`/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron update 3956a4f1-f07b-4ce6-869d-5d69664debb2 --patch '{"enabled":${enableFlag}}'`);
+        await execPromise(`/opt/homebrew/bin/openclaw cron update 3956a4f1-f07b-4ce6-869d-5d69664debb2 --patch '{"enabled":${enableFlag}}'`);
         return { success: true, enabled };
     } catch (error) {
         console.error('Failed to toggle Gmail:', error.message);
@@ -534,7 +536,7 @@ async function getSystemData() {
                 {
                     name: 'MonoClaw Dashboard',
                     running: monoclawDash,
-                    detail: monoclawDash ? `Port 18798` : 'Stopped'
+                    detail: monoclawDash ? `Port 18802` : 'Stopped'
                 },
                 {
                     name: 'Vision Controller',
@@ -577,18 +579,6 @@ async function getSystemData() {
                     running: jobsApp,
                     detail: jobsApp ? `Port 3003` : 'Stopped',
                     link: 'http://openclaw-hub:3003'
-                },
-                {
-                    name: 'Raves Dashboard',
-                    running: ravesApp,
-                    detail: ravesApp ? `Port 3004` : 'Stopped',
-                    link: 'http://openclaw-hub:3004'
-                },
-                {
-                    name: 'Arbitrage Scanner',
-                    running: arbitrageScanner,
-                    detail: arbitrageScanner ? `Port 3005` : 'Stopped',
-                    link: 'http://openclaw-hub:3005/dashboard.html'
                 },
                 {
                     name: 'Gmail Inbox Check',
@@ -741,7 +731,7 @@ async function checkVoiceServerHealth() {
 async function getCronJobs() {
     try {
         const { stdout } = await Promise.race([
-            execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron list --json'),
+            execPromise('/opt/homebrew/bin/openclaw cron list --json'),
             new Promise((_, reject) => setTimeout(() => reject(new Error('cron list timeout')), 5000))
         ]);
         const cronData = JSON.parse(stdout);
@@ -795,7 +785,7 @@ async function parseOpenClawStatus() {
     try {
         // Add timeout to openclaw status command (max 2 seconds)
         const { stdout } = await Promise.race([
-            execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw status'),
+            execPromise('/opt/homebrew/bin/openclaw status'),
             new Promise((_, reject) => setTimeout(() => reject(new Error('openclaw status timeout')), 2000))
         ]);
         
@@ -854,7 +844,7 @@ async function setModel(model) {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
         
         // Restart gateway to apply
-        await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw gateway restart');
+        await execPromise('/opt/homebrew/bin/openclaw gateway restart');
         
         return { success: true };
     } catch (error) {
@@ -1029,7 +1019,7 @@ const server = http.createServer(async (req, res) => {
         }
     } else if (req.url === '/api/openclaw-status' && req.method === 'GET') {
         try {
-            const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw status');
+            const { stdout } = await execPromise('/opt/homebrew/bin/openclaw status');
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, output: stdout }));
         } catch (error) {
@@ -1075,7 +1065,7 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify(health));
     } else if (req.url === '/api/cron' && req.method === 'GET') {
         try {
-            const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw cron list --json');
+            const { stdout } = await execPromise('/opt/homebrew/bin/openclaw cron list --json');
             const cronData = JSON.parse(stdout);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(cronData));
@@ -1083,9 +1073,219 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: error.message, jobs: [] }));
         }
+    } else if (req.url === '/api/cron-calendar' && req.method === 'GET') {
+        try {
+            const runsDir = path.join(process.env.HOME, '.openclaw/cron/runs');
+            const mediaDir = path.join(process.env.HOME, '.openclaw/media');
+            const result = {};
+            // Get full job state from cron list (with timeout)
+            let cronData = { jobs: [] };
+            try {
+                const { stdout } = await execPromise('/opt/homebrew/bin/openclaw cron list --json');
+                cronData = JSON.parse(stdout);
+            } catch (e) { console.error('cron list failed:', e.message); }
+
+            if (fs.existsSync(runsDir)) {
+                const files = fs.readdirSync(runsDir).filter(f => f.endsWith('.jsonl'));
+                for (const f of files) {
+                    const jobId = f.replace('.jsonl', '');
+                    const content = fs.readFileSync(path.join(runsDir, f), 'utf-8');
+                    const lines = content.split('\n').filter(l => l.trim());
+                    // Load per-run full-text reports if they exist
+                    const reportsDir = path.join(path.dirname(runsDir), 'reports', jobId);
+                    const reportIndex = {};
+                    if (fs.existsSync(reportsDir)) {
+                        for (const rf of fs.readdirSync(reportsDir)) {
+                            if (rf.endsWith('.txt')) {
+                                const ts = rf.replace('.txt', '');
+                                try {
+                                    reportIndex[ts] = fs.readFileSync(path.join(reportsDir, rf), 'utf-8').trim();
+                                } catch {}
+                            }
+                        }
+                    }
+
+                    const runs = [];
+                    for (const line of lines) {
+                        try {
+                            const d = JSON.parse(line);
+                            const ts = d.ts || d.runAtMs;
+                            const fullText = reportIndex[String(ts)] || null;
+                            runs.push({
+                                ts,
+                                status: d.status,
+                                delivered: d.delivered,
+                                durationMs: d.durationMs,
+                                error: d.error,
+                                summary: d.summary,
+                                fullText // null if no report file, string if saved
+                            });
+                        } catch {}
+                    }
+                    const job = cronData.jobs?.find(j => j.id === jobId) || {};
+                    const name = job.name || jobId.slice(0, 8);
+                    const state = job.state || {};
+
+                    // Look for matching artifacts in media dir (mp3/txt files matching job name slug)
+                    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                    const artifacts = { text: null, audio: null, lastSummary: null };
+                    // Common pattern: <slug>.txt, <slug>.mp3, <slug>-tts.txt
+                    const candidateNames = [
+                        `${slug}.txt`, `${slug}.mp3`,
+                        `${slug}-tts.txt`, `${slug}-briefing.txt`, `${slug}-briefing.mp3`,
+                        `${slug}-report.txt`, `${slug}-report.mp3`
+                    ];
+                    try {
+                        if (fs.existsSync(mediaDir)) {
+                            for (const cn of candidateNames) {
+                                const full = path.join(mediaDir, cn);
+                                if (fs.existsSync(full)) {
+                                    const stat = fs.statSync(full);
+                                    if (cn.endsWith('.mp3')) artifacts.audio = { name: cn, size: stat.size, mtime: stat.mtimeMs };
+                                    else if (!artifacts.text) artifacts.text = { name: cn, size: stat.size, mtime: stat.mtimeMs };
+                                }
+                            }
+                            // Also scan for any file containing the slug in name
+                            const allFiles = fs.readdirSync(mediaDir);
+                            for (const fn of allFiles) {
+                                const lower = fn.toLowerCase();
+                                if (lower.includes(slug) && !artifacts.text && !artifacts.audio) {
+                                    const full = path.join(mediaDir, fn);
+                                    const stat = fs.statSync(full);
+                                    if (lower.endsWith('.mp3')) artifacts.audio = { name: fn, size: stat.size, mtime: stat.mtimeMs };
+                                    else if (lower.endsWith('.txt')) artifacts.text = { name: fn, size: stat.size, mtime: stat.mtimeMs };
+                                }
+                            }
+                        }
+                    } catch (e) { console.error('artifact scan failed:', e.message); }
+
+                    // Get last summary from runs
+                    for (let i = runs.length - 1; i >= 0; i--) {
+                        if (runs[i].summary) {
+                            artifacts.lastSummary = runs[i].summary;
+                            break;
+                        }
+                    }
+
+                    result[jobId] = {
+                        id: jobId,
+                        name,
+                        schedule: job.schedule,
+                        model: job.model,
+                        enabled: job.enabled !== false,
+                        sessionTarget: job.sessionTarget,
+                        consecutiveErrors: state.consecutiveErrors || 0,
+                        nextRunAtMs: state.nextRunAtMs,
+                        lastRunAtMs: state.lastRunAtMs,
+                        lastRunStatus: state.lastRunStatus,
+                        lastError: state.lastError,
+                        lastErrorReason: state.lastErrorReason,
+                        lastDeliveryError: state.lastDeliveryError,
+                        artifacts,
+                        runs
+                    };
+                }
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(result));
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message }));
+        }
+    } else if (req.url.startsWith('/api/cron-report') && req.method === 'POST') {
+        // Save a full run report: { jobId, ts, text }
+        let body = '';
+        req.on('data', d => body += d);
+        req.on('end', () => {
+            try {
+                const { jobId, ts, text } = JSON.parse(body);
+                if (!jobId || !ts || !text) { res.writeHead(400); res.end(JSON.stringify({ error: 'jobId, ts, text required' })); return; }
+                const dir = path.join(process.env.HOME, '.openclaw/cron/reports', jobId);
+                fs.mkdirSync(dir, { recursive: true });
+                fs.writeFileSync(path.join(dir, `${ts}.txt`), text, 'utf-8');
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, saved: `${jobId}/${ts}.txt` }));
+            } catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
+        });
+    } else if (req.url.startsWith('/api/cron-report/') && req.method === 'GET') {
+        // Fetch a full run report: /api/cron-report/<jobId>/<ts>
+        try {
+            const parts = req.url.replace('/api/cron-report/', '').split('/');
+            const jobId = parts[0]; const ts = parts[1];
+            if (!jobId || !ts) { res.writeHead(400); res.end('bad request'); return; }
+            const filePath = path.join(process.env.HOME, '.openclaw/cron/reports', jobId, `${ts}.txt`);
+            if (!fs.existsSync(filePath)) { res.writeHead(404); res.end('not found'); return; }
+            const text = fs.readFileSync(filePath, 'utf-8');
+            res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+            res.end(text);
+        } catch(e) { res.writeHead(500); res.end(e.message); }
+    } else if (req.url.startsWith('/api/tts') && (req.method === 'POST' || req.method === 'GET')) {
+        // Proxy TTS endpoints to voice server — avoids CORS issues from browser
+        const voicePath = req.url.replace('/api/tts', ''); // /speak → /speak, /stop → /stop, /status → /status
+        if (req.method === 'GET') {
+            const voiceReq = http.request({ hostname: '127.0.0.1', port: 18790, path: voicePath, method: 'GET' }, voiceRes => {
+                let rBody = ''; voiceRes.on('data', d => rBody += d);
+                voiceRes.on('end', () => { res.writeHead(voiceRes.statusCode, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(rBody); });
+            });
+            voiceReq.on('error', e => { res.writeHead(502); res.end(JSON.stringify({ error: e.message })); });
+            voiceReq.end();
+        } else {
+            let body = '';
+            req.on('data', d => body += d);
+            req.on('end', () => {
+                try {
+                    const payload = body ? JSON.parse(body) : {};
+                    const outBody = voicePath === '/speak' ? JSON.stringify({ text: payload.text, immediate: true }) : '{}';
+                    const voiceReq = http.request({
+                        hostname: '127.0.0.1', port: 18790, path: voicePath, method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    }, voiceRes => {
+                        let rBody = ''; voiceRes.on('data', d => rBody += d);
+                        voiceRes.on('end', () => { res.writeHead(voiceRes.statusCode, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(rBody || '{"ok":true}'); });
+                    });
+                    voiceReq.on('error', e => { res.writeHead(502); res.end(JSON.stringify({ error: e.message })); });
+                    voiceReq.end(outBody);
+                } catch(e) { res.writeHead(400); res.end(JSON.stringify({ error: 'bad request' })); }
+            });
+        }
+    } else if (req.url.startsWith('/api/cron-artifact/') && req.method === 'GET') {
+        // Serve cron artifact files securely (only from ~/.openclaw/media/)
+        try {
+            const filename = decodeURIComponent(req.url.replace('/api/cron-artifact/', ''));
+            // Security: reject path traversal
+            if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+                res.writeHead(400); res.end('Invalid filename'); return;
+            }
+            const full = path.join(process.env.HOME, '.openclaw/media', filename);
+            const resolved = path.resolve(full);
+            const allowedDir = path.resolve(path.join(process.env.HOME, '.openclaw/media'));
+            if (!resolved.startsWith(allowedDir + path.sep) && resolved !== allowedDir) {
+                res.writeHead(403); res.end('Forbidden'); return;
+            }
+            if (!fs.existsSync(resolved)) {
+                res.writeHead(404); res.end('Not found'); return;
+            }
+            const ext = path.extname(resolved).toLowerCase();
+            const mimeMap = { '.mp3': 'audio/mpeg', '.txt': 'text/plain', '.json': 'application/json', '.md': 'text/markdown' };
+            const contentType = mimeMap[ext] || 'application/octet-stream';
+            const stat = fs.statSync(resolved);
+            res.writeHead(200, {
+                'Content-Type': contentType,
+                'Content-Length': stat.size,
+                'Content-Disposition': ext === '.mp3' ? `inline; filename="${filename}"` : 'inline'
+            });
+            fs.createReadStream(resolved).pipe(res);
+        } catch (error) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message }));
+        }
+    } else if (req.url === '/cron-calendar.html') {
+        // Legacy calendar route - redirect to unified /cron page
+        res.writeHead(302, { 'Location': '/cron' });
+        res.end();
     } else if (req.url === '/api/sessions' && req.method === 'GET') {
         try {
-            const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
+            const { stdout } = await execPromise('/opt/homebrew/bin/openclaw sessions list --json');
             const sessions = JSON.parse(stdout);
             
             // Enrich sessions with labels from sessions.json (openclaw CLI doesn't return them)
@@ -1129,7 +1329,7 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
             
-            const { stdout } = await execPromise(`/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions history "${sessionKey}" --json --limit 50`);
+            const { stdout } = await execPromise(`/opt/homebrew/bin/openclaw sessions history "${sessionKey}" --json --limit 50`);
             const data = JSON.parse(stdout);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, history: data.messages || [] }));

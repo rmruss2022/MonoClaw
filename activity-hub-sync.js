@@ -17,7 +17,7 @@ const execPromise = util.promisify(exec);
 
 const ACTIVITY_HUB_URL = 'http://localhost:18796';
 const POLL_INTERVAL = 10000; // 10 seconds
-const SESSIONS_DIR = '/Users/matthew/.openclaw/agents/main/sessions';
+const SESSIONS_DIR = '/Users/matthew_1/.openclaw/agents/main/sessions';
 
 // Track file read positions for each transcript
 const filePositions = new Map();
@@ -40,7 +40,7 @@ const CATEGORIES = {
  */
 async function updateAgentLabels() {
   try {
-    const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
+    const { stdout } = await execPromise('/opt/homebrew/bin/openclaw sessions list --json');
     const data = JSON.parse(stdout);
     
     if (data.sessions) {
@@ -113,7 +113,7 @@ async function logActivity(action, type, metadata = {}) {
  */
 async function getActiveSubAgents() {
   try {
-    const { stdout } = await execPromise('/Users/matthew/.nvm/versions/node/v22.22.0/bin/openclaw sessions list --json');
+    const { stdout } = await execPromise('/opt/homebrew/bin/openclaw sessions list --json');
     const data = JSON.parse(stdout);
     return data.sessions.filter(s => s.key.includes('subagent'));
   } catch (error) {

@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('./lib/db');
 
-const PORT = 18791;
+const PORT = 3003;
 const DIR = __dirname;
 
 const MIME_TYPES = {

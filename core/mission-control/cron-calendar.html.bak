@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron Calendar - Mission Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            padding: 24px;
+        }
+        .header {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .header h1 {
+            font-size: 24px;
+            color: #00ff88;
+        }
+        .header .subtitle { font-size: 12px; color: #666; }
+        .header a {
+            color: #00aaff;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        .header a:hover { text-decoration: underline; }
+
+        /* GitHub-style contribution graph */
+        .graph-container {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .graph-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .graph-title {
+            font-size: 14px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .graph-legend {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #888;
+        }
+        .legend-cell {
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+        .legend-cell.l0 { background: #1e1e1e; border: 1px solid #2a2a2a; }
+        .legend-cell.l1 { background: #0e4429; }
+        .legend-cell.l2 { background: #006d32; }
+        .legend-cell.l3 { background: #26a641; }
+        .legend-cell.l4 { background: #39d353; }
+
+        .graph-scroll {
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .graph {
+            display: grid;
+            grid-template-rows: repeat(7, 13px);
+            grid-auto-flow: column;
+            grid-auto-columns: 13px;
+            gap: 3px;
+            min-width: max-content;
+        }
+        .cell {
+            width: 13px;
+            height: 13px;
+            border-radius: 2px;
+            background: #1e1e1e;
+            border: 1px solid #2a2a2a;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.1s;
+        }
+        .cell:hover { transform: scale(1.4); z-index: 10; border-color: #fff; }
+        .cell.l0 { background: #1e1e1e; border-color: #2a2a2a; }
+        .cell.l1 { background: #0e4429; border-color: transparent; }
+        .cell.l2 { background: #006d32; border-color: transparent; }
+        .cell.l3 { background: #26a641; border-color: transparent; }
+        .cell.l4 { background: #39d353; border-color: transparent; }
+        .cell.failure { 
+            background: #ff4444; border-color: #cc0000;
+        }
+        .cell.empty { background: transparent; border-color: transparent; cursor: default; }
+        .cell.empty:hover { transform: none; border-color: transparent; }
+
+        .cell[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: pre;
+            z-index: 100;
+            border: 1px solid #333;
+        }
+
+        /* Job section */
+        .job-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .job-name {
+            font-size: 16px;
+            color: #00ff88;
+        }
+        .job-name.error { color: #ff4444; }
+        .job-name.warning { color: #ffaa00; }
+        .job-id {
+            font-size: 10px;
+            color: #666;
+            font-family: monospace;
+            margin-left: 8px;
+        }
+        .job-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+        .job-meta b { color: #e0e0e0; }
+
+        .job-graph {
+            display: grid;
+            grid-template-rows: repeat(7, 11px);
+            grid-auto-flow: column;
+            grid-auto-columns: 11px;
+            gap: 2px;
+            overflow-x: auto;
+            padding: 4px 0;
+        }
+        .job-graph .cell { width: 11px; height: 11px; }
+
+        .stats-row {
+            display: flex;
+            gap: 24px;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid #2a2a2a;
+            font-size: 12px;
+        }
+        .stat { color: #888; }
+        .stat b { color: #e0e0e0; }
+        .stat.success b { color: #00ff88; }
+        .stat.error b { color: #ff4444; }
+        .stat.rate b { color: #00aaff; }
+
+        .refresh-btn {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .refresh-btn:hover { background: #00cc6a; }
+        .refresh-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+        .filter-bar input {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 12px;
+            flex: 1;
+        }
+        .filter-bar input:focus { outline: none; border-color: #00ff88; }
+        .filter-bar label { font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>📅 Cron Calendar</h1>
+            <div class="subtitle">GitHub-style job health history · last 90 days</div>
+        </div>
+        <div>
+            <a href="/cron-dashboard.html">→ Standard View</a>
+            <button class="refresh-btn" onclick="loadAll()" style="margin-left:12px">↻ Refresh</button>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <label>Filter:</label>
+        <input id="filter" type="text" placeholder="job name..." oninput="render()">
+    </div>
+
+    <div id="loading" class="loading">Loading cron history...</div>
+    <div id="content" style="display:none"></div>
+
+    <script>
+        const RUNS_DIR = '/Users/matthew_1/.openclaw/cron/runs';
+        let allJobs = {};
+
+        async function loadAll() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('content').style.display = 'none';
+            try {
+                const resp = await fetch('/api/cron-calendar');
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                allJobs = await resp.json();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                render();
+            } catch (e) {
+                document.getElementById('loading').textContent = 'Error: ' + e.message;
+            }
+        }
+
+        function fmtDate(d) {
+            return d.toISOString().slice(0, 10);
+        }
+
+        function buildDayMap(runs) {
+            // Build a map of date -> {success, error, total}
+            const map = {};
+            for (const r of runs) {
+                if (!r.ts) continue;
+                const d = new Date(r.ts);
+                const key = fmtDate(d);
+                if (!map[key]) map[key] = { ok: 0, error: 0, runs: [] };
+                if (r.status === 'ok' || r.delivered) map[key].ok++;
+                else map[key].error++;
+                map[key].runs.push(r);
+            }
+            return map;
+        }
+
+        // Build the cells for the last N days, starting from Sunday
+        function buildGridCells(days, dayMap, jobName) {
+            const cells = [];
+            const today = new Date();
+            today.setUTCHours(0,0,0,0);
+            // align to most recent Saturday (end of week)
+            const dow = today.getUTCDay();
+            const end = new Date(today);
+            end.setUTCDate(end.getUTCDate() + (6 - dow));
+            const start = new Date(end);
+            start.setUTCDate(start.getUTCDate() - days + 1);
+
+            let totalOk = 0, totalErr = 0;
+            for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+                const key = fmtDate(d);
+                const data = dayMap[key];
+                let level = 0;
+                let title = `${jobName}\n${key}`;
+                let isFailure = false;
+                if (data) {
+                    const total = data.ok + data.error;
+                    const rate = data.ok / total;
+                    if (data.error > 0 && data.ok === 0) {
+                        level = 0;
+                        isFailure = true;
+                    } else if (rate >= 0.99) level = 4;
+                    else if (rate >= 0.75) level = 3;
+                    else if (rate >= 0.5) level = 2;
+                    else if (rate > 0) level = 1;
+                    totalOk += data.ok;
+                    totalErr += data.error;
+                    title += `\n✓ ${data.ok} ok / ✗ ${data.error} error`;
+                } else {
+                    // No data
+                    if (d > today) {
+                        // Future: empty
+                        cells.push({ level: -1, title: '', isEmpty: true });
+                        continue;
+                    }
+                }
+                cells.push({ level, title, isFailure, isEmpty: false });
+            }
+            return { cells, totalOk, totalErr };
+        }
+
+        function renderJob(job) {
+            const dayMap = buildDayMap(job.runs);
+            const overall = buildGridCells(90, dayMap, job.name);
+            // Calculate recent 30-day stats
+            const recentMap = {};
+            const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+            for (const r of job.runs) {
+                if (r.ts && r.ts >= cutoff) {
+                    const d = new Date(r.ts);
+                    const key = fmtDate(d);
+                    if (!recentMap[key]) recentMap[key] = { ok: 0, error: 0 };
+                    if (r.status === 'ok' || r.delivered) recentMap[key].ok++;
+                    else recentMap[key].error++;
+                }
+            }
+            let r30ok = 0, r30err = 0;
+            for (const k in recentMap) { r30ok += recentMap[k].ok; r30err += recentMap[k].error; }
+            const r30total = r30ok + r30err;
+            const r30rate = r30total > 0 ? Math.round(r30ok / r30total * 100) : 0;
+
+            const allRuns = overall.totalOk + overall.totalErr;
+            const allRate = allRuns > 0 ? Math.round(overall.totalOk / allRuns * 100) : 0;
+
+            // Determine status color
+            let statusClass = '';
+            if (r30err > 0 && r30ok === 0) statusClass = 'error';
+            else if (r30err > r30ok) statusClass = 'error';
+            else if (r30err > 0) statusClass = 'warning';
+
+            const cellsHtml = overall.cells.map(c => {
+                if (c.isEmpty) return `<div class="cell empty"></div>`;
+                const cls = c.isFailure ? 'failure' : `l${c.level}`;
+                return `<div class="cell ${cls}" title="${c.title}"></div>`;
+            }).join('');
+
+            return `
+                <div class="job-section">
+                    <div class="job-header">
+                        <div>
+                            <span class="job-name ${statusClass}">${job.name}</span>
+                            <span class="job-id">${job.id.slice(0,8)}</span>
+                        </div>
+                        <div class="job-meta">
+                            <span>📅 <b>${job.schedule || ''}</b></span>
+                            <span>🤖 <b>${job.model || 'default'}</b></span>
+                        </div>
+                    </div>
+                    <div class="job-graph">${cellsHtml}</div>
+                    <div class="stats-row">
+                        <div class="stat">Last 30d: <b>${r30ok}</b> ok / <b>${r30err}</b> err</div>
+                        <div class="stat rate">Success rate: <b>${r30rate}%</b></div>
+                        <div class="stat success">90d ok: <b>${overall.totalOk}</b></div>
+                        <div class="stat error">90d err: <b>${overall.totalErr}</b></div>
+                        <div class="stat">All time: <b>${allRate}%</b> success</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function render() {
+            const filter = document.getElementById('filter').value.toLowerCase();
+            const jobs = Object.values(allJobs)
+                .filter(j => !filter || j.name.toLowerCase().includes(filter))
+                .sort((a, b) => a.name.localeCompare(b.name));
+            document.getElementById('content').innerHTML = jobs.map(renderJob).join('');
+        }
+
+        loadAll();
+        // Auto-refresh every 60s
+        setInterval(loadAll, 60000);
+    </script>
+</body>
+</html>

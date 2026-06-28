@@ -12,7 +12,7 @@ const screenshots = [
   { name: 'moltbook-dashboard', url: 'http://localhost:18797', wait: 2000 },
 ];
 
-const outputDir = '/Users/matthew/.openclaw/workspace/MonoClaw/matts-claw-blog/public/screenshots/day3';
+const outputDir = '/Users/matthew_1/.openclaw/workspace/MonoClaw/matts-claw-blog/public/screenshots/day3';
 
 (async () => {
   const browser = await puppeteer.launch({ 

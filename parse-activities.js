@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const transcriptPath = '/Users/matthew/.openclaw/agents/main/sessions/860aa0e5-4e3c-4761-83c8-12bb8025d199.jsonl';
-const storePath = '/Users/matthew/.openclaw/workspace/activity-hub/activities-store.json';
+const transcriptPath = '/Users/matthew_1/.openclaw/agents/main/sessions/860aa0e5-4e3c-4761-83c8-12bb8025d199.jsonl';
+const storePath = '/Users/matthew_1/.openclaw/workspace/activity-hub/activities-store.json';
 
 // Read transcript line by line
 const lines = fs.readFileSync(transcriptPath, 'utf-8').split('\n').filter(l => l.trim());

@@ -169,6 +169,210 @@
             padding: 50px;
             color: #666;
         }
+
+        /* Calendar section - GitHub style contribution graph */
+        .calendar-section {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .calendar-header h2 {
+            font-size: 16px;
+            color: #00ff88;
+        }
+        .calendar-legend {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #888;
+        }
+        .legend-cell {
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
+            display: inline-block;
+        }
+        .legend-cell.l0 { background: #1e1e1e; border: 1px solid #2a2a2a; }
+        .legend-cell.l1 { background: #0e4429; }
+        .legend-cell.l2 { background: #006d32; }
+        .legend-cell.l3 { background: #26a641; }
+        .legend-cell.l4 { background: #39d353; }
+
+        /* Unified job card with health indicator + graph + details */
+        #calendarJobs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 1400px) {
+            #calendarJobs { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 900px) {
+            #calendarJobs { grid-template-columns: 1fr; }
+        }
+        .job-card {
+            background: #0f0f0f;
+            border: 1px solid #2a2a2a;
+            border-left: 4px solid #00ff88;
+            border-radius: 6px;
+            padding: 16px;
+            transition: border-color 0.2s;
+            min-width: 0;
+        }
+        .job-card.error { border-left-color: #ff4444; }
+        .job-card.warning { border-left-color: #ffaa00; }
+        .job-card.disabled { border-left-color: #555; opacity: 0.6; }
+
+        .job-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .job-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .health-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #00ff88;
+            box-shadow: 0 0 8px rgba(0,255,136,0.4);
+        }
+        .health-dot.error { background: #ff4444; box-shadow: 0 0 8px rgba(255,68,68,0.5); animation: pulse 2s infinite; }
+        .health-dot.warning { background: #ffaa00; box-shadow: 0 0 8px rgba(255,170,0,0.4); }
+        .health-dot.disabled { background: #555; box-shadow: none; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .job-card-name {
+            font-size: 14px;
+            color: #e0e0e0;
+            font-weight: 600;
+        }
+        .job-card-id {
+            font-size: 10px;
+            color: #555;
+            font-family: monospace;
+        }
+        .job-card-status {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .job-card-status.ok { background: rgba(0,255,136,0.15); color: #00ff88; }
+        .job-card-status.error { background: rgba(255,68,68,0.15); color: #ff4444; }
+        .job-card-status.warning { background: rgba(255,170,0,0.15); color: #ffaa00; }
+        .job-card-status.disabled { background: rgba(85,85,85,0.2); color: #888; }
+
+        .job-card-graph {
+            display: grid;
+            grid-template-rows: repeat(7, 9px);
+            grid-auto-flow: column;
+            grid-auto-columns: 9px;
+            gap: 2px;
+            overflow-x: auto;
+            padding: 6px 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .cal-cell {
+            width: 9px;
+            height: 9px;
+            border-radius: 2px;
+            background: #1e1e1e;
+            border: 1px solid #2a2a2a;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .cal-cell.l0 { background: #1e1e1e; border-color: #2a2a2a; }
+        .cal-cell.l1 { background: #0e4429; border-color: transparent; }
+        .cal-cell.l2 { background: #006d32; border-color: transparent; }
+        .cal-cell.l3 { background: #26a641; border-color: transparent; }
+        .cal-cell.l4 { background: #39d353; border-color: transparent; }
+        .cal-cell.failure { background: #ff4444; border-color: #cc0000; }
+        .cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+
+        .job-card-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px 16px;
+            font-size: 11px;
+        }
+        .job-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .job-detail-label {
+            color: #666;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
+        .job-detail-value {
+            color: #e0e0e0;
+            font-family: monospace;
+        }
+        .job-detail-value.success { color: #00ff88; }
+        .job-detail-value.error { color: #ff4444; }
+        .job-detail-value.muted { color: #888; }
+        .job-detail-value.rate-good { color: #00ff88; font-weight: bold; }
+        .job-detail-value.rate-warn { color: #ffaa00; font-weight: bold; }
+        .job-detail-value.rate-bad { color: #ff4444; font-weight: bold; }
+
+        .job-error-log {
+            margin-top: 10px;
+            padding: 8px 10px;
+            background: rgba(255,68,68,0.05);
+            border: 1px solid rgba(255,68,68,0.2);
+            border-radius: 4px;
+            font-size: 11px;
+            color: #ff8888;
+            font-family: monospace;
+            word-break: break-word;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .job-error-log .err-label {
+            color: #ff4444;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* Floating tooltip that won't get cut off */
+        #calTooltip {
+            position: fixed;
+            background: #000;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: pre;
+            z-index: 9999;
+            pointer-events: none;
+            display: none;
+            border: 1px solid #333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+        }
+
         .last-update {
             position: fixed;
             bottom: 20px;
@@ -180,6 +384,89 @@
             border-radius: 4px;
             border: 1px solid #333;
         }
+        /* ---- Report section ---- */
+        .job-report {
+            border-top: 1px solid #1e1e1e;
+            padding: 12px 14px 10px;
+        }
+        .report-snippet {
+            font-size: 12px;
+            color: #999;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .report-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .report-play-btn {
+            background: #0d1f14;
+            border: 1px solid #1a5c2e;
+            color: #00ff88;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            border-radius: 3px;
+        }
+        .report-play-btn:hover { background: #122b1c; }
+        .speed-controls {
+            display: inline-flex;
+            gap: 2px;
+            align-items: center;
+            margin-left: 4px;
+        }
+        .speed-btn {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            color: #888;
+            padding: 3px 6px;
+            font-size: 10px;
+            font-family: inherit;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.15s;
+        }
+        .speed-btn:hover { border-color: #444; color: #ccc; }
+        .speed-btn.active { background: #0d1f14; border-color: #1a5c2e; color: #00ff88; }
+        .report-tts-btn {
+            background: #1a1200;
+            border-color: #4a3500;
+            color: #ffaa00;
+        }
+        .report-tts-btn:hover { background: #221800; }
+        .report-read-btn {
+            background: transparent;
+            border: 1px solid #2a2a2a;
+            color: #666;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            border-radius: 3px;
+        }
+        .report-read-btn:hover { border-color: #444; color: #aaa; }
+        .tts-active {
+            background: #0d1f14 !important;
+            border-color: #00ff88 !important;
+            color: #00ff88 !important;
+            animation: tts-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes tts-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(0,255,136,0); }
+        }
+        /* Modal body formatting */
+        #modalBody h4 { color: #00ff88; font-size: 12px; margin: 12px 0 4px; letter-spacing: 1px; text-transform: uppercase; }
+        #modalBody strong { color: #e0e0e0; }
+        #modalBody hr { border: none; border-top: 1px solid #222; margin: 12px 0; }
     </style>
 </head>
 <body>
@@ -208,7 +495,24 @@
     </div>
 
     <div class="loading" id="loading">Loading cron jobs...</div>
-    <div class="cron-list" id="cronList" style="display: none;"></div>
+
+    <div class="calendar-section" id="calendarSection" style="display:none;">
+        <div class="calendar-header">
+            <h2>📅 Cron Jobs <span style="color:#666;font-size:11px;font-weight:normal">— health + schedule + history</span></h2>
+            <div class="calendar-legend">
+                <span>Less</span>
+                <span class="legend-cell l0"></span>
+                <span class="legend-cell l1"></span>
+                <span class="legend-cell l2"></span>
+                <span class="legend-cell l3"></span>
+                <span class="legend-cell l4"></span>
+                <span>More</span>
+            </div>
+        </div>
+        <div id="calendarJobs"></div>
+    </div>
+
+    <div id="calTooltip"></div>
 
     <div class="last-update" id="lastUpdate">Last updated: Never</div>
 
@@ -257,100 +561,643 @@
             item.classList.toggle('expanded');
         }
 
-        async function loadCrons() {
-            try {
-                const response = await fetch('/api/cron');
-                const data = await response.json();
-                
-                // Update stats
-                const total = data.jobs.length;
-                const healthy = data.jobs.filter(j => j.enabled && j.state?.lastStatus === 'ok').length;
-                const failing = data.jobs.filter(j => j.enabled && j.state?.lastStatus === 'error').length;
-                const disabled = data.jobs.filter(j => !j.enabled).length;
-                
-                const statsCards = document.querySelectorAll('.stat-card .value');
-                statsCards[0].textContent = total;
-                statsCards[1].textContent = healthy;
-                statsCards[2].textContent = failing;
-                statsCards[3].textContent = disabled;
-                
-                // Sort by most recent run
-                const sorted = data.jobs.sort((a, b) => {
-                    const aTime = a.state?.lastRunAtMs || 0;
-                    const bTime = b.state?.lastRunAtMs || 0;
-                    return bTime - aTime;
-                });
-                
-                // Render cron list
-                const list = document.getElementById('cronList');
-                list.innerHTML = sorted.map(job => {
-                    const status = !job.enabled ? 'disabled' : (job.state?.lastStatus === 'ok' ? 'success' : 'error');
-                    const hasError = job.state?.lastError || job.state?.lastDeliveryError;
-                    
-                    return `
-                        <div class="cron-item ${status}" id="cron-${job.id}">
-                            <div class="cron-header" onclick="toggleCronDetails('${job.id}')">
-                                <div class="left">
-                                    <div class="name">${job.name}</div>
-                                    <div class="meta">
-                                        ${formatSchedule(job.schedule)} • Last run: ${formatDate(job.state?.lastRunAtMs)}
-                                        ${job.state?.lastDurationMs ? ` • ${formatDuration(job.state.lastDurationMs)}` : ''}
-                                    </div>
-                                </div>
-                                <div class="status">
-                                    <span class="status-badge ${status}">${status}</span>
-                                    <span class="expand-icon">›</span>
-                                </div>
+        // Old loadCrons() removed - calendar view is the single source of truth now
+
+        // ===== Cron Job Cards (unified: health + graph + details) =====
+        const calTooltip = document.getElementById('calTooltip');
+
+        function calFmtDate(d) {
+            return d.toISOString().slice(0, 10);
+        }
+
+        function calBuildDayMap(runs) {
+            const map = {};
+            for (const r of runs) {
+                if (!r.ts) continue;
+                const d = new Date(r.ts);
+                const key = calFmtDate(d);
+                if (!map[key]) map[key] = { ok: 0, error: 0, total: 0 };
+                const ok = (r.status === 'ok' || r.delivered) && !r.error;
+                if (ok) map[key].ok++; else map[key].error++;
+                map[key].total++;
+            }
+            return map;
+        }
+
+        function calBuildGrid(days, dayMap, jobName) {
+            const cells = [];
+            const today = new Date();
+            today.setUTCHours(0,0,0,0);
+            const dow = today.getUTCDay();
+            const end = new Date(today);
+            end.setUTCDate(end.getUTCDate() + (6 - dow));
+            const start = new Date(end);
+            start.setUTCDate(start.getUTCDate() - days + 1);
+
+            let totalOk = 0, totalErr = 0;
+            for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+                const key = calFmtDate(d);
+                const data = dayMap[key];
+                let level = 0;
+                let isFailure = false;
+                let isEmpty = false;
+                if (data) {
+                    const rate = data.ok / data.total;
+                    if (data.error > 0 && data.ok === 0) { level = 0; isFailure = true; }
+                    else if (rate >= 0.99) level = 4;
+                    else if (rate >= 0.75) level = 3;
+                    else if (rate >= 0.5) level = 2;
+                    else if (rate > 0) level = 1;
+                    totalOk += data.ok;
+                    totalErr += data.error;
+                } else if (d > today) {
+                    isEmpty = true;
+                }
+                cells.push({ level, isFailure, isEmpty, key, ok: data?.ok || 0, err: data?.error || 0, jobName });
+            }
+            return { cells, totalOk, totalErr };
+        }
+
+        function fmtTimeShort(ms) {
+            if (!ms) return '—';
+            const d = new Date(ms);
+            const now = Date.now();
+            const diff = ms - now;
+            const absDiff = Math.abs(diff);
+            if (absDiff < 60000) return diff > 0 ? 'in <1m' : 'just now';
+            if (absDiff < 3600000) return diff > 0 ? `in ${Math.floor(absDiff/60000)}m` : `${Math.floor(absDiff/60000)}m ago`;
+            if (absDiff < 86400000) return diff > 0 ? `in ${Math.floor(absDiff/3600000)}h` : `${Math.floor(absDiff/3600000)}h ago`;
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function calRenderJob(job) {
+            const dayMap = calBuildDayMap(job.runs);
+            const overall = calBuildGrid(90, dayMap, job.name);
+            // 30-day stats
+            const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+            let r30ok = 0, r30err = 0;
+            for (const r of job.runs) {
+                if (!r.ts || r.ts < cutoff) continue;
+                const ok = (r.status === 'ok' || r.delivered) && !r.error;
+                if (ok) r30ok++; else r30err++;
+            }
+            const r30total = r30ok + r30err;
+            const r30rate = r30total > 0 ? Math.round(r30ok / r30total * 100) : 0;
+            const allRuns = overall.totalOk + overall.totalErr;
+            const allRate = allRuns > 0 ? Math.round(overall.totalOk / allRuns * 100) : 0;
+
+            // Determine overall status (priority: disabled > error > warning > ok)
+            const enabled = job.enabled !== false;
+            const consec = job.consecutiveErrors || 0;
+            const hasError = job.lastError || job.lastDeliveryError;
+            const recentlyFailed = job.lastRunStatus === 'error' || consec > 0;
+
+            let cardClass = '';
+            let healthClass = '';
+            let statusText = 'OK';
+            let statusKind = 'ok';
+
+            if (!enabled) {
+                cardClass = 'disabled'; healthClass = 'disabled'; statusText = 'DISABLED'; statusKind = 'disabled';
+            } else if (consec >= 3 || (job.lastRunStatus === 'error' && !job.lastError?.includes('transient'))) {
+                cardClass = 'error'; healthClass = 'error'; statusText = 'FAILING'; statusKind = 'error';
+            } else if (recentlyFailed || hasError) {
+                cardClass = 'warning'; healthClass = 'warning'; statusText = 'WARN'; statusKind = 'warning';
+            }
+
+            // Rate color
+            const rateClass = r30rate >= 95 ? 'rate-good' : r30rate >= 75 ? 'rate-warn' : 'rate-bad';
+            const allRateClass = allRate >= 95 ? 'rate-good' : allRate >= 75 ? 'rate-warn' : 'rate-bad';
+
+            // Schedule expression
+            const schedExpr = job.schedule?.expr || '—';
+            const schedTz = job.schedule?.tz || '';
+
+            // Build the graph cells
+            const cellsHtml = overall.cells.map(c => {
+                if (c.isEmpty) return `<div class="cal-cell empty"></div>`;
+                const cls = c.isFailure ? 'failure' : `l${c.level}`;
+                return `<div class="cal-cell ${cls}" data-key="${c.key}" data-ok="${c.ok}" data-err="${c.err}" data-job="${job.name.replace(/"/g,'&quot;')}"></div>`;
+            }).join('');
+
+            // Error log (only if there's an error)
+            const errMsg = job.lastError || job.lastDeliveryError;
+            const errHtml = errMsg ? `
+                <div class="job-error-log">
+                    <span class="err-label">⚠ Last error (${job.lastErrorReason || 'unknown'})</span>
+                    ${escapeHtml(errMsg)}
+                </div>
+            ` : '';
+
+            // Artifacts (audio + text from ~/.openclaw/media/)
+            const arts = job.artifacts || {};
+            const fmtBytes = (n) => n > 1024*1024 ? (n/1024/1024).toFixed(1) + ' MB' : n > 1024 ? (n/1024).toFixed(0) + ' KB' : n + ' B';
+            const fmtMtime = (ms) => new Date(ms).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            // Summary snippet — first 140 chars, strip markdown/tts tags
+            const rawSummary = arts.lastSummary || '';
+            const cleanSummary = rawSummary
+                .replace(/\[\[tts[^\]]*\]\]|\[\[\/tts[^\]]*\]\]/gi, '')
+                .replace(/\*\*/g, '').replace(/\*/g, '').replace(/#+\s/g, '')
+                .replace(/\n+/g, ' ').trim();
+            const snippet = cleanSummary.length > 0
+                ? cleanSummary.slice(0, 140) + (cleanSummary.length > 140 ? '…' : '')
+                : '';
+
+            const jobIdSafe = job.id.replace(/[^a-z0-9]/gi, '_');
+            const audioSrc = arts.audio ? '/api/cron-artifact/' + encodeURIComponent(arts.audio.name) : null;
+
+            // Store data in global map — avoids all inline JS escaping issues
+            if (!window._jobReportData) window._jobReportData = {};
+            // Store runs with summaries for history navigation
+            const runsWithSummary = (job.runs || []).filter(r => r.summary && r.summary.trim());
+            // Store text artifact URL so modal can fetch full untruncated content
+            const textArtifactUrl = arts.text ? '/api/cron-artifact/' + encodeURIComponent(arts.text.name) : null;
+            window._jobReportData[jobIdSafe] = { name: job.name, summary: rawSummary, audioSrc, textArtifactUrl, runs: runsWithSummary };
+
+            const artsHtml = (arts.audio || snippet) ? `
+                <div class="job-report">
+                    ${snippet ? `<div class="report-snippet">${escapeHtml(snippet)}</div>` : ''}
+                    <div class="report-actions">
+                        ${arts.audio ? `
+                            <button class="report-play-btn" data-job-id="${jobIdSafe}" onclick="playJobAudio(this.dataset.jobId)" title="Play audio report">
+                                ▶ Play
+                            </button>
+                            <div class="speed-controls" data-job-id="${jobIdSafe}">
+                                ${[1, 1.25, 1.5, 1.75, 2].map(s => `<button class="speed-btn${s===1?' active':''}" onclick="setCardSpeed('${jobIdSafe}',${s},this)">${s}x</button>`).join('')}
                             </div>
-                            <div class="cron-details">
-                                <div class="cron-details-content">
-                                    <div class="detail-row">
-                                        <span class="label">Job ID:</span>
-                                        <span class="value">${job.id}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="label">Agent:</span>
-                                        <span class="value">${job.agentId}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="label">Next run:</span>
-                                        <span class="value">${formatDate(job.state?.nextRunAtMs)}</span>
-                                    </div>
-                                    <div class="detail-row">
-                                        <span class="label">Consecutive errors:</span>
-                                        <span class="value">${job.state?.consecutiveErrors || 0}</span>
-                                    </div>
-                                    ${job.state?.lastRunStatus ? `
-                                    <div class="detail-row">
-                                        <span class="label">Last run status:</span>
-                                        <span class="value">${job.state.lastRunStatus}</span>
-                                    </div>
-                                    ` : ''}
-                                    ${hasError ? `
-                                    <div class="logs-section">
-                                        <strong>Error Log:</strong>
-                                        <pre>${job.state?.lastError || job.state?.lastDeliveryError}</pre>
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            </div>
+                        ` : `
+                            <button class="report-play-btn report-tts-btn" data-job-id="${jobIdSafe}" onclick="speakJobSummary(this.dataset.jobId)" title="Text-to-speech summary">
+                                ▶ Speak
+                            </button>
+                        `}
+                        ${rawSummary ? `
+                            <button class="report-read-btn" data-job-id="${jobIdSafe}" onclick="openReportModal(this.dataset.jobId)">
+                                Read full report
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            return `
+                <div class="job-card ${cardClass}">
+                    <div class="job-card-top">
+                        <div class="job-card-title">
+                            <span class="health-dot ${healthClass}"></span>
+                            <span class="job-card-name">${escapeHtml(job.name)}</span>
+                            <span class="job-card-id">${job.id.slice(0,8)}</span>
                         </div>
-                    `;
-                }).join('');
-                
+                        <div class="job-card-status ${statusKind}">${statusText}</div>
+                    </div>
+                    <div class="job-card-graph">${cellsHtml}</div>
+                    <div class="job-card-details">
+                        <div class="job-detail">
+                            <span class="job-detail-label">Schedule</span>
+                            <span class="job-detail-value">${schedExpr} ${schedTz ? '('+schedTz.split('/').pop()+')' : ''}</span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">Next run</span>
+                            <span class="job-detail-value">${fmtTimeShort(job.nextRunAtMs)}</span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">Last run</span>
+                            <span class="job-detail-value">${fmtTimeShort(job.lastRunAtMs)}</span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">Last status</span>
+                            <span class="job-detail-value ${job.lastRunStatus === 'ok' ? 'success' : job.lastRunStatus === 'error' ? 'error' : 'muted'}">${job.lastRunStatus || '—'}</span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">30d success</span>
+                            <span class="job-detail-value ${rateClass}">${r30rate}% <span style="color:#666">(${r30ok}/${r30total})</span></span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">All-time</span>
+                            <span class="job-detail-value ${allRateClass}">${allRate}% <span style="color:#666">(${allRuns})</span></span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">Consec errors</span>
+                            <span class="job-detail-value ${consec > 0 ? 'error' : 'success'}">${consec}</span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">Model</span>
+                            <span class="job-detail-value muted">${(job.model || 'default').split('/').pop()}</span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">Session</span>
+                            <span class="job-detail-value muted">${job.sessionTarget || '—'}</span>
+                        </div>
+                        <div class="job-detail">
+                            <span class="job-detail-label">Enabled</span>
+                            <span class="job-detail-value ${enabled ? 'success' : 'error'}">${enabled ? 'yes' : 'NO'}</span>
+                        </div>
+                    </div>
+                    ${artsHtml}
+                    ${errHtml}
+                </div>
+            `;
+        }
+
+        function escapeHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/[&<>"']/g, m => ({
+                '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+            }[m]));
+        }
+
+        // Floating tooltip - positioned with viewport coords, won't get cut off
+        document.addEventListener('mouseover', (e) => {
+            if (!e.target.classList || !e.target.classList.contains('cal-cell')) return;
+            if (e.target.classList.contains('empty')) {
+                calTooltip.style.display = 'none';
+                return;
+            }
+            const key = e.target.dataset.key;
+            const ok = e.target.dataset.ok;
+            const err = e.target.dataset.err;
+            const job = e.target.dataset.job;
+            calTooltip.textContent = `${job}\n${key}\n✓ ${ok} ok / ✗ ${err} error`;
+            calTooltip.style.display = 'block';
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (calTooltip.style.display !== 'block') return;
+            // Position above and to the right of cursor, clamp to viewport
+            const tw = calTooltip.offsetWidth;
+            const th = calTooltip.offsetHeight;
+            let x = e.clientX + 14;
+            let y = e.clientY - th - 14;
+            if (x + tw > window.innerWidth - 8) x = window.innerWidth - tw - 8;
+            if (y < 8) y = e.clientY + 18;
+            calTooltip.style.left = x + 'px';
+            calTooltip.style.top = y + 'px';
+        });
+        document.addEventListener('mouseout', (e) => {
+            if (e.target.classList && e.target.classList.contains('cal-cell')) {
+                calTooltip.style.display = 'none';
+            }
+        });
+
+        async function loadCalendar() {
+            try {
+                document.getElementById('loading').textContent = 'Loading cron jobs...';
+                const resp = await fetch('/api/cron-calendar');
+                if (!resp.ok) {
+                    document.getElementById('loading').textContent = 'Error: HTTP ' + resp.status;
+                    return;
+                }
+                const data = await resp.json();
+                const jobs = Object.values(data);
+                // Sort: failing first, then by name
+                jobs.sort((a, b) => {
+                    const aErr = (a.consecutiveErrors || 0);
+                    const bErr = (b.consecutiveErrors || 0);
+                    if (aErr !== bErr) return bErr - aErr;
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+
+                // Update top stats
+                const total = jobs.length;
+                const failing = jobs.filter(j => (j.consecutiveErrors || 0) >= 1).length;
+                const disabled = jobs.filter(j => j.enabled === false).length;
+                const statValues = document.querySelectorAll('.stat-card .value');
+                if (statValues[0]) statValues[0].textContent = total;
+                if (statValues[1]) statValues[1].textContent = total - failing - disabled;
+                if (statValues[2]) statValues[2].textContent = failing;
+                if (statValues[3]) statValues[3].textContent = disabled;
+
+                // Render job cards
+                document.getElementById('calendarJobs').innerHTML = jobs.map(calRenderJob).join('');
+                document.getElementById('calendarSection').style.display = 'block';
                 document.getElementById('loading').style.display = 'none';
-                list.style.display = 'flex';
-                
-                document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-            } catch (error) {
-                console.error('Failed to load crons:', error);
-                document.getElementById('loading').textContent = 'Error loading cron jobs';
+                document.getElementById('lastUpdate').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+            } catch (e) {
+                console.error('Calendar load failed:', e);
+                document.getElementById('loading').textContent = 'Error: ' + e.message;
             }
         }
 
-        // Load immediately and refresh every 10 seconds
-        loadCrons();
-        setInterval(loadCrons, 10000);
+        loadCalendar();
+        setInterval(loadCalendar, 30000);
+
+        // ===================== REPORT MODAL =====================
+        // Track current run index for history navigation
+        window._modalRunIndex = 0; // 0 = latest, 1 = one before, etc.
+
+        async function openReportModal(jobIdSafe, runIndex) {
+            const data = (window._jobReportData || {})[jobIdSafe];
+            if (!data) return;
+            runIndex = runIndex !== undefined ? runIndex : 0;
+            window._modalRunIndex = runIndex;
+            window._modalJobIdSafe = jobIdSafe;
+
+            // Get the run at index (0 = latest)
+            const runs = data.runs || [];
+            const runData = runs.length > 0 ? runs[runs.length - 1 - runIndex] : null;
+            let summary = runData?.summary || data.summary || '';
+            const audioSrc = data.audioSrc;
+            const jobName = data.name;
+            const jobIdSafeVal = jobIdSafe;
+            const totalRuns = runs.length;
+
+            // Always try the text artifact — it has the full untruncated text
+            // Note: artifact always contains the LATEST run's text (gets overwritten each run)
+            let summaryFromArtifact = false;
+            if (data.textArtifactUrl) {
+                try {
+                    const resp = await fetch(data.textArtifactUrl);
+                    if (resp.ok) {
+                        const fullText = await resp.text();
+                        if (fullText && fullText.trim().length > 0) {
+                            summary = fullText.trim();
+                            summaryFromArtifact = (runIndex > 0); // flag if viewing older run
+                        }
+                    }
+                } catch(e) { console.warn('Failed to fetch artifact text:', e); }
+            }
+
+            const modal = document.getElementById('reportModal');
+            document.getElementById('modalTitle').textContent = jobName;
+
+            // Run timestamp label
+            const runTs = runData?.ts;
+            const runLabel = runTs
+                ? new Date(runTs).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'Latest run';
+            const runStatus = runData?.status || '';
+            document.getElementById('modalRunLabel').textContent =
+                `${runLabel}${runStatus === 'error' ? ' · ⚠ error' : ''}`;
+
+            // History nav: prev/next buttons
+            const prevBtn = document.getElementById('modalPrevRun');
+            const nextBtn = document.getElementById('modalNextRun');
+            const runCounter = document.getElementById('modalRunCounter');
+            if (totalRuns > 1) {
+                document.getElementById('modalHistoryNav').style.display = 'flex';
+                runCounter.textContent = `${runIndex + 1} / ${totalRuns}`;
+                prevBtn.disabled = runIndex >= totalRuns - 1; // older
+                nextBtn.disabled = runIndex <= 0; // newer
+            } else {
+                document.getElementById('modalHistoryNav').style.display = 'none';
+            }
+
+            // Render markdown-ish text
+            const clean = summary
+                .replace(/\[\[tts[^\]]*\]\]|\[\[\/tts[^\]]*\]\]/gi, '')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/^#{1,3}\s(.+)$/gm, '<h4>$1</h4>')
+                .replace(/\n---\n/g, '<hr>')
+                .replace(/\n/g, '<br>');
+
+            // Banner: warn when viewing older run but showing latest artifact text
+            const banner = summaryFromArtifact
+                ? `<div style="background:#1a1200; border:1px solid #3a2800; color:#ffaa00; padding:6px 10px; font-size:11px; margin-bottom:12px; letter-spacing:0.3px;">
+                    ⚠ Showing latest saved file — full text for this older run unavailable (gateway truncates history to 2000 chars)
+                   </div>`
+                : '';
+            document.getElementById('modalBody').innerHTML = banner + clean;
+
+            // Audio
+            const audioEl = document.getElementById('modalAudio');
+            const audioWrap = document.getElementById('modalAudioWrap');
+            if (audioSrc) {
+                audioEl.src = audioSrc;
+                // Apply saved speed rate from card
+                const savedRate = (window._jobSpeedRates || {})[jobIdSafeVal] || 1;
+                audioEl.playbackRate = savedRate;
+                // Update modal speed buttons to match
+                document.querySelectorAll('#modalSpeedControls .speed-btn').forEach(b => {
+                    const btnRate = parseFloat(b.textContent);
+                    b.classList.toggle('active', btnRate === savedRate);
+                });
+                audioWrap.style.display = 'block';
+            } else {
+                audioWrap.style.display = 'none';
+                audioEl.src = '';
+            }
+
+            // Store summary + jobId for TTS
+            modal.dataset.summary = summary;
+            modal.dataset.jobIdSafe = jobIdSafeVal || '';
+            modal.style.display = 'flex';
+        }
+
+        function closeReportModal() {
+            const modal = document.getElementById('reportModal');
+            modal.style.display = 'none';
+            const audioEl = document.getElementById('modalAudio');
+            audioEl.pause();
+            audioEl.src = '';
+        }
+
+        // ---- TTS state ----
+        let _ttsPlaying = false;
+        let _ttsPoller = null;
+        let _ttsActiveJobId = null;
+
+        function _ttsCleanText(raw) {
+            return raw.replace(/\[\[tts[^\]]*\]\]|\[\[\/tts[^\]]*\]\]/gi, '')
+                .replace(/\*\*/g, '').replace(/\*/g, '').replace(/#+\s/g, '')
+                .replace(/\n/g, ' ').trim().slice(0, 1500);
+        }
+
+        function _setTtsState(playing, jobIdSafe) {
+            _ttsPlaying = playing;
+            _ttsActiveJobId = playing ? jobIdSafe : null;
+            // Update all speak buttons
+            document.querySelectorAll('.report-tts-btn, .report-play-btn').forEach(btn => {
+                const btnJob = btn.dataset.jobId;
+                if (playing && btnJob === jobIdSafe) {
+                    btn.textContent = '■ Stop';
+                    btn.classList.add('tts-active');
+                } else {
+                    btn.textContent = btn.classList.contains('report-tts-btn') ? '▶ Speak' : '▶ Play';
+                    btn.classList.remove('tts-active');
+                }
+            });
+            // Update modal speak button if open
+            const modalSpeakBtn = document.getElementById('modalSpeakBtn');
+            if (modalSpeakBtn) {
+                modalSpeakBtn.textContent = playing ? '■ Stop' : '▶ SPEAK';
+                modalSpeakBtn.classList.toggle('tts-active', playing);
+            }
+        }
+
+        function _startTtsPoller(jobIdSafe) {
+            if (_ttsPoller) clearInterval(_ttsPoller);
+            _ttsPoller = setInterval(async () => {
+                try {
+                    const r = await fetch('/api/tts/status');
+                    const d = await r.json();
+                    if (!d.playing && _ttsPlaying) {
+                        _setTtsState(false, null);
+                        clearInterval(_ttsPoller); _ttsPoller = null;
+                    }
+                } catch {}
+            }, 1000);
+        }
+
+        async function _ttsSpeak(text, jobIdSafe) {
+            // Stop if already playing this job
+            if (_ttsPlaying && _ttsActiveJobId === jobIdSafe) {
+                await fetch('/api/tts/stop', { method: 'POST' });
+                _setTtsState(false, null);
+                if (_ttsPoller) { clearInterval(_ttsPoller); _ttsPoller = null; }
+                return;
+            }
+            // Stop any other job playing
+            if (_ttsPlaying) {
+                await fetch('/api/tts/stop', { method: 'POST' });
+            }
+            _setTtsState(true, jobIdSafe);
+            fetch('/api/tts/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, immediate: true })
+            }).catch(e => console.warn('TTS error:', e));
+            _startTtsPoller(jobIdSafe);
+        }
+
+        function speakModalSummary() {
+            const modal = document.getElementById('reportModal');
+            const jobIdSafe = modal.dataset.jobIdSafe || '';
+            const text = modal.dataset.summary || '';
+            _ttsSpeak(_ttsCleanText(text), jobIdSafe || 'modal');
+        }
+
+        function playJobAudio(jobIdSafe) {
+            const data = (window._jobReportData || {})[jobIdSafe];
+            if (!data || !data.audioSrc) return;
+            openReportModal(jobIdSafe);
+        }
+
+        async function speakJobSummary(jobIdSafe) {
+            const data = (window._jobReportData || {})[jobIdSafe];
+            if (!data) return;
+            let text = data.summary || '';
+            // Prefer full artifact text if available
+            if (data.textArtifactUrl) {
+                try {
+                    const resp = await fetch(data.textArtifactUrl);
+                    if (resp.ok) {
+                        const full = await resp.text();
+                        if (full && full.trim().length > text.length) text = full.trim();
+                    }
+                } catch(e) {}
+            }
+            if (!text) return;
+            _ttsSpeak(_ttsCleanText(text), jobIdSafe);
+        }
+
+        // ---- Speed controls ----
+        function setModalSpeed(rate, btn) {
+            const audio = document.getElementById('modalAudio');
+            if (audio) audio.playbackRate = rate;
+            document.querySelectorAll('#modalSpeedControls .speed-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+        }
+
+        function setCardSpeed(jobIdSafe, rate, btn) {
+            // Store rate for when modal opens
+            if (!window._jobSpeedRates) window._jobSpeedRates = {};
+            window._jobSpeedRates[jobIdSafe] = rate;
+            // Update active state within this card's speed controls
+            const container = btn.parentElement;
+            container.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function navigateRun(dir) {
+            const jobIdSafe = window._modalJobIdSafe;
+            const data = (window._jobReportData || {})[jobIdSafe];
+            if (!data) return;
+            const totalRuns = (data.runs || []).length;
+            const newIndex = (window._modalRunIndex || 0) + dir;
+            if (newIndex < 0 || newIndex >= totalRuns) return;
+            openReportModal(jobIdSafe, newIndex);
+        }
+
+        // ---- Audio duration display ----
+        function fmtTime(secs) {
+            if (!isFinite(secs) || isNaN(secs)) return '—';
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            return `${m}:${String(s).padStart(2, '0')}`;
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            const audio = document.getElementById('modalAudio');
+            const durEl = document.getElementById('modalAudioDuration');
+            const curEl = document.getElementById('modalAudioCurrent');
+            if (audio) {
+                audio.addEventListener('loadedmetadata', () => {
+                    if (durEl) durEl.textContent = fmtTime(audio.duration);
+                });
+                audio.addEventListener('durationchange', () => {
+                    if (durEl) durEl.textContent = fmtTime(audio.duration);
+                });
+                audio.addEventListener('timeupdate', () => {
+                    if (curEl) curEl.textContent = fmtTime(audio.currentTime);
+                });
+                audio.addEventListener('ended', () => {
+                    if (curEl) curEl.textContent = fmtTime(audio.duration);
+                });
+            }
+
+            // Close on backdrop click
+            const modal = document.getElementById('reportModal');
+            if (modal) modal.addEventListener('click', function(e) {
+                if (e.target === this) closeReportModal();
+            });
+        });
     </script>
+
+<!-- Report Modal -->
+<div id="reportModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#111; border:1px solid #333; max-width:720px; width:100%; max-height:85vh; display:flex; flex-direction:column; border-radius:4px; overflow:hidden;">
+        <!-- Header -->
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px 10px; border-bottom:1px solid #222; flex-shrink:0;">
+            <div style="min-width:0; flex:1;">
+                <div id="modalTitle" style="font-size:14px; font-weight:700; color:#e0e0e0; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                <div id="modalRunLabel" style="font-size:11px; color:#555; margin-top:2px;"></div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-left:12px;">
+                <button id="modalSpeakBtn" onclick="speakModalSummary()" style="background:#1a1a1a; border:1px solid #333; color:#00ff88; padding:5px 10px; font-size:11px; font-family:inherit; cursor:pointer; letter-spacing:0.5px; transition:all 0.15s;">▶ SPEAK</button>
+                <button onclick="closeReportModal()" style="background:transparent; border:none; color:#666; font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">&times;</button>
+            </div>
+        </div>
+        <!-- History nav -->
+        <div id="modalHistoryNav" style="display:none; align-items:center; gap:8px; padding:8px 18px; border-bottom:1px solid #1c1c1c; background:#0d0d0d; flex-shrink:0;">
+            <button onclick="navigateRun(1)" id="modalPrevRun"
+                style="background:transparent; border:1px solid #2a2a2a; color:#888; padding:4px 12px; font-size:11px; font-family:inherit; cursor:pointer; letter-spacing:0.5px;">
+                ← Older
+            </button>
+            <span id="modalRunCounter" style="font-size:11px; color:#555; flex:1; text-align:center; letter-spacing:1px;"></span>
+            <button onclick="navigateRun(-1)" id="modalNextRun"
+                style="background:transparent; border:1px solid #2a2a2a; color:#888; padding:4px 12px; font-size:11px; font-family:inherit; cursor:pointer; letter-spacing:0.5px;">
+                Newer →
+            </button>
+        </div>
+        <div id="modalAudioWrap" style="padding:10px 18px 12px; border-bottom:1px solid #1a1a1a; flex-shrink:0;">
+            <!-- Duration row -->
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <span id="modalAudioDuration" style="font-size:11px; color:#666; font-family: 'SF Mono', monospace;">—</span>
+                <span id="modalAudioCurrent" style="font-size:11px; color:#888; font-family: 'SF Mono', monospace;">0:00</span>
+            </div>
+            <audio id="modalAudio" controls style="width:100%; height:32px; accent-color:#00ff88;"></audio>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                <span style="font-size:10px; color:#666; text-transform:uppercase; letter-spacing:0.5px;">Speed</span>
+                <div class="speed-controls" id="modalSpeedControls">
+                    <button class="speed-btn active" onclick="setModalSpeed(1,this)">1x</button>
+                    <button class="speed-btn" onclick="setModalSpeed(1.25,this)">1.25x</button>
+                    <button class="speed-btn" onclick="setModalSpeed(1.5,this)">1.5x</button>
+                    <button class="speed-btn" onclick="setModalSpeed(1.75,this)">1.75x</button>
+                    <button class="speed-btn" onclick="setModalSpeed(2,this)">2x</button>
+                </div>
+            </div>
+        </div>
+        <div id="modalBody" style="padding:20px; overflow-y:auto; font-size:13px; line-height:1.7; color:#ccc; flex:1; white-space:pre-wrap; word-wrap:break-word;"></div>
+    </div>
+</div>
 </body>
 </html>
