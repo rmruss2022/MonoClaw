@@ -900,20 +900,42 @@
             const jobIdSafeVal = jobIdSafe;
             const totalRuns = runs.length;
 
-            // Always try the text artifact — it has the full untruncated text
-            // Note: artifact always contains the LATEST run's text (gets overwritten each run)
+            // Try to load the full text for this specific run from persistent storage
+            // Priority: 1) per-run report file (exact), 2) text artifact (latest only), 3) truncated summary
             let summaryFromArtifact = false;
-            if (data.textArtifactUrl) {
+            const jobIdRaw = Object.entries(window._jobReportData || {}).find(([k]) => k === jobIdSafe)?.[1];
+
+            // 1. Check if this run has a persisted full-text report
+            if (runData?.ts) {
+                try {
+                    const resp = await fetch(`/api/cron-report/${encodeURIComponent(jobIdSafe.replace(/_/g, '-'))}/${runData.ts}`);
+                    if (resp.ok) {
+                        const fullText = await resp.text();
+                        if (fullText && fullText.trim().length > summary.length) {
+                            summary = fullText.trim();
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // 2. Fallback: text artifact (latest run only — will mismatch for older runs)
+            if (summary === (runData?.summary || data.summary || '') && data.textArtifactUrl) {
                 try {
                     const resp = await fetch(data.textArtifactUrl);
                     if (resp.ok) {
                         const fullText = await resp.text();
-                        if (fullText && fullText.trim().length > 0) {
+                        if (fullText && fullText.trim().length > summary.length) {
                             summary = fullText.trim();
-                            summaryFromArtifact = (runIndex > 0); // flag if viewing older run
+                            summaryFromArtifact = (runIndex > 0);
                         }
                     }
-                } catch(e) { console.warn('Failed to fetch artifact text:', e); }
+                } catch(e) {}
+            }
+
+            // 3. Also check fullText injected directly from run object
+            if (runData?.fullText && runData.fullText.length > summary.length) {
+                summary = runData.fullText;
+                summaryFromArtifact = false;
             }
 
             const modal = document.getElementById('reportModal');
