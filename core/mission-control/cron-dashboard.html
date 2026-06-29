@@ -980,23 +980,32 @@
                 : '';
             document.getElementById('modalBody').innerHTML = banner + clean;
 
-            // Audio
+            // Audio player bar
             const audioEl = document.getElementById('modalAudio');
             const audioWrap = document.getElementById('modalAudioWrap');
+            const playBtn = document.getElementById('modalPlayPauseBtn');
+            const scrubber = document.getElementById('modalScrubber');
+            const durEl = document.getElementById('modalAudioDuration');
+            const curEl = document.getElementById('modalAudioCurrent');
+            // Reset player state
+            if (audioEl) { audioEl.pause(); audioEl.src = ''; }
+            if (playBtn) playBtn.textContent = '▶';
+            if (scrubber) { scrubber.value = 0; }
+            if (durEl) durEl.textContent = '—';
+            if (curEl) curEl.textContent = '0:00';
+
             if (audioSrc) {
                 audioEl.src = audioSrc;
-                // Apply saved speed rate from card
+                audioEl.load();
+                // Apply saved speed
                 const savedRate = (window._jobSpeedRates || {})[jobIdSafeVal] || 1;
                 audioEl.playbackRate = savedRate;
-                // Update modal speed buttons to match
                 document.querySelectorAll('#modalSpeedControls .speed-btn').forEach(b => {
-                    const btnRate = parseFloat(b.textContent);
-                    b.classList.toggle('active', btnRate === savedRate);
+                    b.classList.toggle('active', parseFloat(b.textContent) === savedRate);
                 });
-                audioWrap.style.display = 'block';
+                audioWrap.style.display = 'flex';
             } else {
                 audioWrap.style.display = 'none';
-                audioEl.src = '';
             }
 
             // Store summary + jobId for TTS
@@ -1147,26 +1156,58 @@
             const s = Math.floor(secs % 60);
             return `${m}:${String(s).padStart(2, '0')}`;
         }
+        // ---- Modal audio player controls ----
+        function toggleModalPlay() {
+            const audio = document.getElementById('modalAudio');
+            if (!audio || !audio.src) return;
+            if (audio.paused) { audio.play(); } else { audio.pause(); }
+        }
+
+        function stopModalAudio() {
+            const audio = document.getElementById('modalAudio');
+            if (!audio) return;
+            audio.pause();
+            audio.currentTime = 0;
+        }
+
+        function scrubAudio(val) {
+            const audio = document.getElementById('modalAudio');
+            if (!audio || !isFinite(audio.duration)) return;
+            audio.currentTime = (val / 100) * audio.duration;
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const audio = document.getElementById('modalAudio');
             const durEl = document.getElementById('modalAudioDuration');
             const curEl = document.getElementById('modalAudioCurrent');
+            const scrubber = document.getElementById('modalScrubber');
+            const playBtn = document.getElementById('modalPlayPauseBtn');
+
             if (audio) {
                 audio.addEventListener('loadedmetadata', () => {
                     if (durEl) durEl.textContent = fmtTime(audio.duration);
+                    if (scrubber) { scrubber.max = audio.duration || 100; scrubber.value = 0; }
                 });
                 audio.addEventListener('durationchange', () => {
                     if (durEl) durEl.textContent = fmtTime(audio.duration);
+                    if (scrubber) scrubber.max = audio.duration || 100;
                 });
                 audio.addEventListener('timeupdate', () => {
                     if (curEl) curEl.textContent = fmtTime(audio.currentTime);
+                    if (scrubber && !window._scrubbing && isFinite(audio.duration) && audio.duration > 0) {
+                        scrubber.value = (audio.currentTime / audio.duration) * 100;
+                    }
                 });
                 audio.addEventListener('ended', () => {
                     if (curEl) curEl.textContent = fmtTime(audio.duration);
+                    if (playBtn) playBtn.textContent = '▶';
+                    if (scrubber) scrubber.value = 0;
                 });
+                audio.addEventListener('play', () => { if (playBtn) playBtn.textContent = '⏸'; });
+                audio.addEventListener('pause', () => { if (playBtn) playBtn.textContent = '▶'; });
             }
 
-            // Close on backdrop click
+            // Close modal on backdrop click
             const modal = document.getElementById('reportModal');
             if (modal) modal.addEventListener('click', function(e) {
                 if (e.target === this) closeReportModal();
@@ -1200,25 +1241,49 @@
                 Newer →
             </button>
         </div>
-        <div id="modalAudioWrap" style="padding:10px 18px 12px; border-bottom:1px solid #1a1a1a; flex-shrink:0;">
-            <!-- Duration row -->
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-                <span id="modalAudioDuration" style="font-size:11px; color:#666; font-family: 'SF Mono', monospace;">—</span>
-                <span id="modalAudioCurrent" style="font-size:11px; color:#888; font-family: 'SF Mono', monospace;">0:00</span>
+        <!-- Body (scrollable) -->
+        <div id="modalBody" style="padding:20px 18px; overflow-y:auto; font-size:13px; line-height:1.7; color:#ccc; flex:1; word-wrap:break-word;"></div>
+
+        <!-- Telegram-style sticky player bar at bottom -->
+        <div id="modalAudioWrap" style="display:none; flex-direction:column; background:#0d0d0d; border-top:1px solid #222; flex-shrink:0; padding:10px 14px 12px; gap:8px;">
+
+            <!-- Scrubber row -->
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span id="modalAudioCurrent" style="font-size:11px; color:#888; font-family:'SF Mono',monospace; min-width:34px; text-align:right;">0:00</span>
+                <input id="modalScrubber" type="range" min="0" max="100" value="0" step="0.1"
+                    style="flex:1; height:3px; accent-color:#00ff88; cursor:pointer; background:transparent;"
+                    oninput="scrubAudio(this.value)"
+                    onmousedown="window._scrubbing=true" onmouseup="window._scrubbing=false"
+                    ontouchstart="window._scrubbing=true" ontouchend="window._scrubbing=false" />
+                <span id="modalAudioDuration" style="font-size:11px; color:#555; font-family:'SF Mono',monospace; min-width:34px;">—</span>
             </div>
-            <audio id="modalAudio" controls style="width:100%; height:32px; accent-color:#00ff88;"></audio>
-            <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-                <span style="font-size:10px; color:#666; text-transform:uppercase; letter-spacing:0.5px;">Speed</span>
-                <div class="speed-controls" id="modalSpeedControls">
-                    <button class="speed-btn active" onclick="setModalSpeed(1,this)">1x</button>
-                    <button class="speed-btn" onclick="setModalSpeed(1.25,this)">1.25x</button>
-                    <button class="speed-btn" onclick="setModalSpeed(1.5,this)">1.5x</button>
-                    <button class="speed-btn" onclick="setModalSpeed(1.75,this)">1.75x</button>
-                    <button class="speed-btn" onclick="setModalSpeed(2,this)">2x</button>
+
+            <!-- Controls row -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                <!-- Play/pause + stop -->
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <button id="modalPlayPauseBtn" onclick="toggleModalPlay()"
+                        style="background:#00ff88; border:none; color:#000; width:32px; height:32px; border-radius:50%; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">▶</button>
+                    <button onclick="stopModalAudio()"
+                        style="background:transparent; border:1px solid #2a2a2a; color:#666; width:28px; height:28px; border-radius:50%; font-size:10px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">■</button>
+                </div>
+
+                <!-- Audio element (hidden, controls=false) -->
+                <audio id="modalAudio" style="display:none;"></audio>
+
+                <!-- Speed selector -->
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <span style="font-size:10px; color:#555; letter-spacing:0.5px; margin-right:2px;">SPEED</span>
+                    <div id="modalSpeedControls" style="display:flex; gap:3px;">
+                        <button class="speed-btn active" onclick="setModalSpeed(1,this)">1×</button>
+                        <button class="speed-btn" onclick="setModalSpeed(1.25,this)">1.25×</button>
+                        <button class="speed-btn" onclick="setModalSpeed(1.5,this)">1.5×</button>
+                        <button class="speed-btn" onclick="setModalSpeed(1.75,this)">1.75×</button>
+                        <button class="speed-btn" onclick="setModalSpeed(2,this)">2×</button>
+                    </div>
                 </div>
             </div>
         </div>
-        <div id="modalBody" style="padding:20px; overflow-y:auto; font-size:13px; line-height:1.7; color:#ccc; flex:1; white-space:pre-wrap; word-wrap:break-word;"></div>
     </div>
 </div>
 </body>

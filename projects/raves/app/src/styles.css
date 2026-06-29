@@ -219,10 +219,12 @@ body {
   display: flex;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding: 0 4px calc(var(--safe-bottom));
+  padding: 6px 4px calc(6px + var(--safe-bottom));
   z-index: 100;
   justify-content: space-around;
-  height: 52px;
+  height: auto;
+  min-height: 52px;
+  box-sizing: border-box;
 }
 .tab {
   background: transparent;
