@@ -1235,13 +1235,17 @@ const server = http.createServer(async (req, res) => {
             req.on('end', () => {
                 try {
                     const payload = body ? JSON.parse(body) : {};
-                    const outBody = voicePath === '/speak' ? JSON.stringify({ text: payload.text, immediate: true }) : '{}';
+                    const outBody = voicePath === '/speak'
+                        ? JSON.stringify({ text: payload.text, immediate: true })
+                        : (body || '{}'); // pass full body through for /speak-file, /stop, etc.
                     const voiceReq = http.request({
                         hostname: '127.0.0.1', port: 18790, path: voicePath, method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
+                        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(outBody) }
                     }, voiceRes => {
-                        let rBody = ''; voiceRes.on('data', d => rBody += d);
-                        voiceRes.on('end', () => { res.writeHead(voiceRes.statusCode, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(rBody || '{"ok":true}'); });
+                        // For speak-file, stream binary audio back (not JSON)
+                        const ct = voiceRes.headers['content-type'] || 'application/json';
+                        res.writeHead(voiceRes.statusCode, { 'Content-Type': ct, 'Access-Control-Allow-Origin': '*', 'Accept-Ranges': 'bytes' });
+                        voiceRes.pipe(res);
                     });
                     voiceReq.on('error', e => { res.writeHead(502); res.end(JSON.stringify({ error: e.message })); });
                     voiceReq.end(outBody);

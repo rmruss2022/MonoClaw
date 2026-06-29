@@ -1033,7 +1033,7 @@
         function _ttsCleanText(raw) {
             return raw.replace(/\[\[tts[^\]]*\]\]|\[\[\/tts[^\]]*\]\]/gi, '')
                 .replace(/\*\*/g, '').replace(/\*/g, '').replace(/#+\s/g, '')
-                .replace(/\n/g, ' ').trim().slice(0, 1500);
+                .replace(/\n/g, ' ').trim();
         }
 
         function _setTtsState(playing, jobIdSafe) {
@@ -1160,43 +1160,69 @@
             return `${m}:${String(s).padStart(2, '0')}`;
         }
         // ---- Modal audio player controls ----
+        let _ttsGenerating = false;
+        let _ttsBlobUrl = null;
+
         async function toggleModalPlay() {
             const audio = document.getElementById('modalAudio');
-            if (!audio) return;
+            if (!audio || _ttsGenerating) return;
 
-            // If no audio src yet, generate TTS from the current modal summary
-            if (!audio.src || audio.src === window.location.href) {
-                const modal = document.getElementById('reportModal');
-                const rawText = modal.dataset.summary || '';
-                const text = _ttsCleanText(rawText).slice(0, 3000);
-                if (!text) return;
-
-                const btn = document.getElementById('modalPlayPauseBtn');
-                const durEl = document.getElementById('modalAudioDuration');
-                if (btn) btn.textContent = '…';
-                if (durEl) durEl.textContent = 'Loading…';
-
-                try {
-                    const resp = await fetch('/api/tts/speak-file', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text })
-                    });
-                    if (!resp.ok) throw new Error(`TTS failed: ${resp.status}`);
-                    const blob = await resp.blob();
-                    const url = URL.createObjectURL(blob);
-                    audio.src = url;
-                    audio.load();
-                    await audio.play();
-                } catch(e) {
-                    console.error('TTS generate error:', e);
-                    if (btn) btn.textContent = '▶';
-                    if (durEl) durEl.textContent = 'Error';
-                }
+            // Already have a real src — just toggle play/pause
+            const hasSrc = audio.src && audio.src !== window.location.href && !audio.src.startsWith('about:');
+            if (hasSrc) {
+                if (audio.paused) { audio.play(); } else { audio.pause(); }
                 return;
             }
 
-            if (audio.paused) { audio.play(); } else { audio.pause(); }
+            // Generate MP3 from full text — no char limit
+            const modal = document.getElementById('reportModal');
+            const rawText = modal.dataset.summary || '';
+            const text = _ttsCleanText(rawText);
+            if (!text) return;
+
+            const btn   = document.getElementById('modalPlayPauseBtn');
+            const durEl = document.getElementById('modalAudioDuration');
+            const curEl = document.getElementById('modalAudioCurrent');
+
+            _ttsGenerating = true;
+            if (btn)   btn.textContent   = '…';
+            if (durEl) durEl.textContent = 'Generating…';
+            if (curEl) curEl.textContent = '0:00';
+
+            try {
+                const resp = await fetch('/api/tts/speak-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const blob = await resp.blob();
+
+                if (_ttsBlobUrl) URL.revokeObjectURL(_ttsBlobUrl);
+                _ttsBlobUrl = URL.createObjectURL(blob);
+
+                audio.src = _ttsBlobUrl;
+                audio.load();
+
+                // Wait for metadata so duration + scrubber work before playback
+                await new Promise(resolve => {
+                    audio.addEventListener('loadedmetadata', resolve, { once: true });
+                    audio.addEventListener('error', resolve, { once: true });
+                    setTimeout(resolve, 8000);
+                });
+
+                const activeSpeed = parseFloat(
+                    document.querySelector('#modalSpeedControls .speed-btn.active')?.textContent || '1'
+                );
+                audio.playbackRate = activeSpeed;
+                await audio.play();
+            } catch(e) {
+                console.error('[TTS] generate error:', e);
+                if (btn)   btn.textContent   = '▶';
+                if (durEl) durEl.textContent = 'Error';
+            } finally {
+                _ttsGenerating = false;
+            }
         }
 
         function stopModalAudio() {
