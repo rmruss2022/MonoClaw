@@ -1234,8 +1234,9 @@
 
         function scrubAudio(val) {
             const audio = document.getElementById('modalAudio');
-            if (!audio || !isFinite(audio.duration)) return;
-            audio.currentTime = (val / 100) * audio.duration;
+            if (!audio || !isFinite(audio.duration) || audio.duration === 0) return;
+            // val is 0-100 percentage, convert to seconds
+            audio.currentTime = (parseFloat(val) / 100) * audio.duration;
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -1246,13 +1247,14 @@
             const playBtn = document.getElementById('modalPlayPauseBtn');
 
             if (audio) {
+                // scrubber always 0-100 (percentage), duration shown as label
                 audio.addEventListener('loadedmetadata', () => {
                     if (durEl) durEl.textContent = fmtTime(audio.duration);
-                    if (scrubber) { scrubber.max = audio.duration || 100; scrubber.value = 0; }
+                    if (scrubber) { scrubber.min = 0; scrubber.max = 100; scrubber.value = 0; }
                 });
                 audio.addEventListener('durationchange', () => {
                     if (durEl) durEl.textContent = fmtTime(audio.duration);
-                    if (scrubber) scrubber.max = audio.duration || 100;
+                    if (scrubber) { scrubber.min = 0; scrubber.max = 100; }
                 });
                 audio.addEventListener('timeupdate', () => {
                     if (curEl) curEl.textContent = fmtTime(audio.currentTime);
@@ -1263,7 +1265,7 @@
                 audio.addEventListener('ended', () => {
                     if (curEl) curEl.textContent = fmtTime(audio.duration);
                     if (playBtn) playBtn.textContent = '▶';
-                    if (scrubber) scrubber.value = 0;
+                    if (scrubber) scrubber.value = 100;
                 });
                 audio.addEventListener('play', () => { if (playBtn) playBtn.textContent = '⏸'; });
                 audio.addEventListener('pause', () => { if (playBtn) playBtn.textContent = '▶'; });
