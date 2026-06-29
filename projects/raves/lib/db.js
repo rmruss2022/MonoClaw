@@ -503,6 +503,52 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
 `);
 
+// ===================== SCHEDULER RUNS =====================
+db.exec(`
+  CREATE TABLE IF NOT EXISTS scheduler_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_name TEXT NOT NULL,
+    ran_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL,
+    details TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_scheduler_job ON scheduler_runs(job_name);
+  CREATE INDEX IF NOT EXISTS idx_scheduler_ran_at ON scheduler_runs(ran_at);
+`);
+
+function recordSchedulerRun(jobName, status, details) {
+  const r = db.prepare(`INSERT INTO scheduler_runs (job_name, status, details) VALUES (?, ?, ?)`)
+    .run(jobName, status, details || '');
+  return r.lastInsertRowid;
+}
+
+function getSchedulerRuns(limit = 50) {
+  return db.prepare(`SELECT id, job_name, ran_at, status, details FROM scheduler_runs ORDER BY ran_at DESC, id DESC LIMIT ?`).all(limit);
+}
+
+function getSchedulerLatestByJob(jobName) {
+  return db.prepare(`SELECT id, job_name, ran_at, status, details FROM scheduler_runs WHERE job_name = ? ORDER BY ran_at DESC, id DESC LIMIT 1`).get(jobName);
+}
+
+function getSchedulerJobCounts() {
+  return db.prepare(`
+    SELECT job_name,
+      COUNT(*) as total,
+      SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) as successes,
+      SUM(CASE WHEN status='failed'  THEN 1 ELSE 0 END) as failures,
+      SUM(CASE WHEN status='skipped' THEN 1 ELSE 0 END) as skipped
+    FROM scheduler_runs GROUP BY job_name
+  `).all();
+}
+
+function getPushSubscriptionCount() {
+  return db.prepare(`SELECT COUNT(*) as c FROM push_subscriptions`).get().c;
+}
+
+function getUserCount() {
+  return db.prepare(`SELECT COUNT(*) as c FROM users`).get().c;
+}
+
 function savePushSubscription(userId, sub) {
   db.prepare(`
     INSERT OR REPLACE INTO push_subscriptions (user_id, endpoint, p256dh, auth)
@@ -565,7 +611,13 @@ module.exports = {
   deletePushSubscription,
   getPushSubscriptionsByUser,
   getAllPushSubscriptions,
-  getGoingShowsForDate
+  getPushSubscriptionCount,
+  getUserCount,
+  getGoingShowsForDate,
+  recordSchedulerRun,
+  getSchedulerRuns,
+  getSchedulerLatestByJob,
+  getSchedulerJobCounts
 };
 
 // Ensure budget_config row exists

@@ -14,14 +14,15 @@ webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
  */
 async function sendPush(payload, subs) {
   const targets = subs || getAllPushSubscriptions();
-  const notification = JSON.stringify({
+  const data = {
     title: payload.title,
     body:  payload.body,
-    icon:  payload.icon  || '/icons/icon-192.png',
-    badge: payload.badge || '/icons/icon-72.png',
     url:   payload.url   || '/',
     tag:   payload.tag   || 'groundfloor',
-  });
+  };
+  if (payload.icon)  data.icon  = payload.icon;
+  if (payload.badge) data.badge = payload.badge;
+  const notification = JSON.stringify(data);
 
   const results = { sent: 0, failed: 0, removed: 0 };
   for (const sub of targets) {

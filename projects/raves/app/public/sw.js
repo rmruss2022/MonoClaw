@@ -80,13 +80,13 @@ self.addEventListener('push', e => {
   const title = data.title || 'Groundfloor'
   const options = {
     body: data.body || '',
-    icon: data.icon || '/icons/icon-192.png',
-    badge: data.badge || '/icons/icon-72.png',
     tag: data.tag || 'groundfloor',
     data: { url: data.url || '/' },
     vibrate: [200, 100, 200],
     requireInteraction: false,
   }
+  if (data.icon)  options.icon  = data.icon
+  if (data.badge) options.badge = data.badge
   e.waitUntil(self.registration.showNotification(title, options))
 })
 

@@ -994,18 +994,21 @@
             if (durEl) durEl.textContent = '—';
             if (curEl) curEl.textContent = '0:00';
 
+            // Always show player bar — either with real audio or TTS-on-demand
+            const savedRate = (window._jobSpeedRates || {})[jobIdSafeVal] || 1;
+            audioEl.playbackRate = savedRate;
+            document.querySelectorAll('#modalSpeedControls .speed-btn').forEach(b => {
+                b.classList.toggle('active', parseFloat(b.textContent) === savedRate);
+            });
+            audioWrap.style.display = 'flex';
+
             if (audioSrc) {
                 audioEl.src = audioSrc;
                 audioEl.load();
-                // Apply saved speed
-                const savedRate = (window._jobSpeedRates || {})[jobIdSafeVal] || 1;
-                audioEl.playbackRate = savedRate;
-                document.querySelectorAll('#modalSpeedControls .speed-btn').forEach(b => {
-                    b.classList.toggle('active', parseFloat(b.textContent) === savedRate);
-                });
-                audioWrap.style.display = 'flex';
             } else {
-                audioWrap.style.display = 'none';
+                // TTS mode — load on first play via play button
+                audioEl.src = '';
+                document.getElementById('modalAudioDuration').textContent = 'TTS';
             }
 
             // Store summary + jobId for TTS
@@ -1157,9 +1160,42 @@
             return `${m}:${String(s).padStart(2, '0')}`;
         }
         // ---- Modal audio player controls ----
-        function toggleModalPlay() {
+        async function toggleModalPlay() {
             const audio = document.getElementById('modalAudio');
-            if (!audio || !audio.src) return;
+            if (!audio) return;
+
+            // If no audio src yet, generate TTS from the current modal summary
+            if (!audio.src || audio.src === window.location.href) {
+                const modal = document.getElementById('reportModal');
+                const rawText = modal.dataset.summary || '';
+                const text = _ttsCleanText(rawText).slice(0, 3000);
+                if (!text) return;
+
+                const btn = document.getElementById('modalPlayPauseBtn');
+                const durEl = document.getElementById('modalAudioDuration');
+                if (btn) btn.textContent = '…';
+                if (durEl) durEl.textContent = 'Loading…';
+
+                try {
+                    const resp = await fetch('/api/tts/speak-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text })
+                    });
+                    if (!resp.ok) throw new Error(`TTS failed: ${resp.status}`);
+                    const blob = await resp.blob();
+                    const url = URL.createObjectURL(blob);
+                    audio.src = url;
+                    audio.load();
+                    await audio.play();
+                } catch(e) {
+                    console.error('TTS generate error:', e);
+                    if (btn) btn.textContent = '▶';
+                    if (durEl) durEl.textContent = 'Error';
+                }
+                return;
+            }
+
             if (audio.paused) { audio.play(); } else { audio.pause(); }
         }
 
@@ -1225,7 +1261,7 @@
                 <div id="modalRunLabel" style="font-size:11px; color:#555; margin-top:2px;"></div>
             </div>
             <div style="display:flex; gap:6px; align-items:center; flex-shrink:0; margin-left:12px;">
-                <button id="modalSpeakBtn" onclick="speakModalSummary()" style="background:#1a1a1a; border:1px solid #333; color:#00ff88; padding:5px 10px; font-size:11px; font-family:inherit; cursor:pointer; letter-spacing:0.5px; transition:all 0.15s;">▶ SPEAK</button>
+                <button id="modalSpeakBtn" onclick="speakModalSummary()" style="display:none;">▶ SPEAK</button>
                 <button onclick="closeReportModal()" style="background:transparent; border:none; color:#666; font-size:20px; cursor:pointer; padding:0 4px; line-height:1;">&times;</button>
             </div>
         </div>

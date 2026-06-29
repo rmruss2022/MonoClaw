@@ -12,8 +12,11 @@ const { getAllEvents, getEventsByWeek, getAllWeeks, getEventsGroupedByWeek, upda
   getPerks, getPerksByTier, getRaveCard, getSocialFeed,
   createUser, login, getSession, logout,
   saveScan, updateScanAddedCount, getScanHistory, getScanById, getLatestScan, deleteScan,
-  savePushSubscription, deletePushSubscription, getPushSubscriptionsByUser, getGoingShowsForDate } = require('./lib/db');
+  savePushSubscription, deletePushSubscription, getPushSubscriptionsByUser, getGoingShowsForDate,
+  getSchedulerRuns, getSchedulerLatestByJob, getSchedulerJobCounts,
+  getPushSubscriptionCount, getUserCount } = require('./lib/db');
 const { sendPush, VAPID_PUBLIC } = require('./lib/push');
+const scheduler = require('./lib/scheduler');
 
 const PORT = process.env.PORT || 3004;
 const ROOT_DIR = __dirname;
@@ -1000,6 +1003,102 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ===================== ADMIN =====================
+
+  // GET /api/admin/scheduler — job statuses + recent run history
+  if (cleanUrl === '/api/admin/scheduler' && req.method === 'GET') {
+    try {
+      const jobs = scheduler.listJobs();
+      const counts = getSchedulerJobCounts();
+      const countByJob = Object.fromEntries(counts.map(c => [c.job_name, c]));
+      const enriched = jobs.map(j => {
+        const last = getSchedulerLatestByJob(j.name);
+        const c = countByJob[j.name] || { total: 0, successes: 0, failures: 0, skipped: 0 };
+        return {
+          name: j.name,
+          label: j.label,
+          description: j.description,
+          lastRun: last ? { ranAt: last.ran_at, status: last.status, details: last.details } : null,
+          nextRun: j.nextRun,
+          runCount: c.total || 0,
+          successCount: c.successes || 0,
+          failureCount: c.failures || 0,
+          skippedCount: c.skipped || 0
+        };
+      });
+      const history = getSchedulerRuns(50);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, jobs: enriched, history, nowET: scheduler.nowInET() }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/admin/scheduler/:jobName/run — manually trigger a job
+  if (cleanUrl.startsWith('/api/admin/scheduler/') && cleanUrl.endsWith('/run') && req.method === 'POST') {
+    const jobName = cleanUrl.slice('/api/admin/scheduler/'.length, -'/run'.length);
+    if (!scheduler.JOBS[jobName]) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `Unknown job: ${jobName}` }));
+      return;
+    }
+    (async () => {
+      try {
+        const result = await scheduler.runJob(jobName, { manual: true });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, job: jobName, result }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    })();
+    return;
+  }
+
+  // GET /api/admin/stats — system stats
+  if (cleanUrl === '/api/admin/stats' && req.method === 'GET') {
+    try {
+      const stats = getStats();
+      const dbBytes = fs.existsSync(path.join(ROOT_DIR, 'events.db'))
+        ? fs.statSync(path.join(ROOT_DIR, 'events.db')).size
+        : 0;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        events: stats.upcoming + getAllEvents().filter(e => e.date < new Date().toISOString().slice(0, 10)).length,
+        upcoming: stats.upcoming,
+        going: stats.going,
+        attended: stats.attended,
+        users: getUserCount(),
+        pushSubscriptions: getPushSubscriptionCount(),
+        dbBytes,
+        uptimeSec: Math.floor((Date.now() - START_TIME) / 1000),
+        nodeVersion: process.version,
+        startedAt: new Date(START_TIME).toISOString()
+      }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /admin — serve admin page
+  if (cleanUrl === '/admin' && req.method === 'GET') {
+    fs.readFile(path.join(ROOT_DIR, 'admin.html'), (err, content) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('admin.html not found');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+      }
+    });
+    return;
+  }
+
   // Serve static files
   let filePath = path.join(ROOT_DIR, cleanUrl === '/' ? 'dashboard.html' : cleanUrl);
   const extname = path.extname(filePath);
@@ -1029,4 +1128,10 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ SQLite persistence enabled`);
   console.log(`📅 Week-based grouping active`);
   console.log(`   Uptime: ${Math.floor((Date.now() - START_TIME) / 1000)}s`);
+
+  if (process.env.SCHEDULER_DISABLED === '1') {
+    console.log('[scheduler] disabled via SCHEDULER_DISABLED=1');
+  } else {
+    scheduler.start();
+  }
 });
