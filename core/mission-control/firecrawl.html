@@ -106,6 +106,8 @@
     .spinner { display:inline-block; width:10px; height:10px; border:2px solid #333;
                border-top-color:#f97316; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:4px; }
     @keyframes spin { to { transform:rotate(360deg); } }
+    .log-entry.hidden { display:none; }
+    .highlight { background:#f9731633; color:#f97316; border-radius:2px; padding:0 2px; }
   </style>
 </head>
 <body>
@@ -123,6 +125,39 @@
     <button class="btn" onclick="loadLog()">↻ Refresh</button>
     <button class="btn primary" onclick="openDrawer()">+ New Call</button>
   </div>
+</div>
+
+<!-- Search + filter bar -->
+<div id="filterBar" style="padding:10px 20px; border-bottom:1px solid #111; background:#0a0a0a; display:flex; gap:10px; align-items:center; position:sticky; top:57px; z-index:9;">
+  <input id="searchFilter" placeholder="🔍 Search queries, URLs, prompts..." 
+    style="flex:1; background:#111; border:1px solid #1a1a1a; color:#e0e0e0; font-family:inherit; font-size:12px; padding:6px 10px; outline:none;"
+    oninput="filterLog()" onfocus="this.style.borderColor='#f97316'" onblur="this.style.borderColor='#1a1a1a'">
+  <select id="actionFilter" onchange="filterLog()" style="background:#111; border:1px solid #1a1a1a; color:#888; font-family:inherit; font-size:11px; padding:6px 8px; outline:none; cursor:pointer;">
+    <option value="">All actions</option>
+    <option value="search">Search</option>
+    <option value="scrape">Scrape</option>
+    <option value="extract">Extract</option>
+    <option value="crawl">Crawl</option>
+  </select>
+  <select id="statusFilter" onchange="filterLog()" style="background:#111; border:1px solid #1a1a1a; color:#888; font-family:inherit; font-size:11px; padding:6px 8px; outline:none; cursor:pointer;">
+    <option value="">All status</option>
+    <option value="ok">Success</option>
+    <option value="err">Error</option>
+  </select>
+  <button class="btn" onclick="toggleDebug()" id="debugToggleBtn">Debug</button>
+  <span id="filterCount" style="font-size:10px; color:#444; white-space:nowrap;"></span>
+</div>
+
+<!-- Debug panel -->
+<div id="debugPanel" style="display:none; border-bottom:1px solid #1a1a1a; background:#080808;">
+  <div style="padding:10px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #111;">
+    <span style="font-size:11px; color:#f97316; letter-spacing:1px;">DEBUG — RAW LOG</span>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" onclick="copyRawLog()">Copy Raw</button>
+      <button class="btn" onclick="downloadLog()">Download .jsonl</button>
+    </div>
+  </div>
+  <pre id="rawLogContent" style="font-size:10px; color:#555; padding:12px 20px; max-height:300px; overflow-y:auto; white-space:pre-wrap; word-wrap:break-word; line-height:1.5;"></pre>
 </div>
 
 <div id="logList" class="log-list">
@@ -225,33 +260,7 @@
     return JSON.stringify(i);
   }
 
-  async function loadLog() {
-    const r = await fetch('/api/firecrawl/log');
-    const entries = await r.json();
-    const el = document.getElementById('logList');
-    if (!entries.length) {
-      el.innerHTML = '<div class="log-empty">No calls yet. Hit "+ New Call" to get started.</div>';
-      return;
-    }
-    el.innerHTML = entries.map((e, idx) => `
-      <div class="log-entry" id="entry-${idx}" onclick="toggleDetail(${idx}, this)">
-        <div class="log-ts">${fmtTime(e.ts)}</div>
-        <div class="log-action ${e.action}">${e.action}</div>
-        <div class="log-main">
-          <div class="log-input">${escHtml(inputLabel(e))}</div>
-          <div class="log-meta">
-            <span class="${e.success?'ok':'err'}">${e.success?'✓':'✗'} ${e.status}</span>
-            · ${e.durationMs}ms
-            · ${e.source || 'api'}
-          </div>
-        </div>
-        <div class="log-results">${e.resultCount != null ? e.resultCount + ' result' + (e.resultCount===1?'':'s') : ''}</div>
-      </div>
-      <div class="log-detail" id="detail-${idx}">
-        <div class="detail-json">${escHtml(JSON.stringify(e, null, 2))}</div>
-      </div>
-    `).join('');
-  }
+  // loadLog/renderLog moved below
 
   function toggleDetail(idx, row) {
     const d = document.getElementById('detail-'+idx);
@@ -327,10 +336,110 @@
 
   function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+  // ---- Filter & Debug ----
+  let _allEntries = [];
+
+  async function loadLog() {
+    const r = await fetch('/api/firecrawl/log');
+    _allEntries = await r.json();
+    renderLog(_allEntries);
+    updateRawLog();
+  }
+
+  function filterLog() {
+    const q = document.getElementById('searchFilter').value.toLowerCase();
+    const action = document.getElementById('actionFilter').value;
+    const status = document.getElementById('statusFilter').value;
+
+    const filtered = _allEntries.filter(e => {
+      const inputStr = JSON.stringify(e.input || {}).toLowerCase();
+      const matchQ = !q || inputStr.includes(q) || (e.action||'').includes(q);
+      const matchAction = !action || e.action === action;
+      const matchStatus = !status || (status === 'ok' ? e.success : !e.success);
+      return matchQ && matchAction && matchStatus;
+    });
+
+    renderLog(filtered, q);
+    document.getElementById('filterCount').textContent = 
+      filtered.length < _allEntries.length ? `${filtered.length} / ${_allEntries.length} shown` : `${_allEntries.length} entries`;
+  }
+
+  function renderLog(entries, highlight) {
+    const el = document.getElementById('logList');
+    if (!entries.length) {
+      el.innerHTML = _allEntries.length
+        ? '<div class="log-empty">No entries match your filter.</div>'
+        : '<div class="log-empty">No calls yet. Hit "+ New Call" to get started.</div>';
+      document.getElementById('filterCount').textContent = '';
+      return;
+    }
+
+    document.getElementById('filterCount').textContent = `${entries.length} entries`;
+
+    el.innerHTML = entries.map((e, idx) => {
+      let label = inputLabel(e);
+      if (highlight && label.toLowerCase().includes(highlight)) {
+        const re = new RegExp(highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        label = label.replace(re, m => `<span class="highlight">${escHtml(m)}</span>`);
+      } else {
+        label = escHtml(label);
+      }
+      return `
+      <div class="log-entry" id="entry-${idx}" onclick="toggleDetail(${idx}, this)">
+        <div class="log-ts">${fmtTime(e.ts)}</div>
+        <div class="log-action ${e.action}">${e.action}</div>
+        <div class="log-main">
+          <div class="log-input">${label}</div>
+          <div class="log-meta">
+            <span class="${e.success?'ok':'err'}">${e.success?'✓':'✗'} ${e.status}</span>
+            · ${e.durationMs}ms
+            · ${e.source || 'api'}
+          </div>
+        </div>
+        <div class="log-results">${e.resultCount != null ? e.resultCount + ' result' + (e.resultCount===1?'':'s') : ''}</div>
+      </div>
+      <div class="log-detail" id="detail-${idx}">
+        <div class="detail-json">${escHtml(JSON.stringify(e, null, 2))}</div>
+      </div>`;
+    }).join('');
+  }
+
+  let _debugOpen = false;
+  function toggleDebug() {
+    _debugOpen = !_debugOpen;
+    document.getElementById('debugPanel').style.display = _debugOpen ? 'block' : 'none';
+    document.getElementById('debugToggleBtn').style.color = _debugOpen ? '#f97316' : '';
+    document.getElementById('debugToggleBtn').style.borderColor = _debugOpen ? '#f97316' : '';
+    if (_debugOpen) updateRawLog();
+  }
+
+  function updateRawLog() {
+    const el = document.getElementById('rawLogContent');
+    if (!el || !_debugOpen) return;
+    el.textContent = _allEntries.map(e => JSON.stringify(e)).join('\n') || '(empty)';
+  }
+
+  function copyRawLog() {
+    const text = _allEntries.map(e => JSON.stringify(e)).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target; btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Raw', 1500);
+    });
+  }
+
+  function downloadLog() {
+    const text = _allEntries.map(e => JSON.stringify(e)).join('\n');
+    const blob = new Blob([text], { type: 'application/x-ndjson' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `firecrawl-log-${new Date().toISOString().slice(0,10)}.jsonl`;
+    a.click();
+  }
+
   // Init
   checkStatus();
   loadLog();
-  setInterval(loadLog, 30000);
+  setInterval(() => { loadLog(); }, 30000);
 </script>
 </body>
 </html>
