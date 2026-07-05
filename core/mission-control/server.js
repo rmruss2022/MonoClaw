@@ -1492,4 +1492,17 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🦞 Mission Control running at http://127.0.0.1:${PORT}`);
+
+    // Also bind explicitly to Tailscale IP — macOS 0.0.0.0 doesn't route utun traffic
+    const { execSync } = require('child_process');
+    try {
+        const tsIp = execSync('/opt/homebrew/bin/tailscale ip 2>/dev/null || tailscale ip 2>/dev/null', { encoding: 'utf8', env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' } }).trim().split('\n')[0];
+        if (tsIp && /^\d+\.\d+\.\d+\.\d+$/.test(tsIp)) {
+            const tsServer = http.createServer(server.listeners('request')[0]);
+            tsServer.listen(PORT, tsIp, () => {
+                console.log(`🌐 Tailscale:  http://${tsIp}:${PORT}/hub`);
+            });
+            tsServer.on('error', e => console.log(`[Tailscale bind] ${e.message}`));
+        }
+    } catch(e) { console.log('[Tailscale bind] failed:', e.message); }
 });
