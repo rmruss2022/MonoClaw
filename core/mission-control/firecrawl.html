@@ -292,7 +292,7 @@
   }
 
   function openDrawer() { document.getElementById('drawer').classList.add('open'); }
-  function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('callResult').style.display='none'; }
+  function closeDrawer() { document.getElementById('drawer').classList.remove('open'); const cr = document.getElementById('callResult'); if (cr) cr.style.display='none'; }
 
   function showTab(name) {
     document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['search','scrape','extract','crawl'][i]===name));
@@ -353,7 +353,9 @@
         : 'Done';
       statusEl.textContent = `✓ ${resultCount} · ${Date.now() - startMs}ms`;
       viewBtn.style.display = 'inline-flex';
-      viewBtn.textContent = `View Results →`;
+      viewBtn.textContent = `📊 View Results →`;
+      viewBtn.style.fontSize = '12px';
+      viewBtn.style.padding = '6px 14px';
 
       loadLog(); // refresh log
     } catch(e) {
@@ -429,6 +431,10 @@
         <div class="log-results">${e.resultCount != null ? e.resultCount + ' result' + (e.resultCount===1?'':'s') : ''}</div>
       </div>
       <div class="log-detail" id="detail-${idx}">
+        <div style="display:flex; gap:8px; margin-bottom:8px; padding:4px 0;">
+          <button class="btn primary" style="font-size:10px; padding:4px 10px;" onclick="event.stopPropagation(); rerunEntry(${idx})">▶ Re-run & View</button>
+          <span style="font-size:10px; color:#444; align-self:center;">Replays this call and opens result viewer</span>
+        </div>
         <div class="detail-json">${escHtml(JSON.stringify(e, null, 2))}</div>
       </div>`;
     }).join('');
@@ -569,6 +575,35 @@
       else closeDrawer();
     }
   });
+
+  async function rerunEntry(idx) {
+    const entry = _allEntries[idx];
+    if (!entry) return;
+    const input = entry.input || {};
+    const action = entry.action;
+    
+    // Open drawer to the right tab
+    openDrawer();
+    showTab(action === 'search' ? 'search' : action === 'scrape' ? 'scrape' : action === 'extract' ? 'extract' : 'crawl');
+    
+    // Pre-fill inputs
+    if (action === 'search') {
+      document.getElementById('searchQuery').value = input.query || '';
+      document.getElementById('searchLimit').value = input.limit || 10;
+    } else if (action === 'scrape') {
+      document.getElementById('scrapeUrl').value = input.url || '';
+    } else if (action === 'extract') {
+      document.getElementById('extractUrls').value = (input.urls || [input.url] || []).join('\n');
+      document.getElementById('extractPrompt').value = input.prompt || '';
+    } else if (action === 'crawl') {
+      document.getElementById('crawlUrl').value = input.url || '';
+      document.getElementById('crawlPrompt').value = input.prompt || '';
+    }
+    
+    // Auto-run
+    await runCall(action === 'scrape' && input.jsonOptions ? 'extract' : action);
+    if (window._lastResult) openResultViewer();
+  }
 
   // Init
   checkStatus();
