@@ -206,33 +206,39 @@
 
     <div id="panel-extract" class="panel">
       <div style="margin-bottom:12px">
-        <label>URLs (one per line)</label>
-        <textarea id="extractUrls" placeholder="https://..."></textarea>
+        <label>URLs — one per line (single URL works great)</label>
+        <textarea id="extractUrls" placeholder="https://dice.fm/event/eo3now-akumandra-festival...&#10;https://ra.co/events/2413974"></textarea>
       </div>
       <div class="row">
         <div>
           <label>Prompt — what to extract</label>
-          <input id="extractPrompt" placeholder="Extract event name, ticket prices, availability...">
+          <input id="extractPrompt" placeholder="Extract: event name, date, ticket tiers with prices, availability, venue">
         </div>
-        <button class="btn primary" onclick="runCall('extract')" id="extractBtn">Run</button>
+        <button class="btn primary" onclick="runCall('extract')" id="extractBtn">Extract</button>
+      </div>
+      <div style="font-size:10px; color:#444; padding:6px 8px; border:1px solid #1a1a1a; background:#0d0d0d;">
+        ✅ Best for AI-powered structured data extraction from any URL
       </div>
     </div>
 
     <div id="panel-crawl" class="panel">
+      <div style="margin-bottom:12px">
+        <label>URL</label>
+        <input id="crawlUrl" placeholder="https://dice.fm/event/...">
+      </div>
       <div class="row">
         <div>
-          <label>Start URL</label>
-          <input id="crawlUrl" placeholder="https://...">
+          <label>Prompt — what to find/extract</label>
+          <input id="crawlPrompt" placeholder="Extract ticket prices, availability, event name, date">
         </div>
         <div style="flex:0 0 70px">
           <label>Depth</label>
-          <select id="crawlDepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+          <select id="crawlDepth"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option></select>
         </div>
-        <button class="btn primary" onclick="runCall('crawl')" id="crawlBtn">Run</button>
+        <button class="btn primary" onclick="runCall('crawl')" id="crawlBtn">Crawl</button>
       </div>
-      <div style="margin-bottom:12px">
-        <label>Prompt (optional)</label>
-        <input id="crawlPrompt" placeholder="Find all ticket links and prices">
+      <div style="font-size:10px; color:#444; margin-bottom:12px; padding:6px 8px; border:1px solid #1a1a1a; background:#0d0d0d;">
+        💡 For single-URL AI extraction, use <strong style="color:#34d399">Extract</strong> tab instead — Crawl is for multi-page site crawls
       </div>
     </div>
 
@@ -305,8 +311,26 @@
     let payload = {};
     if (action === 'search') payload = { query: document.getElementById('searchQuery').value, limit: parseInt(document.getElementById('searchLimit').value) };
     else if (action === 'scrape') payload = { url: document.getElementById('scrapeUrl').value, formats: ['markdown'] };
-    else if (action === 'extract') payload = { urls: document.getElementById('extractUrls').value.trim().split('\n').filter(Boolean), prompt: document.getElementById('extractPrompt').value };
-    else if (action === 'crawl') payload = { url: document.getElementById('crawlUrl').value, prompt: document.getElementById('crawlPrompt').value, maxDiscoveryDepth: parseInt(document.getElementById('crawlDepth').value) };
+    else if (action === 'extract') {
+      // Use v2 scrape+json (extract endpoint is deprecated)
+      const urls = document.getElementById('extractUrls').value.trim().split('\n').filter(Boolean);
+      const prompt = document.getElementById('extractPrompt').value.trim();
+      if (urls.length === 1) {
+        // Single URL: use scrape with json format
+        action = 'scrape';
+        payload = { url: urls[0], formats: ['json', 'markdown'], jsonOptions: { prompt } };
+      } else {
+        // Multiple URLs: use agent
+        action = 'agent';
+        payload = { urls, prompt };
+      }
+    }
+    else if (action === 'crawl') {
+      const crawlUrl = document.getElementById('crawlUrl').value;
+      const crawlPrompt = document.getElementById('crawlPrompt').value.trim();
+      payload = { url: crawlUrl, maxDiscoveryDepth: parseInt(document.getElementById('crawlDepth').value) };
+      if (crawlPrompt) payload.scrapeOptions = { formats: ['markdown'], prompt: crawlPrompt };
+    }
 
     try {
       const r = await fetch(`/api/firecrawl/${action}`, {
@@ -320,7 +344,14 @@
         const results = d?.data?.web || d?.results || [];
         resultEl.textContent = results.map(r => `${r.title||r.url}\n${r.url}\n${(r.description||'').slice(0,120)}\n`).join('\n');
       } else if (action === 'scrape') {
-        resultEl.textContent = (d?.data?.markdown || d?.markdown || JSON.stringify(d)).slice(0, 2000);
+        // Show JSON extraction result if available, otherwise markdown
+        const jsonResult = d?.data?.json || d?.json;
+        const md = d?.data?.markdown || d?.markdown || '';
+        if (jsonResult) {
+          resultEl.textContent = JSON.stringify(jsonResult, null, 2);
+        } else {
+          resultEl.textContent = md.slice(0, 3000) || JSON.stringify(d).slice(0, 2000);
+        }
       } else {
         resultEl.textContent = JSON.stringify(d, null, 2).slice(0, 2000);
       }
