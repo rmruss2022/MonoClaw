@@ -3,167 +3,280 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Firecrawl — Mission Control</title>
+  <title>Firecrawl Log — Mission Control</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:'SF Mono',Monaco,monospace; background:#0a0a0a; color:#e0e0e0; padding:24px; }
-    h1 { font-size:20px; color:#f97316; letter-spacing:2px; margin-bottom:4px; }
-    .subtitle { font-size:11px; color:#555; letter-spacing:1px; margin-bottom:24px; }
-    .tabs { display:flex; gap:0; border-bottom:1px solid #222; margin-bottom:20px; }
-    .tab { padding:8px 18px; font-family:inherit; font-size:12px; letter-spacing:1px; text-transform:uppercase;
-           background:transparent; border:none; color:#555; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+    body { font-family:'SF Mono',Monaco,monospace; background:#0a0a0a; color:#e0e0e0; }
+
+    .topbar {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 20px; border-bottom:1px solid #1a1a1a; background:#0d0d0d;
+      position:sticky; top:0; z-index:10;
+    }
+    .topbar-left { display:flex; align-items:center; gap:12px; }
+    h1 { font-size:15px; color:#f97316; letter-spacing:2px; }
+    .api-status { display:flex; align-items:center; gap:6px; font-size:11px; color:#555; }
+    .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+    .dot.green { background:#00ff88; box-shadow:0 0 6px #00ff8866; }
+    .dot.red { background:#ff4444; }
+    .topbar-actions { display:flex; gap:8px; }
+    button.btn {
+      background:transparent; border:1px solid #2a2a2a; color:#888;
+      font-family:inherit; font-size:11px; letter-spacing:0.5px; padding:5px 12px;
+      cursor:pointer; transition:all 0.15s;
+    }
+    button.btn:hover { border-color:#f97316; color:#f97316; }
+    button.btn.primary { border-color:#f97316; color:#f97316; background:#1a0d00; }
+    button.btn.danger { border-color:#ff4444; color:#ff4444; }
+    button.btn.danger:hover { background:#1a0000; }
+
+    /* Log list */
+    .log-list { padding:0; }
+    .log-empty { padding:48px 20px; text-align:center; color:#333; font-size:13px; }
+
+    .log-entry {
+      border-bottom:1px solid #111; padding:12px 20px;
+      display:grid; grid-template-columns:80px 70px 1fr auto;
+      gap:12px; align-items:start; cursor:pointer; transition:background 0.1s;
+    }
+    .log-entry:hover { background:#0d0d0d; }
+    .log-entry.expanded { background:#0d0d0d; }
+
+    .log-ts { font-size:10px; color:#444; line-height:1.4; }
+    .log-action {
+      font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+      padding:2px 6px; border-radius:2px; text-align:center; align-self:start;
+    }
+    .log-action.search { color:#a78bfa; border:1px solid #a78bfa44; }
+    .log-action.scrape { color:#38bdf8; border:1px solid #38bdf844; }
+    .log-action.extract { color:#34d399; border:1px solid #34d39944; }
+    .log-action.crawl { color:#fb923c; border:1px solid #fb923c44; }
+
+    .log-main {}
+    .log-input { font-size:12px; color:#ccc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .log-meta { font-size:11px; color:#444; margin-top:3px; }
+    .log-meta .ok { color:#00ff8866; }
+    .log-meta .err { color:#ff4444; }
+
+    .log-results { font-size:11px; color:#555; text-align:right; white-space:nowrap; }
+
+    /* Detail expand */
+    .log-detail {
+      display:none; border-top:1px solid #1a1a1a;
+      padding:12px 20px 16px; background:#0a0a0a;
+    }
+    .log-detail.open { display:block; }
+    .detail-json { font-size:11px; color:#888; background:#111; border:1px solid #1a1a1a;
+                   padding:10px; max-height:300px; overflow-y:auto; white-space:pre-wrap; word-wrap:break-word; }
+
+    /* New call drawer */
+    .drawer {
+      position:fixed; bottom:0; left:0; right:0; z-index:100;
+      background:#0d0d0d; border-top:1px solid #f97316;
+      transform:translateY(100%); transition:transform 0.2s ease;
+      max-height:70vh; overflow-y:auto;
+    }
+    .drawer.open { transform:translateY(0); }
+    .drawer-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 20px; border-bottom:1px solid #1a1a1a; background:#111;
+      position:sticky; top:0;
+    }
+    .drawer-title { font-size:13px; color:#f97316; letter-spacing:1px; }
+    .drawer-body { padding:16px 20px; }
+
+    .tabs { display:flex; gap:0; border-bottom:1px solid #1a1a1a; margin-bottom:16px; }
+    .tab { padding:6px 14px; font-family:inherit; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+           background:transparent; border:none; color:#444; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
     .tab.active { color:#f97316; border-bottom-color:#f97316; }
     .panel { display:none; }
     .panel.active { display:block; }
-    label { font-size:11px; color:#888; letter-spacing:0.5px; display:block; margin-bottom:4px; }
+
+    label { font-size:10px; color:#555; letter-spacing:0.5px; display:block; margin-bottom:4px; text-transform:uppercase; }
     input, textarea, select {
-      width:100%; background:#111; border:1px solid #2a2a2a; color:#e0e0e0;
-      font-family:inherit; font-size:13px; padding:8px 10px; outline:none;
-      transition:border-color 0.15s;
+      width:100%; background:#111; border:1px solid #222; color:#e0e0e0;
+      font-family:inherit; font-size:12px; padding:7px 10px; outline:none;
     }
     input:focus, textarea:focus { border-color:#f97316; }
-    textarea { resize:vertical; min-height:60px; }
-    .row { display:flex; gap:10px; margin-bottom:14px; align-items:flex-end; }
+    textarea { resize:vertical; min-height:56px; }
+    .row { display:flex; gap:10px; margin-bottom:12px; align-items:flex-end; }
     .row > * { flex:1; }
     .row > button { flex:0 0 auto; }
-    button {
-      background:#1a0d00; border:1px solid #f97316; color:#f97316;
-      font-family:inherit; font-size:12px; letter-spacing:1px; padding:8px 18px;
-      cursor:pointer; text-transform:uppercase; transition:background 0.15s;
-    }
-    button:hover { background:#2a1500; }
-    button:disabled { opacity:0.4; cursor:not-allowed; }
-    .status { font-size:11px; color:#555; margin-bottom:16px; }
-    .status .dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:middle; }
-    .status .dot.green { background:#00ff88; }
-    .status .dot.red { background:#ff4444; }
-    .result-box {
-      background:#111; border:1px solid #222; padding:14px; margin-top:16px;
-      max-height:500px; overflow-y:auto; font-size:12px; line-height:1.6;
-      color:#ccc; white-space:pre-wrap; word-wrap:break-word;
-    }
-    .result-box h4 { color:#f97316; font-size:11px; letter-spacing:1px; margin-bottom:8px; text-transform:uppercase; }
-    .result-item { border-bottom:1px solid #1a1a1a; padding-bottom:10px; margin-bottom:10px; }
-    .result-url { color:#f97316; font-size:11px; word-break:break-all; margin-bottom:4px; }
-    .result-title { font-weight:700; color:#e0e0e0; margin-bottom:2px; }
-    .result-desc { color:#888; font-size:12px; }
-    .spinner { display:inline-block; width:12px; height:12px; border:2px solid #333;
-               border-top-color:#f97316; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:6px; }
+
+    .spinner { display:inline-block; width:10px; height:10px; border:2px solid #333;
+               border-top-color:#f97316; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:4px; }
     @keyframes spin { to { transform:rotate(360deg); } }
-    .copy-btn { font-size:10px; padding:3px 8px; margin-left:8px; opacity:0.6; }
-    .copy-btn:hover { opacity:1; }
-    .formats { display:flex; gap:6px; flex-wrap:wrap; }
-    .fmt-btn { padding:4px 10px; font-size:11px; opacity:0.5; }
-    .fmt-btn.on { opacity:1; background:#1a0d00; }
-    a { color:#f97316; }
   </style>
 </head>
 <body>
-  <h1>🔥 FIRECRAWL</h1>
-  <div class="subtitle">WEB SCRAPING & SEARCH API · MISSION CONTROL</div>
 
-  <div id="apiStatus" class="status"><span class="dot" id="statusDot"></span><span id="statusText">Checking API...</span></div>
-
-  <div class="tabs">
-    <button class="tab active" onclick="showTab('search')">Search</button>
-    <button class="tab" onclick="showTab('scrape')">Scrape</button>
-    <button class="tab" onclick="showTab('extract')">Extract</button>
-    <button class="tab" onclick="showTab('crawl')">Crawl</button>
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>🔥 FIRECRAWL</h1>
+    <div class="api-status">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">Checking...</span>
+    </div>
   </div>
+  <div class="topbar-actions">
+    <button class="btn danger" onclick="clearLog()">Clear Log</button>
+    <button class="btn" onclick="loadLog()">↻ Refresh</button>
+    <button class="btn primary" onclick="openDrawer()">+ New Call</button>
+  </div>
+</div>
 
-  <!-- SEARCH -->
-  <div id="panel-search" class="panel active">
-    <div class="row">
-      <div>
-        <label>Search Query</label>
-        <input id="searchQuery" type="text" placeholder="superior ingredients july 4 ticket..." onkeydown="if(event.key==='Enter') runSearch()">
+<div id="logList" class="log-list">
+  <div class="log-empty">Loading...</div>
+</div>
+
+<!-- New call drawer -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <span class="drawer-title">NEW FIRECRAWL CALL</span>
+    <button class="btn" onclick="closeDrawer()">✕ Close</button>
+  </div>
+  <div class="drawer-body">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('search')">Search</button>
+      <button class="tab" onclick="showTab('scrape')">Scrape</button>
+      <button class="tab" onclick="showTab('extract')">Extract</button>
+      <button class="tab" onclick="showTab('crawl')">Crawl</button>
+    </div>
+
+    <div id="panel-search" class="panel active">
+      <div class="row">
+        <div>
+          <label>Query</label>
+          <input id="searchQuery" placeholder="Search the web..." onkeydown="if(event.key==='Enter')runCall('search')">
+        </div>
+        <div style="flex:0 0 70px">
+          <label>Results</label>
+          <select id="searchLimit">
+            <option value="5">5</option><option value="10" selected>10</option><option value="20">20</option>
+          </select>
+        </div>
+        <button class="btn primary" onclick="runCall('search')" id="searchBtn">Run</button>
       </div>
-      <div style="flex:0 0 80px">
-        <label>Results</label>
-        <select id="searchLimit">
-          <option value="5">5</option>
-          <option value="10" selected>10</option>
-          <option value="20">20</option>
-        </select>
-      </div>
-      <button onclick="runSearch()" id="searchBtn">Search</button>
     </div>
-    <div id="searchResults"></div>
-  </div>
 
-  <!-- SCRAPE -->
-  <div id="panel-scrape" class="panel">
-    <div style="margin-bottom:14px">
-      <label>URL to scrape</label>
-      <input id="scrapeUrl" type="url" placeholder="https://dice.fm/event/..." onkeydown="if(event.key==='Enter') runScrape()">
-    </div>
-    <div style="margin-bottom:14px">
-      <label>Formats</label>
-      <div class="formats" id="fmtBtns">
-        <button class="fmt-btn on" data-fmt="markdown" onclick="toggleFmt(this)">Markdown</button>
-        <button class="fmt-btn" data-fmt="html" onclick="toggleFmt(this)">HTML</button>
-        <button class="fmt-btn" data-fmt="links" onclick="toggleFmt(this)">Links</button>
-        <button class="fmt-btn" data-fmt="summary" onclick="toggleFmt(this)">Summary</button>
+    <div id="panel-scrape" class="panel">
+      <div class="row">
+        <div>
+          <label>URL</label>
+          <input id="scrapeUrl" placeholder="https://..." onkeydown="if(event.key==='Enter')runCall('scrape')">
+        </div>
+        <button class="btn primary" onclick="runCall('scrape')" id="scrapeBtn">Run</button>
       </div>
     </div>
-    <button onclick="runScrape()" id="scrapeBtn">Scrape</button>
-    <div id="scrapeResults"></div>
-  </div>
 
-  <!-- EXTRACT -->
-  <div id="panel-extract" class="panel">
-    <div style="margin-bottom:14px">
-      <label>URLs (one per line)</label>
-      <textarea id="extractUrls" placeholder="https://dice.fm/event/g5q5yp-...&#10;https://ra.co/events/2413974"></textarea>
+    <div id="panel-extract" class="panel">
+      <div style="margin-bottom:12px">
+        <label>URLs (one per line)</label>
+        <textarea id="extractUrls" placeholder="https://..."></textarea>
+      </div>
+      <div class="row">
+        <div>
+          <label>Prompt — what to extract</label>
+          <input id="extractPrompt" placeholder="Extract event name, ticket prices, availability...">
+        </div>
+        <button class="btn primary" onclick="runCall('extract')" id="extractBtn">Run</button>
+      </div>
     </div>
-    <div style="margin-bottom:14px">
-      <label>Extraction Prompt</label>
-      <textarea id="extractPrompt" placeholder="Extract: event name, date, ticket prices, availability status, venue address"></textarea>
-    </div>
-    <button onclick="runExtract()" id="extractBtn">Extract</button>
-    <div id="extractResults"></div>
-  </div>
 
-  <!-- CRAWL -->
-  <div id="panel-crawl" class="panel">
-    <div style="margin-bottom:14px">
-      <label>Start URL</label>
-      <input id="crawlUrl" type="url" placeholder="https://www.si-bk.com/shows">
-    </div>
-    <div class="row">
-      <div>
+    <div id="panel-crawl" class="panel">
+      <div class="row">
+        <div>
+          <label>Start URL</label>
+          <input id="crawlUrl" placeholder="https://...">
+        </div>
+        <div style="flex:0 0 70px">
+          <label>Depth</label>
+          <select id="crawlDepth"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option></select>
+        </div>
+        <button class="btn primary" onclick="runCall('crawl')" id="crawlBtn">Run</button>
+      </div>
+      <div style="margin-bottom:12px">
         <label>Prompt (optional)</label>
-        <input id="crawlPrompt" placeholder="Find all event ticket links and prices">
+        <input id="crawlPrompt" placeholder="Find all ticket links and prices">
       </div>
-      <div style="flex:0 0 80px">
-        <label>Depth</label>
-        <select id="crawlDepth">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="3">3</option>
-        </select>
-      </div>
-      <button onclick="runCrawl()" id="crawlBtn">Crawl</button>
     </div>
-    <div id="crawlResults"></div>
+
+    <div id="callResult" style="display:none; margin-top:12px;
+      background:#111; border:1px solid #222; padding:12px; font-size:11px;
+      color:#888; max-height:200px; overflow-y:auto; white-space:pre-wrap; word-wrap:break-word;"></div>
   </div>
+</div>
 
 <script>
-  // Check API status on load
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    const today = new Date();
+    const isToday = d.toDateString() === today.toDateString();
+    const time = d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+    return isToday ? time : d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + time;
+  }
+
+  function inputLabel(entry) {
+    const i = entry.input || {};
+    if (entry.action === 'search') return i.query || '—';
+    if (entry.action === 'scrape') return i.url || '—';
+    if (entry.action === 'extract') return (i.prompt || '') + (i.urls?.length ? ` · ${i.urls.length} URL(s)` : '');
+    if (entry.action === 'crawl') return i.url || '—';
+    return JSON.stringify(i);
+  }
+
+  async function loadLog() {
+    const r = await fetch('/api/firecrawl/log');
+    const entries = await r.json();
+    const el = document.getElementById('logList');
+    if (!entries.length) {
+      el.innerHTML = '<div class="log-empty">No calls yet. Hit "+ New Call" to get started.</div>';
+      return;
+    }
+    el.innerHTML = entries.map((e, idx) => `
+      <div class="log-entry" id="entry-${idx}" onclick="toggleDetail(${idx}, this)">
+        <div class="log-ts">${fmtTime(e.ts)}</div>
+        <div class="log-action ${e.action}">${e.action}</div>
+        <div class="log-main">
+          <div class="log-input">${escHtml(inputLabel(e))}</div>
+          <div class="log-meta">
+            <span class="${e.success?'ok':'err'}">${e.success?'✓':'✗'} ${e.status}</span>
+            · ${e.durationMs}ms
+            · ${e.source || 'api'}
+          </div>
+        </div>
+        <div class="log-results">${e.resultCount != null ? e.resultCount + ' result' + (e.resultCount===1?'':'s') : ''}</div>
+      </div>
+      <div class="log-detail" id="detail-${idx}">
+        <div class="detail-json">${escHtml(JSON.stringify(e, null, 2))}</div>
+      </div>
+    `).join('');
+  }
+
+  function toggleDetail(idx, row) {
+    const d = document.getElementById('detail-'+idx);
+    const open = d.classList.toggle('open');
+    row.classList.toggle('expanded', open);
+  }
+
+  async function clearLog() {
+    if (!confirm('Clear the entire Firecrawl call log?')) return;
+    await fetch('/api/firecrawl/log', { method:'DELETE' });
+    loadLog();
+  }
+
+  // Status check
   async function checkStatus() {
     try {
       const r = await fetch('/api/firecrawl/status');
       const d = await r.json();
       document.getElementById('statusDot').className = 'dot ' + (d.online ? 'green' : 'red');
-      document.getElementById('statusText').textContent = d.online
-        ? `API Online · Key: ${d.key}`
-        : `API Offline · ${d.reason || 'Check key'}`;
-    } catch(e) {
-      document.getElementById('statusDot').className = 'dot red';
-      document.getElementById('statusText').textContent = 'Cannot reach mission control';
-    }
+      document.getElementById('statusText').textContent = d.online ? `Online · ${d.key}` : `Offline · ${d.reason||''}`;
+    } catch { document.getElementById('statusText').textContent = 'unreachable'; }
   }
-  checkStatus();
+
+  function openDrawer() { document.getElementById('drawer').classList.add('open'); }
+  function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('callResult').style.display='none'; }
 
   function showTab(name) {
     document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['search','scrape','extract','crawl'][i]===name));
@@ -171,97 +284,53 @@
     document.getElementById('panel-'+name).classList.add('active');
   }
 
-  function toggleFmt(btn) { btn.classList.toggle('on'); }
-  function getFormats() { return [...document.querySelectorAll('.fmt-btn.on')].map(b=>b.dataset.fmt); }
+  async function runCall(action) {
+    const btnId = action+'Btn';
+    const btn = document.getElementById(btnId);
+    const resultEl = document.getElementById('callResult');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Running…';
+    resultEl.style.display = 'block';
+    resultEl.textContent = 'Running…';
 
-  function loading(el, btnId) {
-    document.getElementById(btnId).disabled = true;
-    el.innerHTML = '<div style="padding:10px;color:#555"><span class="spinner"></span>Running...</div>';
-  }
+    let payload = {};
+    if (action === 'search') payload = { query: document.getElementById('searchQuery').value, limit: parseInt(document.getElementById('searchLimit').value) };
+    else if (action === 'scrape') payload = { url: document.getElementById('scrapeUrl').value, formats: ['markdown'] };
+    else if (action === 'extract') payload = { urls: document.getElementById('extractUrls').value.trim().split('\n').filter(Boolean), prompt: document.getElementById('extractPrompt').value };
+    else if (action === 'crawl') payload = { url: document.getElementById('crawlUrl').value, prompt: document.getElementById('crawlPrompt').value, maxDiscoveryDepth: parseInt(document.getElementById('crawlDepth').value) };
 
-  async function runSearch() {
-    const q = document.getElementById('searchQuery').value.trim();
-    if (!q) return;
-    const limit = parseInt(document.getElementById('searchLimit').value);
-    const el = document.getElementById('searchResults');
-    loading(el, 'searchBtn');
     try {
-      const r = await fetch('/api/firecrawl/search', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ query: q, limit })
+      const r = await fetch(`/api/firecrawl/${action}`, {
+        method:'POST', headers:{'Content-Type':'application/json', 'X-Source':'dashboard'},
+        body: JSON.stringify(payload)
       });
       const d = await r.json();
-      const results = d.results || d.data?.web || [];
-      el.innerHTML = `<div class="result-box"><h4>${results.length} results for "${q}"</h4>` +
-        results.map(r => `<div class="result-item">
-          <div class="result-url">${r.url}</div>
-          <div class="result-title">${r.title || ''}</div>
-          <div class="result-desc">${(r.description || r.snippet || '').slice(0,200)}</div>
-        </div>`).join('') + '</div>';
-    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
-    document.getElementById('searchBtn').disabled = false;
+
+      // Show result summary
+      if (action === 'search') {
+        const results = d?.data?.web || d?.results || [];
+        resultEl.textContent = results.map(r => `${r.title||r.url}\n${r.url}\n${(r.description||'').slice(0,120)}\n`).join('\n');
+      } else if (action === 'scrape') {
+        resultEl.textContent = (d?.data?.markdown || d?.markdown || JSON.stringify(d)).slice(0, 2000);
+      } else {
+        resultEl.textContent = JSON.stringify(d, null, 2).slice(0, 2000);
+      }
+
+      loadLog(); // refresh log
+    } catch(e) {
+      resultEl.textContent = 'Error: ' + e.message;
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Run';
   }
 
-  async function runScrape() {
-    const url = document.getElementById('scrapeUrl').value.trim();
-    if (!url) return;
-    const formats = getFormats();
-    const el = document.getElementById('scrapeResults');
-    loading(el, 'scrapeBtn');
-    try {
-      const r = await fetch('/api/firecrawl/scrape', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ url, formats })
-      });
-      const d = await r.json();
-      const content = d.markdown || d.data?.markdown || d.html || d.data?.html || JSON.stringify(d, null, 2);
-      el.innerHTML = `<div class="result-box"><h4>Scraped: ${url} <button class="copy-btn" onclick="copyText(this)">Copy</button></h4>${escHtml(content.slice(0, 8000))}</div>`;
-    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
-    document.getElementById('scrapeBtn').disabled = false;
-  }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  async function runExtract() {
-    const urls = document.getElementById('extractUrls').value.trim().split('\n').filter(Boolean);
-    const prompt = document.getElementById('extractPrompt').value.trim();
-    if (!urls.length) return;
-    const el = document.getElementById('extractResults');
-    loading(el, 'extractBtn');
-    try {
-      const r = await fetch('/api/firecrawl/extract', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ urls, prompt })
-      });
-      const d = await r.json();
-      el.innerHTML = `<div class="result-box"><h4>Extracted</h4>${escHtml(JSON.stringify(d, null, 2))}</div>`;
-    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
-    document.getElementById('extractBtn').disabled = false;
-  }
-
-  async function runCrawl() {
-    const url = document.getElementById('crawlUrl').value.trim();
-    const prompt = document.getElementById('crawlPrompt').value.trim();
-    const depth = parseInt(document.getElementById('crawlDepth').value);
-    if (!url) return;
-    const el = document.getElementById('crawlResults');
-    loading(el, 'crawlBtn');
-    try {
-      const r = await fetch('/api/firecrawl/crawl', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ url, prompt, maxDiscoveryDepth: depth })
-      });
-      const d = await r.json();
-      el.innerHTML = `<div class="result-box"><h4>Crawl started · ID: ${d.id || 'unknown'}</h4>` +
-        `<p style="color:#888;margin-top:8px">Crawl running in background. Use ID to check status.</p>` +
-        `<pre style="margin-top:8px">${escHtml(JSON.stringify(d, null, 2))}</pre></div>`;
-    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
-    document.getElementById('crawlBtn').disabled = false;
-  }
-
-  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function copyText(btn) {
-    const pre = btn.closest('.result-box').querySelector('pre, div:last-child');
-    navigator.clipboard.writeText(pre?.textContent || '').then(() => { btn.textContent = 'Copied!'; setTimeout(()=>btn.textContent='Copy',1500); });
-  }
+  // Init
+  checkStatus();
+  loadLog();
+  setInterval(loadLog, 30000);
 </script>
 </body>
 </html>

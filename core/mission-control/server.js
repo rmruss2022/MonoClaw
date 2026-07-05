@@ -1222,6 +1222,23 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         res.end(JSON.stringify(status));
 
+    } else if (req.url === '/api/firecrawl/log' && req.method === 'GET') {
+        // Return call log
+        const logFile = path.join(process.env.HOME, '.openclaw/firecrawl-log.jsonl');
+        try {
+            const lines = fs.existsSync(logFile)
+                ? fs.readFileSync(logFile, 'utf-8').trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)
+                : [];
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify(lines.reverse())); // newest first
+        } catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
+
+    } else if (req.url === '/api/firecrawl/log' && req.method === 'DELETE') {
+        // Clear log
+        const logFile = path.join(process.env.HOME, '.openclaw/firecrawl-log.jsonl');
+        try { fs.writeFileSync(logFile, ''); res.writeHead(200); res.end(JSON.stringify({ ok: true })); }
+        catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
+
     } else if (req.url.startsWith('/api/firecrawl/') && (req.method === 'POST' || req.method === 'GET')) {
         const action = req.url.replace('/api/firecrawl/', ''); // search | scrape | extract | crawl
         let body = '';
@@ -1235,6 +1252,7 @@ const server = http.createServer(async (req, res) => {
 
                 const payload = body ? JSON.parse(body) : {};
                 const fcUrl = `https://api.firecrawl.dev/v1/${action}`;
+                const startMs = Date.now();
                 const fcResp = await fetch(fcUrl, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
@@ -1242,6 +1260,29 @@ const server = http.createServer(async (req, res) => {
                     signal: AbortSignal.timeout(30000)
                 });
                 const fcData = await fcResp.json();
+                const durationMs = Date.now() - startMs;
+
+                // Write to log
+                const logFile = path.join(process.env.HOME, '.openclaw/firecrawl-log.jsonl');
+                const logEntry = {
+                    ts: Date.now(),
+                    action,
+                    status: fcResp.status,
+                    durationMs,
+                    // Log the key input fields per action type
+                    input: action === 'search' ? { query: payload.query, limit: payload.limit }
+                         : action === 'scrape' ? { url: payload.url, formats: payload.formats }
+                         : action === 'extract' ? { urls: payload.urls, prompt: payload.prompt }
+                         : action === 'crawl' ? { url: payload.url, prompt: payload.prompt }
+                         : payload,
+                    // Summary of output
+                    resultCount: fcData?.data?.web?.length ?? fcData?.results?.length ?? (fcData?.success ? 1 : 0),
+                    success: fcResp.status < 400,
+                    // Source: was this called from the UI, from an agent, or from mcporter?
+                    source: req.headers['x-source'] || req.headers.referer?.includes('firecrawl') ? 'dashboard' : 'api'
+                };
+                try { fs.appendFileSync(logFile, JSON.stringify(logEntry) + '\n'); } catch {}
+
                 res.writeHead(fcResp.status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
                 res.end(JSON.stringify(fcData));
             } catch(e) {
