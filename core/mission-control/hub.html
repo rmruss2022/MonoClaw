@@ -877,7 +877,10 @@
 
         function makeUrl(port, path = '') {
             if (isTailscale) {
-                return `http://${tailscaleHost}:${port}${path}`;
+                // On Tailscale: route all services through the proxy on port 18795
+                // Mission control itself (18795) is directly available
+                if (port === 18795) return `${window.location.origin}${path}`;
+                return `${window.location.origin}/proxy/${port}${path}`;
             }
             return `http://localhost:${port}${path}`;
         }

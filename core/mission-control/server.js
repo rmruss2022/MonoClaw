@@ -1216,6 +1216,23 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: error.message }));
         }
+    // ===================== REVERSE PROXY =====================
+    // /proxy/:port/... — proxies to localhost:port for Tailscale access
+    } else if (req.url.startsWith('/proxy/')) {
+        const parts = req.url.slice(7).split('/'); // strip '/proxy/'
+        const port = parseInt(parts[0]);
+        const upstreamPath = '/' + parts.slice(1).join('/') + (req.url.includes('?') ? '?' + req.url.split('?')[1] : '');
+        if (!port || port < 1024 || port > 65535) { res.writeHead(400); res.end('invalid port'); return; }
+        const upstreamReq = http.request(
+            { hostname: '127.0.0.1', port, path: upstreamPath || '/', method: req.method, headers: { ...req.headers, host: `127.0.0.1:${port}` } },
+            upstreamRes => {
+                res.writeHead(upstreamRes.statusCode, { ...upstreamRes.headers, 'Access-Control-Allow-Origin': '*' });
+                upstreamRes.pipe(res);
+            }
+        );
+        upstreamReq.on('error', e => { res.writeHead(502); res.end(`Upstream error: ${e.message}`); });
+        req.pipe(upstreamReq);
+
     // ===================== FIRECRAWL PROXY =====================
     } else if (req.url === '/api/firecrawl/status' && req.method === 'GET') {
         const status = await checkFirecrawl();
