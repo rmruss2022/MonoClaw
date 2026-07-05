@@ -1,0 +1,1377 @@
+[21:48:01.936] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:48:01.936] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:01.937] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:48:01.948] [BACKEND:ACTION] Result for 'peace': success=True elapsed=11ms message=Pressed keys: ['ctrl', 'space']
+[21:48:02.351] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:02.351] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:02.759] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 17ms
+[21:48:02.759] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:03.205] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:03.205] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:03.206] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.74s remaining)
+[21:48:18.270] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:18.271] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:18.271] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:48:18.273] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:48:18.701] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:48:18.701] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:19.133] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:19.133] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:19.521] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:19.521] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:19.521] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:27.928] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:48:27.928] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:27.928] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:28.109] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 21ms
+[21:48:28.109] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:28.109] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:48:28.111] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:48:28.555] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 17ms
+[21:48:28.556] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:28.996] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:28.996] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:29.422] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:29.422] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:29.423] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.69s remaining)
+[21:48:29.867] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:29.867] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:29.867] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.24s remaining)
+[21:48:30.017] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:30.017] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:30.017] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:30.186] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:30.187] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:30.187] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.92s remaining)
+[21:48:30.631] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:48:30.631] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:30.631] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.48s remaining)
+[21:48:31.061] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:31.061] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:31.062] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.05s remaining)
+[21:48:31.501] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:31.501] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:31.501] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.61s remaining)
+[21:48:31.711] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:48:31.711] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:31.711] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:31.888] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:31.888] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:31.888] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.22s remaining)
+[21:48:32.328] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:32.328] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:32.328] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (0.78s remaining)
+[21:48:32.899] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 0.80 | decode: 1ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:48:32.899] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:32.900] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:33.045] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:48:33.045] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:33.045] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (0.07s remaining)
+[21:48:33.383] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:33.383] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:33.383] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:33.537] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:33.538] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:33.538] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:48:33.539] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:48:33.864] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:33.864] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:33.864] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:34.445] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 15ms
+[21:48:34.445] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:34.446] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.09s remaining)
+[21:48:34.674] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:34.674] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:34.674] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:34.998] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 1ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:48:34.998] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:34.998] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.54s remaining)
+[21:48:35.421] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:35.422] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:35.422] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.12s remaining)
+[21:48:35.872] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:48:35.873] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:35.873] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.67s remaining)
+[21:48:36.279] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:36.279] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:36.280] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.26s remaining)
+[21:48:36.495] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:36.496] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:36.496] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:36.725] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:36.725] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:36.726] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.81s remaining)
+[21:48:36.883] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 20ms
+[21:48:36.884] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:36.884] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:37.090] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:37.091] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:37.091] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:37.211] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:48:37.212] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:37.212] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:37.374] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:37.374] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:37.374] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.16s remaining)
+[21:48:37.581] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:37.581] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:37.581] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:37.752] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:48:37.752] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:37.752] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (0.79s remaining)
+[21:48:38.013] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:38.013] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:38.014] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:38.190] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:48:38.190] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:38.191] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (0.35s remaining)
+[21:48:38.345] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:38.345] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:38.345] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:38.772] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:38.772] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:39.222] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:39.222] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:39.606] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:39.606] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:39.606] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:39.990] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:39.990] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:39.991] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:40.378] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 15ms
+[21:48:40.378] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:40.379] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:40.537] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:40.538] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:40.538] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:40.926] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 1ms | detect: 31ms | classify: 0ms | total: 31ms
+[21:48:40.927] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:40.927] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:41.376] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:48:41.376] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:41.964] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:48:41.964] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:42.394] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:42.395] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:42.622] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:48:42.622] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:42.623] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:48:42.624] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:48:42.768] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 3ms | detect: 31ms | classify: 0ms | total: 33ms
+[21:48:42.768] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:42.768] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:42.944] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:48:42.944] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:42.944] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.68s remaining)
+[21:48:43.368] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:48:43.368] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:43.894] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:48:43.895] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:43.895] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:44.039] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 10ms | classify: 0ms | total: 10ms
+[21:48:44.039] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:44.040] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.58s remaining)
+[21:48:44.471] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:44.472] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:44.472] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.15s remaining)
+[21:48:44.903] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:44.903] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:44.904] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.72s remaining)
+[21:48:45.326] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:48:45.326] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:45.327] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.3s remaining)
+[21:48:45.774] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:45.774] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:45.774] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.85s remaining)
+[21:48:46.154] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:48:46.154] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:46.154] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:46.321] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:48:46.321] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:46.321] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.3s remaining)
+[21:48:46.750] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:48:46.751] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:46.751] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (0.87s remaining)
+[21:48:46.980] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:46.980] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:46.980] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:47.428] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:47.429] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:47.714] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:47.714] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:47.715] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:48:47.716] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:48:48.084] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 0.80 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:48:48.084] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:48.085] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:48.243] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:48:48.243] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:48.243] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:48.393] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:48:48.394] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:48.394] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.32s remaining)
+[21:48:48.826] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:48:48.826] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:49.145] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:49.146] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:49.146] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:49.303] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:48:49.304] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:49.304] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.41s remaining)
+[21:48:49.644] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:48:49.644] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:49.644] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:49.798] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:49.798] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:49.799] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.92s remaining)
+[21:48:50.250] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:50.250] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:50.251] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.46s remaining)
+[21:48:50.406] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:50.406] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:50.407] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:50.839] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:50.839] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:51.292] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:48:51.293] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:51.430] [BACKEND:CHANGE] [CHANGE] stop → four_fingers | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:51.430] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:51.430] [BACKEND:ACTION] Skipping 'four_fingers' from gesture_stream: not in whitelist ['peace']
+[21:48:51.604] [BACKEND:CHANGE] [CHANGE] four_fingers → stop | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:48:51.604] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:51.605] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:52.027] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:48:52.027] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:52.445] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:48:52.445] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:52.870] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:52.870] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:53.103] [BACKEND:CHANGE] [CHANGE] stop → four_fingers | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 15ms
+[21:48:53.103] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:53.104] [BACKEND:ACTION] Skipping 'four_fingers' from gesture_stream: not in whitelist ['peace']
+[21:48:53.257] [BACKEND:CHANGE] [CHANGE] four_fingers → stop | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:53.258] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:53.258] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:53.687] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:53.687] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:53.810] [BACKEND:CHANGE] [CHANGE] stop → four_fingers | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:48:53.810] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:53.811] [BACKEND:ACTION] Skipping 'four_fingers' from gesture_stream: not in whitelist ['peace']
+[21:48:53.975] [BACKEND:CHANGE] [CHANGE] four_fingers → stop | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:53.975] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:53.975] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:54.378] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:54.378] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:54.536] [BACKEND:CHANGE] [CHANGE] stop → four_fingers | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:54.536] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:54.536] [BACKEND:ACTION] Skipping 'four_fingers' from gesture_stream: not in whitelist ['peace']
+[21:48:54.920] [BACKEND:CHANGE] [CHANGE] four_fingers → stop | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:48:54.920] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:54.921] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:55.335] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:48:55.335] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:55.890] [BACKEND:CHANGE] [CHANGE] None → fist | conf: 0.80 | decode: 0ms | detect: 28ms | classify: 0ms | total: 28ms
+[21:48:55.890] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:55.891] [BACKEND:ACTION] Skipping 'fist' from gesture_stream: not in whitelist ['peace']
+[21:48:56.036] [BACKEND:CHANGE] [CHANGE] fist → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:56.037] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:56.037] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:56.473] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:56.473] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:56.923] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:56.923] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:57.347] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:48:57.348] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:57.781] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:57.781] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:57.950] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:57.950] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:57.951] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:48:57.952] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:48:58.387] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:58.387] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:58.707] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:48:58.707] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:58.707] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:48:58.863] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:48:58.863] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:58.864] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.09s remaining)
+[21:48:59.278] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:48:59.278] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:59.278] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.67s remaining)
+[21:48:59.440] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:48:59.440] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:48:59.440] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:48:59.876] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:48:59.876] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:00.297] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:00.297] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:00.740] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:00.740] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:01.168] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:01.168] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:01.607] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:01.607] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:02.049] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:02.049] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:02.475] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:02.475] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:02.911] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:49:02.911] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:03.347] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:03.347] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:03.764] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:03.764] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:04.173] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:04.174] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:04.610] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:49:04.610] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:05.040] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:05.040] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:05.481] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:05.481] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:05.927] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:49:05.927] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:06.341] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:06.342] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:06.781] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:49:06.781] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:07.375] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 28ms | classify: 0ms | total: 28ms
+[21:49:07.375] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:07.375] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:08.048] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:08.048] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:08.048] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:08.481] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:08.481] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:08.809] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:49:08.809] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:08.809] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:49:08.811] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:49:09.131] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:09.131] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:09.131] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:09.298] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:09.299] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:09.299] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.51s remaining)
+[21:49:09.681] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:49:09.682] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:09.682] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:09.831] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:09.832] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:09.832] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.98s remaining)
+[21:49:10.258] [BACKEND:CHANGE] [CHANGE] peace → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:10.258] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:10.258] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.55s remaining)
+[21:49:10.792] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:10.792] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:10.792] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:10.958] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:10.958] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:10.959] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.85s remaining)
+[21:49:11.106] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:11.106] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:11.106] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:12.784] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:49:12.784] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:12.785] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:13.158] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 1ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:49:13.158] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:13.158] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:13.578] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:49:13.578] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:13.986] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:49:13.987] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:14.359] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:14.360] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:14.360] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:15.410] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:49:15.410] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:15.411] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:15.864] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 1ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:49:15.864] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:16.281] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:16.281] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:16.711] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:49:16.712] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:17.142] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:17.142] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:17.572] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:17.572] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:18.016] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:18.016] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:18.439] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:18.439] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:18.873] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 18ms
+[21:49:18.873] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:19.302] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:49:19.303] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:19.735] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:49:19.736] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:23.283] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:49:23.284] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:23.284] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:23.494] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:49:23.495] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:23.495] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:23.906] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:23.906] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:24.330] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:24.331] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:24.915] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 18ms
+[21:49:24.915] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:25.341] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:25.341] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:25.779] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:49:25.779] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:25.989] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:25.989] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:25.990] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:26.323] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:26.323] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:26.323] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:26.497] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:49:26.497] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:26.497] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:49:26.498] [BACKEND:ACTION] Result for 'peace': success=True elapsed=0ms message=Pressed keys: ['ctrl', 'space']
+[21:49:26.619] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:49:26.620] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:26.620] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:27.021] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:27.021] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:27.290] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:27.290] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:27.291] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.21s remaining)
+[21:49:28.393] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 1ms | detect: 31ms | classify: 0ms | total: 31ms
+[21:49:28.393] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:28.393] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:29.240] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:29.240] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:29.240] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:29.586] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:49:29.586] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:29.586] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:30.011] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:49:30.011] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:31.549] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 10ms | classify: 0ms | total: 9ms
+[21:49:31.549] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:31.549] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:32.092] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 20ms
+[21:49:32.092] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:32.092] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:32.468] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:49:32.469] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:32.469] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:32.800] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:49:32.800] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:32.800] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:33.348] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 1ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:49:33.348] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:33.348] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:33.766] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:33.767] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:34.201] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:34.201] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:34.614] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:34.614] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:34.980] [BACKEND:CHANGE] [CHANGE] thumbs_up → fist | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:34.980] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:34.980] [BACKEND:ACTION] Skipping 'fist' from gesture_stream: not in whitelist ['peace']
+[21:49:36.481] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:49:36.481] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:36.481] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:37.114] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:37.114] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:37.115] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:37.498] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:37.498] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:37.499] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:39.333] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:39.333] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:39.333] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:39.758] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:39.758] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:40.193] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:40.193] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:40.641] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:40.641] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:41.400] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:49:41.401] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:41.401] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:43.728] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 14ms
+[21:49:43.728] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:43.728] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:44.152] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:49:44.152] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:44.319] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:49:44.319] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:44.319] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:44.719] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:49:44.719] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:45.191] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 11ms | classify: 0ms | total: 11ms
+[21:49:45.191] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:45.594] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:49:45.594] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:46.139] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:46.139] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:46.139] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:46.566] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:49:46.566] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:47.019] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:47.019] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:47.470] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:49:47.470] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:47.889] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:47.889] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:48.334] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 20ms
+[21:49:48.334] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:48.776] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:49:48.776] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:48.935] [BACKEND:CHANGE] [CHANGE] thumbs_up → fist | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:49:48.935] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:48.935] [BACKEND:ACTION] Skipping 'fist' from gesture_stream: not in whitelist ['peace']
+[21:49:49.160] [BACKEND:CHANGE] [CHANGE] fist → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:49:49.160] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:49.161] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:49.433] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:49.433] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:49.433] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:54.093] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:49:54.093] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:54.094] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:54.665] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:49:54.665] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:54.665] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:55.040] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:49:55.040] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:55.041] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:49:55.042] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:49:55.256] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:55.256] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:55.256] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:55.571] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:55.571] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:55.571] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:55.731] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:55.731] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:55.731] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:49:55.899] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:55.900] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:55.900] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.14s remaining)
+[21:49:56.313] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:49:56.313] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:56.313] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:56.531] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:56.531] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:56.531] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.51s remaining)
+[21:49:56.696] [BACKEND:CHANGE] [CHANGE] peace → point | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:56.697] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:56.697] [BACKEND:ACTION] Skipping 'point' from gesture_stream: not in whitelist ['peace']
+[21:49:56.922] [BACKEND:CHANGE] [CHANGE] point → peace | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:56.922] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:56.922] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.12s remaining)
+[21:49:57.070] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 15ms
+[21:49:57.070] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:57.070] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:57.354] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:49:57.354] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:57.355] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (2.69s remaining)
+[21:49:57.490] [BACKEND:CHANGE] [CHANGE] peace → point | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:49:57.490] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:57.490] [BACKEND:ACTION] Skipping 'point' from gesture_stream: not in whitelist ['peace']
+[21:49:57.775] [BACKEND:CHANGE] [CHANGE] point → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:49:57.775] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:57.775] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:57.935] [BACKEND:CHANGE] [CHANGE] thumbs_up → fist | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:57.935] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:57.935] [BACKEND:ACTION] Skipping 'fist' from gesture_stream: not in whitelist ['peace']
+[21:49:58.304] [BACKEND:CHANGE] [CHANGE] fist → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:49:58.304] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:58.304] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:49:58.721] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:49:58.721] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:59.144] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:49:59.144] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:49:59.565] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:49:59.566] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:00.004] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 1ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:50:00.004] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:00.426] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:50:00.427] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:00.873] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:50:00.874] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:01.314] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 18ms
+[21:50:01.314] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:01.745] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:50:01.745] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:02.162] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:50:02.163] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:05.865] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:50:05.866] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:05.866] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:27.720] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:50:27.720] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:27.721] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:28.373] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:50:28.374] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:28.374] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:28.872] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 25ms | classify: 0ms | total: 25ms
+[21:50:28.872] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:29.489] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:50:29.489] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:29.489] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:29.922] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:50:29.922] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:30.045] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:50:30.045] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:30.046] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:50:30.308] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:50:30.309] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:30.309] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:30.632] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:50:30.632] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:30.632] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:50:30.633] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:50:30.853] [BACKEND:CHANGE] [CHANGE] peace → stop | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:50:30.853] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:30.854] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:50:31.018] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:50:31.018] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:31.018] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:31.458] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:50:31.458] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:31.890] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:50:31.890] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:32.322] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 10ms | classify: 0ms | total: 10ms
+[21:50:32.323] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:32.767] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:50:32.767] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:33.200] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:50:33.200] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:33.621] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:50:33.621] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:34.049] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:50:34.049] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:34.049] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:34.492] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:50:34.492] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:34.815] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:50:34.815] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:34.815] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:50:34.936] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:50:34.936] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:34.937] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:40.327] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:50:40.327] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:40.328] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:42.277] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 1ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:50:42.278] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:42.278] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:42.876] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:50:42.877] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:48.750] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:50:48.750] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:48.750] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:49.341] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 1ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:50:49.341] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:49.341] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:51.078] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 23ms
+[21:50:51.079] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:51.079] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:51.393] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:50:51.393] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:51.394] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:50:51.395] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:50:51.593] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:50:51.593] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:51.593] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:52.052] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:50:52.052] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:52.486] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:50:52.486] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:52.486] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.91s remaining)
+[21:50:52.640] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:50:52.641] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:52.641] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:52.917] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:50:52.917] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:52.918] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (3.48s remaining)
+[21:50:53.075] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:50:53.075] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:53.075] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:53.489] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:50:53.489] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:53.935] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:50:53.935] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:54.444] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 1ms | detect: 31ms | classify: 0ms | total: 31ms
+[21:50:54.444] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:54.931] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:50:54.931] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:55.412] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:50:55.412] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:55.909] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:50:55.909] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:56.380] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:50:56.380] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:56.868] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:50:56.868] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:57.572] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:50:57.572] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:57.572] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:50:57.998] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 18ms
+[21:50:57.998] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:58.423] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 17ms
+[21:50:58.424] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:58.863] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:50:58.864] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:50:59.293] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:50:59.293] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:09.620] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 1ms | detect: 31ms | classify: 0ms | total: 31ms
+[21:51:09.620] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:09.620] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:51:10.759] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 0.80 | decode: 1ms | detect: 30ms | classify: 0ms | total: 30ms
+[21:51:10.759] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:10.759] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:51:11.081] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 1ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:51:11.082] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:11.082] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:12.599] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 1ms | detect: 28ms | classify: 0ms | total: 28ms
+[21:51:12.599] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:12.599] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:20.133] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:51:20.133] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:20.133] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:51:20.509] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:51:20.510] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:20.510] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:27.321] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 1ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:51:27.321] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:27.321] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:51:27.902] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:51:27.902] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:27.903] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:51:28.411] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:51:28.412] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:28.412] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:28.565] [BACKEND:CHANGE] [CHANGE] thumbs_up → fist | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:51:28.566] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:28.566] [BACKEND:ACTION] Skipping 'fist' from gesture_stream: not in whitelist ['peace']
+[21:51:28.689] [BACKEND:CHANGE] [CHANGE] fist → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:51:28.689] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:28.689] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:29.010] [BACKEND:CHANGE] [CHANGE] thumbs_up → fist | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:51:29.010] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:29.010] [BACKEND:ACTION] Skipping 'fist' from gesture_stream: not in whitelist ['peace']
+[21:51:29.164] [BACKEND:CHANGE] [CHANGE] fist → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 17ms
+[21:51:29.165] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:29.165] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:29.597] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:51:29.597] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:30.038] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:51:30.038] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:30.478] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:51:30.479] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:31.289] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 25ms | classify: 0ms | total: 25ms
+[21:51:31.289] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:31.289] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:32.303] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:51:32.303] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:32.304] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:32.742] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 1ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:51:32.742] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:33.165] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:51:33.166] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:33.618] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:51:33.618] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:34.068] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[21:51:34.068] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:34.504] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:51:34.505] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:34.931] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:51:34.931] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:35.360] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:51:35.360] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:35.790] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:51:35.790] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:36.232] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:51:36.232] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:38.606] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:51:38.606] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:38.606] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:39.263] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 25ms | classify: 0ms | total: 25ms
+[21:51:39.264] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:39.264] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:51:39.706] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 0.80 | decode: 0ms | detect: 25ms | classify: 0ms | total: 25ms
+[21:51:39.706] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:40.133] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:51:40.133] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:40.354] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:51:40.354] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:40.355] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:40.945] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:51:40.945] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:41.364] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:51:41.364] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:41.807] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:51:41.807] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:42.238] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:51:42.238] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:42.639] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 17ms
+[21:51:42.640] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:42.763] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 1ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:51:42.763] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:42.763] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:51:42.765] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:51:42.978] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:51:42.978] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:42.978] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:51:43.394] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:51:43.394] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:43.845] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 40ms | classify: 0ms | total: 40ms
+[21:51:43.846] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:44.256] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:51:44.256] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:46.636] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:51:46.637] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:51:46.637] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:52:29.017] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:52:29.017] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:29.017] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:52:29.516] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:52:29.516] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:31.110] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 28ms
+[21:52:31.110] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:31.110] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:52:32.969] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:52:32.969] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:32.969] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:52:33.307] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:52:33.307] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:33.307] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:52:34.113] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 16ms
+[21:52:34.114] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:34.114] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:52:34.539] [BACKEND:CHANGE] [CHANGE] stop → stop | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:52:34.539] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:35.924] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[21:52:35.925] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:35.925] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:52:44.389] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:52:44.389] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:52:44.389] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:56:33.048] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:56:33.049] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:33.049] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:56:36.182] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:56:36.182] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:36.182] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:56:37.348] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:56:37.348] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:37.348] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:56:37.570] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:56:37.570] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:37.570] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:56:37.572] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:56:38.005] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 1ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:56:38.006] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:38.006] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:56:39.878] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:56:39.878] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:39.879] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:56:40.322] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:56:40.322] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:40.751] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 18ms
+[21:56:40.751] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:41.171] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:56:41.172] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:41.612] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:56:41.612] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:42.046] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:56:42.047] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:42.476] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:56:42.476] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:42.928] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[21:56:42.928] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:43.350] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:56:43.350] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:43.772] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 49ms | classify: 0ms | total: 48ms
+[21:56:43.773] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:44.212] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:56:44.212] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:44.674] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:56:44.675] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:45.098] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 16ms
+[21:56:45.098] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:45.525] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:56:45.525] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:45.937] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:56:45.937] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:46.378] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:56:46.378] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:46.816] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:56:46.816] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:47.227] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 46ms | classify: 0ms | total: 46ms
+[21:56:47.227] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:47.637] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:56:47.637] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:48.064] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 15ms
+[21:56:48.064] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:48.489] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:56:48.490] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:48.921] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:56:48.921] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:49.337] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:56:49.337] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:49.786] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:56:49.786] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:50.213] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:56:50.213] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:50.645] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[21:56:50.645] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:51.070] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[21:56:51.070] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:51.521] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:56:51.521] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:51.948] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:56:51.948] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:52.384] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:56:52.384] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:52.805] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:56:52.805] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:53.218] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:56:53.218] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:53.627] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:56:53.628] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:54.069] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 10ms | detect: 19ms | classify: 0ms | total: 29ms
+[21:56:54.070] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:54.481] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:56:54.481] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:54.916] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:56:54.916] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:55.332] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:56:55.333] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:55.750] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:56:55.750] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:56.202] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:56:56.202] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:56.633] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:56:56.633] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:57.081] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:56:57.081] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:57.512] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:56:57.512] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:57.950] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:56:57.951] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:58.381] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:56:58.382] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:58.817] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:56:58.817] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:59.250] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:56:59.250] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:56:59.695] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:56:59.696] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:00.113] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[21:57:00.114] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:00.553] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:57:00.553] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:00.977] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 20ms
+[21:57:00.977] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:01.309] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:57:01.309] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:01.309] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:01.480] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:57:01.480] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:01.480] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:01.806] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:57:01.806] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:01.806] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:01.973] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:57:01.973] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:01.973] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:02.186] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:57:02.186] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:02.186] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:02.353] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:57:02.353] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:02.354] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:02.685] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:57:02.686] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:02.686] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:02.843] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:57:02.843] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:02.843] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:03.060] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:57:03.061] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:03.061] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:03.226] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:57:03.226] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:03.227] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:03.384] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:03.384] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:03.384] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:03.542] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:03.542] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:03.543] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:03.775] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:57:03.776] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:03.776] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:03.930] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:57:03.931] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:03.931] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:04.151] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:57:04.151] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:04.151] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:04.318] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:57:04.318] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:04.318] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:04.575] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:04.575] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:04.576] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:57:04.736] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:57:04.736] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:04.737] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:57:04.738] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:57:04.900] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:57:04.900] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:04.900] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:57:05.350] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:05.350] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:05.766] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:57:05.766] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:06.168] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:57:06.168] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:06.589] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:57:06.589] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:07.014] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[21:57:07.014] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:07.439] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:57:07.440] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:07.856] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:57:07.856] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:08.285] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:57:08.285] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:08.728] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[21:57:08.729] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:09.144] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[21:57:09.144] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:09.558] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:57:09.558] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:09.999] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:09.999] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:10.443] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:57:10.443] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:10.859] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:10.860] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:11.287] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:57:11.288] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:11.707] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:57:11.707] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:12.149] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:57:12.149] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:12.569] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:12.570] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:12.999] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:57:12.999] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:13.424] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[21:57:13.424] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:16.508] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 1ms | detect: 26ms | classify: 0ms | total: 26ms
+[21:57:16.508] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:57:16.508] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:58:07.192] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:58:07.193] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:58:07.193] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:58:07.627] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:58:07.627] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:10.157] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[21:59:10.157] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:10.157] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:59:10.761] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[21:59:10.761] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:10.761] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:59:11.283] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:59:11.283] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:11.283] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:59:11.541] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[21:59:11.541] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:11.541] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[21:59:50.339] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[21:59:50.339] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:50.339] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[21:59:50.514] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[21:59:50.514] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:50.514] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[21:59:50.515] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[21:59:50.768] [BACKEND:CHANGE] [CHANGE] peace → four_fingers | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[21:59:50.768] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[21:59:50.768] [BACKEND:ACTION] Skipping 'four_fingers' from gesture_stream: not in whitelist ['peace']
+[22:00:01.386] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 28ms | classify: 0ms | total: 28ms
+[22:00:01.387] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:01.387] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:00:01.806] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:00:01.807] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:02.124] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:00:02.124] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:02.124] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:00:02.277] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[22:00:02.277] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:02.277] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:00:03.794] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[22:00:03.794] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:03.794] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:00:04.223] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:00:04.224] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:04.655] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[22:00:04.655] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:27.409] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[22:00:27.409] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:27.409] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:00:27.841] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[22:00:27.841] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:00:28.337] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[22:00:28.337] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:02:21.654] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 1ms | detect: 29ms | classify: 0ms | total: 29ms
+[22:02:21.654] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:02:21.654] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:03:00.073] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 15ms
+[22:03:00.073] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:03:00.073] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:03:37.498] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:03:37.498] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:03:37.498] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:03:56.537] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 28ms | classify: 0ms | total: 28ms
+[22:03:56.537] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:03:56.537] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:03:57.792] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[22:03:57.792] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:03:57.792] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:03:58.073] [BACKEND:CHANGE] [CHANGE] thumbs_up → point | conf: 1.00 | decode: 1ms | detect: 30ms | classify: 0ms | total: 31ms
+[22:03:58.073] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:03:58.073] [BACKEND:ACTION] Skipping 'point' from gesture_stream: not in whitelist ['peace']
+[22:04:02.445] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[22:04:02.446] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:02.446] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:14.607] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:04:14.607] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:14.607] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:15.493] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 27ms | classify: 0ms | total: 27ms
+[22:04:15.494] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:15.494] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[22:04:15.496] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[22:04:17.870] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[22:04:17.870] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:17.871] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:18.351] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[22:04:18.351] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:18.352] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:31.236] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 0.80 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[22:04:31.236] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:31.236] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:04:31.385] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[22:04:31.385] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:31.385] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:33.076] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 1ms | detect: 26ms | classify: 0ms | total: 26ms
+[22:04:33.076] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:33.077] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:33.450] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[22:04:33.450] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:33.450] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:45.592] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 34ms | classify: 0ms | total: 34ms
+[22:04:45.604] [BACKEND:SEND] [SEND] WebSocket send took 10ms (ok=True)
+[22:04:45.604] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:46.536] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:04:46.536] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:46.536] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:04:48.090] [BACKEND:CHANGE] [CHANGE] None → fist | conf: 1.00 | decode: 0ms | detect: 46ms | classify: 0ms | total: 46ms
+[22:04:48.090] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:04:48.090] [BACKEND:ACTION] Skipping 'fist' from gesture_stream: not in whitelist ['peace']
+[22:05:13.532] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:05:13.532] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:05:13.532] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:10.894] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[22:06:10.894] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:10.895] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:23.288] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:06:23.288] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:23.288] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:23.464] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 1ms | detect: 29ms | classify: 0ms | total: 29ms
+[22:06:23.464] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:23.464] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:25.459] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[22:06:25.459] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:25.459] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:34.822] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 30ms | classify: 0ms | total: 30ms
+[22:06:34.823] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:34.823] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:34.978] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:06:34.978] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:34.978] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[22:06:34.979] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[22:06:35.206] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 28ms | classify: 0ms | total: 28ms
+[22:06:35.206] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:35.206] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:36.711] [BACKEND:CHANGE] [CHANGE] None → four_fingers | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:06:36.712] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:36.712] [BACKEND:ACTION] Skipping 'four_fingers' from gesture_stream: not in whitelist ['peace']
+[22:06:37.059] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[22:06:37.059] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:37.059] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:38.398] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[22:06:38.398] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:38.398] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:38.720] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[22:06:38.720] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:38.721] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:40.460] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[22:06:40.460] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:40.460] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:41.119] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:06:41.120] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:41.120] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[22:06:41.121] [BACKEND:ACTION] Result for 'peace': success=True elapsed=0ms message=Pressed keys: ['ctrl', 'space']
+[22:06:41.886] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:06:41.886] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:41.887] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:42.715] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 13ms
+[22:06:42.715] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:42.715] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:42.884] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:06:42.884] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:42.884] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:44.193] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:06:44.193] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:44.193] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:45.857] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:06:45.857] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:45.857] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:47.916] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:06:47.916] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:47.916] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:49.506] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 22ms | classify: 0ms | total: 22ms
+[22:06:49.507] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:49.507] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:49.784] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 25ms | classify: 0ms | total: 25ms
+[22:06:49.785] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:49.785] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[22:06:49.786] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[22:06:51.650] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:06:51.650] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:51.650] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:51.883] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 24ms | classify: 0ms | total: 23ms
+[22:06:51.883] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:51.883] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:52.275] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:06:52.275] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:52.276] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:52.555] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:06:52.555] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:52.555] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:53.133] [BACKEND:CHANGE] [CHANGE] thumbs_up → peace | conf: 0.80 | decode: 0ms | detect: 15ms | classify: 0ms | total: 15ms
+[22:06:53.133] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:53.134] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.65s remaining)
+[22:06:53.523] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:06:53.523] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:53.524] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (1.26s remaining)
+[22:06:54.080] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 29ms
+[22:06:54.080] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:54.081] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:54.401] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 25ms | classify: 0ms | total: 25ms
+[22:06:54.401] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:54.401] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (0.38s remaining)
+[22:06:55.041] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[22:06:55.041] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:55.041] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[22:06:55.042] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[22:06:55.530] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 0.80 | decode: 1ms | detect: 28ms | classify: 0ms | total: 28ms
+[22:06:55.530] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:55.530] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:55.675] [BACKEND:CHANGE] [CHANGE] stop → peace | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:06:55.675] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:55.676] [BACKEND:ACTION] Skipping keyboard action for 'peace' from gesture_stream: cooldown active (4.37s remaining)
+[22:06:55.885] [BACKEND:CHANGE] [CHANGE] peace → thumbs_up | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[22:06:55.885] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:55.885] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:56.644] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 0.80 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[22:06:56.644] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:56.644] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:06:57.285] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 18ms
+[22:06:57.285] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:57.286] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:57.849] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 23ms | classify: 0ms | total: 23ms
+[22:06:57.849] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:57.849] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:06:58.269] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:06:58.269] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:06:58.864] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 29ms | classify: 0ms | total: 28ms
+[22:06:58.864] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:00.187] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:07:00.187] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:00.188] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:07:01.255] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 19ms
+[22:07:01.255] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:01.255] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:01.788] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[22:07:01.788] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:01.789] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[22:07:01.790] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[22:07:04.783] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 24ms | classify: 0ms | total: 24ms
+[22:07:04.783] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:04.784] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:05.195] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[22:07:05.195] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:05.635] [BACKEND:CHANGE] [CHANGE] thumbs_up → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[22:07:05.635] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:05.956] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 13ms | classify: 0ms | total: 13ms
+[22:07:05.956] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:05.956] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:07:06.118] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[22:07:06.118] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:06.118] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:07.181] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 0.80 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[22:07:07.182] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:07.182] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:07.830] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:07:07.830] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:07.830] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:08.475] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 0.80 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:07:08.476] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:08.476] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:07:08.638] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 0.80 | decode: 1ms | detect: 20ms | classify: 0ms | total: 20ms
+[22:07:08.638] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:08.638] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:08.867] [BACKEND:CHANGE] [CHANGE] thumbs_up → stop | conf: 0.80 | decode: 0ms | detect: 25ms | classify: 0ms | total: 25ms
+[22:07:08.868] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:08.868] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:07:09.022] [BACKEND:CHANGE] [CHANGE] stop → thumbs_up | conf: 1.00 | decode: 0ms | detect: 20ms | classify: 0ms | total: 20ms
+[22:07:09.022] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:09.022] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:09.830] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:07:09.831] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:09.831] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:10.218] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 1ms | detect: 24ms | classify: 0ms | total: 24ms
+[22:07:10.218] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:10.218] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:07:10.873] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 1ms | detect: 30ms | classify: 0ms | total: 31ms
+[22:07:10.874] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:10.874] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:14.152] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 17ms | classify: 0ms | total: 17ms
+[22:07:14.152] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:14.152] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:14.540] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 14ms | classify: 0ms | total: 14ms
+[22:07:14.540] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:14.540] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:17.328] [BACKEND:CHANGE] [CHANGE] None → peace | conf: 0.80 | decode: 0ms | detect: 19ms | classify: 0ms | total: 19ms
+[22:07:17.328] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:17.329] [BACKEND:ACTION] Executing 'peace' action_type='keyboard' params={'keys': ['ctrl', 'space']}
+[22:07:17.330] [BACKEND:ACTION] Result for 'peace': success=True elapsed=1ms message=Pressed keys: ['ctrl', 'space']
+[22:07:21.739] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 0.80 | decode: 0ms | detect: 21ms | classify: 0ms | total: 21ms
+[22:07:21.740] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:21.740] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:07:24.696] [BACKEND:CHANGE] [CHANGE] None → stop | conf: 1.00 | decode: 0ms | detect: 18ms | classify: 0ms | total: 17ms
+[22:07:24.696] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:24.696] [BACKEND:ACTION] Skipping 'stop' from gesture_stream: not in whitelist ['peace']
+[22:07:25.184] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 16ms | classify: 0ms | total: 16ms
+[22:07:25.185] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:25.185] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']
+[22:07:25.844] [BACKEND:CHANGE] [CHANGE] None → thumbs_up | conf: 1.00 | decode: 0ms | detect: 26ms | classify: 0ms | total: 26ms
+[22:07:25.844] [BACKEND:SEND] [SEND] WebSocket send took 0ms (ok=True)
+[22:07:25.844] [BACKEND:ACTION] Skipping 'thumbs_up' from gesture_stream: not in whitelist ['peace']

@@ -1,221 +1,262 @@
-# Groundfloor Recommendations — Show Discovery Engine
+# RECOMMENDATION ENGINE — Architecture
 
-**Status:** Aspirational / design spec  
-**Author:** Claw  
-**Date:** June 27, 2026
+## Overview
 
----
-
-## The Concept
-
-Recommend shows based on what people with similar taste are going to — not algorithmic genre-matching, but **real human signal**: who's going where, and what that says about their taste.
-
-If you and 50 other ravers are all going to Honey Dijon at House of Yes, and 38 of them are *also* going to a smaller Teksupport afterparty you've never heard of — that's a recommendation worth surfacing.
-
-This is **collaborative filtering applied to rave culture**. The same engine that powers Netflix ("people who watched X also watched Y") applied to the most trust-driven, word-of-mouth industry on earth.
+Two new tabs in the app:
+- **RECOMMENDED** — personalized picks based on scene graph + self-affinity
+- **EXPLORE** — discovery feed of trending/popular events you haven't committed to
 
 ---
 
-## Why This Works Better Than Genre Matching
+## Tab 1: RECOMMENDED
 
-Genre tags are noisy. "Techno" means something different at Berghain vs. a Brooklyn warehouse party. "House" at House of Yes is not the same as "House" at a rooftop in Long Island City.
+"Shows you should go to, based on the scene you're already in."
 
-The crowd is the filter. Ravers with taste calibrate taste. If the people going to Dekmantel are *also* going to a small Tuesday night at Public Records — that Tuesday night is worth knowing about, regardless of what genre tags it has.
+### Primary: Scene Graph (Layer 2 — Collaborative Filtering)
 
-**Signal sources, ranked by quality:**
+The core algorithm. Cross-references attendance across all users.
 
-| Signal | Quality | Why |
-|--------|---------|-----|
-| Going overlap with taste-similar users | ★★★★★ | Real human commitment |
-| Attended overlap (past shows both went to) | ★★★★★ | Proven taste alignment |
-| Maybe overlap | ★★★☆☆ | Intent but not committed |
-| Genre overlap | ★★☆☆☆ | Too broad, noisy |
-| Venue overlap | ★★★☆☆ | Good venue loyalty signal |
-| Artist overlap | ★★★★☆ | Strong when lineups are known |
-
----
-
-## The Recommendation Algorithm
-
-### Step 1 — Build your taste profile
-From your Going + Attended history:
-- Venues you frequent → venue affinity vector
-- Genres on your shows → genre weight map
-- Artists you've seen → artist graph
-- Time patterns → weekend vs. weekday, early vs. late
-- Price tolerance → average ticket cost on your Going shows
-
-### Step 2 — Find taste neighbors
-Users whose Going/Attended history overlaps most with yours.
-
-**Jaccard similarity on Going sets:**
-```
-similarity(A, B) = |Going_A ∩ Going_B| / |Going_A ∪ Going_B|
-```
-
-If you and another user are both going to 4 of the same 10 shows — you're 40% similar. At scale across hundreds of users, you build a graph of who's most taste-aligned with you.
-
-**Weight attended higher than going** (committed > intention).
-
-### Step 3 — Surface their discoveries
-From your top 20 taste neighbors, find shows they're going to that you haven't seen yet:
+**How it works:**
 
 ```
-recommendations = 
-  union(neighbor.going_shows) 
-  - your.seen_shows 
-  - your.dismissed_shows
-  weighted by: neighbor_similarity × event_freshness × going_count
+1. Collect: all shows user A has attended (attended=1)
+2. Find overlap: other users who also attended ≥2 of those same shows
+3. Weight those users by overlap count (more shared shows = stronger signal)
+4. Collect: shows those overlapping users are marked "going" for (future dates)
+5. Score: sum of weighted user signals per show
+6. Filter: exclude shows user A is already going/maybe/skip
+7. Rank: return top N with scores + reasoning
 ```
 
-### Step 4 — Explain the recommendation
-Don't just show the show. Show *why*:
-
-> **"12 people also going to Teksupport are going to this →"**  
-> **"Ravers who went to Honey Dijon at HOY tend to also love this"**  
-> **"3 of your Knockdown regulars are going"**
-
-The explanation is the product. Ravers trust word-of-mouth, not algorithms. Make the social signal visible.
-
----
-
-## Recommendation Types
-
-### 1. Crowd Match (primary)
-*"People going to [X] are also going to [Y]"*
-
-Surface shows with high co-attendance rates among users who share your Going list. Works even with small user bases — 50 active users generates useful signal.
-
-### 2. Venue Loyalty Match
-*"You've been to Knockdown 4 times. This is their most anticipated show of the summer."*
-
-Based on your personal venue history, surface upcoming shows at your home venues before they sell out. Regulars should know first.
-
-### 3. Artist Orbit
-*"You went to DVS1 last month. He's mentored this artist. They're playing Basement Saturday."*
-
-Artist graph traversal — not just "you liked X, here's X again," but "you like X, here's what X likes." Requires manually curated or RA-scraped artist relationship data.
-
-### 4. Scene Velocity
-*"This show went from 3 → 47 Going in the past 48 hours. Something's happening."*
-
-Track rate-of-change on Going counts. A show picking up velocity among taste-aligned users is a leading indicator it's about to blow up. Surface it before ticket prices spike.
-
-### 5. First Timer Nudge
-*"You've never been to Public Records. 8 people from your taste graph have. They all loved it."*
-
-Venue exploration nudge — helps ravers break out of their home venues and discover new spots the scene is gravitating toward.
-
-### 6. The Conflict Resolver
-*"Honey Dijon at HOY and Boiler Room at Basement are the same night. Here's who's going where."*
-
-When two high-signal shows conflict, show a split: how many taste-neighbors chose each option and when the sets are (is it possible to do both?).
-
----
-
-## UI Spec
-
-### Discovery Section (new tab or integrated into Upcoming)
+**Scoring formula:**
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  🔥 TRENDING IN YOUR SCENE                          │
-│  Based on people going to similar shows             │
-│                                                     │
-│  ▶ PUBLIC RECORDS — FRIDAY                          │
-│    8 people from your taste graph are going         │
-│    Techno · $15 · ★ First time at this venue        │
-│    [GOING]  [MAYBE]  [DISMISS]                      │
-│                                                     │
-│  ▶ BASEMENT — SATURDAY                              │
-│    12 of 47 Teksupport attendees are going here too │
-│    Techno · $25 · You've been 3x                    │
-│    [GOING]  [MAYBE]  [DISMISS]                      │
-│                                                     │
-│  ▶ JUPITER DISCO — TUESDAY                          │
-│    ↑ Velocity: +23 Going in 24h                     │
-│    Tech House · Free · New venue for you            │
-│    [GOING]  [MAYBE]  [DISMISS]                      │
-└─────────────────────────────────────────────────────┘
+For each upcoming show S:
+  score(S) = Σ (overlap_weight(U) × recency_boost(U)) for each user U going to S
+
+  overlap_weight(U) = shared_attended_count / total_attended_by_U
+  recency_boost(U)  = 1.0 if overlap shows were in last 90 days
+                       0.5 if 90-180 days
+                       0.25 if older
 ```
 
-### On Event Cards
-Add a "why recommended" line beneath the venue:
+**Minimum thresholds:**
+- Need ≥2 shared attended shows with another user to count as "scene overlap"
+- Need ≥3 recommendations to display the section
+- If below threshold → fall through to Self-Affinity
+
+**Reason tags:** "3 people from your scene are going", "You and @user both went to Honey Dijon at HOY"
+
+### Fallback A: Self-Affinity (Layer 1 — Solo Signal)
+
+When scene graph produces <3 results, score all upcoming events against user's own history.
+
+**Signals extracted from attendance history:**
+
+| Signal | Weight | How |
+|--------|--------|-----|
+| Genre match | 0.35 | Count genres in attended shows, normalize. Techno=8, House=3 → techno show gets 0.35 × (8/11) |
+| Venue loyalty | 0.25 | Attended ≥3 shows at same venue → boost. Scale by visit count. |
+| Day preference | 0.15 | Distribution of attended days. If 60% are Saturdays, Saturday shows get 0.15 × 0.6 |
+| Price fit | 0.10 | Compare show cost to user's average. Within ±$15 = full score, beyond = decay |
+| Artist repeat | 0.15 | If a performer in the show description matches any attended show description → full score |
+
+**Combined score:** weighted sum, 0.0–1.0 range, show top 10.
+
+**Reason tags:** "Matches your techno taste", "You love Elsewhere", "In your price range"
+
+### Fallback B: Popular/Trending (Layer 3 — External)
+
+When self-affinity also runs dry (new user, no history).
+
+- Shows with the most "going" marks across all Groundfloor users
+- Shows from weekly scan marked as `topPick`
+- Sort by date (soonest first), cap at 10
+
+**Reason tags:** "Popular on Groundfloor", "Top pick this week"
+
+### Fallback cascade:
+
 ```
-💡 12 people also going to Club Rawhide are going to this
+scene_graph_recs = getSceneGraphRecs(userId)  // Layer 2
+if scene_graph_recs.length >= 3:
+  return scene_graph_recs (up to 10)
+
+affinity_recs = getSelfAffinityRecs(userId)   // Layer 1  
+combined = dedupe(scene_graph_recs + affinity_recs)
+if combined.length >= 3:
+  return combined (up to 10)
+
+popular_recs = getPopularRecs()               // Layer 3
+return dedupe(combined + popular_recs) (up to 10)
 ```
 
-### Recommendation Explanation Modal
-Tap the 💡 chip → expand to show:
-- Which of your taste neighbors are going
-- What shows you have in common with them
-- Option to follow/save those users as "trusted voices"
+---
+
+## Tab 2: EXPLORE
+
+"What's happening that you haven't looked at yet."
+
+NOT personalized. This is the discovery/browsing feed.
+
+**Content:**
+- All upcoming events the user has NOT marked going/maybe/skip
+- Sorted by: date (soonest first), with optional filters
+- Pulled from weekly scan results + manually added events
+
+**Filters:**
+- Genre (multi-select)
+- Date range (this week / this month / custom)
+- Venue
+- Price range (free / under $30 / under $50 / any)
+
+**Layout:**
+- Event cards (same component as calendar)
+- Quick-action: tap to mark Going/Maybe or dismiss (Skip)
+- Events you Skip disappear from Explore but stay in the DB
+
+**Difference from Calendar:**
+- Calendar shows YOUR schedule (going + maybe)
+- Explore shows EVERYTHING ELSE (the unsorted inbox)
 
 ---
 
-## Phase 1 — Single-User Mode (no social graph needed)
+## Data Model Changes
 
-Before there's a community of users, still deliver value:
+### New table: `user_scene_overlap` (materialized, rebuilt periodically)
 
-1. **Genre-based recommendations** from your own history — simple but honest
-2. **Venue loyalty alerts** — "Knockdown announced a show, you've been 4x"
-3. **Scanner-driven discovery** — surface new events from the weekly scan that match your genre/venue profile
-4. **Velocity display** — even without user graph, show "12 people added this to their calendar" (source: scan data, not user Going counts)
-
-### Implementation
-```js
-// Simple taste match from your own events
-const myGenres = frequencyMap(myAttendedEvents.flatMap(e => e.genres))
-const myVenues = frequencyMap(myAttendedEvents.map(e => e.venue))
-
-const score = (event) =>
-  event.genres.reduce((s, g) => s + (myGenres[g] || 0), 0) * 0.6 +
-  (myVenues[event.venue] || 0) * 0.4
-
-const recommended = allEvents
-  .filter(e => !myGoingIds.has(e.id))
-  .sort((a, b) => score(b) - score(a))
-  .slice(0, 10)
+```sql
+CREATE TABLE user_scene_overlap (
+  user_id INTEGER NOT NULL,
+  overlap_user_id INTEGER NOT NULL,
+  shared_count INTEGER DEFAULT 0,
+  last_shared_date TEXT,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, overlap_user_id)
+);
 ```
 
-This runs client-side, needs no backend, and works on day one with just your own event history.
+### New table: `recommendations` (cached results, rebuilt daily)
+
+```sql
+CREATE TABLE recommendations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  event_id TEXT NOT NULL,
+  score REAL DEFAULT 0,
+  source TEXT NOT NULL,       -- 'scene_graph' | 'self_affinity' | 'popular'
+  reason TEXT,                -- human-readable reason tag
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  dismissed INTEGER DEFAULT 0
+);
+CREATE INDEX idx_rec_user ON recommendations(user_id, dismissed);
+```
+
+### Extend `events` table:
+
+- Add `popularity_score REAL DEFAULT 0` — updated during weekly scan from RA/Dice interest counts
+
+### User attendance needs to be per-user:
+
+Currently `attended` and `interest` are global fields on the event (single-user design). For scene graph to work, we need:
+
+```sql
+CREATE TABLE user_events (
+  user_id INTEGER NOT NULL,
+  event_id TEXT NOT NULL,
+  interest TEXT,              -- 'going' | 'maybe' | 'skip' | NULL
+  attended INTEGER DEFAULT 0,
+  cost REAL DEFAULT 0,
+  notes TEXT DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, event_id)
+);
+```
+
+**Migration path:** Move existing event.interest/attended/cost/notes into user_events for user_id=1 (Matthew). Keep the old columns as fallback for backward compat until migration is confirmed.
 
 ---
 
-## Phase 2 — Collaborative Filtering (multi-user)
+## Scheduler Integration
 
-When 50+ active users exist:
+Add to `lib/scheduler.js`:
 
-- Store anonymized Going sets server-side
-- Run Jaccard similarity nightly (or on-demand)
-- Cache top-20 taste neighbors per user
-- Serve recommendations via `/api/recommendations` endpoint
-- Allow users to see (but not identify) their taste neighbors: "8 ravers with similar taste"
-
-**Privacy:** Never expose who specifically is going where without consent. Show aggregate counts only ("8 people from your taste graph") unless users opt into friend visibility.
+- **rebuild_recommendations**: Daily at 6:00 AM ET
+  - Rebuild `user_scene_overlap` from user_events attendance data
+  - Run recommendation cascade for each active user
+  - Cache results in `recommendations` table
+  - Log run to scheduler_runs
 
 ---
 
-## Phase 3 — The Social Graph
+## API Endpoints
 
-When users opt in to social features:
+```
+GET  /api/recommendations          — get current user's recs (from cache)
+POST /api/recommendations/refresh  — force rebuild for current user
+POST /api/recommendations/:id/dismiss — hide a rec
 
-- Follow specific users as "trusted voices"
-- See their Going lists (with permission)
-- "Your crew" view: consolidated Going list for people you follow
-- Group decision tools: "Where are we going Saturday?" poll
-- Shared trip planning for festival travel
-
----
-
-## The Broader Vision
-
-The best music discovery happens through **trust networks** — your friend who DJs, the promoter whose parties you've been to 10 times, the regular at Knockdown who always knows what's good. These aren't algorithms — they're relationships.
-
-Groundfloor can encode those relationships at scale. Not by replacing the human signal, but by making it visible and traversable. The ravers with the best taste become the curators. The scene's collective intelligence — who's going where — becomes a discovery engine that no playlist algorithm can replicate.
-
-**Spotify knows what you listened to after. Groundfloor knows where you went before.**
+GET  /api/explore                  — all upcoming events user hasn't rated
+     ?genre=Techno,House
+     &dateRange=week|month|all
+     &maxPrice=50
+     &venue=Elsewhere
+     &page=1&limit=20
+```
 
 ---
 
-*Part of the Groundfloor vision doc series. See also: VISION-PRODUCT.md, VISION-VENUE-CREDITS.md*
+## Frontend: RECOMMENDED Tab
+
+**Layout:**
+- Section header: "FOR YOU" (if scene graph) or "BASED ON YOUR HISTORY" (if affinity) or "POPULAR" (if fallback)
+- Each recommendation card:
+  - Left accent bar: #E8FF41
+  - Event name, venue, date, genres
+  - Score indicator: subtle 1-5 bar/dot scale (not a number)
+  - Reason tag: small uppercase label, e.g. "3 FROM YOUR SCENE" / "GENRE MATCH" / "VENUE YOU LOVE"
+  - Quick actions: GOING / MAYBE / DISMISS
+- Empty state: "Not enough data yet. Mark more shows as attended to improve recommendations."
+
+**Frontend: EXPLORE Tab**
+
+- Filter bar at top (genre, date, price)
+- Infinite scroll or paginated event cards
+- Same card component as calendar but with GOING/MAYBE/SKIP quick actions
+- Skip = dismiss from explore (doesn't delete event)
+- No personalization — just the raw upcoming event feed, filtered
+
+---
+
+## Implementation Phases
+
+### Phase 1 (MVP — build now)
+- [ ] Create `user_events` table + migration from existing fields
+- [ ] Self-affinity scoring (Layer 1) — works immediately with existing data
+- [ ] RECOMMENDED tab showing affinity-scored results
+- [ ] EXPLORE tab with filters
+- [ ] API endpoints
+
+### Phase 2 (Multi-user — when >1 active user)
+- [ ] Scene graph overlap calculation
+- [ ] Collaborative filtering scoring
+- [ ] Scheduler job for daily rebuild
+- [ ] Reason tags showing social proof
+
+### Phase 3 (External enrichment)
+- [ ] Scrape RA interested/going counts during weekly scan
+- [ ] Popularity scoring
+- [ ] Trending detection (events gaining interest fastest)
+
+---
+
+## Success Metrics
+
+- User marks ≥1 recommended show as "going" per week
+- Recommendations surface events user wouldn't have found on their own
+- Explore tab reduces "I didn't know about that show" moments
+- Scene graph accuracy: ≥50% of scene-graph recs match user's actual genre/venue preferences
+
+---
+
+*This is the source of truth for the recommendation engine. Update as we learn.*

@@ -416,7 +416,7 @@ async function getSystemData() {
         const [voiceServerOnline, jobDashboard, ravesDashboard, tokenTracker, 
                missionControl, activityHub, moltbookDash, agentSwarmDash, 
                visionController, skillBuilderDash, dockerDash, monoclawDash, cannonService, contextManager,
-               commandHubAPI, jobsApp, ravesApp, arbitrageScanner] = await Promise.all([
+               commandHubAPI, jobsApp, ravesApp, arbitrageScanner, firecrawlStatus] = await Promise.all([
             checkPort(18790),
             checkPort(18791),
             checkPort(18793),
@@ -434,7 +434,8 @@ async function getSystemData() {
             checkPort(3001),
             checkPort(3003),
             checkPort(3004),
-            checkPort(3005)
+            checkPort(3005),
+            checkFirecrawl()
         ]);
         const voiceHealth = voiceServerOnline ? 'healthy' : 'down';
         
@@ -542,6 +543,11 @@ async function getSystemData() {
                     name: 'Vision Controller',
                     running: visionController,
                     detail: visionController ? `Port 18799` : 'Stopped'
+                },
+                {
+                    name: 'Firecrawl',
+                    running: firecrawlStatus.online,
+                    detail: firecrawlStatus.online ? `API · ${firecrawlStatus.key}` : (firecrawlStatus.reason || `HTTP ${firecrawlStatus.status || 'down'}`)
                 },
                 {
                     name: 'Skill Builder Dashboard',
@@ -690,6 +696,24 @@ async function getSystemData() {
     } catch (error) {
         console.error('Error gathering system data:', error);
         return { error: error.message };
+    }
+}
+
+async function checkFirecrawl() {
+    try {
+        const configPath = path.join(process.env.HOME, '.openclaw/openclaw.json');
+        const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        const key = cfg?.env?.FIRECRAWL_API_KEY || process.env.FIRECRAWL_API_KEY || '';
+        if (!key) return { online: false, reason: 'no key' };
+        const resp = await fetch('https://api.firecrawl.dev/v1/scrape', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: 'https://example.com', formats: ['markdown'] }),
+            signal: AbortSignal.timeout(5000)
+        });
+        return { online: resp.status !== 401 && resp.status !== 403, status: resp.status, key: key.slice(0, 12) + '...' };
+    } catch(e) {
+        return { online: false, reason: e.message };
     }
 }
 
@@ -1192,6 +1216,49 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: error.message }));
         }
+    // ===================== FIRECRAWL PROXY =====================
+    } else if (req.url === '/api/firecrawl/status' && req.method === 'GET') {
+        const status = await checkFirecrawl();
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        res.end(JSON.stringify(status));
+
+    } else if (req.url.startsWith('/api/firecrawl/') && (req.method === 'POST' || req.method === 'GET')) {
+        const action = req.url.replace('/api/firecrawl/', ''); // search | scrape | extract | crawl
+        let body = '';
+        req.on('data', d => body += d);
+        req.on('end', async () => {
+            try {
+                const configPath = path.join(process.env.HOME, '.openclaw/openclaw.json');
+                const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+                const key = cfg?.env?.FIRECRAWL_API_KEY || process.env.FIRECRAWL_API_KEY || '';
+                if (!key) { res.writeHead(503); res.end(JSON.stringify({ error: 'No Firecrawl API key configured' })); return; }
+
+                const payload = body ? JSON.parse(body) : {};
+                const fcUrl = `https://api.firecrawl.dev/v1/${action}`;
+                const fcResp = await fetch(fcUrl, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(30000)
+                });
+                const fcData = await fcResp.json();
+                res.writeHead(fcResp.status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+                res.end(JSON.stringify(fcData));
+            } catch(e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+
+    // Serve firecrawl.html at /firecrawl
+    } else if (req.url === '/firecrawl' || req.url === '/firecrawl.html') {
+        const filePath = path.join(__dirname, 'firecrawl.html');
+        try {
+            const content = fs.readFileSync(filePath);
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(content);
+        } catch(e) { res.writeHead(404); res.end('Not found'); }
+
     } else if (req.url.startsWith('/api/cron-report') && req.method === 'POST') {
         // Save a full run report: { jobId, ts, text }
         let body = '';

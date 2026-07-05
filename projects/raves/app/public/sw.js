@@ -1,7 +1,7 @@
 // Groundfloor service worker — push + caching
 // Cache version — bump this to force all clients to refresh
 const CACHE = 'groundfloor-v' + (self.registration?.scope || Date.now()).toString().slice(-6)
-const STATIC_CACHE = 'groundfloor-static-v3'
+const STATIC_CACHE = 'groundfloor-static-v4'
 
 self.addEventListener('install', e => {
   // Pre-cache shell only

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firecrawl — Mission Control</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'SF Mono',Monaco,monospace; background:#0a0a0a; color:#e0e0e0; padding:24px; }
+    h1 { font-size:20px; color:#f97316; letter-spacing:2px; margin-bottom:4px; }
+    .subtitle { font-size:11px; color:#555; letter-spacing:1px; margin-bottom:24px; }
+    .tabs { display:flex; gap:0; border-bottom:1px solid #222; margin-bottom:20px; }
+    .tab { padding:8px 18px; font-family:inherit; font-size:12px; letter-spacing:1px; text-transform:uppercase;
+           background:transparent; border:none; color:#555; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+    .tab.active { color:#f97316; border-bottom-color:#f97316; }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    label { font-size:11px; color:#888; letter-spacing:0.5px; display:block; margin-bottom:4px; }
+    input, textarea, select {
+      width:100%; background:#111; border:1px solid #2a2a2a; color:#e0e0e0;
+      font-family:inherit; font-size:13px; padding:8px 10px; outline:none;
+      transition:border-color 0.15s;
+    }
+    input:focus, textarea:focus { border-color:#f97316; }
+    textarea { resize:vertical; min-height:60px; }
+    .row { display:flex; gap:10px; margin-bottom:14px; align-items:flex-end; }
+    .row > * { flex:1; }
+    .row > button { flex:0 0 auto; }
+    button {
+      background:#1a0d00; border:1px solid #f97316; color:#f97316;
+      font-family:inherit; font-size:12px; letter-spacing:1px; padding:8px 18px;
+      cursor:pointer; text-transform:uppercase; transition:background 0.15s;
+    }
+    button:hover { background:#2a1500; }
+    button:disabled { opacity:0.4; cursor:not-allowed; }
+    .status { font-size:11px; color:#555; margin-bottom:16px; }
+    .status .dot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+    .status .dot.green { background:#00ff88; }
+    .status .dot.red { background:#ff4444; }
+    .result-box {
+      background:#111; border:1px solid #222; padding:14px; margin-top:16px;
+      max-height:500px; overflow-y:auto; font-size:12px; line-height:1.6;
+      color:#ccc; white-space:pre-wrap; word-wrap:break-word;
+    }
+    .result-box h4 { color:#f97316; font-size:11px; letter-spacing:1px; margin-bottom:8px; text-transform:uppercase; }
+    .result-item { border-bottom:1px solid #1a1a1a; padding-bottom:10px; margin-bottom:10px; }
+    .result-url { color:#f97316; font-size:11px; word-break:break-all; margin-bottom:4px; }
+    .result-title { font-weight:700; color:#e0e0e0; margin-bottom:2px; }
+    .result-desc { color:#888; font-size:12px; }
+    .spinner { display:inline-block; width:12px; height:12px; border:2px solid #333;
+               border-top-color:#f97316; border-radius:50%; animation:spin 0.6s linear infinite; vertical-align:middle; margin-right:6px; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .copy-btn { font-size:10px; padding:3px 8px; margin-left:8px; opacity:0.6; }
+    .copy-btn:hover { opacity:1; }
+    .formats { display:flex; gap:6px; flex-wrap:wrap; }
+    .fmt-btn { padding:4px 10px; font-size:11px; opacity:0.5; }
+    .fmt-btn.on { opacity:1; background:#1a0d00; }
+    a { color:#f97316; }
+  </style>
+</head>
+<body>
+  <h1>🔥 FIRECRAWL</h1>
+  <div class="subtitle">WEB SCRAPING & SEARCH API · MISSION CONTROL</div>
+
+  <div id="apiStatus" class="status"><span class="dot" id="statusDot"></span><span id="statusText">Checking API...</span></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('search')">Search</button>
+    <button class="tab" onclick="showTab('scrape')">Scrape</button>
+    <button class="tab" onclick="showTab('extract')">Extract</button>
+    <button class="tab" onclick="showTab('crawl')">Crawl</button>
+  </div>
+
+  <!-- SEARCH -->
+  <div id="panel-search" class="panel active">
+    <div class="row">
+      <div>
+        <label>Search Query</label>
+        <input id="searchQuery" type="text" placeholder="superior ingredients july 4 ticket..." onkeydown="if(event.key==='Enter') runSearch()">
+      </div>
+      <div style="flex:0 0 80px">
+        <label>Results</label>
+        <select id="searchLimit">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+      <button onclick="runSearch()" id="searchBtn">Search</button>
+    </div>
+    <div id="searchResults"></div>
+  </div>
+
+  <!-- SCRAPE -->
+  <div id="panel-scrape" class="panel">
+    <div style="margin-bottom:14px">
+      <label>URL to scrape</label>
+      <input id="scrapeUrl" type="url" placeholder="https://dice.fm/event/..." onkeydown="if(event.key==='Enter') runScrape()">
+    </div>
+    <div style="margin-bottom:14px">
+      <label>Formats</label>
+      <div class="formats" id="fmtBtns">
+        <button class="fmt-btn on" data-fmt="markdown" onclick="toggleFmt(this)">Markdown</button>
+        <button class="fmt-btn" data-fmt="html" onclick="toggleFmt(this)">HTML</button>
+        <button class="fmt-btn" data-fmt="links" onclick="toggleFmt(this)">Links</button>
+        <button class="fmt-btn" data-fmt="summary" onclick="toggleFmt(this)">Summary</button>
+      </div>
+    </div>
+    <button onclick="runScrape()" id="scrapeBtn">Scrape</button>
+    <div id="scrapeResults"></div>
+  </div>
+
+  <!-- EXTRACT -->
+  <div id="panel-extract" class="panel">
+    <div style="margin-bottom:14px">
+      <label>URLs (one per line)</label>
+      <textarea id="extractUrls" placeholder="https://dice.fm/event/g5q5yp-...&#10;https://ra.co/events/2413974"></textarea>
+    </div>
+    <div style="margin-bottom:14px">
+      <label>Extraction Prompt</label>
+      <textarea id="extractPrompt" placeholder="Extract: event name, date, ticket prices, availability status, venue address"></textarea>
+    </div>
+    <button onclick="runExtract()" id="extractBtn">Extract</button>
+    <div id="extractResults"></div>
+  </div>
+
+  <!-- CRAWL -->
+  <div id="panel-crawl" class="panel">
+    <div style="margin-bottom:14px">
+      <label>Start URL</label>
+      <input id="crawlUrl" type="url" placeholder="https://www.si-bk.com/shows">
+    </div>
+    <div class="row">
+      <div>
+        <label>Prompt (optional)</label>
+        <input id="crawlPrompt" placeholder="Find all event ticket links and prices">
+      </div>
+      <div style="flex:0 0 80px">
+        <label>Depth</label>
+        <select id="crawlDepth">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+      <button onclick="runCrawl()" id="crawlBtn">Crawl</button>
+    </div>
+    <div id="crawlResults"></div>
+  </div>
+
+<script>
+  // Check API status on load
+  async function checkStatus() {
+    try {
+      const r = await fetch('/api/firecrawl/status');
+      const d = await r.json();
+      document.getElementById('statusDot').className = 'dot ' + (d.online ? 'green' : 'red');
+      document.getElementById('statusText').textContent = d.online
+        ? `API Online · Key: ${d.key}`
+        : `API Offline · ${d.reason || 'Check key'}`;
+    } catch(e) {
+      document.getElementById('statusDot').className = 'dot red';
+      document.getElementById('statusText').textContent = 'Cannot reach mission control';
+    }
+  }
+  checkStatus();
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['search','scrape','extract','crawl'][i]===name));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-'+name).classList.add('active');
+  }
+
+  function toggleFmt(btn) { btn.classList.toggle('on'); }
+  function getFormats() { return [...document.querySelectorAll('.fmt-btn.on')].map(b=>b.dataset.fmt); }
+
+  function loading(el, btnId) {
+    document.getElementById(btnId).disabled = true;
+    el.innerHTML = '<div style="padding:10px;color:#555"><span class="spinner"></span>Running...</div>';
+  }
+
+  async function runSearch() {
+    const q = document.getElementById('searchQuery').value.trim();
+    if (!q) return;
+    const limit = parseInt(document.getElementById('searchLimit').value);
+    const el = document.getElementById('searchResults');
+    loading(el, 'searchBtn');
+    try {
+      const r = await fetch('/api/firecrawl/search', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ query: q, limit })
+      });
+      const d = await r.json();
+      const results = d.results || d.data?.web || [];
+      el.innerHTML = `<div class="result-box"><h4>${results.length} results for "${q}"</h4>` +
+        results.map(r => `<div class="result-item">
+          <div class="result-url">${r.url}</div>
+          <div class="result-title">${r.title || ''}</div>
+          <div class="result-desc">${(r.description || r.snippet || '').slice(0,200)}</div>
+        </div>`).join('') + '</div>';
+    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
+    document.getElementById('searchBtn').disabled = false;
+  }
+
+  async function runScrape() {
+    const url = document.getElementById('scrapeUrl').value.trim();
+    if (!url) return;
+    const formats = getFormats();
+    const el = document.getElementById('scrapeResults');
+    loading(el, 'scrapeBtn');
+    try {
+      const r = await fetch('/api/firecrawl/scrape', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ url, formats })
+      });
+      const d = await r.json();
+      const content = d.markdown || d.data?.markdown || d.html || d.data?.html || JSON.stringify(d, null, 2);
+      el.innerHTML = `<div class="result-box"><h4>Scraped: ${url} <button class="copy-btn" onclick="copyText(this)">Copy</button></h4>${escHtml(content.slice(0, 8000))}</div>`;
+    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
+    document.getElementById('scrapeBtn').disabled = false;
+  }
+
+  async function runExtract() {
+    const urls = document.getElementById('extractUrls').value.trim().split('\n').filter(Boolean);
+    const prompt = document.getElementById('extractPrompt').value.trim();
+    if (!urls.length) return;
+    const el = document.getElementById('extractResults');
+    loading(el, 'extractBtn');
+    try {
+      const r = await fetch('/api/firecrawl/extract', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ urls, prompt })
+      });
+      const d = await r.json();
+      el.innerHTML = `<div class="result-box"><h4>Extracted</h4>${escHtml(JSON.stringify(d, null, 2))}</div>`;
+    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
+    document.getElementById('extractBtn').disabled = false;
+  }
+
+  async function runCrawl() {
+    const url = document.getElementById('crawlUrl').value.trim();
+    const prompt = document.getElementById('crawlPrompt').value.trim();
+    const depth = parseInt(document.getElementById('crawlDepth').value);
+    if (!url) return;
+    const el = document.getElementById('crawlResults');
+    loading(el, 'crawlBtn');
+    try {
+      const r = await fetch('/api/firecrawl/crawl', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ url, prompt, maxDiscoveryDepth: depth })
+      });
+      const d = await r.json();
+      el.innerHTML = `<div class="result-box"><h4>Crawl started · ID: ${d.id || 'unknown'}</h4>` +
+        `<p style="color:#888;margin-top:8px">Crawl running in background. Use ID to check status.</p>` +
+        `<pre style="margin-top:8px">${escHtml(JSON.stringify(d, null, 2))}</pre></div>`;
+    } catch(e) { el.innerHTML = `<div class="result-box" style="color:#ff4444">Error: ${e.message}</div>`; }
+    document.getElementById('crawlBtn').disabled = false;
+  }
+
+  function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function copyText(btn) {
+    const pre = btn.closest('.result-box').querySelector('pre, div:last-child');
+    navigator.clipboard.writeText(pre?.textContent || '').then(() => { btn.textContent = 'Copied!'; setTimeout(()=>btn.textContent='Copy',1500); });
+  }
+</script>
+</body>
+</html>

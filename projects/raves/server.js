@@ -17,6 +17,7 @@ const { getAllEvents, getEventsByWeek, getAllWeeks, getEventsGroupedByWeek, upda
   getPushSubscriptionCount, getUserCount } = require('./lib/db');
 const { sendPush, VAPID_PUBLIC } = require('./lib/push');
 const scheduler = require('./lib/scheduler');
+const { getRecommendations, dismissRecommendation, getExploreEvents } = require('./lib/recommendations');
 
 const PORT = process.env.PORT || 3004;
 const ROOT_DIR = __dirname;
@@ -1000,6 +1001,58 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: e.message }));
       }
     });
+    return;
+  }
+
+  // ===================== RECOMMENDATIONS / EXPLORE =====================
+
+  // GET /api/recommendations — scored picks for current user (single-user MVP)
+  if (cleanUrl === '/api/recommendations' && req.method === 'GET') {
+    try {
+      const result = getRecommendations();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, ...result }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // POST /api/recommendations/dismiss/:eventId
+  if (cleanUrl.startsWith('/api/recommendations/dismiss/') && req.method === 'POST') {
+    try {
+      const eventId = decodeURIComponent(cleanUrl.replace('/api/recommendations/dismiss/', ''));
+      dismissRecommendation(eventId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/explore?genre=&dateRange=week|month|all&maxPrice=&venue=&page=&limit=
+  if (cleanUrl === '/api/explore' && req.method === 'GET') {
+    try {
+      const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+      const opts = {
+        genre: u.searchParams.get('genre') || null,
+        venue: u.searchParams.get('venue') || null,
+        dateRange: u.searchParams.get('dateRange') || 'all',
+        page: parseInt(u.searchParams.get('page')) || 1,
+        limit: parseInt(u.searchParams.get('limit')) || 20
+      };
+      const mp = u.searchParams.get('maxPrice');
+      if (mp !== null && mp !== '') opts.maxPrice = Number(mp);
+      const result = getExploreEvents(opts);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, ...result }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
     return;
   }
 

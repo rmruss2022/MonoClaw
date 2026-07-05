@@ -7,17 +7,21 @@ import RaveCard from './components/RaveCard.jsx'
 import Budget from './components/Budget.jsx'
 import Social from './components/Social.jsx'
 import Scanner from './components/Scanner.jsx'
+import Recommended from './components/Recommended.jsx'
+import Explore from './components/Explore.jsx'
+import ShowDetailModal from './components/ShowDetailModal.jsx'
 import Login from './components/Login.jsx'
 import { API_BASE } from './auth.js'
 import { registerPushNotifications } from './pushNotifications.js'
 
 const TABS = [
-  { id: 'calendar',  label: 'Calendar', icon: 'CAL' },
-  { id: 'upcoming',  label: 'Upcoming', icon: 'UP' },
-  { id: 'social',    label: 'Scene',    icon: 'SC' },
-  { id: 'card',      label: 'Card',     icon: 'ID' },
-  { id: 'budget',    label: 'Budget',   icon: '$' },
-  { id: 'add',       label: 'Add',      icon: '+' },
+  { id: 'calendar',    label: 'Calendar',    icon: 'CAL' },
+  { id: 'recommended', label: 'Recommended', icon: '◆' },
+  { id: 'explore',     label: 'Explore',     icon: '◉' },
+  { id: 'budget',      label: 'Budget',      icon: '$' },
+  { id: 'card',        label: 'Card',        icon: 'ID' },
+  { id: 'upcoming',    label: 'Scanner',     icon: 'UP' },
+  { id: 'add',         label: 'Add',         icon: '+' },
 ]
 
 function AuthenticatedApp({ user, onLogout }) {
@@ -27,6 +31,14 @@ function AuthenticatedApp({ user, onLogout }) {
   const [pushState, setPushState] = useState('idle') // idle | asking | granted | denied
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  const [detailEvent, setDetailEvent] = useState(null)
+
+  function openDetail(event) {
+    if (event) setDetailEvent(event)
+  }
+  function closeDetail() {
+    setDetailEvent(null)
+  }
 
   useEffect(() => { loadEvents() }, [])
 
@@ -48,8 +60,10 @@ function AuthenticatedApp({ user, onLogout }) {
         prev.map(e => e.id === id ? { ...patch } : e)
             .sort((a, b) => a.date.localeCompare(b.date))
       )
+      setDetailEvent(prev => prev && prev.id === id ? { ...patch } : prev)
     } else {
       setEvents(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e))
+      setDetailEvent(prev => prev && prev.id === id ? { ...prev, ...patch } : prev)
     }
     if (patch && !patch.id) {
       try {
@@ -151,15 +165,19 @@ function AuthenticatedApp({ user, onLogout }) {
         {loading && <div className="loading">Loading shows…</div>}
 
         {!loading && tab === 'calendar' && (
-          <Calendar events={filtered} onUpdate={updateEvent} />
+          <Calendar events={filtered} onUpdate={updateEvent} onShowDetail={openDetail} />
+        )}
+
+        {!loading && tab === 'recommended' && (
+          <Recommended onUpdate={updateEvent} onShowDetail={openDetail} />
+        )}
+
+        {!loading && tab === 'explore' && (
+          <Explore onUpdate={updateEvent} onShowDetail={openDetail} />
         )}
 
         {!loading && tab === 'upcoming' && (
           <Scanner events={events} onUpdate={updateEvent} />
-        )}
-
-        {!loading && tab === 'social' && (
-          <Social onUpdate={updateEvent} />
         )}
 
         {!loading && tab === 'card' && (
@@ -179,6 +197,15 @@ function AuthenticatedApp({ user, onLogout }) {
         <AddEventModal
           onClose={() => setShowAdd(false)}
           onCreate={createEvent}
+        />
+      )}
+
+      {detailEvent && (
+        <ShowDetailModal
+          event={detailEvent}
+          onClose={closeDetail}
+          onUpdate={updateEvent}
+          onDelete={deleteEvent}
         />
       )}
     </div>

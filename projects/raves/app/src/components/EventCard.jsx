@@ -4,7 +4,7 @@ import EditEventModal from './EditEventModal.jsx'
 import GoingModal from './GoingModal.jsx'
 import MaybeModal from './MaybeModal.jsx'
 
-export default function EventCard({ event, onUpdate, onDelete }) {
+export default function EventCard({ event, onUpdate, onDelete, onShowDetail }) {
   const [editingNote, setEditingNote] = useState(false)
   const [noteText, setNoteText] = useState(event.notes || '')
   const [editing, setEditing] = useState(false)
@@ -51,7 +51,11 @@ export default function EventCard({ event, onUpdate, onDelete }) {
   return (
     <>
       <div className={`event-card ${interest} ${isPast ? 'past' : ''}`}>
-        <div className="ec-head">
+        <div
+          className="ec-head"
+          onClick={() => onShowDetail && onShowDetail(event)}
+          style={onShowDetail ? { cursor: 'pointer' } : undefined}
+        >
           <div className="ec-date-block">
             <div className="ec-month">{dt.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()}</div>
             <div className="ec-day">{dt.getDate()}</div>
@@ -65,7 +69,11 @@ export default function EventCard({ event, onUpdate, onDelete }) {
             </div>
           </div>
           {event.topPick && <div className="ec-top-pick">TOP PICK</div>}
-          <button className="edit-btn" onClick={() => setEditing(true)} title="Edit or delete">EDIT</button>
+          <button
+            className="edit-btn"
+            onClick={e => { e.stopPropagation(); setEditing(true) }}
+            title="Edit or delete"
+          >EDIT</button>
         </div>
 
         <p className="ec-desc">{event.description}</p>

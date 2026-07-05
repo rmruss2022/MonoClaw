@@ -919,7 +919,8 @@
                     'Context Manager': '🧹',
                     'Activity Hub': '🦞',
                     'Vision Controller': '👋',
-                    'MonoClaw Dashboard': '🦾'
+                    'MonoClaw Dashboard': '🦾',
+                    'Firecrawl': '🔥'
                 };
                 const colors = {
                     'Gateway': '#00d9ff',
@@ -932,7 +933,8 @@
                     'Context Manager': '#22c55e',
                     'Activity Hub': '#9b59b6',
                     'Vision Controller': '#e67e22',
-                    'MonoClaw Dashboard': '#ff9ff3'
+                    'MonoClaw Dashboard': '#ff9ff3',
+                    'Firecrawl': '#f97316'
                 };
                 const urls = {
                     'Voice Server': makeUrl(18790, '/status'),
@@ -944,7 +946,8 @@
                     'Context Manager': makeUrl(18800),
                     'Activity Hub': makeUrl(18796),
                     'Vision Controller': makeUrl(18799),
-                    'MonoClaw Dashboard': makeUrl(18802)
+                    'MonoClaw Dashboard': makeUrl(18802),
+                    'Firecrawl': makeUrl(18795, '/firecrawl')
                 };
 
                 const apps = systemData.services.map(s => {
@@ -1014,6 +1017,7 @@
                 { name: 'Arbitrage Scanner', url: makeUrl(3005), detail: 'Prediction market opportunities' },
                 { name: 'Vision Controller', url: makeUrl(18799), detail: 'Hand gesture window manager' },
                 { name: 'MonoClaw Dashboard', url: makeUrl(18802), detail: 'Project overview' },
+                { name: 'Firecrawl', url: makeUrl(18795, '/firecrawl'), detail: 'Web scraping & search API' },
                 { name: 'Matt\'s Blog (Vercel)', url: 'https://matts-claw.vercel.app', detail: 'Auto-generated daily posts' },
                 { name: 'Moltbook Profile', url: 'https://www.moltbook.com/@matthew', detail: 'Social media updates' }
             ];

@@ -7,7 +7,7 @@ import FestivalView from './FestivalView.jsx'
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
-export default function Calendar({ events, onUpdate }) {
+export default function Calendar({ events, onUpdate, onShowDetail }) {
   const today = localToday()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -85,6 +85,13 @@ export default function Calendar({ events, onUpdate }) {
     }, 50)
   }
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth()
+
+  const allGoingShows = useMemo(() => {
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    return events
+      .filter(e => e.interest === 'going' && !e.isFestival && parseDate(e.date) >= todayStart)
+      .sort((a, b) => parseDate(a.date) - parseDate(b.date))
+  }, [events])
 
   function quickSetInterest(event, interest, ev) {
     ev.stopPropagation()
@@ -259,7 +266,11 @@ export default function Calendar({ events, onUpdate }) {
           )}
           {selectedDayEvents.map(e => (
             <div key={e.id} className="cal-day-evt">
-              <div className="cal-day-evt-info">
+              <div
+                className="cal-day-evt-info"
+                onClick={() => onShowDetail && onShowDetail(e)}
+                style={onShowDetail ? { cursor: 'pointer' } : undefined}
+              >
                 <div className="cal-day-evt-name">{e.name}</div>
                 <div className="cal-day-evt-meta">{e.venue} · {e.dayOfWeek} · {(e.genres || []).join(', ')}</div>
                 <div className="cal-day-evt-desc">{e.description}</div>
@@ -277,6 +288,33 @@ export default function Calendar({ events, onUpdate }) {
             </div>
           ))}
         </div>
+      )}
+
+      {view === 'going' && (
+        <>
+          <div className="going-list-header">UPCOMING ({allGoingShows.length})</div>
+          <div className="going-list">
+            {allGoingShows.length === 0 && <div className="empty">No upcoming shows. Browse Explore to find something.</div>}
+            {allGoingShows.map(e => (
+              <div
+                key={e.id}
+                className="going-list-item"
+                onClick={() => onShowDetail && onShowDetail(e)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="going-list-date">
+                  <div className="going-list-day">{parseDate(e.date).getDate()}</div>
+                  <div className="going-list-month">{MONTHS[parseDate(e.date).getMonth()].toUpperCase().slice(0, 3)}</div>
+                  <div className="going-list-dow">{DOW[parseDate(e.date).getDay()]}</div>
+                </div>
+                <div className="going-list-info">
+                  <div className="going-list-name">{e.name}</div>
+                  <div className="going-list-meta">{e.venue} · {(e.genres || []).join(', ')}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
     </>
