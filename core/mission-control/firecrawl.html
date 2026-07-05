@@ -346,17 +346,23 @@
 
       // Show result summary
       // Store full result for viewer
-      window._lastResult = { action: originalAction, data: d, query: payload };
-      const resultCount = action === 'search'
-        ? (d?.data?.web || d?.results || []).length + ' results'
-        : action === 'scrape' ? (d?.data?.json ? 'JSON extracted' : 'Markdown scraped')
-        : 'Done';
-      statusEl.textContent = `✓ ${resultCount} · ${Date.now() - startMs}ms`;
-      viewBtn.style.display = 'inline-flex';
-      viewBtn.textContent = `📊 View Results →`;
-      viewBtn.style.fontSize = '12px';
-      viewBtn.style.padding = '6px 14px';
-
+      // For async crawl jobs, poll until complete
+      if (originalAction === 'crawl' && d.id && d.success) {
+        statusEl.textContent = `⏳ Crawl running… (id: ${d.id.slice(0,8)})`;
+        viewBtn.style.display = 'none';
+        await pollCrawlJob(d.id, statusEl, viewBtn, payload, startMs);
+      } else {
+        window._lastResult = { action: originalAction, data: d, query: payload };
+        const resultCount = action === 'search'
+          ? (d?.data?.web || d?.results || []).length + ' results'
+          : action === 'scrape' ? (d?.data?.json ? 'JSON extracted' : 'Markdown scraped')
+          : 'Done';
+        statusEl.textContent = `✓ ${resultCount} · ${Date.now() - startMs}ms`;
+        viewBtn.style.display = 'inline-flex';
+        viewBtn.textContent = `📊 View Results →`;
+        viewBtn.style.fontSize = '12px';
+        viewBtn.style.padding = '6px 14px';
+      }
       loadLog(); // refresh log
     } catch(e) {
       statusEl.textContent = '❌ Error: ' + e.message;
@@ -485,6 +491,7 @@
     const d = r.data?.data || r.data || {};
     const tabs = [];
     if (r.action === 'search') tabs.push({ id: 'cards', label: 'Results' });
+    if (r.action === 'crawl' && r.data?.pages?.length) tabs.push({ id: 'pages', label: `Pages (${r.data.pages.length})` });
     if (d.json) tabs.push({ id: 'json', label: 'JSON' });
     if (d.markdown) tabs.push({ id: 'markdown', label: 'Markdown' });
     if (d.links?.length) tabs.push({ id: 'links', label: `Links (${d.links.length})` });
@@ -531,6 +538,17 @@
       el.innerHTML = (d.links || []).map(l =>
         `<div style="padding:4px 0; border-bottom:1px solid #111;"><a href="${escHtml(l)}" target="_blank" style="color:#f97316; font-size:12px; word-break:break-all;">${escHtml(l)}</a></div>`
       ).join('');
+    } else if (tabId === 'pages') {
+      el.style.fontFamily = 'inherit';
+      const pages = r.data?.pages || [];
+      el.innerHTML = pages.length === 0 ? '<div style="color:#444; padding:20px;">No pages crawled</div>'
+        : pages.map((p, i) => `
+          <div style="border:1px solid #1a1a1a; padding:12px; margin-bottom:10px; background:#0d0d0d;">
+            <div style="color:#f97316; font-size:11px; margin-bottom:4px; word-break:break-all;">${escHtml(p.url || p.metadata?.sourceURL || '')}</div>
+            <div style="color:#888; font-size:11px; margin-bottom:6px;">${escHtml((p.metadata?.title || ''))}</div>
+            <pre style="font-size:11px; color:#666; white-space:pre-wrap; max-height:200px; overflow-y:auto;">${escHtml((p.markdown || p.content || '').slice(0, 800))}${(p.markdown||p.content||'').length > 800 ? '…' : ''}</pre>
+          </div>
+        `).join('');
     } else {
       el.style.fontFamily = "'SF Mono', Monaco, monospace";
       el.textContent = JSON.stringify(r.data, null, 2);
@@ -603,6 +621,43 @@
     // Auto-run
     await runCall(action === 'scrape' && input.jsonOptions ? 'extract' : action);
     if (window._lastResult) openResultViewer();
+  }
+
+
+  async function pollCrawlJob(jobId, statusEl, viewBtn, query, startMs) {
+    const maxWait = 120000; // 2 min max
+    const interval = 3000;
+    let elapsed = 0;
+    while (elapsed < maxWait) {
+      await new Promise(r => setTimeout(r, interval));
+      elapsed += interval;
+      try {
+        const r = await fetch(`/api/firecrawl/crawl/${jobId}`);
+        const d = await r.json();
+        const status = d.status || d.data?.status || 'unknown';
+        const completed = d.completed || d.data?.completed || 0;
+        const total = d.total || d.data?.total || '?';
+        statusEl.textContent = `⏳ Crawl: ${status} · ${completed}/${total} pages · ${Math.round(elapsed/1000)}s`;
+        if (status === 'completed' || (d.data && Array.isArray(d.data) && d.data.length > 0)) {
+          const pages = d.data || [];
+          window._lastResult = { action: 'crawl', data: { crawlId: jobId, pages, status: d }, query };
+          statusEl.textContent = `✓ Crawl done · ${pages.length} pages · ${Math.round(elapsed/1000)}s`;
+          viewBtn.style.display = 'inline-flex';
+          viewBtn.textContent = `📊 View ${pages.length} Pages →`;
+          viewBtn.style.fontSize = '12px';
+          viewBtn.style.padding = '6px 14px';
+          loadLog();
+          return;
+        }
+        if (status === 'failed') {
+          statusEl.textContent = `❌ Crawl failed`;
+          return;
+        }
+      } catch(e) {
+        console.warn('Poll error:', e);
+      }
+    }
+    statusEl.textContent = '⚠ Crawl timed out — check Firecrawl dashboard';
   }
 
   // Init

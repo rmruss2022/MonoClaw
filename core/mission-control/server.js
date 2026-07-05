@@ -1280,6 +1280,22 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(200); res.end(JSON.stringify({ ok: true }));
         } catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
 
+    } else if (req.url.match(/^\/api\/firecrawl\/crawl\/[\w-]+$/) && req.method === 'GET') {
+        // Check async crawl job status
+        const jobId = req.url.split('/').pop();
+        try {
+            const configPath = path.join(process.env.HOME, '.openclaw/openclaw.json');
+            const cfg = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+            const key = cfg?.env?.FIRECRAWL_API_KEY || process.env.FIRECRAWL_API_KEY || '';
+            const fcResp = await fetch(`https://api.firecrawl.dev/v1/crawl/${jobId}`, {
+                headers: { 'Authorization': `Bearer ${key}` },
+                signal: AbortSignal.timeout(10000)
+            });
+            const fcData = await fcResp.json();
+            res.writeHead(fcResp.status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify(fcData));
+        } catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
+
     } else if (req.url.startsWith('/api/firecrawl/') && (req.method === 'POST' || req.method === 'GET')) {
         const action = req.url.replace('/api/firecrawl/', ''); // search | scrape | extract | crawl
         let body = '';
