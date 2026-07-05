@@ -3,6 +3,18 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { Pool } = require('pg');
+
+// Postgres connection (firecrawl call log)
+const pgPool = new Pool({
+  user: 'claw',
+  database: 'monoclaw_logs',
+  host: '127.0.0.1',
+  port: 5432,
+  max: 5,
+  idleTimeoutMillis: 30000
+});
+pgPool.on('error', err => console.error('[pg] pool error:', err.message));
 const { exec } = require('child_process');
 const util = require('util');
 const _exec = util.promisify(exec);
@@ -1239,22 +1251,34 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         res.end(JSON.stringify(status));
 
-    } else if (req.url === '/api/firecrawl/log' && req.method === 'GET') {
-        // Return call log
-        const logFile = path.join(process.env.HOME, '.openclaw/firecrawl-log.jsonl');
+    } else if (req.url.startsWith('/api/firecrawl/log') && req.method === 'GET') {
+        // Return call log from Postgres — supports ?limit=N&action=X&search=Y
+        const qp = new URLSearchParams(req.url.includes('?') ? req.url.split('?')[1] : '');
+        const limit = Math.min(parseInt(qp.get('limit') || '200'), 1000);
+        const action = qp.get('action') || '';
+        const search = qp.get('search') || '';
         try {
-            const lines = fs.existsSync(logFile)
-                ? fs.readFileSync(logFile, 'utf-8').trim().split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)
-                : [];
+            let query = 'SELECT id, ts, action, status, duration_ms AS "durationMs", success, result_count AS "resultCount", source, input FROM fc_calls WHERE 1=1';
+            const params = [];
+            if (action) { params.push(action); query += ` AND action = $${params.length}`; }
+            if (search) { params.push(`%${search}%`); query += ` AND input::text ILIKE $${params.length}`; }
+            query += ` ORDER BY ts DESC LIMIT ${limit}`;
+            const result = await pgPool.query(query, params);
+            const rows = result.rows.map(r => ({
+                ts: Number(r.ts), action: r.action, status: r.status,
+                durationMs: r.durationMs, success: r.success,
+                resultCount: r.resultCount, source: r.source, input: r.input
+            }));
             res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
-            res.end(JSON.stringify(lines.reverse())); // newest first
-        } catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
+            res.end(JSON.stringify(rows));
+        } catch(e) { console.error('[pg] log fetch:', e.message); res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
 
     } else if (req.url === '/api/firecrawl/log' && req.method === 'DELETE') {
         // Clear log
-        const logFile = path.join(process.env.HOME, '.openclaw/firecrawl-log.jsonl');
-        try { fs.writeFileSync(logFile, ''); res.writeHead(200); res.end(JSON.stringify({ ok: true })); }
-        catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
+        try {
+            await pgPool.query('TRUNCATE fc_calls RESTART IDENTITY');
+            res.writeHead(200); res.end(JSON.stringify({ ok: true }));
+        } catch(e) { res.writeHead(500); res.end(JSON.stringify({ error: e.message })); }
 
     } else if (req.url.startsWith('/api/firecrawl/') && (req.method === 'POST' || req.method === 'GET')) {
         const action = req.url.replace('/api/firecrawl/', ''); // search | scrape | extract | crawl
@@ -1279,26 +1303,25 @@ const server = http.createServer(async (req, res) => {
                 const fcData = await fcResp.json();
                 const durationMs = Date.now() - startMs;
 
-                // Write to log
-                const logFile = path.join(process.env.HOME, '.openclaw/firecrawl-log.jsonl');
+                // Write to Postgres
                 const logEntry = {
                     ts: Date.now(),
                     action,
                     status: fcResp.status,
                     durationMs,
-                    // Log the key input fields per action type
                     input: action === 'search' ? { query: payload.query, limit: payload.limit }
                          : action === 'scrape' ? { url: payload.url, formats: payload.formats }
                          : action === 'extract' ? { urls: payload.urls, prompt: payload.prompt }
                          : action === 'crawl' ? { url: payload.url, prompt: payload.prompt }
                          : payload,
-                    // Summary of output
                     resultCount: fcData?.data?.web?.length ?? fcData?.results?.length ?? (fcData?.success ? 1 : 0),
                     success: fcResp.status < 400,
-                    // Source: was this called from the UI, from an agent, or from mcporter?
-                    source: req.headers['x-source'] || req.headers.referer?.includes('firecrawl') ? 'dashboard' : 'api'
+                    source: req.headers['x-source'] || (req.headers.referer || '').includes('firecrawl') ? 'dashboard' : 'api'
                 };
-                try { fs.appendFileSync(logFile, JSON.stringify(logEntry) + '\n'); } catch {}
+                pgPool.query(
+                    'INSERT INTO fc_calls (ts, action, status, duration_ms, success, result_count, source, input) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+                    [logEntry.ts, logEntry.action, logEntry.status, logEntry.durationMs, logEntry.success, logEntry.resultCount, logEntry.source, JSON.stringify(logEntry.input)]
+                ).catch(e => console.error('[pg] insert:', e.message));
 
                 res.writeHead(fcResp.status, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
                 res.end(JSON.stringify(fcData));
