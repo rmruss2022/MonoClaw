@@ -242,9 +242,10 @@
       </div>
     </div>
 
-    <div id="callResult" style="display:none; margin-top:12px;
-      background:#111; border:1px solid #222; padding:12px; font-size:11px;
-      color:#888; max-height:200px; overflow-y:auto; white-space:pre-wrap; word-wrap:break-word;"></div>
+    <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+      <div id="callStatus" style="font-size:11px; color:#555;"></div>
+      <button id="viewResultsBtn" class="btn primary" style="display:none;" onclick="openResultViewer()">View Results →</button>
+    </div>
   </div>
 </div>
 
@@ -302,11 +303,13 @@
   async function runCall(action) {
     const btnId = action+'Btn';
     const btn = document.getElementById(btnId);
-    const resultEl = document.getElementById('callResult');
+    const statusEl = document.getElementById('callStatus');
+    const viewBtn = document.getElementById('viewResultsBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Running…';
-    resultEl.style.display = 'block';
-    resultEl.textContent = 'Running…';
+    statusEl.textContent = 'Running…';
+    viewBtn.style.display = 'none';
+    window._lastResult = null;
 
     let payload = {};
     if (action === 'search') payload = { query: document.getElementById('searchQuery').value, limit: parseInt(document.getElementById('searchLimit').value) };
@@ -332,6 +335,8 @@
       if (crawlPrompt) payload.scrapeOptions = { formats: ['markdown'], prompt: crawlPrompt };
     }
 
+    const startMs = Date.now();
+    const originalAction = action;
     try {
       const r = await fetch(`/api/firecrawl/${action}`, {
         method:'POST', headers:{'Content-Type':'application/json', 'X-Source':'dashboard'},
@@ -340,29 +345,23 @@
       const d = await r.json();
 
       // Show result summary
-      if (action === 'search') {
-        const results = d?.data?.web || d?.results || [];
-        resultEl.textContent = results.map(r => `${r.title||r.url}\n${r.url}\n${(r.description||'').slice(0,120)}\n`).join('\n');
-      } else if (action === 'scrape') {
-        // Show JSON extraction result if available, otherwise markdown
-        const jsonResult = d?.data?.json || d?.json;
-        const md = d?.data?.markdown || d?.markdown || '';
-        if (jsonResult) {
-          resultEl.textContent = JSON.stringify(jsonResult, null, 2);
-        } else {
-          resultEl.textContent = md.slice(0, 3000) || JSON.stringify(d).slice(0, 2000);
-        }
-      } else {
-        resultEl.textContent = JSON.stringify(d, null, 2).slice(0, 2000);
-      }
+      // Store full result for viewer
+      window._lastResult = { action: originalAction, data: d, query: payload };
+      const resultCount = action === 'search'
+        ? (d?.data?.web || d?.results || []).length + ' results'
+        : action === 'scrape' ? (d?.data?.json ? 'JSON extracted' : 'Markdown scraped')
+        : 'Done';
+      statusEl.textContent = `✓ ${resultCount} · ${Date.now() - startMs}ms`;
+      viewBtn.style.display = 'inline-flex';
+      viewBtn.textContent = `View Results →`;
 
       loadLog(); // refresh log
     } catch(e) {
-      resultEl.textContent = 'Error: ' + e.message;
+      statusEl.textContent = '❌ Error: ' + e.message;
     }
 
     btn.disabled = false;
-    btn.textContent = 'Run';
+    btn.textContent = ['search','scrape','crawl'].includes(originalAction||action) ? originalAction.charAt(0).toUpperCase()+originalAction.slice(1) : 'Run';
   }
 
   function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -467,10 +466,149 @@
     a.click();
   }
 
+
+  // ===================== RESULT VIEWER =====================
+  function openResultViewer() {
+    const r = window._lastResult;
+    if (!r) return;
+    const viewer = document.getElementById('resultViewer');
+    document.getElementById('viewerTitle').textContent = r.action.toUpperCase() + ' RESULT';
+    document.getElementById('viewerMeta').textContent = r.query?.url || r.query?.query || r.query?.urls?.[0] || '';
+
+    // Build tabs based on what data exists
+    const d = r.data?.data || r.data || {};
+    const tabs = [];
+    if (r.action === 'search') tabs.push({ id: 'cards', label: 'Results' });
+    if (d.json) tabs.push({ id: 'json', label: 'JSON' });
+    if (d.markdown) tabs.push({ id: 'markdown', label: 'Markdown' });
+    if (d.links?.length) tabs.push({ id: 'links', label: `Links (${d.links.length})` });
+    tabs.push({ id: 'raw', label: 'Raw' });
+
+    const tabsEl = document.getElementById('viewerTabs');
+    tabsEl.innerHTML = tabs.map((t, i) =>
+      `<button class="viewer-tab ${i===0?'active':''}" onclick="switchViewerTab('${t.id}', this)">${t.label}</button>`
+    ).join('');
+
+    switchViewerTab(tabs[0].id);
+    viewer.style.display = 'flex';
+  }
+
+  function switchViewerTab(tabId, btn) {
+    document.querySelectorAll('.viewer-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    else document.querySelector(`.viewer-tab`)?.classList.add('active');
+
+    const r = window._lastResult;
+    const d = r.data?.data || r.data || {};
+    const el = document.getElementById('viewerContent');
+
+    if (tabId === 'cards') {
+      const results = r.data?.data?.web || r.data?.results || [];
+      el.style.fontFamily = 'inherit';
+      el.innerHTML = results.length === 0 ? '<div style="color:#444; padding:20px;">No results</div>'
+        : results.map(res => `
+          <div class="search-result-card">
+            <div class="src-url">${escHtml(res.url || '')}</div>
+            <div class="src-title">${escHtml(res.title || '')}</div>
+            <div class="src-desc">${escHtml(res.description || res.snippet || '')}</div>
+            <a href="${escHtml(res.url||'')}" target="_blank" style="font-size:10px; color:#f97316; margin-top:6px; display:inline-block;">Open ↗</a>
+          </div>
+        `).join('');
+    } else if (tabId === 'json') {
+      el.style.fontFamily = "'SF Mono', Monaco, monospace";
+      el.innerHTML = syntaxHighlight(d.json || {});
+    } else if (tabId === 'markdown') {
+      el.style.fontFamily = "'SF Mono', Monaco, monospace";
+      el.textContent = d.markdown || '';
+    } else if (tabId === 'links') {
+      el.style.fontFamily = "inherit";
+      el.innerHTML = (d.links || []).map(l =>
+        `<div style="padding:4px 0; border-bottom:1px solid #111;"><a href="${escHtml(l)}" target="_blank" style="color:#f97316; font-size:12px; word-break:break-all;">${escHtml(l)}</a></div>`
+      ).join('');
+    } else {
+      el.style.fontFamily = "'SF Mono', Monaco, monospace";
+      el.textContent = JSON.stringify(r.data, null, 2);
+    }
+  }
+
+  function closeResultViewer() {
+    document.getElementById('resultViewer').style.display = 'none';
+  }
+
+  function syntaxHighlight(obj) {
+    const j = JSON.stringify(obj, null, 2);
+    return escHtml(j)
+      .replace(/"([^"]+)":/g, '<span class="viewer-key">"$1":</span>')
+      .replace(/: "([^"]*)"([,\n])/g, ': <span class="viewer-str">"$1"</span>$2')
+      .replace(/: (-?\d+\.?\d*)([,\n])/g, ': <span class="viewer-num">$1</span>$2')
+      .replace(/: (true|false|null)([,\n])/g, ': <span class="viewer-bool">$1</span>$2');
+  }
+
+  function copyViewerContent() {
+    const el = document.getElementById('viewerContent');
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      const btn = event.target; btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+  }
+
+  function downloadViewerContent() {
+    const r = window._lastResult;
+    const text = document.getElementById('viewerContent').textContent;
+    const ext = text.startsWith('{') || text.startsWith('[') ? 'json' : 'md';
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `firecrawl-${r?.action || 'result'}-${Date.now()}.${ext}`;
+    a.click();
+  }
+
+  // Close viewer on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('resultViewer').style.display !== 'none') closeResultViewer();
+      else closeDrawer();
+    }
+  });
+
   // Init
   checkStatus();
   loadLog();
   setInterval(() => { loadLog(); }, 30000);
 </script>
+
+<!-- Full-screen Result Viewer -->
+<div id="resultViewer" style="display:none; position:fixed; inset:0; background:#0a0a0a; z-index:200; flex-direction:column;">
+  <!-- Viewer header -->
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #1a1a1a; background:#0d0d0d; flex-shrink:0;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span id="viewerTitle" style="font-size:13px; color:#f97316; letter-spacing:1px;"></span>
+      <span id="viewerMeta" style="font-size:11px; color:#444;"></span>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" onclick="copyViewerContent()">Copy</button>
+      <button class="btn" onclick="downloadViewerContent()">Download</button>
+      <button class="btn" onclick="closeResultViewer()">✕ Close</button>
+    </div>
+  </div>
+  <!-- Format tabs -->
+  <div id="viewerTabs" style="display:flex; gap:0; border-bottom:1px solid #111; background:#0d0d0d; flex-shrink:0;"></div>
+  <!-- Content -->
+  <div id="viewerContent" style="flex:1; overflow-y:auto; padding:20px; font-size:13px; line-height:1.7; color:#ccc; white-space:pre-wrap; word-wrap:break-word; font-family:'SF Mono',Monaco,monospace;"></div>
+</div>
+
+<style>
+  .viewer-tab { padding:7px 16px; font-family:'SF Mono',Monaco,monospace; font-size:11px; letter-spacing:1px; text-transform:uppercase;
+    background:transparent; border:none; color:#444; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+  .viewer-tab.active { color:#f97316; border-bottom-color:#f97316; }
+  .viewer-json { color:#a5f3fc; }
+  .viewer-key { color:#86efac; }
+  .viewer-str { color:#fde68a; }
+  .viewer-num { color:#f9a8d4; }
+  .viewer-bool { color:#f97316; }
+  .search-result-card { border:1px solid #1a1a1a; padding:12px; margin-bottom:10px; background:#0d0d0d; }
+  .src-url { color:#f97316; font-size:11px; margin-bottom:4px; word-break:break-all; }
+  .src-title { color:#e0e0e0; font-weight:600; margin-bottom:4px; }
+  .src-desc { color:#666; font-size:12px; line-height:1.5; }
+</style>
 </body>
 </html>
