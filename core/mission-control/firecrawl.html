@@ -127,6 +127,12 @@
   </div>
 </div>
 
+<!-- Results action bar - appears after a run, sticky at top -->
+<div id="resultsBar" style="display:none; position:sticky; top:57px; z-index:11; background:#1a0d00; border-bottom:2px solid #f97316; padding:10px 20px; display:none; align-items:center; justify-content:space-between; gap:12px;">
+  <span id="resultsBarLabel" style="font-size:12px; color:#f97316; font-weight:700; letter-spacing:0.5px;"></span>
+  <button onclick="openResultViewer()" style="background:#f97316; border:none; color:#000; font-family:inherit; font-size:13px; font-weight:800; padding:8px 20px; cursor:pointer; letter-spacing:0.5px;">VIEW RESULTS</button>
+</div>
+
 <!-- Search + filter bar -->
 <div id="filterBar" style="padding:10px 20px; border-bottom:1px solid #111; background:#0a0a0a; display:flex; gap:10px; align-items:center; position:sticky; top:57px; z-index:9;">
   <input id="searchFilter" placeholder="🔍 Search queries, URLs, prompts..." 
@@ -291,7 +297,7 @@
     } catch { document.getElementById('statusText').textContent = 'unreachable'; }
   }
 
-  function openDrawer() { document.getElementById('drawer').classList.add('open'); }
+  function openDrawer() { document.getElementById('drawer').classList.add('open'); const bar = document.getElementById('resultsBar'); if (bar) bar.style.display='none'; }
   function closeDrawer() { document.getElementById('drawer').classList.remove('open'); const cr = document.getElementById('callResult'); if (cr) cr.style.display='none'; }
 
   function showTab(name) {
@@ -362,6 +368,13 @@
         viewBtn.textContent = `📊 View Results →`;
         viewBtn.style.fontSize = '12px';
         viewBtn.style.padding = '6px 14px';
+        // Also show the sticky top bar
+        const bar = document.getElementById('resultsBar');
+        const barLabel = document.getElementById('resultsBarLabel');
+        if (bar && barLabel) {
+          barLabel.textContent = `✓ ${resultCount} · ${Math.round((Date.now()-startMs)/10)/100}s`;
+          bar.style.display = 'flex';
+        }
       }
       loadLog(); // refresh log
     } catch(e) {
@@ -646,6 +659,12 @@
           viewBtn.textContent = `📊 View ${pages.length} Pages →`;
           viewBtn.style.fontSize = '12px';
           viewBtn.style.padding = '6px 14px';
+          const bar = document.getElementById('resultsBar');
+          const barLabel = document.getElementById('resultsBarLabel');
+          if (bar && barLabel) {
+            barLabel.textContent = `✓ ${pages.length} pages crawled`;
+            bar.style.display = 'flex';
+          }
           loadLog();
           return;
         }
