@@ -171,6 +171,210 @@
         }
 
         /* Calendar section - GitHub style contribution graph */
+
+        /* ===== REPORTS SECTION (iOS-grade) ===== */
+        .reports-section {
+          margin: 0 -20px 30px -20px;
+          padding: 0 20px;
+        }
+        .reports-section-inner {
+          background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005));
+          border-bottom: 1px solid #1a1a1a;
+        }
+        .reports-header {
+          display:flex; align-items:flex-end; justify-content:space-between;
+          padding: 24px 0 16px; gap:16px; flex-wrap:wrap;
+        }
+        .reports-header h2 {
+          font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+          color: #fff; margin: 0;
+        }
+        .reports-header h2 small {
+          font-size: 11px; color: #888; letter-spacing: 1.5px;
+          text-transform: uppercase; font-weight: 600; display:block; margin-bottom:4px;
+        }
+        .reports-sub {
+          font-size: 12px; color: #888; margin-top:4px;
+        }
+        .reports-controls {
+          display:flex; gap:8px; align-items:center;
+        }
+        .reports-search {
+          background: #0a0a0a; border: 1px solid #222; border-radius: 10px;
+          padding: 8px 14px 8px 36px; color: #e0e0e0; font-family: inherit; font-size: 13px;
+          width: 240px; outline: none; transition: border-color 0.15s;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+          background-repeat: no-repeat; background-position: 12px center;
+        }
+        .reports-search:focus { border-color: #00ff88; }
+        .reports-search::placeholder { color: #555; }
+
+        .reports-pill {
+          padding: 6px 12px; font-family: inherit; font-size: 11px;
+          letter-spacing: 0.5px; border-radius: 8px;
+          background: #0a0a0a; color: #888; border: 1px solid #222; cursor: pointer;
+          transition: all 0.15s; font-weight: 600;
+        }
+        .reports-pill:hover { color: #ccc; border-color: #333; }
+        .reports-pill.active {
+          background: #00ff8822; color: #00ff88; border-color: #00ff88;
+        }
+        .reports-pill.error.active {
+          background: #ff444422; color: #ff4444; border-color: #ff4444;
+        }
+
+        /* Hero card — featured latest report */
+        .report-hero {
+          background: linear-gradient(135deg, #0a0a0a 0%, #111 100%);
+          border: 1px solid #222; border-radius: 16px;
+          padding: 0; overflow: hidden; margin-bottom: 20px;
+          display: grid; grid-template-columns: 280px 1fr; min-height: 220px;
+          cursor: pointer; transition: all 0.2s;
+        }
+        .report-hero:hover { border-color: #00ff88; transform: translateY(-1px); }
+        .report-hero-left {
+          background: linear-gradient(135deg, #00ff8818 0%, #00ff8805 100%);
+          border-right: 1px solid #1a1a1a;
+          padding: 24px; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .report-hero-eyebrow {
+          font-size: 10px; font-weight: 700; letter-spacing: 2px;
+          color: #00ff88; text-transform: uppercase;
+        }
+        .report-hero-icon {
+          font-size: 48px; line-height: 1; margin: 16px 0;
+        }
+        .report-hero-time {
+          font-size: 11px; color: #888;
+        }
+        .report-hero-time strong {
+          display:block; font-size: 18px; color: #fff; font-weight: 700;
+          margin: 4px 0 2px; letter-spacing: -0.3px;
+        }
+        .report-hero-time em {
+          font-style: normal; color: #555; font-size: 10px;
+        }
+        .report-hero-right {
+          padding: 24px; display: flex; flex-direction: column; gap: 10px;
+        }
+        .report-hero-title {
+          font-size: 17px; font-weight: 700; color: #fff; line-height: 1.3;
+          letter-spacing: -0.3px;
+        }
+        .report-hero-source {
+          display: flex; gap: 8px; align-items: center; font-size: 11px;
+          color: #555; letter-spacing: 0.5px;
+        }
+        .report-hero-source .src-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: #00ff88;
+          box-shadow: 0 0 6px #00ff8888;
+        }
+        .report-hero-source .src-dot.error { background: #ff4444; box-shadow: 0 0 6px #ff444488; }
+        .report-hero-snippet {
+          font-size: 13px; color: #aaa; line-height: 1.5;
+          display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .report-hero-cta {
+          margin-top: auto; display: flex; gap: 8px; align-items: center;
+          color: #00ff88; font-size: 12px; font-weight: 600;
+        }
+        .report-hero-cta svg { transition: transform 0.15s; }
+        .report-hero:hover .report-hero-cta svg { transform: translateX(2px); }
+
+        /* Featured stat tiles row */
+        .reports-stats {
+          display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+          margin-bottom: 20px;
+        }
+        .rstat {
+          background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 12px;
+          padding: 16px; transition: all 0.15s; cursor: pointer;
+          position: relative; overflow: hidden;
+        }
+        .rstat:hover { border-color: #333; transform: translateY(-1px); }
+        .rstat-label {
+          font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+          color: #888; text-transform: uppercase;
+        }
+        .rstat-value {
+          font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -1px;
+          margin-top: 6px; line-height: 1;
+        }
+        .rstat-value.success { color: #00ff88; }
+        .rstat-value.error { color: #ff4444; }
+        .rstat-delta {
+          font-size: 11px; color: #888; margin-top: 6px;
+        }
+        .rstat-delta .up { color: #00ff88; }
+        .rstat-delta .down { color: #ff4444; }
+
+        /* Activity stream — vertical timeline */
+        .activity-stream {
+          display: grid; grid-template-columns: 1fr; gap: 1px;
+          background: #1a1a1a; border-radius: 12px; overflow: hidden;
+        }
+        .activity-row {
+          background: #0a0a0a; padding: 14px 18px;
+          display: grid; grid-template-columns: 110px 1fr auto;
+          align-items: center; gap: 16px; cursor: pointer;
+          transition: background 0.1s;
+        }
+        .activity-row:hover { background: #0d0d0d; }
+        .activity-time {
+          font-family: inherit; font-size: 11px;
+          color: #888; letter-spacing: 0.5px;
+        }
+        .activity-time strong {
+          display: block; color: #fff; font-size: 13px; font-weight: 600;
+          margin-bottom: 2px;
+        }
+        .activity-main {
+          display: flex; flex-direction: column; gap: 4px; min-width: 0;
+        }
+        .activity-title {
+          font-size: 13px; font-weight: 600; color: #e0e0e0;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .activity-snippet {
+          font-size: 11px; color: #666; line-height: 1.4;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .activity-status {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 11px; color: #888;
+        }
+        .activity-status .pill {
+          padding: 3px 8px; font-size: 10px; font-weight: 700;
+          letter-spacing: 1px; border-radius: 4px; text-transform: uppercase;
+        }
+        .activity-status .pill.ok {
+          background: #00ff8822; color: #00ff88;
+        }
+        .activity-status .pill.err {
+          background: #ff444422; color: #ff4444;
+        }
+        .activity-status .dur {
+          font-family: inherit; color: #555; font-size: 10px;
+        }
+        .activity-empty {
+          padding: 32px; text-align: center; color: #444;
+          font-size: 12px; background: #0a0a0a;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+          .reports-stats { grid-template-columns: repeat(2, 1fr); }
+          .report-hero { grid-template-columns: 1fr; }
+          .report-hero-left { border-right: none; border-bottom: 1px solid #1a1a1a; }
+          .activity-row { grid-template-columns: 90px 1fr auto; gap: 10px; padding: 12px; }
+        }
+        @media (max-width: 600px) {
+          .reports-search { width: 100%; }
+          .reports-controls { width: 100%; }
+          .reports-stats { grid-template-columns: 1fr 1fr; }
+        }
+
         .calendar-section {
             background: #1a1a1a;
             border: 1px solid #333;
@@ -492,6 +696,35 @@
             <div class="label">Disabled</div>
             <div class="value">--</div>
         </div>
+    </div>
+
+    <!-- ===== REPORTS SECTION ===== -->
+    <div class="reports-section">
+      <div class="reports-section-inner">
+        <div class="reports-header">
+          <div>
+            <h2><small>Reports</small>Latest from your scheduled runs</h2>
+            <div class="reports-sub">Real-time briefings, audits and digests — generated by your cron jobs</div>
+          </div>
+          <div class="reports-controls">
+            <input id="reportsSearch" class="reports-search" placeholder="Search reports…" oninput="renderReports()">
+            <button id="filterAll" class="reports-pill active" onclick="setReportFilter('all', this)">All</button>
+            <button id="filterOk" class="reports-pill" onclick="setReportFilter('ok', this)">✓ OK</button>
+            <button id="filterErr" class="reports-pill error" onclick="setReportFilter('error', this)">✗ Errors</button>
+          </div>
+        </div>
+
+        <!-- Featured stat tiles -->
+        <div class="reports-stats" id="reportsStats"></div>
+
+        <!-- Hero: latest report -->
+        <div id="reportHero"></div>
+
+        <!-- Activity stream -->
+        <div class="activity-stream" id="activityStream"></div>
+
+        <div style="height:24px;"></div>
+      </div>
     </div>
 
     <div class="loading" id="loading">Loading cron jobs...</div>
@@ -838,6 +1071,200 @@
             }
         });
 
+
+        // ===== REPORTS SECTION =====
+        let _reportFilter = 'all';
+
+        function setReportFilter(f, btn) {
+            _reportFilter = f;
+            document.querySelectorAll('.reports-pill').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            const jobs = Object.values(window._lastJobs || {});
+            renderReports(jobs);
+        }
+
+        function fmtTimeAgo(ms) {
+            if (!ms) return '—';
+            const diff = Date.now() - ms;
+            if (diff < 60000) return 'just now';
+            if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+            if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+            if (diff < 86400000 * 7) return Math.floor(diff/86400000) + 'd ago';
+            return new Date(ms).toLocaleDateString('en-US', { month:'short', day:'numeric' });
+        }
+
+        function fmtExactTime(ms) {
+            if (!ms) return 'Never';
+            const d = new Date(ms);
+            return d.toLocaleString('en-US', { hour:'numeric', minute:'2-digit', hour12: true });
+        }
+
+        function summarizeReport(run, job) {
+            const snippet = (run.fullText || run.summary || '').slice(0, 280);
+            return snippet;
+        }
+
+        function getLatestReport(jobs) {
+            // Build a flat list of all runs across jobs, sorted by ts desc
+            const all = [];
+            for (const job of jobs) {
+                for (const run of job.runs || []) {
+                    if (!run.summary && !run.fullText) continue;
+                    all.push({ run, job, ts: run.ts || 0 });
+                }
+            }
+            all.sort((a, b) => b.ts - a.ts);
+            return all[0] || null;
+        }
+
+        function renderReports(jobs) {
+            window._lastJobs = jobs;
+            if (!jobs) return;
+
+            // === Featured stats ===
+            const total = jobs.length;
+            const failing = jobs.filter(j => (j.consecutiveErrors || 0) >= 3).length;
+            const healthy = jobs.filter(j => j.enabled !== false && (j.consecutiveErrors || 0) === 0).length;
+            const disabled = jobs.filter(j => j.enabled === false).length;
+            const todayCount = jobs.reduce((sum, j) => {
+                const today = new Date(); today.setHours(0,0,0,0);
+                return sum + (j.runs || []).filter(r => r.ts >= today.getTime()).length;
+            }, 0);
+            const last24h = jobs.reduce((sum, j) => {
+                return sum + (j.runs || []).filter(r => r.ts >= Date.now() - 86400000).length;
+            }, 0);
+            const errors24h = jobs.reduce((sum, j) => {
+                return sum + (j.runs || []).filter(r => r.ts >= Date.now() - 86400000 && r.status === 'error').length;
+            }, 0);
+
+            document.getElementById('reportsStats').innerHTML = `
+                <div class="rstat" onclick="document.getElementById('calendarSection').scrollIntoView({behavior:'smooth'})">
+                    <div class="rstat-label">Total Jobs</div>
+                    <div class="rstat-value">${total}</div>
+                    <div class="rstat-delta">${healthy} healthy</div>
+                </div>
+                <div class="rstat" onclick="document.getElementById('calendarSection').scrollIntoView({behavior:'smooth'})">
+                    <div class="rstat-label">Healthy</div>
+                    <div class="rstat-value success">${healthy}</div>
+                    <div class="rstat-delta">${disabled} disabled</div>
+                </div>
+                <div class="rstat" onclick="document.getElementById('calendarSection').scrollIntoView({behavior:'smooth'})">
+                    <div class="rstat-label">Failing</div>
+                    <div class="rstat-value ${failing ? 'error' : ''}">${failing}</div>
+                    <div class="rstat-delta">${errors24h} errors · 24h</div>
+                </div>
+                <div class="rstat">
+                    <div class="rstat-label">Runs Today</div>
+                    <div class="rstat-value">${todayCount}</div>
+                    <div class="rstat-delta">${last24h} in 24h</div>
+                </div>
+            `;
+
+            // === Hero: latest report ===
+            const latest = getLatestReport(jobs);
+            const heroEl = document.getElementById('reportHero');
+            if (latest) {
+                const r = latest.run, j = latest.job;
+                const isErr = r.status === 'error';
+                const snippet = summarizeReport(r, j);
+                const ago = fmtTimeAgo(r.ts);
+                const exact = fmtExactTime(r.ts);
+                const dur = r.durationMs ? `${Math.round(r.durationMs/100)/10}s` : '';
+                const ico = pickIcon(j.name);
+                heroEl.innerHTML = `
+                    <div class="report-hero" onclick="openReportModal('${escHtmlAttr(j.id)}', 0)">
+                        <div class="report-hero-left">
+                            <div class="report-hero-eyebrow">★ Latest Report</div>
+                            <div class="report-hero-icon">${ico}</div>
+                            <div class="report-hero-time">
+                                <strong>${ago}</strong>
+                                ${exact}${dur ? ' · ' + dur : ''}
+                            </div>
+                        </div>
+                        <div class="report-hero-right">
+                            <div class="report-hero-title">${escHtml(j.name)}</div>
+                            <div class="report-hero-source">
+                                <span class="src-dot ${isErr ? 'error' : ''}"></span>
+                                <span>${isErr ? 'Failed' : 'Delivered'}</span>
+                                <span style="color:#333">·</span>
+                                <span>${escHtml(j.schedule?.expr || '')}</span>
+                            </div>
+                            <div class="report-hero-snippet">${escHtml(snippet)}</div>
+                            <div class="report-hero-cta">
+                                Read full report
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                heroEl.innerHTML = '';
+            }
+
+            // === Activity stream ===
+            const all = [];
+            for (const job of jobs) {
+                for (const run of job.runs || []) {
+                    if (!run.summary && !run.fullText) continue;
+                    all.push({ run, job, ts: run.ts || 0 });
+                }
+            }
+            all.sort((a, b) => b.ts - a.ts);
+
+            const search = (document.getElementById('reportsSearch')?.value || '').toLowerCase();
+            const filtered = all.filter(item => {
+                const hay = (item.job.name + ' ' + (item.run.fullText || item.run.summary || '')).toLowerCase();
+                if (search && !hay.includes(search)) return false;
+                if (_reportFilter === 'ok' && item.run.status === 'error') return false;
+                if (_reportFilter === 'error' && item.run.status !== 'error') return false;
+                return true;
+            }).slice(0, 20);
+
+            const streamEl = document.getElementById('activityStream');
+            if (filtered.length === 0) {
+                streamEl.innerHTML = '<div class="activity-empty">No reports match your filter.</div>';
+            } else {
+                streamEl.innerHTML = filtered.map(item => {
+                    const r = item.run, j = item.job;
+                    const isErr = r.status === 'error';
+                    const ago = fmtTimeAgo(r.ts);
+                    const exact = fmtExactTime(r.ts);
+                    const snippet = (r.fullText || r.summary || '').slice(0, 140).replace(/\n/g, ' ');
+                    const dur = r.durationMs ? `${Math.round(r.durationMs/100)/10}s` : '';
+                    return `
+                        <div class="activity-row" onclick="openReportModal('${escHtmlAttr(j.id)}', 0)">
+                            <div class="activity-time">
+                                <strong>${ago}</strong>
+                                ${exact}
+                            </div>
+                            <div class="activity-main">
+                                <div class="activity-title">${escHtml(j.name)}</div>
+                                <div class="activity-snippet">${escHtml(snippet)}</div>
+                            </div>
+                            <div class="activity-status">
+                                <span class="pill ${isErr ? 'err' : 'ok'}">${isErr ? '✗ err' : '✓ ok'}</span>
+                                ${dur ? `<span class="dur">${dur}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function pickIcon(name) {
+            const n = (name || '').toLowerCase();
+            if (n.includes('pulse') || n.includes('briefing')) return '📰';
+            if (n.includes('blog')) return '✍️';
+            if (n.includes('audit') || n.includes('security')) return '🔒';
+            if (n.includes('health')) return '💚';
+            if (n.includes('digest') || n.includes('weekly')) return '📊';
+            if (n.includes('scan')) return '🔍';
+            return '⚙️';
+        }
+
+        function escHtmlAttr(s) { return String(s||'').replace(/'/g, "\\'"); }
+
+
         async function loadCalendar() {
             try {
                 document.getElementById('loading').textContent = 'Loading cron jobs...';
@@ -848,6 +1275,8 @@
                 }
                 const data = await resp.json();
                 const jobs = Object.values(data);
+                // Render reports section first
+                renderReports(jobs);
                 // Sort: failing first, then by name
                 jobs.sort((a, b) => {
                     const aErr = (a.consecutiveErrors || 0);
