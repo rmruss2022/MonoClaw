@@ -91,7 +91,8 @@ const VENUE_PATTERNS = [
   { match: /baby-s-all-right|babysallright/i, venue: "Baby's All Right" },
   { match: /ra\.co\/events/i, venue: '' },
   { match: /dice\.fm/i, venue: '' },
-  { match: /eventbrite\.com/i, venue: '' }
+  { match: /eventbrite\.com/i, venue: '' },
+  { match: /posh\.vip/i, venue: '' }
 ]
 
 // Genre detection from text
@@ -331,7 +332,8 @@ const SCAN_SOURCES = [
   { name: 'Resident Advisor · House', url: 'https://ra.co/events/us/newyorkcity/house', type: 'ra' },
   { name: 'Resident Advisor · Tech House', url: 'https://ra.co/events/us/newyorkcity/techhouse', type: 'ra' },
   { name: 'Dice · NYC', url: 'https://dice.fm/browse/new_york-5bbf4db0f06331478e9b2c59', type: 'dice' },
-  { name: 'Dice · NYC DJ', url: 'https://dice.fm/browse/new_york-5bbf4db0f06331478e9b2c59/music/dj', type: 'dice' }
+  { name: 'Dice · NYC DJ', url: 'https://dice.fm/browse/new_york-5bbf4db0f06331478e9b2c59/music/dj', type: 'dice' },
+  { name: 'Posh · NYC Raves', url: 'https://posh.vip/explore/new-york', type: 'posh' }
 ]
 
 async function scrapeFirecrawl(url, formats = ['markdown']) {
@@ -357,6 +359,17 @@ function extractEventLinksFromMd(md, sourceType) {
   } else if (sourceType === 'dice') {
     const matches = md.match(/https:\/\/dice\.fm\/event\/[a-z0-9-]+/g) || []
     for (const m of matches) links.add(m)
+  } else if (sourceType === 'posh') {
+    // Posh event slugs: posh.vip/e/<slug> - filter to only electronic/rave keywords
+    const RAVE_KW = /\b(rave|techno|house|trance|bass|dubstep|dnb|drum|electronic|edm|warehouse|underground|breakbeat|jungle|hardcore|hardstyle|psytrance|minimal|ambient|acid|electro|disco|club|nightlife|afterparty|after-party|night party|late night|midnight|dance|clubbing|bashment|caribbean party|afro|reggae|dancehall|open air|open-air|bpm|plur)\b/i
+    const matches = md.matchAll(/https?:\/\/posh\.vip\/e\/([a-z0-9-]+)/g)
+    for (const m of matches) {
+      const slug = m[1]
+      const slugText = slug.replace(/-/g, ' ')
+      if (RAVE_KW.test(slugText)) {
+        links.add(`https://posh.vip/e/${slug}`)
+      }
+    }
   }
   return Array.from(links)
 }

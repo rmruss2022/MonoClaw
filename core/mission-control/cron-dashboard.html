@@ -367,6 +367,66 @@
           font-size: 12px; background: #0a0a0a;
         }
 
+        /* ===== PINNED REPORTS ===== */
+        .pinned-section {
+          margin-bottom: 24px;
+          padding-bottom: 24px;
+          border-bottom: 1px solid #1a1a1a;
+        }
+        .pinned-header {
+          display:flex; align-items:baseline; justify-content:space-between;
+          margin-bottom: 14px; gap: 12px;
+        }
+        .pinned-title {
+          font-size: 11px; font-weight: 700; letter-spacing: 2px;
+          color: #888; text-transform: uppercase;
+        }
+        .pinned-empty {
+          padding: 18px; border: 1px dashed #1a1a1a; border-radius: 12px;
+          color: #555; font-size: 12px; text-align: center; background: #0a0a0a;
+        }
+        .pinned-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 12px;
+        }
+        .pinned-card {
+          background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 12px;
+          padding: 16px; transition: border-color 0.15s, transform 0.15s;
+          cursor: pointer; display: flex; flex-direction: column; gap: 10px;
+          position: relative; min-height: 140px;
+        }
+        .pinned-card:hover { border-color: #00ff88; transform: translateY(-1px); }
+        .pinned-card-head { display: flex; align-items:flex-start; gap: 10px; }
+        .pinned-card-icon { font-size: 20px; line-height: 1; }
+        .pinned-card-info { flex: 1; min-width: 0; }
+        .pinned-card-name { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.3; }
+        .pinned-card-schedule { font-size: 10px; color: #555; margin-top: 3px; letter-spacing: 0.5px; }
+        .pinned-card-snippet {
+          font-size: 12px; color: #aaa; line-height: 1.5;
+          display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+          overflow: hidden; flex: 1;
+        }
+        .pinned-card-foot {
+          display: flex; justify-content: space-between; align-items: center;
+          font-size: 11px;
+        }
+        .pinned-card-time { color: #888; }
+        .pinned-card-unpin {
+          background: transparent; border: 1px solid #2a2a2a; color: #888;
+          padding: 4px 10px; font-size: 10px; font-family: inherit;
+          border-radius: 4px; cursor: pointer; letter-spacing: 0.5px;
+          transition: all 0.15s;
+        }
+        .pinned-card-unpin:hover { border-color: #ff4444; color: #ff4444; }
+        .pin-btn {
+          background: transparent; border: 1px solid #2a2a2a; color: #555;
+          padding: 3px 8px; font-size: 10px; font-family: inherit;
+          border-radius: 4px; cursor: pointer; letter-spacing: 0.5px;
+          transition: all 0.15s;
+        }
+        .pin-btn:hover { border-color: #00ff88; color: #00ff88; }
+        .pin-btn.is-pinned { background: #00ff8822; color: #00ff88; border-color: #00ff88; }
+
         /* Responsive */
         @media (max-width: 900px) {
           .reports-stats { grid-template-columns: repeat(2, 1fr); }
@@ -720,6 +780,10 @@
     <!-- ===== REPORTS SECTION ===== -->
     <div class="reports-section">
       <div class="reports-section-inner">
+
+        <!-- Pinned reports -->
+        <div class="pinned-section" id="pinnedSection"></div>
+
         <div class="reports-header">
           <div>
             <h2><small>Reports</small>Latest from your scheduled runs</h2>
@@ -1140,6 +1204,9 @@
             window._lastJobs = jobs;
             if (!jobs) return;
 
+            // === Pinned Reports ===
+            renderPinned(jobs);
+
             // === Featured stats ===
             const total = jobs.length;
             const failing = jobs.filter(j => (j.consecutiveErrors || 0) >= 3).length;
@@ -1250,6 +1317,7 @@
                     const exact = fmtExactTime(r.ts);
                     const snippet = (r.fullText || r.summary || '').slice(0, 140).replace(/\n/g, ' ');
                     const dur = r.durationMs ? `${Math.round(r.durationMs/100)/10}s` : '';
+                    const isPinned = _pinnedJobs.has(j.id);
                     return `
                         <div class="activity-row" onclick="openReportModal('${escHtmlAttr(j.id)}', 0)">
                             <div class="activity-time">
@@ -1261,6 +1329,11 @@
                                 <div class="activity-snippet">${escHtml(snippet)}</div>
                             </div>
                             <div class="activity-status">
+                                <button class="pin-btn ${isPinned ? 'is-pinned' : ''}" 
+                                    onclick="event.stopPropagation(); togglePin('${escHtmlAttr(j.id)}', this)" 
+                                    title="${isPinned ? 'Unpin from dashboard' : 'Pin to dashboard'}">
+                                    ${isPinned ? '★ Pinned' : '☆ Pin'}
+                                </button>
                                 <span class="pill ${isErr ? 'err' : 'ok'}">${isErr ? '✗ err' : '✓ ok'}</span>
                                 ${dur ? `<span class="dur">${dur}</span>` : ''}
                             </div>
@@ -1283,6 +1356,79 @@
 
         function escHtmlAttr(s) { return String(s||'').replace(/'/g, "\\'"); }
         function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        // ---- Pinned jobs (localStorage) ----
+        const PINNED_KEY = 'cronDashboard:pinnedJobs:v1';
+        const _pinnedJobs = new Set();
+        try {
+          const stored = JSON.parse(localStorage.getItem(PINNED_KEY) || '[]');
+          if (Array.isArray(stored)) stored.forEach(id => _pinnedJobs.add(id));
+        } catch {}
+
+        function savePinned() {
+          try { localStorage.setItem(PINNED_KEY, JSON.stringify([..._pinnedJobs])); } catch {}
+        }
+
+        function togglePin(jobId, btn) {
+          if (_pinnedJobs.has(jobId)) {
+            _pinnedJobs.delete(jobId);
+          } else {
+            _pinnedJobs.add(jobId);
+          }
+          savePinned();
+          renderReports();
+        }
+
+        function renderPinned(jobs) {
+          const el = document.getElementById('pinnedSection');
+          if (!el) return;
+          const pinnedJobs = jobs.filter(j => _pinnedJobs.has(j.id));
+          if (pinnedJobs.length === 0) {
+            el.innerHTML = `
+              <div class="pinned-header">
+                <span class="pinned-title">★ Pinned Reports</span>
+              </div>
+              <div class="pinned-empty">Click ☆ Pin on any report below to pin it here</div>
+            `;
+            return;
+          }
+          el.innerHTML = `
+            <div class="pinned-header">
+              <span class="pinned-title">★ Pinned Reports · ${pinnedJobs.length}</span>
+            </div>
+            <div class="pinned-grid">
+              ${pinnedJobs.map(j => renderPinnedCard(j)).join('')}
+            </div>
+          `;
+        }
+
+        function renderPinnedCard(j) {
+          const lastRun = (j.runs || [])[0];
+          const ago = lastRun ? fmtTimeAgo(lastRun.ts) : 'never';
+          const isErr = lastRun && lastRun.status === 'error';
+          const snippet = lastRun ? (lastRun.fullText || lastRun.summary || '').slice(0, 200).replace(/\n/g, ' ') : 'No runs yet';
+          const schedule = j.schedule?.expr || '';
+          const tz = j.schedule?.tz ? ` (${j.schedule.tz.split('/').pop()})` : '';
+          return `
+            <div class="pinned-card" onclick="openReportModal('${escHtmlAttr(j.id)}', 0)">
+              <div class="pinned-card-head">
+                <div class="pinned-card-icon">${pickIcon(j.name)}</div>
+                <div class="pinned-card-info">
+                  <div class="pinned-card-name">${escHtml(j.name)}</div>
+                  <div class="pinned-card-schedule">${escHtml(schedule)}${tz}</div>
+                </div>
+              </div>
+              <div class="pinned-card-snippet">${escHtml(snippet)}</div>
+              <div class="pinned-card-foot">
+                <span class="pinned-card-time">${ago}${lastRun && isErr ? ' · <span style="color:#ff4444">err</span>' : ''}</span>
+                <button class="pinned-card-unpin" 
+                  onclick="event.stopPropagation(); togglePin('${escHtmlAttr(j.id)}', this)">
+                  Unpin
+                </button>
+              </div>
+            </div>
+          `;
+        }
 
 
         async function loadCalendar() {
