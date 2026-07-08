@@ -3,6 +3,7 @@ import { parseDate, today as localToday } from '../dateUtils.js'
 import EditEventModal from './EditEventModal.jsx'
 import GoingModal from './GoingModal.jsx'
 import MaybeModal from './MaybeModal.jsx'
+import Chat from './Chat.jsx'
 
 function sourceUrlForEvent(event) {
   // Stored URL if present (future), otherwise none
@@ -23,6 +24,7 @@ export default function ShowDetailModal({ event, onClose, onUpdate, onDelete }) 
   const [editing, setEditing] = useState(false)
   const [showGoing, setShowGoing] = useState(false)
   const [showMaybe, setShowMaybe] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
 
   if (!event) return null
   const interest = event.interest || 'none'
@@ -128,6 +130,23 @@ export default function ShowDetailModal({ event, onClose, onUpdate, onDelete }) 
               </div>
             </>
           )}
+
+          <div className="detail-divider" />
+          <div className="detail-section">
+            <button
+              className="chat-section-toggle"
+              onClick={() => setChatOpen(v => !v)}
+              aria-expanded={chatOpen}
+            >
+              <span className="detail-label">CHAT</span>
+              <span className="chat-section-caret">{chatOpen ? '−' : '+'}</span>
+            </button>
+            {chatOpen && (
+              <div className="chat-section-body">
+                <Chat eventId={event.id} />
+              </div>
+            )}
+          </div>
 
           <div className="detail-divider" />
           <div className="detail-actions">

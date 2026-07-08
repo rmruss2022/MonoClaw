@@ -14,8 +14,13 @@ const { getAllEvents, getEventsByWeek, getAllWeeks, getEventsGroupedByWeek, upda
   saveScan, updateScanAddedCount, getScanHistory, getScanById, getLatestScan, deleteScan,
   savePushSubscription, deletePushSubscription, getPushSubscriptionsByUser, getGoingShowsForDate,
   getSchedulerRuns, getSchedulerLatestByJob, getSchedulerJobCounts,
-  getPushSubscriptionCount, getUserCount } = require('./lib/db');
+  getPushSubscriptionCount, getUserCount,
+  ensureChatThread, getChatThreadByEvent, joinChatThread, leaveChatThread,
+  getChatMembers, isChatMember, postChatMessage, getChatMessages, pinChatMessage,
+  markChatRead, getChatMessageCount, getChatAttendeeCount, getUnreadChatCount,
+  getChatThreadsForUser } = require('./lib/db');
 const { sendPush, VAPID_PUBLIC } = require('./lib/push');
+const { notifyChatSubscribers } = require('./lib/chat-push');
 const scheduler = require('./lib/scheduler');
 const { getRecommendations, dismissRecommendation, getExploreEvents } = require('./lib/recommendations');
 
@@ -39,6 +44,34 @@ function requireAuth(req, res) {
     return null;
   }
   return user;
+}
+
+// Optional-auth identity: returns { userId, authorName, isAnon } — never fails.
+function optionalIdentity(req) {
+  const token = getAuthToken(req);
+  const user = token ? getSession(token) : null;
+  if (user) return { userId: user.id, authorName: user.display_name || user.username || 'You', isAnon: false };
+  return { userId: null, authorName: 'You', isAnon: true };
+}
+
+// Simple in-memory rate limiter (per-identity, 60s window).
+const rateLimits = new Map();
+function rateLimitKey(req, identity) {
+  if (identity && identity.userId != null) return `u:${identity.userId}`;
+  const fwd = req.headers['x-forwarded-for'];
+  const ip = (fwd ? fwd.split(',')[0].trim() : '') || req.socket?.remoteAddress || 'anon';
+  return `ip:${ip}`;
+}
+function checkRateLimit(key, max = 30, windowMs = 60_000) {
+  const now = Date.now();
+  const arr = (rateLimits.get(key) || []).filter(t => now - t < windowMs);
+  if (arr.length >= max) {
+    rateLimits.set(key, arr);
+    return false;
+  }
+  arr.push(now);
+  rateLimits.set(key, arr);
+  return true;
 }
 
 // Venue detection from URL/domain
@@ -1131,6 +1164,209 @@ const server = http.createServer((req, res) => {
         nodeVersion: process.version,
         startedAt: new Date(START_TIME).toISOString()
       }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // ===================== CHAT =====================
+
+  // Match /api/events/:id/chat and /api/events/:id/chat/(members|join|leave|pin|read)
+  const chatMatch = cleanUrl.match(/^\/api\/events\/([^/]+)\/chat(?:\/([a-z]+))?$/);
+  if (chatMatch) {
+    const eventId = decodeURIComponent(chatMatch[1]);
+    const action = chatMatch[2] || '';
+    const identity = optionalIdentity(req);
+    const event = getEventById(eventId);
+    if (!event) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Event not found' }));
+      return;
+    }
+    const thread = ensureChatThread(eventId);
+
+    // GET /api/events/:id/chat
+    if (action === '' && req.method === 'GET') {
+      try {
+        const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        const limit = parseInt(u.searchParams.get('limit')) || 50;
+        const beforeId = u.searchParams.get('beforeId') ? parseInt(u.searchParams.get('beforeId')) : null;
+        // Auto-join if user has going interest, or in single-user mode.
+        const goingAutoJoin = (event.interest === 'going') || identity.isAnon;
+        if (goingAutoJoin && !isChatMember(thread.id, identity.userId)) {
+          joinChatThread(thread.id, identity.userId, identity.authorName);
+        }
+        const messages = getChatMessages(thread.id, limit, beforeId);
+        const members = getChatMembers(thread.id);
+        // Compute per-thread unread from this user's last_read_at
+        let unread = 0;
+        const meMember = members.find(m => (identity.userId == null && m.user_id == null) || (m.user_id === identity.userId));
+        if (meMember) {
+          const cutoff = meMember.last_read_at || '1970-01-01';
+          unread = messages.filter(m => m.created_at > cutoff && (identity.userId == null || m.user_id !== identity.userId)).length;
+        }
+        if (isChatMember(thread.id, identity.userId)) markChatRead(thread.id, identity.userId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          thread,
+          members,
+          messages,
+          unread,
+          currentUserId: identity.userId,
+          currentAuthorName: identity.authorName,
+          isMember: isChatMember(thread.id, identity.userId),
+          eventName: event.name
+        }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
+    // POST /api/events/:id/chat  (send message)
+    if (action === '' && req.method === 'POST') {
+      const key = rateLimitKey(req, identity);
+      if (!checkRateLimit(key, 30, 60_000)) {
+        res.writeHead(429, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Rate limit exceeded (30/min)' }));
+        return;
+      }
+      let body = '';
+      req.on('data', d => body += d);
+      req.on('end', async () => {
+        try {
+          const parsed = body ? JSON.parse(body) : {};
+          const text = (parsed.body || '').trim();
+          if (!text) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Message body required' }));
+            return;
+          }
+          if (text.length > 500) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Message body too long (max 500)' }));
+            return;
+          }
+          if (!isChatMember(thread.id, identity.userId)) {
+            joinChatThread(thread.id, identity.userId, identity.authorName);
+          }
+          const msg = postChatMessage(thread.id, identity.userId, identity.authorName, text);
+          markChatRead(thread.id, identity.userId);
+          if (!identity.isAnon) {
+            notifyChatSubscribers(thread.id, eventId, event.name, identity.authorName, text, identity.userId)
+              .catch(err => console.error('[chat-push]', err.message));
+          }
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, message: msg, thread }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/events/:id/chat/members
+    if (action === 'members' && req.method === 'GET') {
+      try {
+        const members = getChatMembers(thread.id);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, members, count: members.length }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
+    // POST /api/events/:id/chat/join
+    if (action === 'join' && req.method === 'POST') {
+      try {
+        joinChatThread(thread.id, identity.userId, identity.authorName);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, members: getChatMembers(thread.id) }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
+    // POST /api/events/:id/chat/leave
+    if (action === 'leave' && req.method === 'POST') {
+      try {
+        leaveChatThread(thread.id, identity.userId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, members: getChatMembers(thread.id) }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+
+    // POST /api/events/:id/chat/pin   { messageId, pinned }
+    if (action === 'pin' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => body += d);
+      req.on('end', () => {
+        try {
+          const { messageId, pinned } = JSON.parse(body);
+          if (!messageId) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'messageId required' }));
+            return;
+          }
+          const msg = pinChatMessage(messageId, pinned);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, message: msg }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
+    // POST /api/events/:id/chat/read
+    if (action === 'read' && req.method === 'POST') {
+      try {
+        if (isChatMember(thread.id, identity.userId)) markChatRead(thread.id, identity.userId);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+      return;
+    }
+  }
+
+  // GET /api/chat/unread — total unread across all threads for current identity
+  if (cleanUrl === '/api/chat/unread' && req.method === 'GET') {
+    try {
+      const identity = optionalIdentity(req);
+      const unread = getUnreadChatCount(identity.userId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, unread }));
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+
+  // GET /api/chat/threads — list of threads user is a member of
+  if (cleanUrl === '/api/chat/threads' && req.method === 'GET') {
+    try {
+      const identity = optionalIdentity(req);
+      const threads = getChatThreadsForUser(identity.userId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, threads }));
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: e.message }));

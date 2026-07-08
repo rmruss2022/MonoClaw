@@ -192,6 +192,7 @@ function upsertEvent(event) {
     JSON.stringify(event.vibe_tags || []),
     event.cost || 0
   );
+  try { ensureChatThread(event.id); } catch (e) { console.error('[db] ensureChatThread failed:', e.message); }
 }
 
 // Update event fields (PATCH)
@@ -490,6 +491,184 @@ function getSocialFeed() {
   };
 }
 
+// ===================== CHAT =====================
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chat_threads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    archived INTEGER DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_threads_event ON chat_threads(event_id);
+
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id INTEGER NOT NULL,
+    user_id INTEGER,
+    author_name TEXT NOT NULL,
+    body TEXT NOT NULL,
+    pinned INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (thread_id) REFERENCES chat_threads(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_msg_thread ON chat_messages(thread_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS chat_members (
+    thread_id INTEGER NOT NULL,
+    user_id INTEGER,
+    display_name TEXT NOT NULL,
+    joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_read_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (thread_id, user_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_members_user ON chat_members(user_id);
+`);
+
+function ensureChatThread(eventId) {
+  let row = db.prepare('SELECT * FROM chat_threads WHERE event_id = ?').get(eventId);
+  if (!row) {
+    db.prepare('INSERT INTO chat_threads (event_id) VALUES (?)').run(eventId);
+    row = db.prepare('SELECT * FROM chat_threads WHERE event_id = ?').get(eventId);
+  }
+  return row;
+}
+
+function getChatThreadByEvent(eventId) {
+  return db.prepare('SELECT * FROM chat_threads WHERE event_id = ?').get(eventId) || null;
+}
+
+function isChatMember(threadId, userId) {
+  if (userId === null || userId === undefined) {
+    return !!db.prepare('SELECT 1 FROM chat_members WHERE thread_id = ? AND user_id IS NULL').get(threadId);
+  }
+  return !!db.prepare('SELECT 1 FROM chat_members WHERE thread_id = ? AND user_id = ?').get(threadId, userId);
+}
+
+function joinChatThread(threadId, userId, displayName) {
+  if (isChatMember(threadId, userId)) return getChatMember(threadId, userId);
+  db.prepare('INSERT INTO chat_members (thread_id, user_id, display_name) VALUES (?, ?, ?)')
+    .run(threadId, userId ?? null, displayName || 'You');
+  return getChatMember(threadId, userId);
+}
+
+function getChatMember(threadId, userId) {
+  if (userId === null || userId === undefined) {
+    return db.prepare('SELECT * FROM chat_members WHERE thread_id = ? AND user_id IS NULL').get(threadId);
+  }
+  return db.prepare('SELECT * FROM chat_members WHERE thread_id = ? AND user_id = ?').get(threadId, userId);
+}
+
+function leaveChatThread(threadId, userId) {
+  if (userId === null || userId === undefined) {
+    db.prepare('DELETE FROM chat_members WHERE thread_id = ? AND user_id IS NULL').run(threadId);
+  } else {
+    db.prepare('DELETE FROM chat_members WHERE thread_id = ? AND user_id = ?').run(threadId, userId);
+  }
+}
+
+function getChatMembers(threadId) {
+  return db.prepare('SELECT thread_id, user_id, display_name, joined_at, last_read_at FROM chat_members WHERE thread_id = ? ORDER BY joined_at ASC').all(threadId);
+}
+
+function postChatMessage(threadId, userId, authorName, body) {
+  const trimmed = (body || '').toString();
+  if (trimmed.length < 1) throw new Error('Message body is empty');
+  if (trimmed.length > 500) throw new Error('Message body too long (max 500)');
+  const result = db.prepare(`
+    INSERT INTO chat_messages (thread_id, user_id, author_name, body)
+    VALUES (?, ?, ?, ?)
+  `).run(threadId, userId ?? null, authorName || 'You', trimmed);
+  return db.prepare('SELECT * FROM chat_messages WHERE id = ?').get(result.lastInsertRowid);
+}
+
+function getChatMessages(threadId, limit = 50, beforeId = null) {
+  const lim = Math.min(Math.max(parseInt(limit) || 50, 1), 200);
+  let rows;
+  if (beforeId) {
+    rows = db.prepare(`
+      SELECT * FROM chat_messages
+      WHERE thread_id = ? AND id < ?
+      ORDER BY id DESC LIMIT ?
+    `).all(threadId, beforeId, lim);
+  } else {
+    rows = db.prepare(`
+      SELECT * FROM chat_messages
+      WHERE thread_id = ?
+      ORDER BY id DESC LIMIT ?
+    `).all(threadId, lim);
+  }
+  return rows.reverse();
+}
+
+function pinChatMessage(messageId, pinned) {
+  db.prepare('UPDATE chat_messages SET pinned = ? WHERE id = ?').run(pinned ? 1 : 0, messageId);
+  return db.prepare('SELECT * FROM chat_messages WHERE id = ?').get(messageId);
+}
+
+function markChatRead(threadId, userId) {
+  if (userId === null || userId === undefined) {
+    db.prepare(`UPDATE chat_members SET last_read_at = CURRENT_TIMESTAMP WHERE thread_id = ? AND user_id IS NULL`).run(threadId);
+  } else {
+    db.prepare(`UPDATE chat_members SET last_read_at = CURRENT_TIMESTAMP WHERE thread_id = ? AND user_id = ?`).run(threadId, userId);
+  }
+}
+
+function getChatMessageCount(threadId) {
+  return db.prepare('SELECT COUNT(*) as c FROM chat_messages WHERE thread_id = ?').get(threadId).c;
+}
+
+function getChatAttendeeCount(eventId) {
+  const thread = getChatThreadByEvent(eventId);
+  if (!thread) return 0;
+  return db.prepare('SELECT COUNT(*) as c FROM chat_members WHERE thread_id = ?').get(thread.id).c;
+}
+
+function getUnreadChatCount(userId) {
+  const rows = userId === null || userId === undefined
+    ? db.prepare(`SELECT thread_id, last_read_at FROM chat_members WHERE user_id IS NULL`).all()
+    : db.prepare(`SELECT thread_id, last_read_at FROM chat_members WHERE user_id = ?`).all(userId);
+  let total = 0;
+  for (const m of rows) {
+    const q = userId === null || userId === undefined
+      ? db.prepare(`SELECT COUNT(*) as c FROM chat_messages WHERE thread_id = ? AND created_at > ? AND (user_id IS NOT NULL OR user_id IS NULL)`).get(m.thread_id, m.last_read_at || '1970-01-01')
+      : db.prepare(`SELECT COUNT(*) as c FROM chat_messages WHERE thread_id = ? AND created_at > ? AND (user_id IS NULL OR user_id != ?)`).get(m.thread_id, m.last_read_at || '1970-01-01', userId);
+    total += q.c || 0;
+  }
+  return total;
+}
+
+function getChatThreadsForUser(userId) {
+  const members = userId === null || userId === undefined
+    ? db.prepare(`SELECT * FROM chat_members WHERE user_id IS NULL`).all()
+    : db.prepare(`SELECT * FROM chat_members WHERE user_id = ?`).all(userId);
+  const results = [];
+  for (const m of members) {
+    const thread = db.prepare('SELECT * FROM chat_threads WHERE id = ?').get(m.thread_id);
+    if (!thread) continue;
+    const event = db.prepare('SELECT id, name, venue, date FROM events WHERE id = ?').get(thread.event_id);
+    const lastMsg = db.prepare('SELECT * FROM chat_messages WHERE thread_id = ? ORDER BY id DESC LIMIT 1').get(m.thread_id);
+    const unread = userId === null || userId === undefined
+      ? db.prepare(`SELECT COUNT(*) as c FROM chat_messages WHERE thread_id = ? AND created_at > ?`).get(m.thread_id, m.last_read_at || '1970-01-01').c
+      : db.prepare(`SELECT COUNT(*) as c FROM chat_messages WHERE thread_id = ? AND created_at > ? AND (user_id IS NULL OR user_id != ?)`).get(m.thread_id, m.last_read_at || '1970-01-01', userId).c;
+    const memberCount = db.prepare('SELECT COUNT(*) as c FROM chat_members WHERE thread_id = ?').get(m.thread_id).c;
+    results.push({ thread, event, lastMessage: lastMsg || null, unread, memberCount });
+  }
+  results.sort((a, b) => {
+    const at = a.lastMessage?.created_at || a.thread.created_at;
+    const bt = b.lastMessage?.created_at || b.thread.created_at;
+    return bt.localeCompare(at);
+  });
+  return results;
+}
+
+function getChatMembersWithSubs(threadId) {
+  return db.prepare(`
+    SELECT cm.thread_id, cm.user_id, cm.display_name
+    FROM chat_members cm
+    WHERE cm.thread_id = ? AND cm.user_id IS NOT NULL
+  `).all(threadId);
+}
+
 // ===================== PUSH SUBSCRIPTIONS =====================
 db.exec(`
   CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -617,7 +796,23 @@ module.exports = {
   recordSchedulerRun,
   getSchedulerRuns,
   getSchedulerLatestByJob,
-  getSchedulerJobCounts
+  getSchedulerJobCounts,
+  ensureChatThread,
+  getChatThreadByEvent,
+  joinChatThread,
+  leaveChatThread,
+  getChatMembers,
+  getChatMember,
+  isChatMember,
+  postChatMessage,
+  getChatMessages,
+  pinChatMessage,
+  markChatRead,
+  getChatMessageCount,
+  getChatAttendeeCount,
+  getUnreadChatCount,
+  getChatThreadsForUser,
+  getChatMembersWithSubs
 };
 
 // Ensure budget_config row exists

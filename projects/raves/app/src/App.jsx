@@ -11,7 +11,7 @@ import Recommended from './components/Recommended.jsx'
 import Explore from './components/Explore.jsx'
 import ShowDetailModal from './components/ShowDetailModal.jsx'
 import Login from './components/Login.jsx'
-import { API_BASE } from './auth.js'
+import { API_BASE, authFetch } from './auth.js'
 import { registerPushNotifications } from './pushNotifications.js'
 
 const TABS = [
@@ -32,6 +32,7 @@ function AuthenticatedApp({ user, onLogout }) {
   const [search, setSearch] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [detailEvent, setDetailEvent] = useState(null)
+  const [unreadChat, setUnreadChat] = useState(0)
 
   function openDetail(event) {
     if (event) setDetailEvent(event)
@@ -41,6 +42,21 @@ function AuthenticatedApp({ user, onLogout }) {
   }
 
   useEffect(() => { loadEvents() }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    async function poll() {
+      try {
+        const r = await authFetch('/api/chat/unread')
+        if (!r || !r.ok) return
+        const d = await r.json()
+        if (!cancelled) setUnreadChat(d.unread || 0)
+      } catch {}
+    }
+    poll()
+    const id = setInterval(poll, 30000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [])
 
   async function loadEvents() {
     setLoading(true)
@@ -139,6 +155,11 @@ function AuthenticatedApp({ user, onLogout }) {
             </button>
           )}
           {pushState === 'granted' && <span className="push-granted" title="Notifications on">🔔✓</span>}
+          {unreadChat > 0 && (
+            <span className="chat-unread-global" title={`${unreadChat} unread chat message${unreadChat === 1 ? '' : 's'}`}>
+              {unreadChat > 99 ? '99+' : unreadChat}
+            </span>
+          )}
           <div className="user-menu" onClick={onLogout} title="Log out">
             <span className="user-avatar">{user.displayName?.[0]?.toUpperCase() || user.username?.[0]?.toUpperCase()}</span>
             <span className="user-name">{user.displayName || user.username}</span>

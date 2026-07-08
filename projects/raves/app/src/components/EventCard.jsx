@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { parseDate, today as localToday } from '../dateUtils.js'
+import { authFetch } from '../auth.js'
 import EditEventModal from './EditEventModal.jsx'
 import GoingModal from './GoingModal.jsx'
 import MaybeModal from './MaybeModal.jsx'
@@ -10,7 +11,22 @@ export default function EventCard({ event, onUpdate, onDelete, onShowDetail }) {
   const [editing, setEditing] = useState(false)
   const [showGoingModal, setShowGoingModal] = useState(false)
   const [showMaybeModal, setShowMaybeModal] = useState(false)
+  const [chatCount, setChatCount] = useState(0)
   const interest = event.interest || 'none'
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadCount() {
+      try {
+        const r = await authFetch(`/api/events/${event.id}/chat/members`)
+        if (!r || !r.ok) return
+        const d = await r.json()
+        if (!cancelled) setChatCount(d.count || 0)
+      } catch {}
+    }
+    loadCount()
+    return () => { cancelled = true }
+  }, [event.id])
 
   function handleGoingClick() {
     if (interest === 'going') {
@@ -69,6 +85,9 @@ export default function EventCard({ event, onUpdate, onDelete, onShowDetail }) {
             </div>
           </div>
           {event.topPick && <div className="ec-top-pick">TOP PICK</div>}
+          {chatCount > 0 && (
+            <div className="chat-badge" title={`${chatCount} in chat`}>{chatCount}</div>
+          )}
           <button
             className="edit-btn"
             onClick={e => { e.stopPropagation(); setEditing(true) }}
