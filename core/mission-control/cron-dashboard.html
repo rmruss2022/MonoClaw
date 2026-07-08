@@ -1113,7 +1113,7 @@
             // Store data in global map — avoids all inline JS escaping issues
             if (!window._jobReportData) window._jobReportData = {};
             // Store runs with summaries for history navigation
-            const runsWithSummary = (job.runs || []).filter(r => r.summary && r.summary.trim());
+            const runsWithSummary = job.runs || [];  // include all runs (even with empty summary)
             // Store text artifact URL so modal can fetch full untruncated content
             const textArtifactUrl = arts.text ? '/api/cron-artifact/' + encodeURIComponent(arts.text.name) : null;
             window._jobReportData[jobIdSafe] = { name: job.name, summary: rawSummary, audioSrc, textArtifactUrl, runs: runsWithSummary };
@@ -1651,7 +1651,7 @@
             const runs = data.runs || [];
             const runData = runs.length > 0 ? runs[runs.length - 1 - runIndex] : null;
             let summary = runData?.summary || data.summary || '';
-            const audioSrc = data.audioSrc;
+            if (!summary) summary = '_(No summary text — original run may have timed out. Full text will be fetched from artifact if available.)_';
             const jobName = data.name;
             const jobIdSafeVal = jobIdSafe;
             const totalRuns = runs.length;
