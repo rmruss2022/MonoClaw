@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 72" role="img" aria-label="openhome">
+  <g transform="translate(4,4)">
+    <path d="M32 6 L56.5 25.5 L56.5 55 L7.5 55 L7.5 25.5 Z"
+          fill="none" stroke="#3ddc97" stroke-width="5"
+          stroke-linejoin="round" stroke-linecap="round"/>
+    <g fill="#3ddc97">
+      <circle cx="32" cy="33" r="6.2"/>
+      <path d="M28.8 37 L26.2 49.5 L37.8 49.5 L35.2 37 Z"/>
+    </g>
+  </g>
+  <text x="82" y="47" font-family="DejaVu Sans, Segoe UI, Arial, sans-serif"
+        font-size="34" letter-spacing="-1">
+    <tspan fill="#e7ebf3">open</tspan><tspan fill="#3ddc97" font-weight="bold">home</tspan>
+  </text>
+</svg>

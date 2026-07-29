@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.*
+!.env.example
+coverage/
+.DS_Store
+
+# open-home runtime data — never commit user home data
+data/
+recordings/
+*.sqlite
+*.sqlite-journal
+certs/
