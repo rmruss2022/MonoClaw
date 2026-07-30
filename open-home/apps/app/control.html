@@ -9,7 +9,8 @@
 <style>
   :root{--bg:#0e1014;--panel:#171a21;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:radial-gradient(1200px 900px at 50% -5%,#141821,var(--bg));color:var(--text);
+  html{height:100%;background:var(--bg)}
+  body{margin:0;height:100%;background:radial-gradient(1200px 900px at 50% -5%,#141821,var(--bg));color:var(--text);
     font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;overscroll-behavior:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
   img{-webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-select:none}
@@ -30,7 +31,7 @@
   .greeting h1{font-size:24px;font-weight:700;margin:0;letter-spacing:-.02em}
   .greeting p{color:var(--muted);font-size:14px;margin:4px 0 0}
   .radial{position:relative;width:min(88vw,430px);height:min(88vw,430px);touch-action:none}
-  svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  #wedges{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
   /* wedges + icons hidden until press */
   .ring{opacity:0;transform:scale(.86);transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.2,1)}
   .radial.armed .ring{opacity:1;transform:scale(1)}
@@ -361,23 +362,22 @@ async function startVoice(){
   if(listening)return; listening=true; handled=false;
   core.classList.add("listening"); document.body.classList.add("talking");
   chime([660,880]);                              // rising "wake" chime
+  ttsWarmup();                                   // unlock iOS speech within this gesture
   if(navigator.vibrate)navigator.vibrate([10,40,10]);
   voicecap.textContent=""; voicechips.innerHTML="";   // leave the top greeting untouched
-  // Preferred: real mic → Gemini. Needs a secure origin (the https link).
-  if(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder){
-    try{ await startRecording(); return; }catch(_){ /* mic denied/unavailable → fall back */ }
+  const hasMic = navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder;
+  // Explain precisely why the mic can't prompt, instead of failing silently.
+  if(!window.isSecureContext){ voiceSamples("Voice needs the 🔒 https link — or tap:"); return; }
+  if(!hasMic){ voiceSamples("Open in Safari (not the in-app browser) for voice — or tap:"); return; }
+  try{
+    await startRecording();
+  }catch(err){
+    const n = (err&&err.name)||"blocked";
+    const msg = n==="NotAllowedError" ? "Mic blocked — Safari ‘AA’ → Website Settings → Microphone → Allow. Or tap:"
+              : n==="NotFoundError"  ? "No microphone found — or tap:"
+              : "Mic "+n+" — open in Safari & allow. Or tap:";
+    voiceSamples(msg);
   }
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(SR){
-    try{
-      recog=new SR(); recog.lang="en-US"; recog.interimResults=true; recog.maxAlternatives=1;
-      recog.onresult=(e)=>{ const r=e.results[0]; voicecap.textContent='"'+r[0].transcript+'"'; if(r.isFinal) heard(r[0].transcript); };
-      recog.onerror=()=>{ if(listening&&!handled) voiceSamples(secureHint()); };
-      recog.onend=()=>{ if(listening&&!handled&&!voicechips.children.length) voiceSamples(secureHint()); };
-      recog.start(); return;
-    }catch(_){}
-  }
-  voiceSamples(secureHint());
 }
 // Real voice: record mic audio → hub → Gemini transcribes + acts, then speaks back.
 async function startRecording(){
@@ -405,7 +405,9 @@ async function startRecording(){
 }
 function stopStream(){ try{ if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; } }catch(_){} if(recStopT){ clearTimeout(recStopT); recStopT=null; } }
 function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res(String(r.result).split(",")[1]||""); r.onerror=rej; r.readAsDataURL(blob); }); }
-function speak(t){ try{ if(t && window.speechSynthesis){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); u.rate=1.02; speechSynthesis.speak(u); } }catch(_){} }
+// iOS only lets speech start from a user gesture — "unlock" it on the double-tap.
+function ttsWarmup(){ try{ if(window.speechSynthesis){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); } }catch(_){} }
+function speak(t){ try{ if(t && window.speechSynthesis){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); u.rate=1.02; u.pitch=1; u.lang="en-US"; speechSynthesis.speak(u); speechSynthesis.resume(); } }catch(_){} }
 function voiceSamples(msg){
   voicecap.textContent=msg; voicechips.innerHTML="";
   SAMPLES.forEach(s=>{ const b=document.createElement("button"); b.textContent=s;

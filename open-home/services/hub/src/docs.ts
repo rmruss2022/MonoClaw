@@ -17,6 +17,7 @@ export const DOCS: DocEntry[] = [
   { slug: "readme", title: "Overview", file: "README.md", blurb: "What open-home is and why." },
   { slug: "architecture", title: "Architecture", file: "ARCHITECTURE.md", blurb: "How the pieces fit together." },
   { slug: "hardware", title: "Hardware", file: "hardware/reference-spec.md", blurb: "The open-home box, three tiers." },
+  { slug: "build", title: "Build Guide", file: "hardware/openhome-mini-build-guide.md", blurb: "Build the mini — a local \"Alexa\" on a Pi 4, with parts links." },
   { slug: "contributing", title: "Contributing", file: "CONTRIBUTING.md", blurb: "Ground rules and dev setup." },
 ];
 

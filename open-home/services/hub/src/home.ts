@@ -78,6 +78,7 @@ const SCENES: Scene[] = [
   { id: "dinner", name: "Dinner", icon: "🍽️", description: "Warm kitchen + living lights, soft music." },
   { id: "party", name: "Party", icon: "🎉", description: "Every light full, music up, shades open." },
   { id: "reading", name: "Reading", icon: "📖", description: "Soft office + living light, quiet everywhere else." },
+  { id: "evening", name: "Evening", icon: "🌆", description: "Warm dim living/kitchen lights, shades down, cozy." },
 ];
 
 let currentScene: string | null = null;
@@ -158,6 +159,13 @@ export function activateScene(id: string): Scene | { id: string } {
       set("light_living", { on: true, brightness: 40 }); set("light_office", { on: true, brightness: 70 });
       byType("speaker").forEach((s) => (s.state.playing = false));
       set("plug_tv", { on: false });
+      break;
+    case "evening":
+      set("light_living", { on: true, brightness: 45 }); set("light_kitchen", { on: true, brightness: 55 });
+      set("light_hallway", { on: true, brightness: 35 }); set("light_porch", { on: true });
+      byType("shade").forEach((s) => (s.state.position = 25));
+      set("thermostat_main", { target: 70, mode: "auto" });
+      set("speaker_living", { playing: true, track: "Evening Chill", volume: 25 });
       break;
   }
   currentScene = id;

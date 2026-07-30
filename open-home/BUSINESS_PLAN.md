@@ -244,6 +244,118 @@ Two viable paths, not mutually exclusive:
 
 ---
 
+## 18. Device sourcing & the v1 starter line (white-label strategy)
+
+**The rule.** White-labeling is right for *commodity, low-risk* accessories and wrong for the
+whole catalog. Rebranded hardware is a commodity trap — no moat, thin margins, and real liability
+on cameras and locks. So: **white-label the cheap attach items, certify/partner the risky ones,
+and never sell a device that can't run fully local.**
+
+| Category | Day-1 play | Why |
+|---|---|---|
+| Plugs, bulbs, sensors, buttons | ✅ **White-label** | Commodity, low-risk, high-attach, easy to guarantee local |
+| Cameras | ⚠️ **Certify + integrate** (ONVIF/RTSP, local NVR) | Security/privacy liability; a hacked "openhome cam" ends the brand |
+| Locks | ⚠️ **Partner/resell** (Matter/Z-Wave) | Physical safety, BHMA/ANSI grading, legal liability |
+
+**⚠️ Avoid Tuya as the core.** Most white-label smart-home startups are reskinned Tuya, which is
+**cloud-dependent by default** — the opposite of our promise. Prefer **Zigbee, Matter-over-Thread,
+Z-Wave, and ESPHome/ESP32** (flashable, provably local). ESPHome is the secret weapon: we own the
+firmware and can truthfully say "you own it."
+
+**Hidden dependency — the radio.** None of the low-power accessories work without a **Zigbee/Thread
+coordinator inside the box.** The starter box must ship one (Silicon Labs EFR32-based). This is a
+real BOM line people forget.
+
+### v1 starter line — 5 accessories + the radio
+
+Reference devices below are the ODM/white-label or certify targets — the ones to buy first, test,
+and rebrand or badge.
+
+| SKU | Protocol | Reference / ODM to start | ~Unit cost | Target retail |
+|---|---|---|---|---|
+| openhome Plug (energy) | Wi-Fi ESPHome *or* Zigbee | Athom Smart Plug V3 (ESPHome) · Third Reality Zigbee · Sonoff S60 | $8–12 | $14 |
+| openhome Bulb (RGBWW) | Wi-Fi ESPHome *or* Zigbee | Athom RGBWW bulb (ESPHome) · Sengled/IKEA Zigbee | $6–9 | $14–19 |
+| openhome Motion sensor | Zigbee / Thread | Aqara Motion P1 · Sonoff SNZB-03 · Third Reality | $5–8 | $15 |
+| openhome Contact sensor | Zigbee / Thread | Aqara Door/Window P2 (Matter) · Sonoff SNZB-04 | $4–7 | $13 |
+| openhome Button | Zigbee | Aqara Mini Switch · Sonoff SNZB-01 · Third Reality | $4–6 | $15 |
+| **In-box radio** (dependency) | Zigbee + Thread | HA Connect ZBT-2 · Sonoff ZBDongle-E (EFR32MG21) | $12–20 | (in box) |
+
+**Certify, don't build (day 1):**
+- **Cameras** — Reolink (ONVIF/RTSP, local recording); also Amcrest. Frigate for local AI detection.
+- **Locks** — Aqara U100/U200 (Matter-over-Thread) or Yale Assure 2 + Matter/Z-Wave module.
+
+### Where to buy — verified exact products (v1)
+
+Every link below was checked live. All run locally through the openhome hub.
+
+| Product | Role | Protocol | Link |
+|---|---|---|---|
+| Home Assistant Connect ZBT-2 | In-box radio | **Zigbee + Thread** | [home-assistant.io](https://www.home-assistant.io/connect/zbt-2/) · [Amazon](https://www.amazon.com/dp/B0G34ZTW51) |
+| Athom Smart Plug V3 | Plug (energy) | **Wi-Fi · ESPHome** (local) | [athom.tech](https://www.athom.tech/) |
+| Athom RGBWW Bulb | Bulb | **Wi-Fi · ESPHome** (local) | [athom.tech](https://www.athom.tech/) |
+| Aqara Motion Sensor P1 | Motion | **Zigbee 3.0** | [aqara.com](https://www.aqara.com/en/product/motion-sensor-p1/) |
+| Aqara Door & Window Sensor P2 | Contact | **Matter-over-Thread** | [aqara.com](https://www.aqara.com/en/product/door-and-window-sensor-p2/) |
+| Aqara Wireless Mini Switch | Button | **Zigbee 3.0** | [aqara.com](https://www.aqara.com/en/product/wireless-mini-switch/) |
+| Reolink RLC-810A | Camera (certify) | **PoE · ONVIF/RTSP** (local NVR) | [reolink.com](https://reolink.com/product/rlc-810a/) |
+| Aqara Smart Lock U100 | Lock (certify) | **Matter** (via Aqara hub) / Bluetooth | [aqara.com](https://www.aqara.com/en/product/smart-lock-u100/) |
+
+**Why the radio earns its keep:** the ZBT-2 speaks *both* Zigbee (P1, Mini Switch) and Thread
+(P2/Matter) — one ~$30 dongle covers both stacks.
+**Lock caveat:** the U100 bridges to Matter *through an Aqara hub*; for no-bridge local, use **Z-Wave**
+(Yale Assure Lock 2 + Z-Wave module) or the Thread-native **Aqara U200**.
+**Play:** buy 1–2 of each, verify **fully-local** operation through the openhome hub, then pick the ODM
+partner per SKU for the rebrand.
+
+### More bulb options (pick by protocol)
+
+| Bulb | Protocol | Why | Link |
+|---|---|---|---|
+| Athom RGBWW Bulb | **Wi-Fi · ESPHome** | flashable — we own the firmware | [athom.tech](https://www.athom.tech/) |
+| Nanoleaf Essentials | **Matter-over-Thread** | standards-based, premium finish | [nanoleaf.me](https://nanoleaf.me/) |
+| Innr E27 / GU10 | **Zigbee 3.0** | 36-SKU range, best value | [innr.com](https://innr.com/) |
+| Sengled | **Zigbee** | cheap (note: end-device, doesn't repeat mesh) | [sengled.com](https://us.sengled.com/) |
+| IKEA (ORMANÄS/TRÅDFRI) | **Zigbee** | cheapest | [ikea.com](https://www.ikea.com/) |
+| Philips Hue | **Zigbee** | premium; pairs to our coordinator without a Hue bridge | [philips-hue.com](https://www.philips-hue.com/) |
+
+### Going Z-Wave (locks & security layer)
+
+Z-Wave is the **lock/security** layer — secure, its own sub-GHz band (no Wi-Fi congestion), long range.
+⚠️ It needs its **own controller** — the ZBT-2 does *not* do Z-Wave; a Z-Wave box carries two radios.
+⚠️ **Z-Wave has no real bulb ecosystem** — do lighting with a Z-Wave in-wall dimmer + a normal bulb, or
+keep Zigbee/Matter bulbs above.
+
+| Role | Product | Protocol | Link |
+|---|---|---|---|
+| Z-Wave controller | Zooz **ZST39 800 LR Stick** | Z-Wave Long Range (800) | [getzooz.com](https://www.getzooz.com/products/) |
+| Lock | Yale Assure Lock 2 (Z-Wave) · Schlage BE469ZP | Z-Wave | [shopyalehome.com](https://shopyalehome.com/) |
+| Plug (energy) | Zooz **ZEN04 / ZEN15** | Z-Wave | [getzooz.com](https://www.getzooz.com/products/) |
+| Dimmer (lighting) | Zooz **ZEN72 / ZEN77** | Z-Wave | [getzooz.com](https://www.getzooz.com/products/) |
+| Motion / multi | Zooz **ZSE11 Q Sensor** | Z-Wave | [getzooz.com](https://www.getzooz.com/products/) |
+| Contact | Zooz **ZSE41 Open\|Close XS** | Z-Wave | [getzooz.com](https://www.getzooz.com/products/) |
+
+### Benchmark — what Home Assistant / Nabu Casa actually ships (audit)
+
+Our closest philosophical competitor. Note what they *build* vs. what they lean on the ecosystem for:
+
+| Their product | What it is | Our equivalent |
+|---|---|---|
+| Home Assistant Green (~$99) | turnkey hub | openhome Box — Starter |
+| Home Assistant Yellow | hackable PoE hub (CM4/CM5) | openhome Box — Standard |
+| Connect ZBT-2 (~$30) | Zigbee + Thread USB radio | our in-box radio |
+| Voice Preview Edition (~$59) | voice satellite (Echo-like) | openhome mini / Pod |
+| HA OS · Assist · Music Assistant | local voice + automation | our hub + agent |
+
+**Takeaway:** they build the **hub + radio + voice box** and **do not** make sensors, bulbs, or locks —
+they lean on the open Zigbee/Z-Wave/Matter/ESPHome ecosystem and monetize hardware + an optional
+~$6.50/mo cloud. That is exactly the model we mirror. **Our edge:** the agent, a curated white-label
+accessory line, and no forced cloud.
+Links — [Green](https://www.home-assistant.io/green/) ·
+[Yellow](https://www.home-assistant.io/yellow/) ·
+[Connect ZBT-2](https://www.home-assistant.io/connect/zbt-2/) ·
+[Voice PE](https://www.home-assistant.io/voice-pe/)
+
+---
+
 ## Appendix — sources
 
 - Smart-home market size/CAGR (2026): MarketsandMarkets, Grand View Research, Fortune Business

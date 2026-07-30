@@ -79,10 +79,11 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       try {
         const r = await ai.aiText(text);
         const done = ai.execute(r.actions);
+        console.log(`[agent] in=${JSON.stringify(text)} model=${JSON.stringify(r.actions)} executed=${JSON.stringify(done)} reply=${JSON.stringify(r.reply)}`);
         done.forEach((a) => bus.publish({ type: `agent.${a.label}`, ts: Date.now(), payload: { via: "voice", text } }));
         json(res, { ok: true, heard: text, reply: r.reply, understood: done.length > 0, actions: done, source: "ai", summary: home.summary() });
         return;
-      } catch { /* fall through to keyword NLU */ }
+      } catch (e) { console.log("[agent] AI error:", (e as Error)?.message); }
     }
     const r = home.respond(text);
     bus.publish({ type: r.action ? `agent.${r.action}` : "agent.unrecognized", ts: Date.now(), payload: { via: "voice", text } });
@@ -99,6 +100,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     try {
       const r = await ai.aiAudio(audio, mime);
       const done = ai.execute(r.actions);
+      console.log(`[agent/audio] transcript=${JSON.stringify(r.transcript)} model=${JSON.stringify(r.actions)} executed=${JSON.stringify(done)}`);
       done.forEach((a) => bus.publish({ type: `agent.${a.label}`, ts: Date.now(), payload: { via: "audio" } }));
       json(res, { ok: true, transcript: r.transcript ?? "", reply: r.reply, actions: done, source: "ai-audio", summary: home.summary() });
     } catch { json(res, { ok: false, error: "ai_error" }, 502); }

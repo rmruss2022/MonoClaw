@@ -35,8 +35,14 @@ Each action is exactly one of:
   {"device":"<id>","patch":{...}}        // set one device
   {"type":"<deviceType>","patch":{...}}  // set ALL devices of a type (e.g. all lights off)
   {"scene":"<sceneId>"}                  // run a scene
-Prefer a scene when the request matches one. For "all lights" use the "type" form. If the
-request is not about the home, return "actions":[] with a brief helpful reply.`;
+  {"allOff":true}                        // turn EVERYTHING off: all lights (INCLUDING the porch light), plugs, speakers, cameras, garage, vacuum, thermostat
+  {"allOn":true}                         // turn all lights and plugs on
+Rules:
+- The porch light (light_porch) IS a light; "all lights off" / "turn everything off" MUST include it.
+- For "turn off everything / all devices / all off" return exactly [{"allOff":true}].
+- For "turn on everything" return exactly [{"allOn":true}].
+- Locks are security: only unlock when explicitly asked, never as part of "all off".
+- Prefer a scene when the request matches one. If it's not about the home, return "actions":[] with a brief helpful reply.`;
 }
 
 interface AiResult { reply: string; transcript?: string; actions: any[]; }
@@ -134,7 +140,21 @@ export function execute(actions: any[]): Array<{ label: string }> {
   const done: Array<{ label: string }> = [];
   for (const a of actions ?? []) {
     try {
-      if (a?.scene) { home.activateScene(String(a.scene)); done.push({ label: `scene.${a.scene}` }); }
+      if (a?.allOff) {
+        home.setByType("light", { on: false });
+        home.setByType("plug", { on: false });
+        home.setByType("speaker", { playing: false });
+        home.setByType("camera", { recording: false });
+        home.setDevice("vacuum_robo", { status: "docked" });
+        home.setDevice("garage_door", { open: false });
+        home.setDevice("thermostat_main", { mode: "off" });
+        done.push({ label: "all_off" });
+      } else if (a?.allOn) {
+        home.setByType("light", { on: true });
+        home.setByType("plug", { on: true });
+        home.setDevice("thermostat_main", { mode: "auto" });
+        done.push({ label: "all_on" });
+      } else if (a?.scene) { home.activateScene(String(a.scene)); done.push({ label: `scene.${a.scene}` }); }
       else if (a?.type && a?.patch) { home.setByType(String(a.type), a.patch); done.push({ label: `type.${a.type}` }); }
       else if (a?.device && a?.patch) { if (home.setDevice(String(a.device), a.patch)) done.push({ label: `device.${a.device}` }); }
     } catch { /* skip bad action */ }

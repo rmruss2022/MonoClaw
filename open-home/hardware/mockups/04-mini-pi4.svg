@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" font-family="DejaVu Sans, sans-serif">
+  <defs>
+    <radialGradient id="bg" cx="72%" cy="16%" r="90%">
+      <stop offset="0" stop-color="#151a24"/><stop offset="0.6" stop-color="#0e1014"/><stop offset="1" stop-color="#0b0d11"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0c0e12"/><stop offset="0.18" stop-color="#20242e"/>
+      <stop offset="0.5" stop-color="#2c313d"/><stop offset="0.82" stop-color="#181b22"/><stop offset="1" stop-color="#0a0c10"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#161922"/><stop offset="0.5" stop-color="#333a48"/><stop offset="1" stop-color="#12141a"/>
+    </linearGradient>
+    <radialGradient id="topface" cx="50%" cy="36%" r="72%">
+      <stop offset="0" stop-color="#2a2f3b"/><stop offset="1" stop-color="#12151c"/>
+    </radialGradient>
+    <radialGradient id="ledglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#3ddc97" stop-opacity="0.9"/><stop offset="1" stop-color="#3ddc97" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="floorglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#3ddc97" stop-opacity="0.14"/><stop offset="1" stop-color="#3ddc97" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="meshfade" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#0c0e12"/><stop offset="0.5" stop-color="#262b34"/><stop offset="1" stop-color="#0a0c10"/>
+    </linearGradient>
+    <pattern id="mesh" width="12" height="12" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.7" fill="#000" opacity="0.5"/>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="1040" fill="url(#bg)"/>
+
+  <!-- ================= HEADER ================= -->
+  <svg x="64" y="46" width="34" height="34" viewBox="0 0 48 48">
+    <path d="M24 5 6 20v22a2 2 0 0 0 2 2h32a2 2 0 0 0 2-2V20L24 5Z" fill="none" stroke="#3ddc97" stroke-width="2.4"/>
+    <circle cx="24" cy="26" r="5" fill="none" stroke="#3ddc97" stroke-width="2.4"/>
+    <rect x="22.2" y="29" width="3.6" height="9" rx="1.6" fill="#3ddc97"/>
+  </svg>
+  <text x="110" y="72" font-size="27" font-weight="bold" fill="#e7ebf3">open<tspan fill="#3ddc97">home</tspan></text>
+  <text x="111" y="94" font-size="12.5" letter-spacing="3" fill="#8b93a7">MVP &#183; WEEKEND BUILD</text>
+
+  <text x="1536" y="70" text-anchor="end" font-size="13" letter-spacing="3" fill="#3ddc97">CONCEPT R2</text>
+  <text x="1536" y="92" text-anchor="end" font-size="13" fill="#8b93a7">Raspberry Pi 4 &#183; far-field voice pod</text>
+
+  <!-- ================= TITLE ================= -->
+  <text x="64" y="180" font-size="47" font-weight="bold" fill="#e7ebf3" letter-spacing="-1">the openhome mini</text>
+  <text x="64" y="216" font-size="17" fill="#8b93a7">A build-it-this-weekend voice pod. Off-the-shelf parts, one 3D-printed shell,</text>
+  <text x="64" y="240" font-size="17" fill="#8b93a7">a far-field mic array that hears across the room — and a light ring that never lies.</text>
+
+  <!-- ================= HERO POD (left) ================= -->
+  <g transform="translate(370 620)">
+    <ellipse cx="0" cy="250" rx="185" ry="30" fill="#000" opacity="0.5"/>
+    <ellipse cx="0" cy="255" rx="240" ry="46" fill="url(#floorglow)"/>
+
+    <!-- body -->
+    <path d="M-160 -120 A160 42 0 0 0 160 -120 L160 180 A160 42 0 0 1 -160 180 Z" fill="url(#body)"/>
+    <clipPath id="clipbody"><path d="M-160 -120 A160 42 0 0 0 160 -120 L160 180 A160 42 0 0 1 -160 180 Z"/></clipPath>
+    <g clip-path="url(#clipbody)">
+      <rect x="-160" y="-50" width="320" height="250" fill="url(#meshfade)"/>
+      <rect x="-160" y="-50" width="320" height="250" fill="url(#mesh)"/>
+      <ellipse cx="0" cy="-50" rx="160" ry="42" fill="none" stroke="#3a4150" stroke-width="1.4" opacity="0.6"/>
+    </g>
+
+    <!-- top cap -->
+    <ellipse cx="0" cy="-120" rx="160" ry="42" fill="url(#cap)"/>
+    <!-- LED ring channel + glow -->
+    <ellipse cx="0" cy="-120" rx="140" ry="36" fill="none" stroke="#0a0c10" stroke-width="9"/>
+    <ellipse cx="0" cy="-120" rx="140" ry="36" fill="none" stroke="url(#ledglow)" stroke-width="18" opacity="0.85"/>
+    <ellipse cx="0" cy="-120" rx="140" ry="36" fill="none" stroke="#3ddc97" stroke-width="3.5"/>
+    <!-- recessed top face -->
+    <ellipse cx="0" cy="-128" rx="122" ry="30" fill="url(#topface)"/>
+    <!-- mic ports -->
+    <g fill="#0a0c10">
+      <circle cx="-58" cy="-133" r="3.6"/><circle cx="58" cy="-133" r="3.6"/>
+      <circle cx="-30" cy="-120" r="3.6"/><circle cx="30" cy="-120" r="3.6"/>
+      <circle cx="0" cy="-140" r="3.6"/><circle cx="0" cy="-112" r="3.6"/>
+    </g>
+    <circle cx="0" cy="-128" r="9" fill="none" stroke="#3a4150" stroke-width="2"/>
+    <!-- base foot -->
+    <path d="M-160 173 A160 42 0 0 0 160 173 L160 180 A160 42 0 0 1 -160 180 Z" fill="#07080b"/>
+
+    <text x="0" y="214" text-anchor="middle" font-size="13" letter-spacing="2" fill="#6b7386">~110 mm &#216; &#183; 128 mm TALL</text>
+  </g>
+
+  <!-- ================= SHOPPING LIST (right) ================= -->
+  <g transform="translate(724 276)">
+    <rect x="0" y="0" width="812" height="560" rx="16" fill="#14171e" stroke="#272c37" stroke-width="1"/>
+    <text x="28" y="42" font-size="14" letter-spacing="2.5" font-weight="bold" fill="#3ddc97">SHOPPING LIST &#183; REAL PARTS YOU CAN ORDER</text>
+    <line x1="28" y1="60" x2="784" y2="60" stroke="#272c37" stroke-width="1"/>
+
+    <!-- two-line rows: name baseline Y0=104, step 50; spec at +18; price centered -->
+    <g>
+      <!-- 1 -->
+      <text x="28" y="104" font-size="18" font-weight="bold" fill="#e7ebf3">Raspberry Pi 4 Model B</text>
+      <text x="28" y="122" font-size="13" fill="#8b93a7">4 GB &#183; the brain of the pod</text>
+      <text x="784" y="112" text-anchor="end" font-size="19" fill="#e7ebf3">$55</text>
+      <!-- 2 -->
+      <text x="28" y="154" font-size="18" font-weight="bold" fill="#e7ebf3">Samsung EVO+ 32 GB microSD</text>
+      <text x="28" y="172" font-size="13" fill="#8b93a7">A2 &#183; boots the OS</text>
+      <text x="784" y="162" text-anchor="end" font-size="19" fill="#e7ebf3">$8</text>
+      <!-- 3 -->
+      <text x="28" y="204" font-size="18" font-weight="bold" fill="#3ddc97">ReSpeaker Mic Array v2.0</text>
+      <text x="28" y="222" font-size="13" fill="#8b93a7">XMOS XVF-3000 &#183; AEC + beamforming &#183; 12-LED ring built in</text>
+      <text x="784" y="212" text-anchor="end" font-size="19" fill="#e7ebf3">$70</text>
+      <!-- 4 -->
+      <text x="28" y="254" font-size="18" font-weight="bold" fill="#e7ebf3">MAX98357A I2S amp</text>
+      <text x="28" y="272" font-size="13" fill="#8b93a7">3 W Class-D, mono &#183; digital audio out</text>
+      <text x="784" y="262" text-anchor="end" font-size="19" fill="#e7ebf3">$6</text>
+      <!-- 5 -->
+      <text x="28" y="304" font-size="18" font-weight="bold" fill="#e7ebf3">3&#8243; full-range driver + passive radiator</text>
+      <text x="28" y="322" font-size="13" fill="#8b93a7">4 &#937; &#183; room-filling, real low end</text>
+      <text x="784" y="312" text-anchor="end" font-size="19" fill="#e7ebf3">$10</text>
+      <!-- 6 -->
+      <text x="28" y="354" font-size="18" font-weight="bold" fill="#e7ebf3">Official USB-C power supply</text>
+      <text x="28" y="372" font-size="13" fill="#8b93a7">5 V / 3 A (15 W)</text>
+      <text x="784" y="362" text-anchor="end" font-size="19" fill="#e7ebf3">$8</text>
+      <!-- 7 -->
+      <text x="28" y="404" font-size="18" font-weight="bold" fill="#e7ebf3">Heatsink + 30 mm fan</text>
+      <text x="28" y="422" font-size="13" fill="#8b93a7">keeps the Pi 4 cool + quiet</text>
+      <text x="784" y="412" text-anchor="end" font-size="19" fill="#e7ebf3">$6</text>
+      <!-- 8 -->
+      <text x="28" y="454" font-size="18" font-weight="bold" fill="#e7ebf3">3D-printed PETG shell</text>
+      <text x="28" y="472" font-size="13" fill="#8b93a7">diffuser ring + fabric grille + M2.5 fasteners</text>
+      <text x="784" y="462" text-anchor="end" font-size="19" fill="#e7ebf3">$8</text>
+    </g>
+    <g stroke="#1e232c" stroke-width="1">
+      <line x1="28" y1="132" x2="784" y2="132"/><line x1="28" y1="182" x2="784" y2="182"/>
+      <line x1="28" y1="232" x2="784" y2="232"/><line x1="28" y1="282" x2="784" y2="282"/>
+      <line x1="28" y1="332" x2="784" y2="332"/><line x1="28" y1="382" x2="784" y2="382"/>
+      <line x1="28" y1="432" x2="784" y2="432"/>
+    </g>
+
+    <!-- total -->
+    <line x1="28" y1="500" x2="784" y2="500" stroke="#3ddc97" stroke-width="1" opacity="0.5"/>
+    <text x="28" y="534" font-size="16" fill="#8b93a7">Est. parts cost &#183; qty 1</text>
+    <text x="784" y="540" text-anchor="end" font-size="30" font-weight="bold" fill="#3ddc97">~$171</text>
+  </g>
+
+  <!-- ================= WIRING STRIP ================= -->
+  <g transform="translate(64 880)">
+    <text x="0" y="18" font-size="13" letter-spacing="2.5" font-weight="bold" fill="#3ddc97">WIRING &#183; ONE PI, THREE HOOKUPS</text>
+    <g font-size="13.5">
+      <rect x="0" y="34" width="300" height="40" rx="10" fill="#171a21" stroke="#272c37"/>
+      <text x="16" y="59" fill="#e7ebf3"><tspan fill="#f0b429" font-weight="bold">USB</tspan>  Mic Array v2.0 &#183; AEC + LEDs</text>
+
+      <rect x="316" y="34" width="470" height="40" rx="10" fill="#171a21" stroke="#272c37"/>
+      <text x="332" y="59" fill="#e7ebf3"><tspan fill="#3ddc97" font-weight="bold">I2S</tspan>  MAX98357A &#8594; BCLK GPIO18 &#183; LRC GPIO19 &#183; DIN GPIO21 &#183; VIN 5V</text>
+
+      <rect x="802" y="34" width="360" height="40" rx="10" fill="#171a21" stroke="#272c37"/>
+      <text x="818" y="59" fill="#e7ebf3"><tspan fill="#3ddc97" font-weight="bold">SPK</tspan>  amp terminals &#8594; 4 &#937; driver + radiator</text>
+
+      <rect x="1178" y="34" width="252" height="40" rx="10" fill="#171a21" stroke="#272c37"/>
+      <text x="1194" y="59" fill="#e7ebf3"><tspan fill="#f0b429" font-weight="bold">PWR</tspan>  USB-C 5V / 3A &#183; fan</text>
+    </g>
+    <text x="0" y="100" font-size="13" fill="#5b6376">Budget swap: drop the Mic Array v2.0 for a ReSpeaker 2-Mic HAT (&#8722;$57) &#8594; near-field, still wake-word reliable at ~2&#8211;3 m.</text>
+  </g>
+</svg>
