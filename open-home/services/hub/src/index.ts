@@ -17,11 +17,13 @@ import { Agent } from "./agent.ts";
 import { docsIndexHtml, docPageHtml } from "./docs.ts";
 import * as home from "./home.ts";
 import * as ai from "./ai.ts";
+import * as audio from "./audio.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
 const DASHBOARD = new URL("../../../apps/app/index.html", import.meta.url);
 const CONTROL = new URL("../../../apps/app/control.html", import.meta.url);
+const MUSIC = new URL("../../../apps/app/music.html", import.meta.url);
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -45,6 +47,9 @@ setInterval(() => {
   const ev = home.simulateTick(Date.now());
   if (ev) bus.publish({ type: ev.type, ts: Date.now(), payload: ev.payload });
 }, 12_000);
+
+// Advance the music playhead so the now-playing UI feels live.
+setInterval(() => audio.tick(2_000), 2_000);
 
 function json(res: import("node:http").ServerResponse, body: unknown, code = 200): void {
   res.statusCode = code;
@@ -126,6 +131,20 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.end(html);
     } catch {
       json(res, { error: "control_not_found" }, 500);
+    }
+    return;
+  }
+
+  // Music app (same-origin UI)
+  if (url === "/music" || url === "/music.html") {
+    try {
+      const html = await readFile(MUSIC, "utf8");
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+    } catch {
+      json(res, { error: "music_not_found" }, 500);
     }
     return;
   }
@@ -214,6 +233,45 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
   if (url === "/events/recent") {
     json(res, { events: bus.recent() });
+    return;
+  }
+
+  // ---- Speaker service / music ----
+  if (url === "/speakers") { json(res, { speakers: audio.listSpeakers(), zones: audio.listZones() }); return; }
+  if (url === "/audio/state") { json(res, audio.state()); return; }
+  if (url === "/audio/spotify/search") {
+    const q = new URL(req.url ?? "/", "http://x").searchParams.get("q") ?? "";
+    json(res, { tracks: audio.spotifySearch(q) }); return;
+  }
+  if (url === "/audio/discover") {
+    const kind = (new URL(req.url ?? "/", "http://x").searchParams.get("kind") ?? "wifi") as "wifi" | "bluetooth";
+    json(res, { found: audio.discover(kind === "bluetooth" ? "bluetooth" : "wifi") }); return;
+  }
+  if (url === "/audio/command" && req.method === "POST") {
+    const body = await readBody(req);
+    let p: any = {};
+    try { p = JSON.parse(body || "{}"); } catch {}
+    const cmd = String(p.cmd ?? "");
+    let result: unknown = null;
+    switch (cmd) {
+      case "transport": result = audio.transport(p.action, p.ms); break;
+      case "volume": result = audio.setVolume(String(p.id), Number(p.volume)); break;
+      case "mute": result = audio.setMuted(String(p.id), !!p.muted); break;
+      case "add-speaker": result = audio.addSpeaker(String(p.name ?? ""), String(p.room ?? "—"), p.kind); break;
+      case "remove-speaker": result = audio.removeSpeaker(String(p.id)); break;
+      case "create-zone": result = audio.createZone(String(p.name ?? ""), Array.isArray(p.speakerIds) ? p.speakerIds : []); break;
+      case "add-to-zone": result = audio.addToZone(String(p.zoneId), String(p.speakerId)); break;
+      case "remove-from-zone": result = audio.removeFromZone(String(p.zoneId), String(p.speakerId)); break;
+      case "dissolve-zone": result = audio.dissolveZone(String(p.zoneId)); break;
+      case "set-role": result = audio.setRole(String(p.id), p.role); break;
+      case "calibrate": result = audio.calibrate(String(p.zoneId)); break;
+      case "spotify-connect": result = audio.spotifyConnect(); break;
+      case "spotify-play": result = audio.spotifyPlay(String(p.trackId), p.zoneId); break;
+      case "play-in-zone": result = audio.playInZone(String(p.zoneId)); break;
+      default: json(res, { ok: false, error: "unknown_cmd", cmd }, 400); return;
+    }
+    bus.publish({ type: `audio.${cmd}`, ts: Date.now(), payload: { via: "music-app" } });
+    json(res, { ok: true, cmd, result, state: audio.state() });
     return;
   }
 

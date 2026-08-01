@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>openhome · music</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+<meta name="theme-color" content="#0e1014" />
+<style>
+  :root{--bg:#0e1014;--panel:#171a21;--panel2:#1e222b;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56;--warn:#f0b429;--danger:#ef5350;--radius:14px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,var(--bg));position:sticky;top:0;z-index:5}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px}
+  .brand a{color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px}
+  nav{display:flex;gap:4px;flex-wrap:wrap}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid transparent}
+  nav a:hover{color:var(--text);background:var(--panel2);border-color:var(--line)}
+  nav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  main{padding:22px;max-width:1080px;margin:0 auto;display:grid;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  h2{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .row{display:flex;align-items:center;gap:12px}
+  .between{justify-content:space-between}
+  .muted{color:var(--muted)}
+  .badge{font-size:11px;color:var(--accent);background:rgba(61,220,151,.1);border:1px solid var(--accent-dim);padding:1px 7px;border-radius:999px;white-space:nowrap}
+  .badge.bt{color:#7db4ff;background:rgba(125,180,255,.1);border-color:#345}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+  .dot.on{background:var(--accent)}
+  .dot.off{background:var(--danger)}
+  button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+  button:hover{border-color:var(--accent-dim)}
+  button.primary{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
+  button.icon{width:44px;height:44px;border-radius:50%;font-size:16px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  button.play{width:56px;height:56px;font-size:20px}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--panel2);outline:none;flex:1}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer}
+  input[type=text]{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:9px 12px;flex:1}
+  select{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 8px}
+  .np{display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:center}
+  .art{width:96px;height:96px;border-radius:12px;background:linear-gradient(135deg,#20323a,#101820);display:flex;align-items:center;justify-content:center;font-size:34px;border:1px solid var(--line)}
+  .title{font-size:22px;font-weight:700;letter-spacing:-.01em}
+  .scrub{display:flex;align-items:center;gap:10px;margin-top:10px;font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted)}
+  .prog{flex:1;height:6px;border-radius:6px;background:var(--panel2);overflow:hidden}
+  .prog > i{display:block;height:100%;background:var(--accent);width:0}
+  .spk{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--panel2)}
+  .spk:last-child{margin-bottom:0}
+  .zone{border:1px solid var(--accent-dim);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:rgba(61,220,151,.05)}
+  .chk{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .list{max-height:280px;overflow:auto;margin-top:8px}
+  .item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line)}
+  .item:last-child{border:0}
+  .small{font-size:12px}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand"><a href="/"><img src="/assets/brand/logo.svg" alt="openhome" height="26"/></a></div>
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/control">Control</a>
+      <a href="/music" class="active">Music</a>
+      <a href="/docs/sound">Sound docs</a>
+    </nav>
+    <div style="flex:1"></div>
+    <span class="row small muted"><span class="dot on" id="hubdot"></span><span id="counts">…</span></span>
+  </header>
+
+  <main>
+    <!-- Now playing -->
+    <section class="card">
+      <h2>Now playing <span id="src" class="badge" style="margin-left:6px"></span></h2>
+      <div class="np">
+        <div class="art" id="art">🎵</div>
+        <div>
+          <div class="title" id="npTitle">—</div>
+          <div class="muted" id="npArtist">—</div>
+          <div class="scrub"><span id="pos">0:00</span><span class="prog"><i id="progBar"></i></span><span id="dur">0:00</span></div>
+          <div class="row" style="margin-top:12px;gap:10px">
+            <button class="icon" onclick="tx('prev')">⏮</button>
+            <button class="icon play primary" id="playBtn" onclick="togglePlay()">▶</button>
+            <button class="icon" onclick="tx('next')">⏭</button>
+            <span class="muted small">Zone</span>
+            <select id="zoneSel" onchange="playZone(this.value)"></select>
+            <span style="flex:1"></span>
+            <span class="small muted">🔊</span>
+            <input type="range" min="0" max="100" id="masterVol" style="max-width:160px" oninput="vol(currentZone(),this.value)">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid2">
+      <!-- Rooms & speakers -->
+      <section class="card">
+        <div class="row between"><h2 style="margin:0">Rooms &amp; speakers</h2>
+          <span class="row" style="gap:6px">
+            <button class="small" onclick="scan('wifi')">+ Wi-Fi</button>
+            <button class="small" onclick="scan('bluetooth')">+ Bluetooth</button>
+          </span>
+        </div>
+        <div id="zones" style="margin-top:12px"></div>
+        <div id="loose"></div>
+        <div class="row" style="margin-top:12px;gap:8px">
+          <input type="text" id="zoneName" placeholder="New zone name (e.g. Downstairs)">
+          <button onclick="makeZone()">Group selected</button>
+        </div>
+        <div id="discover" class="list"></div>
+      </section>
+
+      <!-- Surround + calibration + Spotify -->
+      <section class="card">
+        <h2>Surround &amp; calibration</h2>
+        <select id="calZone" onchange="renderRoles()"></select>
+        <div id="roles" style="margin-top:10px"></div>
+        <button class="primary" style="margin-top:10px" onclick="calibrate()">Calibrate room</button>
+        <div class="note">Assign L/R/center/surround/sub, then calibrate to time-align the speakers (per-speaker delay).</div>
+
+        <h2 style="margin-top:22px">Spotify</h2>
+        <div id="spotifyBox"></div>
+        <div class="row" style="margin-top:10px;gap:8px">
+          <input type="text" id="q" placeholder="Search songs, artists…" onkeydown="if(event.key==='Enter')search()">
+          <button onclick="search()">Search</button>
+        </div>
+        <div id="results" class="list"></div>
+      </section>
+    </div>
+  </main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let S = null;            // last state
+let editingVol = false;  // don't clobber a slider mid-drag
+const sel = new Set();   // selected speaker ids for grouping
+
+const fmt = (ms) => { const s = Math.floor(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); };
+async function api(cmd, payload={}) { const r = await fetch("/audio/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cmd,...payload})}); const j = await r.json(); if(j.state) render(j.state); return j; }
+async function refresh(){ try{ const r = await fetch("/audio/state"); render(await r.json()); }catch(e){ $("hubdot").className="dot off"; } }
+
+function currentZone(){ return $("zoneSel").value || (S && S.nowPlaying.zoneId) || ""; }
+
+function render(state){
+  S = state; $("hubdot").className="dot on";
+  $("counts").textContent = `${state.counts.online}/${state.counts.speakers} speakers · ${state.counts.zones} zones`;
+  const np = state.nowPlaying;
+  $("npTitle").textContent = np.title || "Nothing playing";
+  $("npArtist").textContent = np.artist ? `${np.artist} · ${np.album}` : "—";
+  $("src").textContent = np.source;
+  $("playBtn").textContent = np.playing ? "⏸" : "▶";
+  $("pos").textContent = fmt(np.positionMs); $("dur").textContent = fmt(np.durationMs);
+  $("progBar").style.width = (np.durationMs? (100*np.positionMs/np.durationMs):0)+"%";
+
+  // zone selectors
+  const zopts = state.zones.map(z=>`<option value="${z.id}">${z.name}</option>`).join("");
+  for (const id of ["zoneSel","calZone"]) { const el=$(id); const keep=el.value; el.innerHTML=zopts||`<option value="">(no zones)</option>`; if([...el.options].some(o=>o.value===keep)) el.value=keep; }
+  if (np.zoneId) $("zoneSel").value = np.zoneId;
+  const mz = state.zones.find(z=>z.id===currentZone());
+  if (!editingVol) $("masterVol").value = mz? mz.volume : 30;
+
+  // zones + loose speakers
+  const inZone = new Set(state.zones.flatMap(z=>z.speakerIds));
+  $("zones").innerHTML = state.zones.map(z=>{
+    const spk = z.speakerIds.map(id=>state.speakers.find(s=>s.id===id)).filter(Boolean);
+    return `<div class="zone"><div class="row between"><b>${z.name} ${z.surround?'<span class="badge">surround</span>':''}</b>
+      <span class="row small" style="gap:6px"><span class="muted">${spk.length} speakers</span><button class="small" onclick="api('dissolve-zone',{zoneId:'${z.id}'})">ungroup</button></span></div>
+      <div class="row" style="margin-top:8px"><span class="small muted">🔊</span><input type="range" min="0" max="100" value="${z.volume}" onmousedown="editingVol=true" onmouseup="editingVol=false" oninput="vol('${z.id}',this.value)"></div>
+      ${spk.map(sp=>spkRow(sp,true)).join("")}</div>`;
+  }).join("");
+  $("loose").innerHTML = state.speakers.filter(s=>!inZone.has(s.id)).map(sp=>spkRow(sp,false)).join("");
+  renderRoles();
+  // spotify
+  const sp = state.spotify;
+  $("spotifyBox").innerHTML = sp.connected
+    ? `<span class="row small"><span class="dot on"></span> Connected${sp.configured?"":" (demo mode — no API keys set)"}</span>`
+    : `<button class="primary" onclick="api('spotify-connect')">Connect Spotify</button> <span class="note">${sp.configured?"":"Set SPOTIFY_CLIENT_ID/SECRET for real playback."}</span>`;
+}
+
+function spkRow(sp, inZone){
+  const badge = sp.kind==="bluetooth"?`<span class="badge bt">${sp.kind}</span>`:`<span class="badge">${sp.kind}</span>`;
+  const dot = sp.online?"on":"off";
+  const check = `<span class="chk" onclick="toggleSel('${sp.id}')"><input type="checkbox" ${sel.has(sp.id)?"checked":""} onclick="event.stopPropagation();toggleSel('${sp.id}')"></span>`;
+  return `<div class="spk"><div class="row between">
+     <span class="row" style="gap:8px">${inZone?"":check}<span class="dot ${dot}"></span><b>${sp.name}</b> ${badge} <span class="muted small">${sp.room}</span></span>
+     <span class="row small" style="gap:6px">${inZone?`<button class="small" onclick="api('remove-from-zone',{zoneId:'${sp.zone}',speakerId:'${sp.id}'})">remove</button>`:`<button class="small" onclick="api('remove-speaker',{id:'${sp.id}'})">✕</button>`}</span>
+   </div>
+   <div class="row" style="margin-top:8px"><span class="small muted">🔊</span><input type="range" min="0" max="100" value="${sp.volume}" onmousedown="editingVol=true" onmouseup="editingVol=false" oninput="vol('${sp.id}',this.value)"></div></div>`;
+}
+
+function renderRoles(){
+  if(!S) return; const z = S.zones.find(x=>x.id===$("calZone").value); if(!z){ $("roles").innerHTML='<span class="note">Create a zone to set surround roles.</span>'; return; }
+  const roles=["stereo","left","right","center","surround-l","surround-r","sub","mono"];
+  $("roles").innerHTML = z.speakerIds.map(id=>{const sp=S.speakers.find(s=>s.id===id); if(!sp)return"";
+    return `<div class="item"><span>${sp.name} ${sp.calibrated?`<span class="badge">${sp.latencyMs}ms</span>`:""}</span>
+      <select onchange="api('set-role',{id:'${sp.id}',role:this.value})">${roles.map(r=>`<option ${sp.role===r?"selected":""}>${r}</option>`).join("")}</select></div>`;
+  }).join("");
+}
+
+function toggleSel(id){ sel.has(id)?sel.delete(id):sel.add(id); render(S); }
+function togglePlay(){ tx(S && S.nowPlaying.playing ? "pause":"play"); }
+function tx(action){ api("transport",{action}); }
+function vol(id,v){ if(!id)return; api("volume",{id,volume:Number(v)}); }
+function playZone(z){ api("play-in-zone",{zoneId:z}); }
+function makeZone(){ if(sel.size<1){alert("Select speakers to group first.");return;} api("create-zone",{name:$("zoneName").value,speakerIds:[...sel]}).then(()=>{sel.clear();$("zoneName").value="";}); }
+function calibrate(){ const z=$("calZone").value; if(z) api("calibrate",{zoneId:z}); }
+
+async function scan(kind){
+  $("discover").innerHTML=`<div class="note">Scanning ${kind}…</div>`;
+  const r=await (await fetch("/audio/discover?kind="+kind)).json();
+  $("discover").innerHTML = (r.found.length?r.found:[]).map(d=>`<div class="item"><span><span class="badge ${kind==='bluetooth'?'bt':''}">${d.kind}</span> ${d.name} <span class="muted small">${d.room}</span></span>
+    <button class="small primary" onclick='addSpk(${JSON.stringify(d).replace(/'/g,"&#39;")})'>add</button></div>`).join("") || `<div class="note">No new ${kind} speakers found.</div>`;
+}
+function addSpk(d){ api("add-speaker",{name:d.name,room:d.room,kind:d.kind}).then(()=>$("discover").innerHTML=""); }
+
+async function search(){
+  const q=$("q").value; const r=await (await fetch("/audio/spotify/search?q="+encodeURIComponent(q))).json();
+  $("results").innerHTML = r.tracks.map(t=>`<div class="item"><span>${t.title} <span class="muted small">— ${t.artist}</span></span>
+    <button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("") || '<div class="note">No results.</div>';
+}
+
+refresh(); setInterval(refresh, 3000);
+</script>
+</body>
+</html>
