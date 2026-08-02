@@ -21,6 +21,7 @@
     --radius: 14px;
   }
   * { box-sizing: border-box; }
+  html, body { overflow-x: hidden; max-width: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -86,7 +87,7 @@
     .brand small { display: none; }
     .spacer { display: none; }
     .model { display: none; }
-    .topnav { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 2px -16px 0; padding: 2px 16px 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .topnav { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 2px 0 0; padding: 2px 0 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .topnav::-webkit-scrollbar { display: none; }
     .topnav a { white-space: nowrap; padding: 7px 13px; }
     main { padding: 16px 14px; }
