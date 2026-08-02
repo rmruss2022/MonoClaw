@@ -121,8 +121,14 @@
 
         <h2 style="margin-top:22px">Spotify</h2>
         <div id="spotifyBox"></div>
+        <div id="spotifyTabs" class="row" style="gap:6px;margin-top:10px;display:none">
+          <button class="small" onclick="loadAccount('playlists')">Your playlists</button>
+          <button class="small" onclick="loadAccount('liked')">Liked songs</button>
+          <button class="small" onclick="loadAccount('top')">Top tracks</button>
+        </div>
+        <div id="account" class="list"></div>
         <div class="row" style="margin-top:10px;gap:8px">
-          <input type="text" id="q" placeholder="Search songs, artists…" onkeydown="if(event.key==='Enter')search()">
+          <input type="text" id="q" placeholder="Search Spotify…" onkeydown="if(event.key==='Enter')search()">
           <button onclick="search()">Search</button>
         </div>
         <div id="results" class="list"></div>
@@ -171,12 +177,44 @@ function render(state){
   }).join("");
   $("loose").innerHTML = state.speakers.filter(s=>!inZone.has(s.id)).map(sp=>spkRow(sp,false)).join("");
   renderRoles();
-  // spotify
-  const sp = state.spotify;
-  $("spotifyBox").innerHTML = sp.connected
-    ? `<span class="row small"><span class="dot on"></span> Connected${sp.configured?"":" (demo mode — no API keys set)"}</span>`
-    : `<button class="primary" onclick="api('spotify-connect')">Connect Spotify</button> <span class="note">${sp.configured?"":"Set SPOTIFY_CLIENT_ID/SECRET for real playback."}</span>`;
+  renderSpotify(state.spotify);
 }
+
+let spotifyReady = false;
+function renderSpotify(sp){
+  const tabs = $("spotifyTabs");
+  if (sp.connected){
+    const p = sp.profile || {};
+    $("spotifyBox").innerHTML = `<div class="row between"><span class="row" style="gap:10px">
+      ${p.image?`<img src="${p.image}" width="38" height="38" style="border-radius:50%">`:""}
+      <span><b>${esc(p.name||"Spotify")}</b> <span class="badge">${esc(p.product||"connected")}</span></span></span>
+      <button class="small" onclick="fetch('/audio/spotify/disconnect',{method:'POST'}).then(()=>location.reload())">Sign out</button></div>`;
+    tabs.style.display = "flex";
+    if (!spotifyReady){ spotifyReady = true; loadAccount('playlists'); }
+  } else if (sp.configured){
+    $("spotifyBox").innerHTML = `<a href="/audio/spotify/login" style="text-decoration:none"><button class="primary">Sign in with Spotify</button></a>`;
+    tabs.style.display = "none";
+  } else {
+    $("spotifyBox").innerHTML = `<div class="note">Spotify isn't set up yet. Create an app at developer.spotify.com, add redirect URI <code>${esc(sp.redirectUri||"")}</code>, then set its Client ID/Secret on the hub.</div>`;
+    tabs.style.display = "none";
+  }
+}
+async function loadAccount(kind){
+  $("account").innerHTML = `<div class="note">Loading ${kind}…</div>`;
+  if (kind==='playlists'){
+    const r = await (await fetch('/audio/spotify/playlists')).json();
+    $("account").innerHTML = (r.playlists||[]).map(pl=>`<div class="item"><span class="row" style="gap:8px">${pl.image?`<img src="${pl.image}" width="34" height="34" style="border-radius:6px">`:""}<span><b>${esc(pl.name)}</b> <span class="muted small">${pl.tracks} tracks</span></span></span>
+      <button class="small primary" onclick='playCtx(${JSON.stringify(pl.uri)})'>play</button></div>`).join("") || '<div class="note">No playlists.</div>';
+  } else {
+    const r = await (await fetch(kind==='liked'?'/audio/spotify/liked':'/audio/spotify/top')).json();
+    $("account").innerHTML = (r.tracks||[]).map(trackRow).join("") || '<div class="note">Nothing here.</div>';
+  }
+}
+function trackRow(t){ return `<div class="item"><span class="row" style="gap:8px">${t.image?`<img src="${t.image}" width="34" height="34" style="border-radius:6px">`:""}<span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
+  <button class="small primary" onclick='playTrack(${JSON.stringify(t).replace(/'/g,"&#39;")})'>play</button></div>`; }
+function playCtx(uri){ api('spotify-play',{contextUri:uri,zoneId:currentZone()}); }
+function playTrack(t){ api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone()}); }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 
 function spkRow(sp, inZone){
   const badge = sp.kind==="bluetooth"?`<span class="badge bt">${sp.kind}</span>`:`<span class="badge">${sp.kind}</span>`;
@@ -216,8 +254,9 @@ function addSpk(d){ api("add-speaker",{name:d.name,room:d.room,kind:d.kind}).the
 
 async function search(){
   const q=$("q").value; const r=await (await fetch("/audio/spotify/search?q="+encodeURIComponent(q))).json();
-  $("results").innerHTML = r.tracks.map(t=>`<div class="item"><span>${t.title} <span class="muted small">— ${t.artist}</span></span>
-    <button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("") || '<div class="note">No results.</div>';
+  $("results").innerHTML = (r.tracks||[]).map(t=> t.uri ? trackRow(t)
+    : `<div class="item"><span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span>
+       <button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("") || '<div class="note">No results.</div>';
 }
 
 refresh(); setInterval(refresh, 3000);

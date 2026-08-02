@@ -13,6 +13,8 @@
  *   - Bluetooth        → BlueZ A2DP sink (convenience, single-room)
  */
 
+import * as spotify from "./spotify.ts";
+
 export type SpeakerKind = "wifi" | "bluetooth" | "airplay" | "chromecast" | "snapcast" | "pod";
 export type Role = "mono" | "stereo" | "left" | "right" | "center" | "surround-l" | "surround-r" | "sub";
 
@@ -202,19 +204,20 @@ export function tick(dtMs: number): void {
   }
 }
 
-// ---------- Spotify (scaffold; real = OAuth + Web API + librespot) ----------
-const SPOTIFY_ID = process.env.SPOTIFY_CLIENT_ID || "";
-const SPOTIFY_SECRET = process.env.SPOTIFY_CLIENT_SECRET || "";
-let spotifyConnected = false;
+// ---------- Spotify ----------
+// Real integration lives in spotify.ts (OAuth + Web API). status() reflects it; the mock
+// CATALOG below is only a fallback for when Spotify isn't connected yet.
+export function spotifyStatus() { return spotify.status(); }
 
-export function spotifyStatus() {
-  return { configured: !!(SPOTIFY_ID && SPOTIFY_SECRET), connected: spotifyConnected };
+/** Set now-playing from a real track object {title,artist,album,image,durationMs}. */
+export function setTrack(t: { title: string; artist?: string; album?: string; image?: string; durationMs?: number }, zoneId?: string): NowPlaying {
+  nowPlaying = {
+    source: "spotify", title: t.title, artist: t.artist ?? "", album: t.album ?? "", art: t.image ?? "",
+    playing: true, positionMs: 0, durationMs: t.durationMs ?? 210_000, zoneId: zoneId ?? nowPlaying.zoneId,
+  };
+  return { ...nowPlaying };
 }
-export function spotifyConnect(): { connected: boolean } {
-  // Real: OAuth Authorization-Code + PKCE, store refresh token. Here we flip the flag.
-  spotifyConnected = spotifyStatus().configured || true;
-  return { connected: spotifyConnected };
-}
+
 const CATALOG = [
   { id: "t1", title: "Weightless", artist: "Marconi Union", album: "Ambient Works", durationMs: 8 * 60_000 },
   { id: "t2", title: "Nightcall", artist: "Kavinsky", album: "OutRun", durationMs: 258_000 },

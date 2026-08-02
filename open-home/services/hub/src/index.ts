@@ -18,6 +18,7 @@ import { docsIndexHtml, docPageHtml } from "./docs.ts";
 import * as home from "./home.ts";
 import * as ai from "./ai.ts";
 import * as audio from "./audio.ts";
+import * as spotify from "./spotify.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -36,6 +37,7 @@ function readBody(req: import("node:http").IncomingMessage): Promise<string> {
 
 const bus = new EventBus();
 const agent = new Agent(bus);
+void spotify.load(); // restore Spotify sign-in from disk if present
 
 // Heartbeat so the event feed isn't empty on first run.
 setInterval(() => {
@@ -241,8 +243,30 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   if (url === "/audio/state") { json(res, audio.state()); return; }
   if (url === "/audio/spotify/search") {
     const q = new URL(req.url ?? "/", "http://x").searchParams.get("q") ?? "";
+    if (spotify.connected()) { try { json(res, { tracks: await spotify.search(q) }); return; } catch {} }
     json(res, { tracks: audio.spotifySearch(q) }); return;
   }
+  // --- Spotify OAuth + account ---
+  if (url === "/audio/spotify/login") {
+    if (!spotify.configured()) { json(res, { error: "not_configured", need: ["SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "SPOTIFY_REDIRECT_URI"], redirectUri: spotify.redirectUri() }, 503); return; }
+    res.statusCode = 302; res.setHeader("Location", spotify.authUrl("openhome")); res.end(); return;
+  }
+  if (url === "/audio/spotify/callback") {
+    const code = new URL(req.url ?? "/", "http://x").searchParams.get("code") ?? "";
+    const ok = code ? await spotify.exchangeCode(code).catch(() => false) : false;
+    bus.publish({ type: "audio.spotify-signin", ts: Date.now(), payload: { ok } });
+    res.statusCode = 302; res.setHeader("Location", ok ? "/music?spotify=ok" : "/music?spotify=fail"); res.end(); return;
+  }
+  if (url === "/audio/spotify/me") { try { json(res, { profile: await spotify.me() }); } catch { json(res, { profile: null }, 401); } return; }
+  if (url === "/audio/spotify/playlists") { try { json(res, { playlists: await spotify.playlists() }); } catch { json(res, { playlists: [] }, 401); } return; }
+  if (url === "/audio/spotify/liked") { try { json(res, { tracks: await spotify.liked() }); } catch { json(res, { tracks: [] }, 401); } return; }
+  if (url === "/audio/spotify/top") { try { json(res, { tracks: await spotify.topTracks() }); } catch { json(res, { tracks: [] }, 401); } return; }
+  if (url === "/audio/spotify/playlist") {
+    const id = new URL(req.url ?? "/", "http://x").searchParams.get("id") ?? "";
+    try { json(res, { tracks: await spotify.playlistTracks(id) }); } catch { json(res, { tracks: [] }, 401); } return;
+  }
+  if (url === "/audio/spotify/devices") { try { json(res, { devices: await spotify.devices() }); } catch { json(res, { devices: [] }, 401); } return; }
+  if (url === "/audio/spotify/disconnect" && req.method === "POST") { spotify.disconnect(); json(res, { ok: true }); return; }
   if (url === "/audio/discover") {
     const kind = (new URL(req.url ?? "/", "http://x").searchParams.get("kind") ?? "wifi") as "wifi" | "bluetooth";
     json(res, { found: audio.discover(kind === "bluetooth" ? "bluetooth" : "wifi") }); return;
@@ -265,8 +289,15 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "dissolve-zone": result = audio.dissolveZone(String(p.zoneId)); break;
       case "set-role": result = audio.setRole(String(p.id), p.role); break;
       case "calibrate": result = audio.calibrate(String(p.zoneId)); break;
-      case "spotify-connect": result = audio.spotifyConnect(); break;
-      case "spotify-play": result = audio.spotifyPlay(String(p.trackId), p.zoneId); break;
+      case "spotify-play": {
+        if (spotify.connected() && (p.uri || p.contextUri)) {
+          try { await spotify.play({ uris: p.uri ? [String(p.uri)] : undefined, contextUri: p.contextUri, deviceId: p.deviceId }); } catch (e) { console.log("[spotify] play:", (e as Error).message); }
+          result = p.meta ? audio.setTrack(p.meta, p.zoneId) : audio.state().nowPlaying;
+        } else {
+          result = audio.spotifyPlay(String(p.trackId), p.zoneId);
+        }
+        break;
+      }
       case "play-in-zone": result = audio.playInZone(String(p.zoneId)); break;
       default: json(res, { ok: false, error: "unknown_cmd", cmd }, 400); return;
     }

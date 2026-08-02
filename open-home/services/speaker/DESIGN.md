@@ -23,7 +23,7 @@ living tracker — architecture, decisions, and the build checklist.
 |---|---|---|
 | Multi-room sync | **Snapcast** (one client per speaker) | 🔌 modelled, not wired |
 | Source bridge | **Music Assistant** (Spotify/AirPlay/Cast/DLNA) | 🔌 modelled |
-| Spotify playback | Spotify Web API (browse) + **librespot** (Connect) | 🚧 scaffolded (OAuth TODO) |
+| Spotify | OAuth + Web API (browse/control) + **librespot** (Connect playback) | ✅ OAuth + Web API · ⬜ librespot |
 | Bluetooth | **BlueZ** A2DP sink | 🔌 modelled |
 | Calibration | mic sweep → per-speaker delay/level | 🚧 stubbed (assigns delays) |
 
@@ -56,7 +56,8 @@ Everything currently runs as a **mock-but-real-shaped** model in `audio.ts` (sam
 **Next (v1 — make it real)**
 - ⬜ Snapcast server on hub + one real client (a Pi/ESP32 speaker) playing in sync
 - ⬜ Music Assistant integration as the source/announce engine
-- ⬜ Spotify OAuth (Auth-Code + PKCE) + librespot for real Connect playback
+- ✅ Spotify OAuth (Authorization Code) + Web API — profile, playlists, liked, top, search, play-to-device
+- ⬜ librespot on the box so playback targets *our* speakers (not just existing Spotify devices)
 - ⬜ Real discovery: mDNS/Snapcast (Wi-Fi) + BlueZ (Bluetooth A2DP)
 - ⬜ Real calibration: mic sweep → measured delay + level trim per speaker
 - ⬜ Persist speakers/zones/calibration (ties into the hub persistence milestone)
