@@ -272,6 +272,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     try { json(res, { tracks: await spotify.playlistTracks(id) }); } catch { json(res, { tracks: [] }, 401); } return;
   }
   if (url === "/audio/spotify/devices") { try { json(res, { devices: await spotify.devices() }); } catch { json(res, { devices: [] }, 401); } return; }
+  if (url === "/audio/spotify/token") { try { json(res, await spotify.webToken()); } catch { json(res, { error: "not_connected" }, 401); } return; }
   if (url === "/audio/spotify/home") {
     try {
       const [pl, liked, top] = await Promise.all([spotify.playlists(), spotify.liked(), spotify.topTracks()]);

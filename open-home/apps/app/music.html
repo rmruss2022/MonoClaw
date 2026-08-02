@@ -91,7 +91,7 @@
       <div class="row between"><h2 style="margin:0">Speakers &amp; rooms</h2>
         <span class="row" style="gap:6px"><button class="small" onclick="scan('wifi')">+ Wi-Fi</button><button class="small" onclick="scan('bluetooth')">+ Bluetooth</button></span>
       </div>
-      <div class="note">Output currently routes to your <b>MacBook</b> via Spotify Connect (keep the Spotify app open on the Mac). Real per-room sync arrives with Snapcast — see <a href="/docs/sound">Sound docs</a>.</div>
+      <div class="note">This is a mock home, so playback is routed to <b>this browser tab on the Mac</b> (Spotify Web Player) instead of real room speakers. Real per-room sync arrives with Snapcast — see <a href="/docs/sound">Sound docs</a>.</div>
       <div id="zones" style="margin-top:12px"></div><div id="loose"></div>
       <div class="row" style="margin-top:12px;gap:8px"><input type="text" id="zoneName" placeholder="New zone name (e.g. Downstairs)"><button onclick="makeZone()">Group selected</button></div>
       <div id="discover" class="list"></div>
@@ -200,16 +200,19 @@ function pcard(pl){const cov=pl.image?`<img class="cov" src="${pl.image}">`:`<di
 function trackRow(t){const img=t.image?`<img src="${t.image}">`:"";
   return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
     <button class="small primary" onclick='playTrack(${JSON.stringify(t).replace(/'/g,"&#39;")})'>play</button></div>`;}
-function playCtx(uri){api('spotify-play',{contextUri:uri,zoneId:currentZone()});}
-function playTrack(t){api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone()});}
+function playCtx(uri){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");} api('spotify-play',{contextUri:uri,zoneId:currentZone(),deviceId:webDeviceId||undefined}); }
+function playTrack(t){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");} api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone(),deviceId:webDeviceId||undefined}); }
 async function search(){const q=$("q").value;const r=await (await fetch("/audio/spotify/search?q="+encodeURIComponent(q))).json();
   $("results").innerHTML=(r.tracks||[]).map(t=>t.uri?trackRow(t):`<div class="item"><span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span><button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("")||'<div class="note">No results.</div>';}
 
 // ---- controls ----
 function toggleSel(id){sel.has(id)?sel.delete(id):sel.add(id);render(S);}
 function togglePlay(){tx(S&&S.nowPlaying.playing?"pause":"play");}
-function tx(action){api("transport",{action});}
-function vol(id,v){if(id)api("volume",{id,volume:Number(v)});}
+function tx(action){
+  if(webPlayer&&webDeviceId){ if(action==='play'||action==='pause')webPlayer.togglePlay(); else if(action==='next')webPlayer.nextTrack(); else if(action==='prev')webPlayer.previousTrack(); return; }
+  api("transport",{action});
+}
+function vol(id,v){ if(webPlayer&&webDeviceId&&id===currentZone())webPlayer.setVolume(Math.max(0,Math.min(1,Number(v)/100))); if(id)api("volume",{id,volume:Number(v)}); }
 function playZone(z){api("play-in-zone",{zoneId:z});}
 function makeZone(){if(sel.size<1){toast("Select speakers to group first.");return;}api("create-zone",{name:$("zoneName").value,speakerIds:[...sel]}).then(()=>{sel.clear();$("zoneName").value="";});}
 function calibrate(){const z=$("calZone").value;if(z)api("calibrate",{zoneId:z});}
@@ -218,7 +221,34 @@ async function scan(kind){$("discover").innerHTML=`<div class="note">Scanning ${
     <button class="small primary" onclick='addSpk(${JSON.stringify(d).replace(/'/g,"&#39;")})'>add</button></div>`).join("")||`<div class="note">No new ${kind} speakers found.</div>`;}
 function addSpk(d){api("add-speaker",{name:d.name,room:d.room,kind:d.kind}).then(()=>$("discover").innerHTML="");}
 
+// ---- Spotify Web Playback SDK: play in THIS browser tab (Mac speakers), no desktop app ----
+let webPlayer=null, webDeviceId=null;
+window.onSpotifyWebPlaybackSDKReady=initWeb;
+async function initWeb(){
+  try{
+    const t=await (await fetch('/audio/spotify/token')).json();
+    if(!t.access_token) return; // not signed in yet
+    webPlayer=new Spotify.Player({name:'openhome Web Player (Mac)',volume:0.6,
+      getOAuthToken:cb=>fetch('/audio/spotify/token').then(r=>r.json()).then(j=>cb(j.access_token)).catch(()=>{})});
+    webPlayer.addListener('ready',({device_id})=>{webDeviceId=device_id;toast('Mac web player ready 🔊');});
+    webPlayer.addListener('not_ready',()=>{webDeviceId=null;});
+    webPlayer.addListener('account_error',()=>toast('Spotify Premium is required for in-browser playback.'));
+    webPlayer.addListener('initialization_error',({message})=>console.log('sdk init:',message));
+    webPlayer.addListener('authentication_error',({message})=>console.log('sdk auth:',message));
+    webPlayer.addListener('player_state_changed',s=>{if(s)fastNow(s);});
+    webPlayer.connect();
+  }catch(e){console.log('web player:',e);}
+}
+function fastNow(s){const t=s.track_window&&s.track_window.current_track;if(!t)return;
+  $("plTitle").textContent=t.name;$("plSub").textContent=(t.artists||[]).map(a=>a.name).join(", ")+" · this Mac";
+  $("playBtn").textContent=s.paused?"▶":"⏸";
+  if(t.album&&t.album.images&&t.album.images[0]){$("plArt").src=t.album.images[0].url;$("plArt").style.display="";$("plArtFallback").style.display="none";}
+}
+// if the SDK loaded before this handler was set, kick it now
+if(window.Spotify&&!webPlayer)initWeb();
+
 refresh();setInterval(refresh,3000);
 </script>
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
 </body>
 </html>

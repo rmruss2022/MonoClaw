@@ -57,7 +57,9 @@ Everything currently runs as a **mock-but-real-shaped** model in `audio.ts` (sam
 - ⬜ Snapcast server on hub + one real client (a Pi/ESP32 speaker) playing in sync
 - ⬜ Music Assistant integration as the source/announce engine
 - ✅ Spotify OAuth (Authorization Code) + Web API — profile, playlists, liked, top, search, play-to-device
-- ⬜ librespot on the box so playback targets *our* speakers (not just existing Spotify devices)
+- ✅ In-browser playback via **Spotify Web Playback SDK** — plays in the openhome tab on the Mac
+  (mock-home stand-in for room speakers; no desktop app; Premium)
+- ⬜ librespot on the box/pods so playback targets *our* real speakers (not the browser tab)
 - ⬜ Real discovery: mDNS/Snapcast (Wi-Fi) + BlueZ (Bluetooth A2DP)
 - ⬜ Real calibration: mic sweep → measured delay + level trim per speaker
 - ⬜ Persist speakers/zones/calibration (ties into the hub persistence milestone)

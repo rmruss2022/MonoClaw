@@ -100,6 +100,13 @@ async function api(path: string, init?: RequestInit): Promise<any> {
   return txt ? JSON.parse(txt) : {};
 }
 
+/** Short-lived access token for the browser Web Playback SDK (plays in the page). */
+export async function webToken() {
+  const t = await accessToken();
+  if (!t || !tokens) throw new Error("not_connected");
+  return { access_token: t, expires_in: Math.max(30, Math.floor((tokens.expires_at - Date.now()) / 1000)) };
+}
+
 export async function me() {
   const j = await api("/me");
   profile = { name: j.display_name || j.id, email: j.email, image: j.images?.[0]?.url, product: j.product };
