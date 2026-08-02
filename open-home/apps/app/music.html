@@ -58,6 +58,11 @@
   .player .time{font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted)}
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:92px;background:var(--panel2);border:1px solid var(--accent-dim);color:var(--text);padding:10px 16px;border-radius:10px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none}
   .toast.show{opacity:1}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
+  .modal.show{display:flex}
+  .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;max-width:640px;width:100%}
+  .player .prog{cursor:pointer}
+  .player .prog:hover>i{background:#5affb0}
   @media(max-width:720px){.player .meta{width:120px}.player .time,.player .zonewrap{display:none}}
 </style>
 </head>
@@ -110,12 +115,21 @@
     <button class="icon" onclick="tx('prev')">⏮</button>
     <button class="icon play primary" id="playBtn" onclick="togglePlay()">▶</button>
     <button class="icon" onclick="tx('next')">⏭</button>
-    <span class="time" id="pos">0:00</span><span class="prog"><i id="progBar"></i></span><span class="time" id="dur">0:00</span>
+    <span class="time" id="pos">0:00</span><span class="prog" id="progWrap" onclick="seekAt(event)"><i id="progBar"></i></span><span class="time" id="dur">0:00</span>
     <span class="row zonewrap" style="gap:6px"><span class="small muted">🔊</span>
       <input type="range" min="0" max="100" id="masterVol" style="max-width:120px" oninput="vol(currentZone(),this.value)" onmousedown="editingVol=true" onmouseup="editingVol=false">
       <select id="zoneSel" onchange="playZone(this.value)"></select></span>
   </div>
   <div class="toast" id="toast"></div>
+
+  <!-- playlist detail -->
+  <div class="modal" id="plModal" onclick="if(event.target===this)closePl()">
+    <div class="sheet">
+      <div class="row between"><b id="plmName" style="font-size:18px"></b><button class="small" onclick="closePl()">✕</button></div>
+      <div class="row" style="gap:10px;margin:12px 0"><button class="primary" id="plmPlay">▶ Play all</button><span class="muted small" id="plmCount"></span></div>
+      <div id="plmTracks" class="list" style="max-height:60vh;overflow:auto"></div>
+    </div>
+  </div>
 
 <script>
 const $=(id)=>document.getElementById(id);
@@ -195,8 +209,22 @@ async function loadHome(){
     $("top").innerHTML=(h.top||[]).map(trackRow).join("")||'<span class="note">Nothing here.</span>';
   }catch(e){/* 401 until token warm */}
 }
-function pcard(pl){const cov=pl.image?`<img class="cov" src="${pl.image}">`:`<div class="cov">🎵</div>`;
-  return `<div class="pcard" onclick='playCtx(${JSON.stringify(pl.uri)})'>${cov}<div class="nm">${esc(pl.name)}</div><div class="sub">${pl.tracks} tracks</div></div>`;}
+let PLMAP={};
+function pcard(pl){PLMAP[pl.id]=pl; const cov=pl.image?`<img class="cov" src="${pl.image}">`:`<div class="cov">🎵</div>`;
+  return `<div class="pcard" onclick="openPl('${pl.id}')">${cov}<div class="nm">${esc(pl.name)}</div><div class="sub">${pl.tracks} tracks</div></div>`;}
+async function openPl(id){const pl=PLMAP[id];if(!pl)return;
+  $("plmName").textContent=pl.name;$("plmCount").textContent="";$("plmTracks").innerHTML='<div class="note">Loading…</div>';
+  $("plmPlay").onclick=()=>{playCtx(pl.uri);closePl();};
+  $("plModal").classList.add("show");
+  try{const r=await (await fetch('/audio/spotify/playlist?id='+encodeURIComponent(id))).json();
+    const ts=r.tracks||[];$("plmCount").textContent=ts.length?ts.length+" songs":"";
+    $("plmTracks").innerHTML=ts.length?ts.map(trackRow).join("")
+      :'<div class="note">Spotify restricts listing this playlist’s songs for third-party apps (needs an extended-quota approval). You can still hit <b>Play all</b>. Your <b>Liked songs</b> and <b>Top tracks</b> show full track lists.</div>';
+  }catch(e){$("plmTracks").innerHTML='<div class="note">Could not load songs.</div>';}
+}
+function closePl(){$("plModal").classList.remove("show");}
+function seekAt(e){if(!S)return;const rect=e.currentTarget.getBoundingClientRect();const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));const ms=Math.round(frac*(S.nowPlaying.durationMs||0));
+  if(webPlayer&&webDeviceId)webPlayer.seek(ms);else api('transport',{action:'seek',ms});$("progBar").style.width=(frac*100)+"%";}
 function trackRow(t){const img=t.image?`<img src="${t.image}">`:"";
   return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
     <button class="small primary" onclick='playTrack(${JSON.stringify(t).replace(/'/g,"&#39;")})'>play</button></div>`;}

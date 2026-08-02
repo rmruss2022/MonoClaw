@@ -131,9 +131,11 @@ export async function topTracks(limit = 20) {
   return (j.items || []).map(trackOf);
 }
 
-export async function playlistTracks(id: string, limit = 100) {
-  const j = await api(`/playlists/${id}/tracks?limit=${limit}`);
-  return (j.items || []).map((it: any) => trackOf(it.track)).filter((t: any) => t.id);
+export async function playlistTracks(id: string) {
+  // The dedicated /playlists/{id}/tracks endpoint 403s for new apps; the base
+  // playlist endpoint returns the first page of tracks and works.
+  const j = await api(`/playlists/${id}?fields=tracks.items(track(id,uri,name,artists(name),album(name,images),duration_ms))`);
+  return (j.tracks?.items || []).map((it: any) => trackOf(it.track)).filter((t: any) => t.id);
 }
 
 export async function search(q: string) {
@@ -167,6 +169,11 @@ export async function play(opts: { contextUri?: string; uris?: string[]; deviceI
   if (opts.uris) body.uris = opts.uris;
   await api(`/me/player/play?device_id=${deviceId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return { ok: true, device: deviceName };
+}
+
+export async function seek(ms: number) {
+  await api(`/me/player/seek?position_ms=${Math.max(0, Math.round(ms))}`, { method: "PUT" });
+  return { ok: true };
 }
 
 export async function transportRemote(action: "play" | "pause" | "next" | "previous") {

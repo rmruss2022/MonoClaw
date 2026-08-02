@@ -295,7 +295,12 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     let hint: string | undefined;
     switch (cmd) {
       case "transport": {
-        if (spotify.connected()) { try { await spotify.transportRemote(p.action === "prev" ? "previous" : p.action); } catch (e) { const m = (e as Error).message || ""; if (m.includes("no_device") || m.includes("404")) hint = "no_device"; } }
+        if (spotify.connected()) {
+          try {
+            if (p.action === "seek") await spotify.seek(Number(p.ms) || 0);
+            else await spotify.transportRemote(p.action === "prev" ? "previous" : p.action);
+          } catch (e) { const m = (e as Error).message || ""; if (m.includes("no_device") || m.includes("404")) hint = "no_device"; }
+        }
         result = audio.transport(p.action, p.ms); break;
       }
       case "volume": result = audio.setVolume(String(p.id), Number(p.volume)); break;
