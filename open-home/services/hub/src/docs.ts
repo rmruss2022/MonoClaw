@@ -25,7 +25,7 @@ export const DOCS: DocEntry[] = [
 
 function page(title: string, body: string, nav: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>${title} · openhome</title>
 <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg"/>
 <meta name="theme-color" content="#0e1014"/>
@@ -33,7 +33,7 @@ function page(title: string, body: string, nav: string): string {
   :root{--bg:#0e1014;--panel:#171a21;--panel2:#1e222b;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 24px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,var(--bg));position:sticky;top:0;z-index:5}
+  header{display:flex;align-items:center;gap:12px 14px;flex-wrap:wrap;padding:calc(env(safe-area-inset-top,0px) + 14px) 24px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,var(--bg))}
   .brand{font-weight:700;font-size:18px;letter-spacing:-.02em}
   .brand a{color:var(--text);text-decoration:none}
   nav{display:flex;gap:6px;flex-wrap:wrap}
@@ -66,6 +66,18 @@ function page(title: string, body: string, nav: string): string {
   .card:hover{border-color:var(--accent-dim)}
   .card h3{color:var(--accent);text-transform:none;letter-spacing:0;font-size:16px;margin:0 0 6px}
   .card p{margin:0;color:var(--muted);font-size:14px}
+  @media(max-width:640px){
+    header{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;gap:8px 12px}
+    nav{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:2px -16px 0;padding:2px 16px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    nav::-webkit-scrollbar{display:none}
+    nav a{white-space:nowrap}
+    body{font-size:15px}
+    main{padding:20px 16px 56px}
+    h1{font-size:24px}h2{font-size:19px}
+    pre{border-radius:10px;padding:12px}
+    /* wide tables scroll instead of squishing */
+    table{display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+  }
 </style></head>
 <body>
 <header>
