@@ -110,7 +110,7 @@ export async function playlists(limit = 50) {
   const j = await api(`/me/playlists?limit=${limit}`);
   return (j.items || []).map((p: any) => ({
     id: p.id, uri: p.uri, name: p.name, tracks: p.tracks?.total ?? 0,
-    image: p.images?.[0]?.url, owner: p.owner?.display_name,
+    image: p.images?.[0]?.url, owner: p.owner?.display_name, ownerId: p.owner?.id,
   }));
 }
 
@@ -139,14 +139,48 @@ export async function devices() {
   return (j.devices || []).map((d: any) => ({ id: d.id, name: d.name, type: d.type, active: d.is_active, volume: d.volume_percent }));
 }
 
-/** Play a context (playlist uri) or a list of track uris, optionally on a specific device. */
-export async function play(opts: { contextUri?: string; uris?: string[]; deviceId?: string }) {
-  const qs = opts.deviceId ? `?device_id=${opts.deviceId}` : "";
+/** Pick a Connect device — prefer the MacBook, then any computer, then whatever's active. */
+export async function pickDeviceId(prefer = "mac"): Promise<{ id: string; name: string } | null> {
+  const ds = await devices();
+  if (!ds.length) return null;
+  const p = prefer.toLowerCase();
+  const d = ds.find((x: any) => (x.name || "").toLowerCase().includes(p) || (x.name || "").toLowerCase().includes("book"))
+    || ds.find((x: any) => x.type === "Computer")
+    || ds.find((x: any) => x.active)
+    || ds[0];
+  return { id: d.id, name: d.name };
+}
+
+/** Play a context (playlist uri) or track uris. Defaults output to the MacBook. */
+export async function play(opts: { contextUri?: string; uris?: string[]; deviceId?: string; prefer?: string }) {
+  let deviceId = opts.deviceId, deviceName = "";
+  if (!deviceId) { const d = await pickDeviceId(opts.prefer ?? "mac"); if (!d) throw new Error("no_device"); deviceId = d.id; deviceName = d.name; }
   const body: any = {};
   if (opts.contextUri) body.context_uri = opts.contextUri;
   if (opts.uris) body.uris = opts.uris;
-  await api(`/me/player/play${qs}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  await api(`/me/player/play?device_id=${deviceId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  return { ok: true, device: deviceName };
+}
+
+export async function transportRemote(action: "play" | "pause" | "next" | "previous") {
+  const m = action === "play" ? "PUT" : action === "pause" ? "PUT" : "POST";
+  const path = action === "play" ? "/me/player/play" : action === "pause" ? "/me/player/pause" : `/me/player/${action}`;
+  await api(path, { method: m });
   return { ok: true };
+}
+
+/** What Spotify is actually playing right now (drives the Now Playing bar). */
+export async function currentlyPlaying() {
+  const j = await api("/me/player/currently-playing");
+  if (!j || !j.item) return null;
+  const t = j.item;
+  return {
+    source: "spotify" as const,
+    title: t.name, artist: (t.artists || []).map((a: any) => a.name).join(", "),
+    album: t.album?.name ?? "", art: t.album?.images?.[0]?.url ?? "",
+    playing: !!j.is_playing, positionMs: j.progress_ms ?? 0, durationMs: t.duration_ms ?? 0,
+    device: j.device?.name ?? "",
+  };
 }
 
 function trackOf(t: any) {

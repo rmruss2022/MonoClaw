@@ -53,6 +53,12 @@ setInterval(() => {
 // Advance the music playhead so the now-playing UI feels live.
 setInterval(() => audio.tick(2_000), 2_000);
 
+// Mirror Spotify's real playback into Now Playing when signed in.
+setInterval(async () => {
+  if (!spotify.connected()) return;
+  try { const np = await spotify.currentlyPlaying(); if (np) audio.applySpotifyPlayback(np); } catch {}
+}, 3_000);
+
 function json(res: import("node:http").ServerResponse, body: unknown, code = 200): void {
   res.statusCode = code;
   res.setHeader("Content-Type", "application/json");
@@ -266,6 +272,14 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     try { json(res, { tracks: await spotify.playlistTracks(id) }); } catch { json(res, { tracks: [] }, 401); } return;
   }
   if (url === "/audio/spotify/devices") { try { json(res, { devices: await spotify.devices() }); } catch { json(res, { devices: [] }, 401); } return; }
+  if (url === "/audio/spotify/home") {
+    try {
+      const [pl, liked, top] = await Promise.all([spotify.playlists(), spotify.liked(), spotify.topTracks()]);
+      const isSpotify = (p: any) => String(p.ownerId || p.owner || "").toLowerCase() === "spotify";
+      json(res, { mixes: pl.filter(isSpotify), playlists: pl.filter((p: any) => !isSpotify(p)), liked, top });
+    } catch { json(res, { mixes: [], playlists: [], liked: [], top: [] }, 401); }
+    return;
+  }
   if (url === "/audio/spotify/disconnect" && req.method === "POST") { spotify.disconnect(); json(res, { ok: true }); return; }
   if (url === "/audio/discover") {
     const kind = (new URL(req.url ?? "/", "http://x").searchParams.get("kind") ?? "wifi") as "wifi" | "bluetooth";
@@ -277,8 +291,12 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     try { p = JSON.parse(body || "{}"); } catch {}
     const cmd = String(p.cmd ?? "");
     let result: unknown = null;
+    let hint: string | undefined;
     switch (cmd) {
-      case "transport": result = audio.transport(p.action, p.ms); break;
+      case "transport": {
+        if (spotify.connected()) { try { await spotify.transportRemote(p.action === "prev" ? "previous" : p.action); } catch (e) { const m = (e as Error).message || ""; if (m.includes("no_device") || m.includes("404")) hint = "no_device"; } }
+        result = audio.transport(p.action, p.ms); break;
+      }
       case "volume": result = audio.setVolume(String(p.id), Number(p.volume)); break;
       case "mute": result = audio.setMuted(String(p.id), !!p.muted); break;
       case "add-speaker": result = audio.addSpeaker(String(p.name ?? ""), String(p.room ?? "—"), p.kind); break;
@@ -291,7 +309,8 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "calibrate": result = audio.calibrate(String(p.zoneId)); break;
       case "spotify-play": {
         if (spotify.connected() && (p.uri || p.contextUri)) {
-          try { await spotify.play({ uris: p.uri ? [String(p.uri)] : undefined, contextUri: p.contextUri, deviceId: p.deviceId }); } catch (e) { console.log("[spotify] play:", (e as Error).message); }
+          try { const r = await spotify.play({ uris: p.uri ? [String(p.uri)] : undefined, contextUri: p.contextUri, deviceId: p.deviceId }); hint = r.device ? `Playing on ${r.device}` : undefined; }
+          catch (e) { const m = (e as Error).message || ""; hint = m.includes("no_device") ? "no_device" : m; console.log("[spotify] play:", m); }
           result = p.meta ? audio.setTrack(p.meta, p.zoneId) : audio.state().nowPlaying;
         } else {
           result = audio.spotifyPlay(String(p.trackId), p.zoneId);
@@ -302,7 +321,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       default: json(res, { ok: false, error: "unknown_cmd", cmd }, 400); return;
     }
     bus.publish({ type: `audio.${cmd}`, ts: Date.now(), payload: { via: "music-app" } });
-    json(res, { ok: true, cmd, result, state: audio.state() });
+    json(res, { ok: true, cmd, result, hint, state: audio.state() });
     return;
   }
 

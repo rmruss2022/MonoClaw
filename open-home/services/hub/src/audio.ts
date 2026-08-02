@@ -46,6 +46,7 @@ export interface NowPlaying {
   playing: boolean;
   positionMs: number; durationMs: number;
   zoneId: string | null;
+  device?: string;
 }
 
 const KIND_LABEL: Record<SpeakerKind, string> = {
@@ -196,8 +197,17 @@ export function transport(action: "play" | "pause" | "next" | "prev" | "seek", m
 }
 export function playInZone(zoneId: string): NowPlaying { nowPlaying.zoneId = zoneId; nowPlaying.playing = true; return { ...nowPlaying }; }
 
-/** advance the playhead so the UI feels live; called on a tick. */
+let liveFrom = 0; // timestamp of last real Spotify update
+
+/** Mirror what Spotify is actually playing into Now Playing (called by the hub poll). */
+export function applySpotifyPlayback(np: { title: string; artist: string; album: string; art: string; playing: boolean; positionMs: number; durationMs: number; device?: string }): void {
+  nowPlaying = { source: "spotify", title: np.title, artist: np.artist, album: np.album, art: np.art, playing: np.playing, positionMs: np.positionMs, durationMs: np.durationMs, zoneId: nowPlaying.zoneId, device: np.device };
+  liveFrom = Date.now();
+}
+
+/** advance the playhead so the UI feels live; skipped while a real Spotify feed is driving it. */
 export function tick(dtMs: number): void {
+  if (Date.now() - liveFrom < 8000) return; // Spotify is the source of truth
   if (nowPlaying.playing) {
     nowPlaying.positionMs += dtMs;
     if (nowPlaying.positionMs >= nowPlaying.durationMs) nowPlaying.positionMs = 0;
