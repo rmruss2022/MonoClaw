@@ -250,7 +250,7 @@ async function openPl(id){const pl=PLMAP[id];if(!pl)return;
   $("plModal").classList.add("show");
   try{const r=await (await fetch('/audio/spotify/playlist?id='+encodeURIComponent(id))).json();
     const ts=r.tracks||[];$("plmCount").textContent=ts.length?ts.length+" songs":"";
-    $("plmTracks").innerHTML=ts.length?ts.map(trackRow).join("")
+    $("plmTracks").innerHTML=ts.length?ts.map((t,i)=>plTrackRow(t,pl.uri,i)).join("")
       :'<div class="note">Spotify only returns a track list for smaller playlists on our current API tier — very large playlists come back empty until the app is granted <b>Extended Quota Mode</b>. You can still hit <b>Play all</b>, and <b>Liked songs</b> / <b>Top tracks</b> always list in full.</div>';
   }catch(e){$("plmTracks").innerHTML='<div class="note">Could not load songs.</div>';}
 }
@@ -262,6 +262,13 @@ function trackRow(t){const img=t.image?`<img src="${t.image}">`:"";
     <button class="small primary" onclick='playTrack(${JSON.stringify(t).replace(/'/g,"&#39;")})'>play</button></div>`;}
 function playCtx(uri){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");} api('spotify-play',{contextUri:uri,zoneId:currentZone(),deviceId:webDeviceId||undefined}); }
 function playTrack(t){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");} api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone(),deviceId:webDeviceId||undefined}); }
+// A song tapped inside a playlist plays the playlist *in context* at that
+// track's position, so next/prev walk the playlist instead of replaying it.
+function plTrackRow(t,ctx,pos){const img=t.image?`<img src="${t.image}">`:"";
+  return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
+    <button class="small primary" onclick='playInCtx(${JSON.stringify(ctx)},${pos},${JSON.stringify({title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs}).replace(/'/g,"&#39;")})'>play</button></div>`;}
+function playInCtx(ctx,pos,meta){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");}
+  toast("▶ "+meta.title); api('spotify-play',{contextUri:ctx,offset:pos,meta:meta,zoneId:currentZone(),deviceId:webDeviceId||undefined}); closePl(); }
 async function search(){const q=$("q").value;const r=await (await fetch("/audio/spotify/search?q="+encodeURIComponent(q))).json();
   $("results").innerHTML=(r.tracks||[]).map(t=>t.uri?trackRow(t):`<div class="item"><span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span><button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("")||'<div class="note">No results.</div>';}
 

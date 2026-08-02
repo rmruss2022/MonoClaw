@@ -175,13 +175,16 @@ export async function pickDeviceId(prefer = "mac"): Promise<{ id: string; name: 
   return { id: d.id, name: d.name };
 }
 
-/** Play a context (playlist uri) or track uris. Defaults output to the MacBook. */
-export async function play(opts: { contextUri?: string; uris?: string[]; deviceId?: string; prefer?: string }) {
+/** Play a context (playlist uri) or track uris. Defaults output to the MacBook.
+ *  `offset` starts a context at a track — a number (position) or a track URI —
+ *  so the player has the rest of the playlist queued for next/prev. */
+export async function play(opts: { contextUri?: string; uris?: string[]; offset?: number | string; deviceId?: string; prefer?: string }) {
   let deviceId = opts.deviceId, deviceName = "";
   if (!deviceId) { const d = await pickDeviceId(opts.prefer ?? "mac"); if (!d) throw new Error("no_device"); deviceId = d.id; deviceName = d.name; }
   const body: any = {};
   if (opts.contextUri) body.context_uri = opts.contextUri;
   if (opts.uris) body.uris = opts.uris;
+  if (opts.offset != null) body.offset = typeof opts.offset === "number" ? { position: opts.offset } : { uri: opts.offset };
   await api(`/me/player/play?device_id=${deviceId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   return { ok: true, device: deviceName };
 }

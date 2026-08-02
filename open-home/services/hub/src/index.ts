@@ -322,7 +322,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "spotify-play": {
         const uris = Array.isArray(p.uris) ? p.uris.map(String) : (p.uri ? [String(p.uri)] : undefined);
         if (spotify.connected() && (uris || p.contextUri)) {
-          try { const r = await spotify.play({ uris, contextUri: p.contextUri, deviceId: p.deviceId }); hint = r.device ? `Playing on ${r.device}` : undefined; }
+          try { const r = await spotify.play({ uris, contextUri: p.contextUri, offset: p.offset, deviceId: p.deviceId }); hint = r.device ? `Playing on ${r.device}` : undefined; }
           catch (e) { const m = (e as Error).message || ""; hint = m.includes("no_device") ? "no_device" : m; console.log("[spotify] play:", m); }
           result = p.meta ? audio.setTrack(p.meta, p.zoneId) : audio.state().nowPlaying;
         } else {
