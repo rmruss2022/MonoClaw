@@ -31,7 +31,7 @@
   button.play{width:48px;height:48px;font-size:17px}
   input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--panel2);outline:none;flex:1}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer}
-  input[type=text]{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:9px 12px;flex:1}
+  input[type=text]{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:9px 12px;flex:1;min-width:0}
   select{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 8px}
   /* browse shelves */
   .shelf{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}
@@ -87,6 +87,10 @@
     .modal{padding:0;align-items:flex-end}
     .modal .sheet{max-width:100%;border-radius:16px 16px 0 0;max-height:86vh;overflow:auto}
     .modal .list .item{padding:11px 4px}
+    /* card header rows (Curator title + mood/Suggest, Speakers header, zone rows)
+       must wrap instead of shoving controls off the right edge */
+    .card .row.between{flex-wrap:wrap;gap:8px 10px}
+    #mood{max-width:none;flex:1 1 140px}
   }
 </style>
 </head>
