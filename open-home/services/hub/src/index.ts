@@ -19,6 +19,7 @@ import * as home from "./home.ts";
 import * as ai from "./ai.ts";
 import * as audio from "./audio.ts";
 import * as spotify from "./spotify.ts";
+import * as curator from "./curator.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -249,7 +250,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   if (url === "/audio/state") { json(res, audio.state()); return; }
   if (url === "/audio/spotify/search") {
     const q = new URL(req.url ?? "/", "http://x").searchParams.get("q") ?? "";
-    if (spotify.connected()) { try { json(res, { tracks: await spotify.search(q) }); return; } catch {} }
+    if (spotify.connected()) { try { json(res, { tracks: await spotify.search(q, 20) }); return; } catch (e) { console.log("[spotify] search error:", (e as Error).message); } }
     json(res, { tracks: audio.spotifySearch(q) }); return;
   }
   // --- Spotify OAuth + account ---
@@ -273,6 +274,11 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
   if (url === "/audio/spotify/devices") { try { json(res, { devices: await spotify.devices() }); } catch { json(res, { devices: [] }, 401); } return; }
   if (url === "/audio/spotify/token") { try { json(res, await spotify.webToken()); } catch { json(res, { error: "not_connected" }, 401); } return; }
+  if (url === "/audio/curator") {
+    const mood = new URL(req.url ?? "/", "http://x").searchParams.get("mood") ?? "";
+    try { json(res, { picks: await curator.curate(mood), ai: curator.enabled() }); } catch { json(res, { picks: [] }, 500); }
+    return;
+  }
   if (url === "/audio/spotify/home") {
     try {
       const [pl, liked, top] = await Promise.all([spotify.playlists(), spotify.liked(), spotify.topTracks()]);
@@ -314,8 +320,9 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "set-role": result = audio.setRole(String(p.id), p.role); break;
       case "calibrate": result = audio.calibrate(String(p.zoneId)); break;
       case "spotify-play": {
-        if (spotify.connected() && (p.uri || p.contextUri)) {
-          try { const r = await spotify.play({ uris: p.uri ? [String(p.uri)] : undefined, contextUri: p.contextUri, deviceId: p.deviceId }); hint = r.device ? `Playing on ${r.device}` : undefined; }
+        const uris = Array.isArray(p.uris) ? p.uris.map(String) : (p.uri ? [String(p.uri)] : undefined);
+        if (spotify.connected() && (uris || p.contextUri)) {
+          try { const r = await spotify.play({ uris, contextUri: p.contextUri, deviceId: p.deviceId }); hint = r.device ? `Playing on ${r.device}` : undefined; }
           catch (e) { const m = (e as Error).message || ""; hint = m.includes("no_device") ? "no_device" : m; console.log("[spotify] play:", m); }
           result = p.meta ? audio.setTrack(p.meta, p.zoneId) : audio.state().nowPlaying;
         } else {

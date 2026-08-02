@@ -116,7 +116,9 @@ export async function me() {
 export async function playlists(limit = 50) {
   const j = await api(`/me/playlists?limit=${limit}`);
   return (j.items || []).map((p: any) => ({
-    id: p.id, uri: p.uri, name: p.name, tracks: p.tracks?.total ?? 0,
+    // Spotify's newer shape carries the track count under `items.total`; keep
+    // the legacy `tracks.total` as a fallback.
+    id: p.id, uri: p.uri, name: p.name, tracks: p.items?.total ?? p.tracks?.total ?? 0,
     image: p.images?.[0]?.url, owner: p.owner?.display_name, ownerId: p.owner?.id,
   }));
 }
@@ -132,15 +134,28 @@ export async function topTracks(limit = 20) {
 }
 
 export async function playlistTracks(id: string) {
-  // The dedicated /playlists/{id}/tracks endpoint 403s for new apps; the base
-  // playlist endpoint returns the first page of tracks and works.
-  const j = await api(`/playlists/${id}?fields=tracks.items(track(id,uri,name,artists(name),album(name,images),duration_ms))`);
-  return (j.tracks?.items || []).map((it: any) => trackOf(it.track)).filter((t: any) => t.id);
+  // The dedicated /playlists/{id}/tracks endpoint 403s for new apps. The base
+  // playlist endpoint works, but Spotify's newer response shape renamed the
+  // paging wrapper (`tracks` -> `items`) and each entry's payload
+  // (`track` -> `item`). Read the new shape, falling back to the legacy one.
+  const j = await api(`/playlists/${id}?limit=100`);
+  const page = j.items ?? j.tracks ?? {};
+  const rows = page.items ?? [];
+  return rows.map((it: any) => trackOf(it.item ?? it.track)).filter((t: any) => t.id);
 }
 
-export async function search(q: string) {
-  const j = await api(`/search?type=track&limit=12&q=${encodeURIComponent(q)}`);
-  return (j.tracks?.items || []).map(trackOf);
+// Development-mode Spotify apps cap the search `limit` at 10 (higher values
+// 400 with "Invalid limit"), so page with offset to gather more when asked.
+export async function search(q: string, want = 10) {
+  const PAGE = 10;
+  const out: any[] = [];
+  for (let offset = 0; out.length < want && offset < 60; offset += PAGE) {
+    const j = await api(`/search?type=track&limit=${PAGE}&offset=${offset}&q=${encodeURIComponent(q)}`);
+    const items = j.tracks?.items || [];
+    out.push(...items.map(trackOf));
+    if (items.length < PAGE) break;
+  }
+  return out.slice(0, want);
 }
 
 export async function devices() {

@@ -81,6 +81,11 @@
     <!-- Spotify browse -->
     <section id="spotifyBox"></section>
     <section id="browse" style="display:none;display:grid;gap:24px">
+      <div class="card"><div class="row between"><h2 style="margin:0">✨ Curator</h2>
+        <span class="row" style="gap:6px"><input type="text" id="mood" placeholder="mood (optional)" style="max-width:170px" onkeydown="if(event.key==='Enter')curate()"><button class="small" onclick="curate()">Suggest</button></span></div>
+        <div class="note">AI picks 4 things to play right now, from your taste. Tap one to start.</div>
+        <div id="picks" class="shelf" style="margin-top:10px"></div>
+      </div>
       <div><h2>Made for you</h2><div id="mixes" class="shelf"></div></div>
       <div><h2>Your top playlists</h2><div id="playlists" class="shelf"></div></div>
       <div class="card"><h2>Recently liked</h2><div id="liked" class="list"></div></div>
@@ -208,7 +213,19 @@ async function loadHome(){
     $("liked").innerHTML=(h.liked||[]).map(trackRow).join("")||'<span class="note">No liked songs.</span>';
     $("top").innerHTML=(h.top||[]).map(trackRow).join("")||'<span class="note">Nothing here.</span>';
   }catch(e){/* 401 until token warm */}
+  curate();
 }
+let PICKS={};
+async function curate(){
+  $("picks").innerHTML='<span class="note">Curating…</span>';
+  try{const r=await (await fetch('/audio/curator?mood='+encodeURIComponent($("mood").value||''))).json();
+    PICKS={};
+    $("picks").innerHTML=(r.picks||[]).map((p,i)=>{PICKS[i]=p;const cov=p.image?`<img class="cov" src="${p.image}">`:`<div class="cov">✨</div>`;
+      return `<div class="pcard" onclick="playPick(${i})">${cov}<div class="nm">${esc(p.label)}</div><div class="sub">${esc(p.vibe)}</div></div>`;}).join("")||'<span class="note">No picks.</span>';
+  }catch(e){$("picks").innerHTML='<span class="note">Curator unavailable.</span>';}
+}
+function playPick(i){const p=PICKS[i];if(!p||!p.uris||!p.uris.length){toast("Nothing playable found for that pick.");return;}
+  toast("▶ "+p.label);api('spotify-play',{uris:p.uris,deviceId:webDeviceId||undefined,meta:{title:p.label,artist:p.vibe}});}
 let PLMAP={};
 function pcard(pl){PLMAP[pl.id]=pl; const cov=pl.image?`<img class="cov" src="${pl.image}">`:`<div class="cov">🎵</div>`;
   return `<div class="pcard" onclick="openPl('${pl.id}')">${cov}<div class="nm">${esc(pl.name)}</div><div class="sub">${pl.tracks} tracks</div></div>`;}
@@ -219,7 +236,7 @@ async function openPl(id){const pl=PLMAP[id];if(!pl)return;
   try{const r=await (await fetch('/audio/spotify/playlist?id='+encodeURIComponent(id))).json();
     const ts=r.tracks||[];$("plmCount").textContent=ts.length?ts.length+" songs":"";
     $("plmTracks").innerHTML=ts.length?ts.map(trackRow).join("")
-      :'<div class="note">Spotify restricts listing this playlist’s songs for third-party apps (needs an extended-quota approval). You can still hit <b>Play all</b>. Your <b>Liked songs</b> and <b>Top tracks</b> show full track lists.</div>';
+      :'<div class="note">Spotify only returns a track list for smaller playlists on our current API tier — very large playlists come back empty until the app is granted <b>Extended Quota Mode</b>. You can still hit <b>Play all</b>, and <b>Liked songs</b> / <b>Top tracks</b> always list in full.</div>';
   }catch(e){$("plmTracks").innerHTML='<div class="note">Could not load songs.</div>';}
 }
 function closePl(){$("plModal").classList.remove("show");}
