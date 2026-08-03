@@ -28,6 +28,7 @@ const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
 const DASHBOARD = new URL("../../../apps/app/index.html", import.meta.url);
 const CONTROL = new URL("../../../apps/app/control.html", import.meta.url);
 const MUSIC = new URL("../../../apps/app/music.html", import.meta.url);
+const SPEAKERS = new URL("../../../apps/app/speakers.html", import.meta.url);
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -163,6 +164,18 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.end(html);
     } catch {
       json(res, { error: "music_not_found" }, 500);
+    }
+    return;
+  }
+  if (url === "/speakers" || url === "/speakers.html") {
+    try {
+      const html = await readFile(SPEAKERS, "utf8");
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+    } catch {
+      json(res, { error: "speakers_not_found" }, 500);
     }
     return;
   }
