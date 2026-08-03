@@ -68,11 +68,12 @@ async function generate(mood: string) {
   const out = [];
   for (const p of picks) {
     let tracks: any[] = [];
-    // resolve tracks with a couple of retries — Spotify search can 429 in bursts,
-    // and a too-narrow query can miss; fall back to the mix label as a broader query.
+    // resolve tracks with a couple of retries — a too-narrow query can miss, so
+    // fall back to the mix label as a broader query. Bail out immediately if
+    // Spotify is rate-limiting us (retrying would only make the 429 worse).
     for (const q of [p.query, p.label, p.query]) {
-      if (tracks.length >= 5) break;
-      try { if (spotify.connected()) tracks = (await spotify.search(q, 25)).slice(0, 25); } catch {}
+      if (tracks.length >= 5 || spotify.rateLimited()) break;
+      try { if (spotify.connected()) tracks = (await spotify.search(q, 25)).slice(0, 25); } catch { if (spotify.rateLimited()) break; }
       if (tracks.length < 5) await sleep(400);
     }
     out.push({

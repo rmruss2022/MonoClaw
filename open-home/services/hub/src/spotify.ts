@@ -23,6 +23,7 @@ const SCOPES = [
 
 const DATA_DIR = new URL("../.data/", import.meta.url);
 const TOKEN_FILE = new URL("../.data/spotify-tokens.json", import.meta.url);
+const PROFILE_FILE = new URL("../.data/spotify-profile.json", import.meta.url);
 
 interface Tokens { access_token: string; refresh_token: string; expires_at: number; }
 let tokens: Tokens | null = null;
@@ -33,13 +34,14 @@ export function connected(): boolean { return !!tokens?.refresh_token; }
 export function redirectUri(): string { return REDIRECT_URI; }
 
 export function status() {
-  return { configured: configured(), connected: connected(), profile, redirectUri: REDIRECT_URI };
+  return { configured: configured(), connected: connected(), profile, redirectUri: REDIRECT_URI, rateLimited: rateLimited(), retryAfterMs: retryAfterMs() };
 }
 
 export async function load(): Promise<void> {
+  try { profile = JSON.parse(await readFile(PROFILE_FILE, "utf8")); } catch {}
   try {
     tokens = JSON.parse(await readFile(TOKEN_FILE, "utf8"));
-    await me().catch(() => {}); // warm the profile
+    await me().catch(() => {}); // warm the profile (keeps cached one if this fails)
   } catch { tokens = null; }
 }
 
@@ -88,12 +90,27 @@ async function accessToken(): Promise<string | null> {
   return tokens.access_token;
 }
 
+// Global rate-limit gate: when Spotify returns 429 we back off for Retry-After
+// and short-circuit every call until then, so we stop hammering the API.
+let rateLimitedUntil = 0;
+export function rateLimited(): boolean { return Date.now() < rateLimitedUntil; }
+export function retryAfterMs(): number { return Math.max(0, rateLimitedUntil - Date.now()); }
+
 async function api(path: string, init?: RequestInit): Promise<any> {
+  if (Date.now() < rateLimitedUntil) throw new Error("rate_limited");
   const tok = await accessToken();
   if (!tok) throw new Error("not_connected");
   const r = await fetch(`https://api.spotify.com/v1${path}`, {
     ...init, headers: { ...(init?.headers || {}), Authorization: `Bearer ${tok}` },
   });
+  if (r.status === 429) {
+    const ra = Number(r.headers.get("retry-after") || "10");
+    // honor Spotify's Retry-After but cap our self-gate at 10 min so a long
+    // penalty only darkens us in short probe cycles instead of for over an hour
+    rateLimitedUntil = Date.now() + (Math.min(ra, 600) + 1) * 1000;
+    console.log(`[spotify] 429 — server asked ${ra}s, backing off ${Math.min(ra, 600)}s`);
+    throw new Error("rate_limited");
+  }
   if (r.status === 204) return {};
   const txt = await r.text();
   if (!r.ok) throw new Error(`spotify_${r.status}: ${txt.slice(0, 200)}`);
@@ -108,9 +125,15 @@ export async function webToken() {
 }
 
 export async function me() {
-  const j = await api("/me");
-  profile = { name: j.display_name || j.id, email: j.email, image: j.images?.[0]?.url, product: j.product };
-  return profile;
+  // during a rate-limit window, keep showing the last-known profile instead of
+  // re-fetching (which would just fail and flip the UI to "not connected")
+  if (profile && rateLimited()) return profile;
+  try {
+    const j = await api("/me");
+    profile = { name: j.display_name || j.id, email: j.email, image: j.images?.[0]?.url, product: j.product };
+    writeFile(PROFILE_FILE, JSON.stringify(profile), { mode: 0o600 }).catch(() => {});
+    return profile;
+  } catch (e) { if (profile) return profile; throw e; }
 }
 
 export async function playlists(limit = 50) {

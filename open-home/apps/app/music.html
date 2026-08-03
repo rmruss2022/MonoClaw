@@ -115,6 +115,7 @@
   </header>
 
   <main>
+    <div id="rlbanner" style="display:none;background:rgba(240,180,41,.12);border:1px solid #5a4a00;color:#f0b429;border-radius:12px;padding:10px 14px;font-size:13px"></div>
     <!-- Spotify browse -->
     <section id="spotifyBox"></section>
     <section id="browse" style="display:none;display:grid;grid-template-columns:minmax(0,1fr);gap:24px">
@@ -199,6 +200,8 @@ function currentZone(){return $("zoneSel").value||(S&&S.nowPlaying.zoneId)||"";}
 
 function render(state){
   S=state;$("hubdot").className="dot on";
+  const rl=state.spotify&&state.spotify.rateLimited;const rb=$("rlbanner");
+  if(rb){if(rl){const m=Math.max(1,Math.ceil((state.spotify.retryAfterMs||0)/60000));rb.style.display="";rb.innerHTML=`⏳ Spotify is rate-limiting the app (too many requests) — browsing uses cached data and playback resumes automatically in ~${m} min. Avoid spamming Refresh.`;}else rb.style.display="none";}
   $("counts").textContent=`${state.counts.online}/${state.counts.speakers} speakers · ${state.counts.zones} zones`;
   // now-playing bar
   const np=state.nowPlaying;

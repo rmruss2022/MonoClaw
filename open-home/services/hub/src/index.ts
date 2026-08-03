@@ -57,19 +57,26 @@ setInterval(() => {
 // Advance the music playhead so the now-playing UI feels live.
 setInterval(() => audio.tick(2_000), 2_000);
 
-// Mirror Spotify's real playback into Now Playing when signed in.
+// Mirror Spotify's real playback into Now Playing when signed in. (Skipped while
+// rate-limited so we don't pile onto a 429.)
 setInterval(async () => {
-  if (!spotify.connected()) return;
+  if (!spotify.connected() || spotify.rateLimited()) return;
   try { const np = await spotify.currentlyPlaying(); if (np) audio.applySpotifyPlayback(np); } catch {}
-}, 3_000);
+}, 5_000);
 
 // Keep the live Connect devices (Mac/iPhone/…) synced into the speaker model.
 speakerService.refresh().catch(() => {});
-setInterval(() => { speakerService.refresh().catch(() => {}); }, 8_000);
+setInterval(() => { if (!spotify.rateLimited()) speakerService.refresh().catch(() => {}); }, 15_000);
 
 // Maintain onboarded local Wi-Fi/Bluetooth speakers — reconnect on drop.
 setInterval(() => { localAudio.maintain().catch(() => {}); }, 15_000);
 
+function spotifyHint(m: string): string {
+  if (m.includes("rate_limited")) return "Spotify is rate-limiting us — pausing a moment, try again shortly.";
+  if (m.includes("no_device") || m.includes("404")) return "no_device";
+  if (m.includes("403")) return "Spotify needs Premium for remote playback.";
+  return "Couldn't reach Spotify — try again.";
+}
 function json(res: import("node:http").ServerResponse, body: unknown, code = 200): void {
   res.statusCode = code;
   res.setHeader("Content-Type", "application/json");
@@ -334,7 +341,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
           try {
             if (p.action === "seek") await spotify.seek(Number(p.ms) || 0);
             else await spotify.transportRemote(p.action === "prev" ? "previous" : p.action);
-          } catch (e) { const m = (e as Error).message || ""; if (m.includes("no_device") || m.includes("404")) hint = "no_device"; }
+          } catch (e) { const m = (e as Error).message || ""; if (m.includes("no_device") || m.includes("404")) hint = "no_device"; else if (m.includes("rate_limited")) hint = "Spotify is busy — give it a moment."; }
         }
         result = audio.transport(p.action, p.ms); break;
       }
@@ -371,7 +378,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
         const uris = Array.isArray(p.uris) ? p.uris.map(String) : (p.uri ? [String(p.uri)] : undefined);
         if (spotify.connected() && (uris || p.contextUri)) {
           try { const r = await spotify.play({ uris, contextUri: p.contextUri, offset: p.offset, deviceId: p.deviceId }); hint = r.device ? `Playing on ${r.device}` : undefined; }
-          catch (e) { const m = (e as Error).message || ""; hint = m.includes("no_device") ? "no_device" : m; console.log("[spotify] play:", m); }
+          catch (e) { const m = (e as Error).message || ""; hint = spotifyHint(m); console.log("[spotify] play:", m); }
           result = p.meta ? audio.setTrack(p.meta, p.zoneId) : audio.state().nowPlaying;
         } else {
           result = audio.spotifyPlay(String(p.trackId), p.zoneId);
