@@ -20,6 +20,7 @@ export const DOCS: DocEntry[] = [
   { slug: "build", title: "Build Guide", file: "hardware/openhome-mini-build-guide.md", blurb: "Build the mini — a local \"Alexa\" on a Pi 4, with parts links." },
   { slug: "pod-mesh", title: "Pod Mesh", file: "hardware/openhome-pod-mesh.md", blurb: "Wall-plug pods in every room — agent everywhere, synced music, intercom." },
   { slug: "sound", title: "Sound", file: "services/speaker/DESIGN.md", blurb: "Speaker service + music app — zones, surround, Spotify. Design + tracker." },
+  { slug: "run-hub", title: "Run on your Pi", file: "hardware/run-the-hub.md", blurb: "Run the hub on your Pi/Mac so Wi-Fi + Bluetooth speaker discovery goes live." },
   { slug: "contributing", title: "Contributing", file: "CONTRIBUTING.md", blurb: "Ground rules and dev setup." },
 ];
 
