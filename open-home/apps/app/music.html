@@ -154,7 +154,9 @@
     <button class="icon play primary" id="playBtn" onclick="togglePlay()">▶</button>
     <button class="icon" onclick="tx('next')">⏭</button>
     <span class="time" id="pos">0:00</span><span class="prog" id="progWrap" onclick="seekAt(event)"><i id="progBar"></i></span><span class="time" id="dur">0:00</span>
-    <span class="row zonewrap" style="gap:6px"><span class="small muted">🔊</span>
+    <span class="row zonewrap" style="gap:6px"><span class="small muted">📻</span>
+      <select id="outDev" onchange="onDevPick()" title="Where playback goes"></select>
+      <span class="small muted">🔊</span>
       <input type="range" min="0" max="100" id="masterVol" style="max-width:120px" oninput="vol(currentZone(),this.value)" onmousedown="editingVol=true" onmouseup="editingVol=false">
       <select id="zoneSel" onchange="playZone(this.value)"></select></span>
   </div>
@@ -274,19 +276,19 @@ async function openPl(id){const pl=PLMAP[id];if(!pl)return;
 }
 function closePl(){$("plModal").classList.remove("show");}
 function seekAt(e){if(!S)return;const rect=e.currentTarget.getBoundingClientRect();const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));const ms=Math.round(frac*(S.nowPlaying.durationMs||0));
-  if(webPlayer&&webDeviceId)webPlayer.seek(ms);else api('transport',{action:'seek',ms});$("progBar").style.width=(frac*100)+"%";}
+  if(webPlayer&&webDeviceId&&tabIsTarget())webPlayer.seek(ms);else api('transport',{action:'seek',ms});$("progBar").style.width=(frac*100)+"%";}
 function trackRow(t){const img=t.image?`<img src="${t.image}">`:"";
   return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
     <button class="small primary" onclick='playTrack(${JSON.stringify(t).replace(/'/g,"&#39;")})'>play</button></div>`;}
-function playCtx(uri){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");} api('spotify-play',{contextUri:uri,zoneId:currentZone(),deviceId:webDeviceId||undefined}); }
-function playTrack(t){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");} api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone(),deviceId:webDeviceId||undefined}); }
+function playCtx(uri){ warmTab(); api('spotify-play',{contextUri:uri,zoneId:currentZone(),deviceId:targetDevice()}); }
+function playTrack(t){ warmTab(); api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone(),deviceId:targetDevice()}); }
 // A song tapped inside a playlist plays the playlist *in context* at that
 // track's position, so next/prev walk the playlist instead of replaying it.
 function plTrackRow(t,ctx,pos){const img=t.image?`<img src="${t.image}">`:"";
   return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
     <button class="small primary" onclick='playInCtx(${JSON.stringify(ctx)},${pos},${JSON.stringify({title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs}).replace(/'/g,"&#39;")})'>play</button></div>`;}
-function playInCtx(ctx,pos,meta){ if(!webDeviceId){toast("Starting Mac web player… tap play again in a second.");}
-  toast("▶ "+meta.title); api('spotify-play',{contextUri:ctx,offset:pos,meta:meta,zoneId:currentZone(),deviceId:webDeviceId||undefined}); closePl(); }
+function playInCtx(ctx,pos,meta){ warmTab();
+  toast("▶ "+meta.title); api('spotify-play',{contextUri:ctx,offset:pos,meta:meta,zoneId:currentZone(),deviceId:targetDevice()}); closePl(); }
 async function search(){const q=$("q").value;const r=await (await fetch("/audio/spotify/search?q="+encodeURIComponent(q))).json();
   $("results").innerHTML=(r.tracks||[]).map(t=>t.uri?trackRow(t):`<div class="item"><span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span><button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("")||'<div class="note">No results.</div>';}
 
@@ -294,10 +296,10 @@ async function search(){const q=$("q").value;const r=await (await fetch("/audio/
 function toggleSel(id){sel.has(id)?sel.delete(id):sel.add(id);render(S);}
 function togglePlay(){tx(S&&S.nowPlaying.playing?"pause":"play");}
 function tx(action){
-  if(webPlayer&&webDeviceId){ if(action==='play'||action==='pause')webPlayer.togglePlay(); else if(action==='next')webPlayer.nextTrack(); else if(action==='prev')webPlayer.previousTrack(); return; }
+  if(webPlayer&&webDeviceId&&tabIsTarget()){ if(action==='play'||action==='pause')webPlayer.togglePlay(); else if(action==='next')webPlayer.nextTrack(); else if(action==='prev')webPlayer.previousTrack(); return; }
   api("transport",{action});
 }
-function vol(id,v){ if(webPlayer&&webDeviceId&&id===currentZone())webPlayer.setVolume(Math.max(0,Math.min(1,Number(v)/100))); if(id)api("volume",{id,volume:Number(v)}); }
+function vol(id,v){ if(webPlayer&&webDeviceId&&tabIsTarget()&&id===currentZone())webPlayer.setVolume(Math.max(0,Math.min(1,Number(v)/100))); if(id)api("volume",{id,volume:Number(v)}); }
 function playZone(z){api("play-in-zone",{zoneId:z});}
 function makeZone(){if(sel.size<1){toast("Select speakers to group first.");return;}api("create-zone",{name:$("zoneName").value,speakerIds:[...sel]}).then(()=>{sel.clear();$("zoneName").value="";});}
 function calibrate(){const z=$("calZone").value;if(z)api("calibrate",{zoneId:z});}
@@ -305,6 +307,22 @@ async function scan(kind){$("discover").innerHTML=`<div class="note">Scanning ${
   $("discover").innerHTML=(r.found||[]).map(d=>`<div class="item"><span><span class="badge ${kind==='bluetooth'?'bt':''}">${d.kind}</span> ${esc(d.name)} <span class="muted small">${esc(d.room)}</span></span>
     <button class="small primary" onclick='addSpk(${JSON.stringify(d).replace(/'/g,"&#39;")})'>add</button></div>`).join("")||`<div class="note">No new ${kind} speakers found.</div>`;}
 function addSpk(d){api("add-speaker",{name:d.name,room:d.room,kind:d.kind}).then(()=>$("discover").innerHTML="");}
+
+// ---- Output device picker: send playback to iPhone / Mac / this tab ----
+let outDevices=[];
+const TAB_NAME='openhome Web Player (Mac)';
+function tabIsTarget(){return $("outDev").value==='__tab';}
+function targetDevice(){const v=$("outDev").value; if(v==='__tab')return webDeviceId||undefined; if(!v||v==='__auto')return undefined; return v;}
+function warmTab(){ if(tabIsTarget()&&!webDeviceId)toast("Starting this-tab player… tap play again in a second."); }
+async function loadDevices(){try{const r=await(await fetch('/audio/spotify/devices')).json();outDevices=r.devices||[];renderDevPicker();}catch(e){}}
+function renderDevPicker(){const el=$("outDev");if(!el)return;const keep=el.value;
+  let opts=`<option value="__auto">Auto (follow active)</option>`;
+  if(webDeviceId)opts+=`<option value="__tab">This tab 🔊</option>`;
+  opts+=outDevices.filter(d=>d.name!==TAB_NAME).map(d=>`<option value="${d.id}">${esc(d.name)}${d.active?' · active':''}</option>`).join("");
+  el.innerHTML=opts; el.value=([...el.options].some(o=>o.value===keep))?keep:'__auto';}
+function onDevPick(){const v=$("outDev").value;
+  if(v==='__tab'){ if(webDeviceId)api('spotify-transfer',{deviceId:webDeviceId}); }
+  else if(v&&v!=='__auto'){ api('spotify-transfer',{deviceId:v}); toast("Sending to "+($("outDev").selectedOptions[0].textContent||"device")); } }
 
 // ---- Spotify Web Playback SDK: play in THIS browser tab (Mac speakers), no desktop app ----
 let webPlayer=null, webDeviceId=null;
@@ -315,7 +333,7 @@ async function initWeb(){
     if(!t.access_token) return; // not signed in yet
     webPlayer=new Spotify.Player({name:'openhome Web Player (Mac)',volume:0.6,
       getOAuthToken:cb=>fetch('/audio/spotify/token').then(r=>r.json()).then(j=>cb(j.access_token)).catch(()=>{})});
-    webPlayer.addListener('ready',({device_id})=>{webDeviceId=device_id;toast('Mac web player ready 🔊');});
+    webPlayer.addListener('ready',({device_id})=>{webDeviceId=device_id;toast('This-tab player ready 🔊');loadDevices();});
     webPlayer.addListener('not_ready',()=>{webDeviceId=null;});
     webPlayer.addListener('account_error',()=>toast('Spotify Premium is required for in-browser playback.'));
     webPlayer.addListener('initialization_error',({message})=>console.log('sdk init:',message));
@@ -333,6 +351,7 @@ function fastNow(s){const t=s.track_window&&s.track_window.current_track;if(!t)r
 if(window.Spotify&&!webPlayer)initWeb();
 
 refresh();setInterval(refresh,3000);
+loadDevices();setInterval(loadDevices,10000);
 </script>
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
 </body>

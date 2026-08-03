@@ -163,16 +163,25 @@ export async function devices() {
   return (j.devices || []).map((d: any) => ({ id: d.id, name: d.name, type: d.type, active: d.is_active, volume: d.volume_percent }));
 }
 
-/** Pick a Connect device — prefer the MacBook, then any computer, then whatever's active. */
-export async function pickDeviceId(prefer = "mac"): Promise<{ id: string; name: string } | null> {
+/** Pick a Connect device. "auto" follows whatever is already playing (so the
+ *  phone and Mac stay in sync); a named prefer forces that device; falls back
+ *  to the Mac web player when nothing is active. */
+export async function pickDeviceId(prefer = "auto"): Promise<{ id: string; name: string } | null> {
   const ds = await devices();
   if (!ds.length) return null;
   const p = prefer.toLowerCase();
-  const d = ds.find((x: any) => (x.name || "").toLowerCase().includes(p) || (x.name || "").toLowerCase().includes("book"))
+  const d = (p && p !== "auto" && ds.find((x: any) => (x.name || "").toLowerCase().includes(p)))
+    || ds.find((x: any) => x.active)                                                   // follow the active device
+    || ds.find((x: any) => (x.name || "").toLowerCase().includes("mac") || (x.name || "").toLowerCase().includes("book"))
     || ds.find((x: any) => x.type === "Computer")
-    || ds.find((x: any) => x.active)
     || ds[0];
   return { id: d.id, name: d.name };
+}
+
+/** Move playback to a specific Connect device (the "send to iPhone/Mac" action). */
+export async function transfer(deviceId: string, play = true) {
+  await api("/me/player", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ device_ids: [deviceId], play }) });
+  return { ok: true };
 }
 
 /** Play a context (playlist uri) or track uris. Defaults output to the MacBook.
@@ -180,7 +189,7 @@ export async function pickDeviceId(prefer = "mac"): Promise<{ id: string; name: 
  *  so the player has the rest of the playlist queued for next/prev. */
 export async function play(opts: { contextUri?: string; uris?: string[]; offset?: number | string; deviceId?: string; prefer?: string }) {
   let deviceId = opts.deviceId, deviceName = "";
-  if (!deviceId) { const d = await pickDeviceId(opts.prefer ?? "mac"); if (!d) throw new Error("no_device"); deviceId = d.id; deviceName = d.name; }
+  if (!deviceId) { const d = await pickDeviceId(opts.prefer ?? "auto"); if (!d) throw new Error("no_device"); deviceId = d.id; deviceName = d.name; }
   const body: any = {};
   if (opts.contextUri) body.context_uri = opts.contextUri;
   if (opts.uris) body.uris = opts.uris;

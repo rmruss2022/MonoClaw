@@ -330,6 +330,13 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
         }
         break;
       }
+      case "spotify-transfer": {
+        if (spotify.connected() && p.deviceId) {
+          try { await spotify.transfer(String(p.deviceId), p.play !== false); hint = "Moved playback"; }
+          catch (e) { const m = (e as Error).message || ""; hint = m.includes("404") ? "no_device" : m; }
+        }
+        result = audio.state().nowPlaying; break;
+      }
       case "play-in-zone": result = audio.playInZone(String(p.zoneId)); break;
       default: json(res, { ok: false, error: "unknown_cmd", cmd }, 400); return;
     }
