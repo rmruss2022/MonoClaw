@@ -152,6 +152,7 @@
     <button class="icon" onclick="tx('prev')">⏮</button>
     <button class="icon play primary" id="playBtn" onclick="togglePlay()">▶</button>
     <button class="icon" onclick="tx('next')">⏭</button>
+    <button class="icon devbtn" id="devBtn" onclick="openDevSheet()" title="Speaker output">📻</button>
     <span class="time" id="pos">0:00</span><span class="prog" id="progWrap" onclick="seekAt(event)"><i id="progBar"></i></span><span class="time" id="dur">0:00</span>
     <span class="row zonewrap" style="gap:6px"><span class="small muted">📻</span>
       <select id="outDev" onchange="onDevPick()" title="Where playback goes"></select>
@@ -160,6 +161,15 @@
       <select id="zoneSel" onchange="playZone(this.value)"></select></span>
   </div>
   <div class="toast" id="toast"></div>
+
+  <!-- speaker output chooser -->
+  <div class="modal" id="devModal" onclick="if(event.target===this)closeDevSheet()">
+    <div class="sheet">
+      <div class="row between"><b style="font-size:18px">🔊 Speaker output</b><button class="small" onclick="closeDevSheet()">✕</button></div>
+      <div class="muted small" style="margin:6px 0 12px">Where music plays. Open Spotify/this app on a device for it to show up.</div>
+      <div id="devList" class="list"></div>
+    </div>
+  </div>
 
   <!-- playlist detail -->
   <div class="modal" id="plModal" onclick="if(event.target===this)closePl()">
@@ -317,10 +327,22 @@ function renderDevPicker(){const el=$("outDev");if(!el)return;const keep=el.valu
   let opts=`<option value="__auto">Auto (follow active)</option>`;
   if(webDeviceId)opts+=`<option value="__tab">This tab 🔊</option>`;
   opts+=outDevices.filter(d=>d.name!==TAB_NAME).map(d=>`<option value="${d.id}">${esc(d.name)}${d.active?' · active':''}</option>`).join("");
-  el.innerHTML=opts; el.value=([...el.options].some(o=>o.value===keep))?keep:'__auto';}
+  el.innerHTML=opts; el.value=([...el.options].some(o=>o.value===keep))?keep:'__auto'; updateDevBtn();}
 function onDevPick(){const v=$("outDev").value;
   if(v==='__tab'){ if(webDeviceId)api('spotify-transfer',{deviceId:webDeviceId}); }
   else if(v&&v!=='__auto'){ api('spotify-transfer',{deviceId:v}); toast("Sending to "+($("outDev").selectedOptions[0].textContent||"device")); } }
+// short label for the player-bar output button
+function deviceLabel(){const el=$("outDev");const o=el&&el.selectedOptions&&el.selectedOptions[0];return o?o.textContent.replace(/ ·.*/,'').replace(' 🔊',''):'Auto';}
+function updateDevBtn(){const b=$("devBtn");if(!b)return;const l=deviceLabel();b.title='Output: '+l;b.textContent=l==='Auto'||l==='Auto (follow active)'?'📻':(l.toLowerCase().includes('iphone')||l.toLowerCase().includes('phone')?'📱':(l.toLowerCase().includes('tab')||l.toLowerCase().includes('mac')?'💻':'🔈'));}
+// tap-friendly output chooser (works on mobile where the inline select is hidden)
+async function openDevSheet(){await loadDevices();renderDevList();$("devModal").classList.add("show");}
+function closeDevSheet(){$("devModal").classList.remove("show");}
+function renderDevList(){const cur=$("outDev").value||'__auto';
+  const opts=[{v:'__auto',n:'Auto (follow active device)',i:'🎯'}];
+  if(webDeviceId)opts.push({v:'__tab',n:'This tab / browser',i:'🔊'});
+  outDevices.filter(d=>d.name!==TAB_NAME).forEach(d=>opts.push({v:d.id,n:d.name+(d.active?' · playing':''),i:d.type==='Smartphone'?'📱':d.type==='Computer'?'💻':'🔈'}));
+  $("devList").innerHTML=opts.map(o=>`<div class="item" style="cursor:pointer" onclick="pickDev('${o.v}')"><span>${o.i} ${esc(o.n)}</span>${o.v===cur?'<span class="badge">current</span>':''}</div>`).join("")||'<div class="note">No devices found. Open Spotify or this app on a device.</div>';}
+function pickDev(v){const el=$("outDev");if(![...el.options].some(o=>o.value===v)){el.innerHTML+=`<option value="${v}"></option>`;}el.value=v;onDevPick();updateDevBtn();toast('Output → '+deviceLabel());closeDevSheet();}
 
 // ---- Spotify Web Playback SDK: play in THIS browser tab (Mac speakers), no desktop app ----
 let webPlayer=null, webDeviceId=null;
