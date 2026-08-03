@@ -14,6 +14,7 @@
  */
 
 import * as spotify from "./spotify.ts";
+import * as speakerService from "./speakerService.ts";
 
 export type SpeakerKind = "wifi" | "bluetooth" | "airplay" | "chromecast" | "snapcast" | "pod";
 export type Role = "mono" | "stereo" | "left" | "right" | "center" | "surround-l" | "surround-r" | "sub";
@@ -104,12 +105,16 @@ export function listZones(): Zone[] { return zones.map((z) => ({ ...z, speakerId
 export function state() {
   const np = { ...nowPlaying };
   if (np.playing) np.positionMs = Math.min(np.durationMs, np.positionMs); // advanced by tick()
+  // live Spotify Connect devices (your Mac, iPhone, …) show up as real speakers,
+  // each in its assigned room, ahead of the mock demo speakers.
+  const live = speakerService.cached();
+  const allSpeakers = [...live, ...listSpeakers()];
   return {
     nowPlaying: np,
     zones: listZones(),
-    speakers: listSpeakers(),
+    speakers: allSpeakers,
     spotify: spotifyStatus(),
-    counts: { speakers: speakers.length, online: speakers.filter((x) => x.online).length, zones: zones.length },
+    counts: { speakers: allSpeakers.length, online: allSpeakers.filter((x) => x.online).length, zones: zones.length },
   };
 }
 

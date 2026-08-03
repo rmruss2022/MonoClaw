@@ -184,6 +184,13 @@ export async function transfer(deviceId: string, play = true) {
   return { ok: true };
 }
 
+/** Set a Connect device's volume (0-100). Not all devices accept it (e.g. iOS caps it). */
+export async function setDeviceVolume(deviceId: string, percent: number) {
+  const v = Math.max(0, Math.min(100, Math.round(percent)));
+  await api(`/me/player/volume?volume_percent=${v}&device_id=${deviceId}`, { method: "PUT" });
+  return { ok: true };
+}
+
 /** Play a context (playlist uri) or track uris. Defaults output to the MacBook.
  *  `offset` starts a context at a track — a number (position) or a track URI —
  *  so the player has the rest of the playlist queued for next/prev. */

@@ -20,6 +20,7 @@ import * as ai from "./ai.ts";
 import * as audio from "./audio.ts";
 import * as spotify from "./spotify.ts";
 import * as curator from "./curator.ts";
+import * as speakerService from "./speakerService.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -59,6 +60,10 @@ setInterval(async () => {
   if (!spotify.connected()) return;
   try { const np = await spotify.currentlyPlaying(); if (np) audio.applySpotifyPlayback(np); } catch {}
 }, 3_000);
+
+// Keep the live Connect devices (Mac/iPhone/…) synced into the speaker model.
+speakerService.refresh().catch(() => {});
+setInterval(() => { speakerService.refresh().catch(() => {}); }, 8_000);
 
 function json(res: import("node:http").ServerResponse, body: unknown, code = 200): void {
   res.statusCode = code;
@@ -311,7 +316,19 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
         }
         result = audio.transport(p.action, p.ms); break;
       }
-      case "volume": result = audio.setVolume(String(p.id), Number(p.volume)); break;
+      case "volume": {
+        const id = String(p.id);
+        const live = speakerService.deviceForSpeaker(id);
+        if (live) { const ok = await speakerService.setVolume(live.deviceId, Number(p.volume)); if (!ok) hint = "This device doesn't allow remote volume."; result = audio.state().nowPlaying; }
+        else result = audio.setVolume(id, Number(p.volume));
+        break;
+      }
+      case "speaker-room": { speakerService.setRoom(String(p.deviceId), String(p.room ?? "—")); result = audio.state(); break; }
+      case "play-room": {
+        const name = await speakerService.playRoom(String(p.room));
+        hint = name ? `Playing in ${p.room} (${name})` : `No live speaker in ${p.room} yet`;
+        result = audio.state().nowPlaying; break;
+      }
       case "mute": result = audio.setMuted(String(p.id), !!p.muted); break;
       case "add-speaker": result = audio.addSpeaker(String(p.name ?? ""), String(p.room ?? "—"), p.kind); break;
       case "remove-speaker": result = audio.removeSpeaker(String(p.id)); break;
