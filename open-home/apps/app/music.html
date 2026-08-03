@@ -115,7 +115,7 @@
     <section id="spotifyBox"></section>
     <section id="browse" style="display:none;display:grid;grid-template-columns:minmax(0,1fr);gap:24px">
       <div class="card"><div class="row between"><h2 style="margin:0">✨ Made for you</h2>
-        <span class="row" style="gap:6px"><input type="text" id="mood" placeholder="mood (optional)" style="max-width:170px" onkeydown="if(event.key==='Enter')curate()"><button class="small" onclick="curate()">Refresh</button></span></div>
+        <span class="row" style="gap:6px"><input type="text" id="mood" placeholder="mood (optional)" style="max-width:170px" onkeydown="if(event.key==='Enter')curate(true)"><button class="small" onclick="curate(true)">Refresh</button></span></div>
         <div class="note">openhome mixes, tuned to your taste — tap one to play. Type a mood to steer them.</div>
         <div id="picks" class="shelf" style="margin-top:10px"></div>
       </div>
@@ -249,9 +249,9 @@ async function loadHome(){
   curate();
 }
 let PICKS={};
-async function curate(){
-  $("picks").innerHTML='<span class="note">Curating…</span>';
-  try{const r=await (await fetch('/audio/curator?mood='+encodeURIComponent($("mood").value||''))).json();
+async function curate(force){
+  $("picks").innerHTML='<span class="note">'+(force?'Refreshing your mixes…':'Loading your mixes…')+'</span>';
+  try{const r=await (await fetch('/audio/curator?mood='+encodeURIComponent($("mood").value||'')+(force?'&force=1':''))).json();
     PICKS={};
     $("picks").innerHTML=(r.picks||[]).map((p,i)=>{PICKS[i]=p;const cov=p.image?`<img class="cov" src="${p.image}">`:`<div class="cov">✨</div>`;
       return `<div class="pcard" onclick="playPick(${i})">${cov}<div class="nm">${esc(p.label)}</div><div class="sub">${esc(p.vibe)}</div></div>`;}).join("")||'<span class="note">No picks.</span>';

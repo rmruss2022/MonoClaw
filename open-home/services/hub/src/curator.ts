@@ -7,7 +7,7 @@
  * comes back with track URIs you can fire straight into playback — ideal for a
  * 4-option remote gesture.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import * as spotify from "./spotify.ts";
 
@@ -16,6 +16,18 @@ function key(): string {
   try { return process.env.GEMINI_API_KEY || readFileSync(`${homedir()}/.gemini/imagekey`, "utf8").trim(); } catch { return ""; }
 }
 export function enabled(): boolean { return !!key(); }
+
+// ---- Persistent cache: keep generated mixes and only refresh every few hours ----
+const DATA_DIR = new URL("../.data/", import.meta.url);
+const CACHE_FILE = new URL("../.data/curator-cache.json", import.meta.url);
+const TTL_MS = 6 * 60 * 60 * 1000; // regenerate at most every 6 hours
+type CacheEntry = { at: number; picks: any[] };
+function loadCache(): Record<string, CacheEntry> {
+  try { return JSON.parse(readFileSync(CACHE_FILE, "utf8")); } catch { return {}; }
+}
+function saveCache(c: Record<string, CacheEntry>) {
+  try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(CACHE_FILE, JSON.stringify(c)); } catch (e) { console.log("[curator] cache save:", (e as Error).message); }
+}
 
 interface Pick { label: string; vibe: string; query: string; }
 
@@ -49,7 +61,7 @@ Make the 4 genuinely varied (different energy/genre). Return ONLY JSON:
   } catch (e) { console.log("[curator]", (e as Error).message); return fallback(); }
 }
 
-export async function curate(mood = "") {
+async function generate(mood: string) {
   const picks = await propose(mood);
   const out = [];
   for (const p of picks) {
@@ -63,4 +75,30 @@ export async function curate(mood = "") {
     });
   }
   return out;
+}
+
+/** Return curated mixes. Cached on disk per mood; regenerated only every ~6h
+ *  (or immediately when `force` is set, e.g. the user hits Refresh). */
+export async function curate(mood = "", force = false) {
+  const cacheKey = mood.trim().toLowerCase() || "__default";
+  const cache = loadCache();
+  const hit = cache[cacheKey];
+  if (!force && hit && (Date.now() - hit.at) < TTL_MS && hit.picks?.length) {
+    return hit.picks;
+  }
+  const out = await generate(mood);
+  // only overwrite the cache when we actually produced playable mixes
+  if (out.some((p) => p.uris?.length)) {
+    cache[cacheKey] = { at: Date.now(), picks: out };
+    saveCache(cache);
+    return out;
+  }
+  // generation came back empty (e.g. transient) — fall back to any prior cache
+  return hit?.picks?.length ? hit.picks : out;
+}
+
+/** When the cache for a mood was last generated (ms epoch), or 0 if never. */
+export function cachedAt(mood = ""): number {
+  const c = loadCache();
+  return c[(mood.trim().toLowerCase() || "__default")]?.at || 0;
 }

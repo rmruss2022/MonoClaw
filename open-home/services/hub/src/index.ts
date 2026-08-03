@@ -275,8 +275,10 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   if (url === "/audio/spotify/devices") { try { json(res, { devices: await spotify.devices() }); } catch { json(res, { devices: [] }, 401); } return; }
   if (url === "/audio/spotify/token") { try { json(res, await spotify.webToken()); } catch { json(res, { error: "not_connected" }, 401); } return; }
   if (url === "/audio/curator") {
-    const mood = new URL(req.url ?? "/", "http://x").searchParams.get("mood") ?? "";
-    try { json(res, { picks: await curator.curate(mood), ai: curator.enabled() }); } catch { json(res, { picks: [] }, 500); }
+    const qs = new URL(req.url ?? "/", "http://x").searchParams;
+    const mood = qs.get("mood") ?? "";
+    const force = qs.get("force") === "1" || qs.get("refresh") === "1";
+    try { json(res, { picks: await curator.curate(mood, force), ai: curator.enabled(), cachedAt: curator.cachedAt(mood) }); } catch { json(res, { picks: [] }, 500); }
     return;
   }
   if (url === "/audio/spotify/home") {
