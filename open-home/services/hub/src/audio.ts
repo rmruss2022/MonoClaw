@@ -17,6 +17,7 @@ import * as spotify from "./spotify.ts";
 import * as speakerService from "./speakerService.ts";
 import * as localAudio from "./localAudio.ts";
 import * as calibration from "./calibration.ts";
+import * as snapcast from "./snapcast.ts";
 
 export type SpeakerKind = "wifi" | "bluetooth" | "airplay" | "chromecast" | "snapcast" | "pod";
 export type Role = "mono" | "stereo" | "left" | "right" | "center" | "surround-l" | "surround-r" | "sub";
@@ -127,6 +128,7 @@ export function state() {
     zones: listZones(),
     speakers: allSpeakers,
     calibratedRooms: calRooms,
+    snapcast: snapcast.cached(),
     spotify: spotifyStatus(),
     counts: { speakers: allSpeakers.length, online: allSpeakers.filter((x) => x.online).length, zones: zones.length },
   };

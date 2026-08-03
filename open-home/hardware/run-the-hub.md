@@ -144,3 +144,56 @@ Today each onboarded speaker is discovered, roomed, and kept connected.
 **Synchronized multi-room** (the same audio playing in time across rooms) is the
 next layer — a **Snapcast** server on the hub with one client per speaker. The
 speaker service is built to plug straight into it. See [Sound](/docs/sound).
+
+---
+
+## Synchronized multi-room (Snapcast)
+
+Grouping a room's speakers so they play the **same audio in sample-sync** uses
+[Snapcast](https://github.com/snapcast/snapcast). The hub already speaks
+snapserver's control API (`services/hub/src/snapcast.ts`) — it pushes each
+room's calibration (delay → client latency, trim → client volume) and groups a
+room's clients on demand. You just need the audio pipeline running:
+
+```
+   Spotify / music  ──▶  librespot  ──▶  /tmp/snapfifo  ──▶  snapserver  ──▶  snapclient (Living Room L)
+                         (Connect sink)   (named pipe)      (:1704 stream)   ├▶ snapclient (Living Room R)
+                                                            (:1705 control)  └▶ snapclient (Kitchen)  …
+```
+
+**1. Install + a FIFO source**
+
+```bash
+sudo apt install -y snapserver snapclient librespot   # or build librespot
+```
+
+`/etc/snapserver.conf`:
+```ini
+[stream]
+source = pipe:///tmp/snapfifo?name=openhome&sampleformat=44100:16:2&codec=flac
+[http]
+enabled = true            # ui + websocket on :1780
+[tcp]
+enabled = true            # JSON-RPC control on :1705  ← the hub talks here
+```
+
+**2. Feed it** — run librespot as a Spotify Connect target that writes PCM to the
+pipe (so "openhome" shows up as a speaker in your Spotify app):
+```bash
+librespot -n "openhome" --backend pipe --device /tmp/snapfifo --bitrate 320
+```
+
+**3. One snapclient per speaker.** On each speaker node (a Pi Zero at the
+speaker, or the hub itself for a locally-wired speaker):
+```bash
+snapclient -h <hub-ip> --hostID "Living Room L"   # the name the hub matches on
+```
+Name each client to match its speaker in the app — that's how calibration and
+`⇄ Sync` map onto the right client.
+
+**4. In the app** — `/speakers` shows **🔗 sync active** once snapserver is
+reachable. **⇄ Sync** on a room groups its clients (one stream, in sync); **✨
+Calibrate** pushes that room's per-speaker delay/volume to those clients.
+
+> The hub points at `127.0.0.1:1705` by default; override with
+> `SNAPCAST_HOST` / `SNAPCAST_PORT` if snapserver runs elsewhere.

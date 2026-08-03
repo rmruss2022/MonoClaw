@@ -110,7 +110,7 @@
     </section>
 
     <section>
-      <div class="row between" style="margin-bottom:10px"><h2>Your rooms</h2><a href="/docs/run-hub" class="small muted" style="text-decoration:none">Setup help →</a></div>
+      <div class="row between" style="margin-bottom:10px"><h2>Your rooms</h2><span class="row small" style="gap:10px"><span id="syncStatus" class="small"></span><a href="/docs/run-hub" class="small muted" style="text-decoration:none">Setup help →</a></span></div>
       <div id="rooms"></div>
     </section>
   </main>
@@ -173,10 +173,13 @@ function render(s){
   const order=[],groups={};
   for(const x of sp){const r=x.room||"—";if(!groups[r]){groups[r]=[];order.push(r);}groups[r].push(x);}
   const calRooms=new Set(s.calibratedRooms||[]);
+  const snap=s.snapcast||{available:false,groups:[],clients:0};
+  $("syncStatus").innerHTML=snap.available?`<span class="badge live">🔗 sync active · ${snap.clients} clients</span>`:`<span class="muted">multi-room sync: <a href="/docs/run-hub" style="color:var(--accent)">start Snapcast</a></span>`;
   $("rooms").innerHTML=order.map(room=>{
     const g=groups[room];const live=g.filter(x=>x.online).length;const cal=calRooms.has(room);
     const calBtn=g.length>=2?`<button class="small" onclick="openCal('${esc(room)}')">${cal?'✨ Re-tune':'✨ Calibrate'}</button>`:'';
-    return `<div class="card roomcard" style="margin-bottom:14px"><div class="row between"><span class="row" style="gap:8px"><h3>${esc(room)}</h3>${cal?'<span class="badge live">spatial ✓</span>':''}</span><span class="row small" style="gap:8px"><span class="muted">${live}/${g.length} online</span>${calBtn}</span></div>
+    const syncBtn=g.length>=2?`<button class="small" onclick="api('sync-room',{room:'${esc(room)}'})" title="Play the same audio in sync across this room">⇄ Sync</button>`:'';
+    return `<div class="card roomcard" style="margin-bottom:14px"><div class="row between"><span class="row" style="gap:8px"><h3>${esc(room)}</h3>${cal?'<span class="badge live">spatial ✓</span>':''}</span><span class="row small" style="gap:8px"><span class="muted">${live}/${g.length} online</span>${syncBtn}${calBtn}</span></div>
       ${g.map(speakerRow).join("")}</div>`;
   }).join("")||`<div class="card"><div class="empty"><div class="ic">🔈</div><h3 style="margin:10px 0 4px">No speakers yet</h3><div class="note">Set up your Wi-Fi or Bluetooth speakers to start playing music around the house.</div><div style="margin-top:16px"><button class="primary" onclick="openWiz()">＋ Set up a speaker</button></div></div></div>`;
 }

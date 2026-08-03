@@ -23,6 +23,7 @@ import * as curator from "./curator.ts";
 import * as speakerService from "./speakerService.ts";
 import * as localAudio from "./localAudio.ts";
 import * as calibration from "./calibration.ts";
+import * as snapcast from "./snapcast.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -71,6 +72,10 @@ setInterval(() => { if (!spotify.rateLimited()) speakerService.refresh().catch((
 
 // Maintain onboarded local Wi-Fi/Bluetooth speakers — reconnect on drop.
 setInterval(() => { localAudio.maintain().catch(() => {}); }, 15_000);
+
+// Poll the Snapcast server (synchronized multi-room), if one is running.
+snapcast.refresh().catch(() => {});
+setInterval(() => { snapcast.refresh().catch(() => {}); }, 20_000);
 
 function spotifyHint(m: string): string {
   if (m.includes("rate_limited")) return "Spotify is rate-limiting us — pausing a moment, try again shortly.";
@@ -371,9 +376,19 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
         const inputs = Array.isArray(p.speakers) ? p.speakers.map((x: any) => ({ id: String(x.id), name: x.name, role: x.role, distanceM: Number(x.distanceM) })) : [];
         const profile = calibration.saveProfile(calibration.computeProfile(room, inputs, { mode: p.mode, tempC: Number(p.tempC) }));
         hint = `Calibrated ${room} — spatial audio active`;
+        // push the delays/trims to Snapcast clients if a server is running
+        const ap = await snapcast.applyCalibration(profile).catch(() => null);
+        if (ap && ap.applied) hint += ` · Snapcast ${ap.applied}/${ap.total}`;
         result = { profile, state: audio.state() }; break;
       }
       case "clear-calibration": { calibration.clearProfile(String(p.room || "")); result = audio.state(); break; }
+      case "sync-room": {
+        const room = String(p.room || "");
+        const names = (audio.state().speakers as any[]).filter((s) => s.room === room).map((s) => s.name);
+        const r = await snapcast.syncRoom(names);
+        hint = r.ok ? `Synced ${r.grouped} speakers in ${room}` : (r.reason || "Snapcast not available");
+        result = audio.state(); break;
+      }
       case "mute": result = audio.setMuted(String(p.id), !!p.muted); break;
       case "add-speaker": result = audio.addSpeaker(String(p.name ?? ""), String(p.room ?? "—"), p.kind); break;
       case "remove-speaker": result = audio.removeSpeaker(String(p.id)); break;
