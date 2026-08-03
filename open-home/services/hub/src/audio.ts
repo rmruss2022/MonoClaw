@@ -15,6 +15,7 @@
 
 import * as spotify from "./spotify.ts";
 import * as speakerService from "./speakerService.ts";
+import * as localAudio from "./localAudio.ts";
 
 export type SpeakerKind = "wifi" | "bluetooth" | "airplay" | "chromecast" | "snapcast" | "pod";
 export type Role = "mono" | "stereo" | "left" | "right" | "center" | "surround-l" | "surround-r" | "sub";
@@ -108,7 +109,12 @@ export function state() {
   // live Spotify Connect devices (your Mac, iPhone, …) show up as real speakers,
   // each in its assigned room, ahead of the mock demo speakers.
   const live = speakerService.cached();
-  const allSpeakers = [...live, ...listSpeakers()];
+  const local = localAudio.list().map((s) => ({
+    id: s.id, name: s.name, room: s.room, kind: s.kind, online: s.status === "connected",
+    volume: 40, muted: false, zone: null, role: "mono" as const, latencyMs: 0, calibrated: false,
+    local: true as const, status: s.status, address: s.address, mac: s.mac,
+  }));
+  const allSpeakers = [...live, ...local, ...listSpeakers()];
   return {
     nowPlaying: np,
     zones: listZones(),

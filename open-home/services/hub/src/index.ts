@@ -21,6 +21,7 @@ import * as audio from "./audio.ts";
 import * as spotify from "./spotify.ts";
 import * as curator from "./curator.ts";
 import * as speakerService from "./speakerService.ts";
+import * as localAudio from "./localAudio.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -64,6 +65,9 @@ setInterval(async () => {
 // Keep the live Connect devices (Mac/iPhone/…) synced into the speaker model.
 speakerService.refresh().catch(() => {});
 setInterval(() => { speakerService.refresh().catch(() => {}); }, 8_000);
+
+// Maintain onboarded local Wi-Fi/Bluetooth speakers — reconnect on drop.
+setInterval(() => { localAudio.maintain().catch(() => {}); }, 15_000);
 
 function json(res: import("node:http").ServerResponse, body: unknown, code = 200): void {
   res.statusCode = code;
@@ -297,7 +301,12 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   if (url === "/audio/spotify/disconnect" && req.method === "POST") { spotify.disconnect(); json(res, { ok: true }); return; }
   if (url === "/audio/discover") {
     const kind = (new URL(req.url ?? "/", "http://x").searchParams.get("kind") ?? "wifi") as "wifi" | "bluetooth";
-    json(res, { found: audio.discover(kind === "bluetooth" ? "bluetooth" : "wifi") }); return;
+    if (kind === "bluetooth") {
+      const r = await localAudio.scanBluetooth();
+      json(res, { found: r.devices, available: r.available, note: r.available ? undefined : r.reason }); return;
+    }
+    const found = await localAudio.scanWifi();
+    json(res, { found, note: found.length ? undefined : "No speakers answered on this network. Run the hub on the same LAN as your speakers to find them." }); return;
   }
   if (url === "/audio/command" && req.method === "POST") {
     const body = await readBody(req);
@@ -329,6 +338,13 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
         hint = name ? `Playing in ${p.room} (${name})` : `No live speaker in ${p.room} yet`;
         result = audio.state().nowPlaying; break;
       }
+      case "onboard-speaker": {
+        const sp = localAudio.onboard(p.device || {}, String(p.room ?? "Living Room"));
+        hint = `Added ${sp.name} to ${sp.room}`; result = audio.state(); break;
+      }
+      case "reconnect-speaker": { const sp = await localAudio.reconnect(String(p.id)); hint = sp ? `${sp.name}: ${sp.status}` : "not found"; result = audio.state(); break; }
+      case "remove-local": { localAudio.remove(String(p.id)); result = audio.state(); break; }
+      case "local-room": { localAudio.setRoom(String(p.id), String(p.room ?? "—")); result = audio.state(); break; }
       case "mute": result = audio.setMuted(String(p.id), !!p.muted); break;
       case "add-speaker": result = audio.addSpeaker(String(p.name ?? ""), String(p.room ?? "—"), p.kind); break;
       case "remove-speaker": result = audio.removeSpeaker(String(p.id)); break;
