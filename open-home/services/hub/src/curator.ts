@@ -31,6 +31,8 @@ function saveCache(c: Record<string, CacheEntry>) {
 
 interface Pick { label: string; vibe: string; query: string; }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 function fallback(): Pick[] {
   return [
     { label: "Focus Flow", vibe: "calm instrumentals to lock in", query: "focus instrumental beats" },
@@ -66,11 +68,18 @@ async function generate(mood: string) {
   const out = [];
   for (const p of picks) {
     let tracks: any[] = [];
-    try { if (spotify.connected()) tracks = (await spotify.search(p.query, 25)).slice(0, 25); } catch {}
+    // resolve tracks with a couple of retries — Spotify search can 429 in bursts,
+    // and a too-narrow query can miss; fall back to the mix label as a broader query.
+    for (const q of [p.query, p.label, p.query]) {
+      if (tracks.length >= 5) break;
+      try { if (spotify.connected()) tracks = (await spotify.search(q, 25)).slice(0, 25); } catch {}
+      if (tracks.length < 5) await sleep(400);
+    }
     out.push({
       label: p.label, vibe: p.vibe, query: p.query,
       image: tracks[0]?.image || "", count: tracks.length,
       uris: tracks.map((t) => t.uri).filter(Boolean),
+      tracks: tracks.map((t) => ({ title: t.title, artist: t.artist, image: t.image, uri: t.uri, durationMs: t.durationMs })),
       sample: tracks.slice(0, 3).map((t) => `${t.title} — ${t.artist}`),
     });
   }
@@ -87,13 +96,14 @@ export async function curate(mood = "", force = false) {
     return hit.picks;
   }
   const out = await generate(mood);
-  // only overwrite the cache when we actually produced playable mixes
-  if (out.some((p) => p.uris?.length)) {
+  // only cache a full, good set — every mix must have songs (avoids caching a
+  // partial result when Spotify rate-limits mid-generation)
+  if (out.length && out.every((p) => p.uris?.length)) {
     cache[cacheKey] = { at: Date.now(), picks: out };
     saveCache(cache);
     return out;
   }
-  // generation came back empty (e.g. transient) — fall back to any prior cache
+  // partial/empty generation — prefer the last good cache, else return what we got
   return hit?.picks?.length ? hit.picks : out;
 }
 

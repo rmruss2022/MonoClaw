@@ -264,11 +264,27 @@ async function curate(force){
   try{const r=await (await fetch('/audio/curator?mood='+encodeURIComponent($("mood").value||'')+(force?'&force=1':''))).json();
     PICKS={};
     $("picks").innerHTML=(r.picks||[]).map((p,i)=>{PICKS[i]=p;const cov=p.image?`<img class="cov" src="${p.image}">`:`<div class="cov">✨</div>`;
-      return `<div class="pcard" onclick="playPick(${i})">${cov}<div class="nm">${esc(p.label)}</div><div class="sub">${esc(p.vibe)}</div></div>`;}).join("")||'<span class="note">No picks.</span>';
+      return `<div class="pcard" onclick="openMix(${i})">${cov}<div class="nm">${esc(p.label)}</div><div class="sub">${esc(p.vibe)}</div></div>`;}).join("")||'<span class="note">No picks.</span>';
   }catch(e){$("picks").innerHTML='<span class="note">Curator unavailable.</span>';}
 }
 function playPick(i){const p=PICKS[i];if(!p||!p.uris||!p.uris.length){toast("Nothing playable found for that pick.");return;}
   warmTab();toast("▶ "+p.label);api('spotify-play',{uris:p.uris,deviceId:targetDevice(),meta:{title:p.label,artist:p.vibe}});}
+// open a mix and list all its songs (like a playlist), with Play all + per-song play
+function openMix(i){const p=PICKS[i];if(!p)return;
+  $("plmName").textContent=p.label;
+  $("plmCount").textContent=p.vibe||((p.count||0)+" songs");
+  $("plmPlay").onclick=()=>{playPick(i);closePl();};
+  const ts=p.tracks||[];
+  $("plmTracks").innerHTML=ts.length?ts.map((t,idx)=>mixTrackRow(t,i,idx)).join("")
+    :'<div class="note">This mix was built before song lists were saved — hit Refresh on Made for you, then reopen.</div>';
+  $("plModal").classList.add("show");
+}
+function mixTrackRow(t,mix,idx){const img=t.image?`<img src="${t.image}">`:"";
+  return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
+    <button class="small primary" onclick='playMixAt(${mix},${idx},${JSON.stringify({title:t.title,artist:t.artist,album:"",image:t.image,durationMs:t.durationMs}).replace(/'/g,"&#39;")})'>play</button></div>`;}
+// play a mix starting at a given song so next/prev walk the rest of the mix
+function playMixAt(mix,idx,meta){const p=PICKS[mix];if(!p||!p.uris||!p.uris.length)return;
+  warmTab();toast("▶ "+meta.title);api('spotify-play',{uris:p.uris,offset:idx,meta:meta,zoneId:currentZone(),deviceId:targetDevice()});closePl();}
 let PLMAP={};
 function pcard(pl){PLMAP[pl.id]=pl; const cov=pl.image?`<img class="cov" src="${pl.image}">`:`<div class="cov">🎵</div>`;
   return `<div class="pcard" onclick="openPl('${pl.id}')">${cov}<div class="nm">${esc(pl.name)}</div><div class="sub">${pl.tracks} tracks</div></div>`;}
