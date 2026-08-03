@@ -122,6 +122,13 @@
     <div class="foot" id="wizFoot"></div>
   </div>
 
+  <!-- room calibration wizard -->
+  <div class="wiz" id="calwiz">
+    <div class="wh"><button class="small" onclick="calBack()" id="calBackBtn">‹ Back</button><b id="calTitle">Calibrate room</b><div style="flex:1"></div><button class="small" onclick="closeCal()">✕</button></div>
+    <div class="body" id="calBody"></div>
+    <div class="foot" id="calFoot"></div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
 <script>
@@ -154,18 +161,22 @@ function speakerRow(sp){
     right=`<span class="muted small">demo</span>`;
     extra=`<div class="row" style="margin-top:8px"><span class="small muted">🔊</span><input type="range" min="0" max="100" value="${sp.volume}" oninput="vol('${sp.id}',this.value)"></div>`;
   }
-  return `<div class="spk"><div class="row between"><span class="row" style="gap:9px;min-width:0"><span style="font-size:18px">${kindIcon(sp)}</span><span class="dot ${dot}"></span><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sp.name)}</b> ${kindBadge(sp)}</span>
+  const calBadge=sp.cal?`<span class="badge" title="calibrated">${esc(sp.cal.role)} · ${sp.cal.delayMs}ms${sp.cal.trimDb?` · ${sp.cal.trimDb}dB`:''}</span>`:'';
+  return `<div class="spk"><div class="row between"><span class="row" style="gap:9px;min-width:0"><span style="font-size:18px">${kindIcon(sp)}</span><span class="dot ${dot}"></span><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sp.name)}</b> ${kindBadge(sp)} ${calBadge}</span>
      <span class="row small" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${right}</span></div>${extra}</div>`;
 }
 
+let S=null;
 function render(s){
-  const sp=s.speakers||[];
+  S=s;const sp=s.speakers||[];
   $("counts").textContent=`${sp.filter(x=>x.online).length}/${sp.length} online`;
   const order=[],groups={};
   for(const x of sp){const r=x.room||"—";if(!groups[r]){groups[r]=[];order.push(r);}groups[r].push(x);}
+  const calRooms=new Set(s.calibratedRooms||[]);
   $("rooms").innerHTML=order.map(room=>{
-    const g=groups[room];const live=g.filter(x=>x.online).length;
-    return `<div class="card roomcard" style="margin-bottom:14px"><div class="row between"><h3>${esc(room)}</h3><span class="muted small">${live}/${g.length} online</span></div>
+    const g=groups[room];const live=g.filter(x=>x.online).length;const cal=calRooms.has(room);
+    const calBtn=g.length>=2?`<button class="small" onclick="openCal('${esc(room)}')">${cal?'✨ Re-tune':'✨ Calibrate'}</button>`:'';
+    return `<div class="card roomcard" style="margin-bottom:14px"><div class="row between"><span class="row" style="gap:8px"><h3>${esc(room)}</h3>${cal?'<span class="badge live">spatial ✓</span>':''}</span><span class="row small" style="gap:8px"><span class="muted">${live}/${g.length} online</span>${calBtn}</span></div>
       ${g.map(speakerRow).join("")}</div>`;
   }).join("")||`<div class="card"><div class="empty"><div class="ic">🔈</div><h3 style="margin:10px 0 4px">No speakers yet</h3><div class="note">Set up your Wi-Fi or Bluetooth speakers to start playing music around the house.</div><div style="margin-top:16px"><button class="primary" onclick="openWiz()">＋ Set up a speaker</button></div></div></div>`;
 }
@@ -263,7 +274,67 @@ function renderWiz(){
   }
 }
 
-refresh();setInterval(()=>{if(!$("wizard").classList.contains('show'))refresh();},4000);
+/* ============ Room calibration / spatial audio wizard ============ */
+const ROLES=["stereo","left","right","center","surround-l","surround-r","sub","height-l","height-r"];
+function suggestRoles(n){if(n<=1)return["stereo"];if(n===2)return["left","right"];if(n===3)return["left","right","center"];if(n===4)return["left","right","surround-l","surround-r"];if(n===5)return["left","right","center","surround-l","surround-r"];const b=["left","right","center","surround-l","surround-r","sub"];while(b.length<n)b.push("stereo");return b;}
+const C={step:'intro',room:'',temp:20,mode:'spatial',speakers:[],result:null};
+function openCal(room){
+  const sp=(S&&S.speakers||[]).filter(x=>x.room===room);
+  const roles=suggestRoles(sp.length);
+  C.room=room;C.temp=20;C.mode=sp.length>=4?'spatial':(sp.length>=2?'surround':'stereo');C.result=null;C.step='intro';
+  C.speakers=sp.map((x,i)=>({id:x.id,name:x.name,role:(x.cal&&x.cal.role)||roles[i]||'stereo',distanceM:3}));
+  $("calwiz").classList.add('show');renderCal();
+}
+function closeCal(){$("calwiz").classList.remove('show');refresh();}
+function calGoto(s){C.step=s;renderCal();}
+function calBack(){const m={intro:null,setup:'intro',result:'setup',done:null};const p=m[C.step];if(!p){closeCal();return;}calGoto(p);}
+async function calCompute(){
+  C.step='computing';renderCal();
+  const j=await post('calibrate-room',{room:C.room,mode:C.mode,tempC:C.temp,speakers:C.speakers.map(s=>({id:s.id,name:s.name,role:s.role,distanceM:s.distanceM}))});
+  C.result=j.result&&j.result.profile?j.result.profile:null;
+  calGoto('result');
+}
+function renderCal(){
+  const b=$("calBody"),f=$("calFoot");$("calBackBtn").style.visibility=(C.step==='intro'||C.step==='done'||C.step==='computing')?'hidden':'visible';
+  if(C.step==='intro'){
+    $("calTitle").textContent='Calibrate '+C.room;
+    b.innerHTML=`<h1>Spatial audio</h1><p class="sub">Tune the ${C.speakers.length} speakers in <b>${esc(C.room)}</b> so they arrive at your seat in perfect time — an immersive, room-filling soundstage.</p>
+      <div class="wizcard" style="cursor:default"><span class="ic">⏱️</span><span>Time-align<br><span class="cap">delay each speaker by distance ÷ speed-of-sound</span></span></div>
+      <div class="wizcard" style="cursor:default"><span class="ic">🎚️</span><span>Level-match<br><span class="cap">balance loudness across the room</span></span></div>
+      <div class="wizcard" style="cursor:default"><span class="ic">🔊</span><span>Spatialize<br><span class="cap">map speakers to L / R / center / surround / sub</span></span></div>`;
+    f.innerHTML=`<button onclick="closeCal()">Cancel</button><button class="primary" onclick="calGoto('setup')">Start</button>`;
+  } else if(C.step==='setup'){
+    $("calTitle").textContent='Measure';
+    b.innerHTML=`<h1>Your speakers</h1><p class="sub">Set each speaker's role and its distance to your listening spot.</p>
+      <div style="margin-bottom:16px"><div class="small muted">Soundstage mode</div>
+        <div class="chips">${['stereo','surround','spatial'].map(m=>`<div class="chip ${C.mode===m?'on':''}" onclick="C.mode='${m}';renderCal()">${m}</div>`).join('')}</div></div>
+      ${C.speakers.map((s,i)=>`<div class="spk"><div class="row between"><b>${esc(s.name)}</b>
+        <select class="roomsel" onchange="C.speakers[${i}].role=this.value">${ROLES.map(r=>`<option ${r===s.role?'selected':''}>${r}</option>`).join('')}</select></div>
+        <div class="row" style="margin-top:8px;gap:10px"><span class="small muted" style="width:74px">${s.distanceM.toFixed(1)} m</span>
+        <input type="range" min="0.5" max="8" step="0.1" value="${s.distanceM}" oninput="C.speakers[${i}].distanceM=Number(this.value);this.previousElementSibling.textContent=Number(this.value).toFixed(1)+' m'"></div></div>`).join('')}
+      <div class="spk"><div class="row between"><span class="small muted">Room temperature (speed of sound)</span><span class="small muted" id="tempLbl">${C.temp}°C</span></div>
+        <input type="range" min="5" max="35" step="1" value="${C.temp}" oninput="C.temp=Number(this.value);document.getElementById('tempLbl').textContent=this.value+'°C'"></div>`;
+    f.innerHTML=`<button onclick="calGoto('intro')">Back</button><button class="primary" onclick="calCompute()">Calculate</button>`;
+  } else if(C.step==='computing'){
+    $("calTitle").textContent='Calibrating';
+    b.innerHTML=`<div class="center"><div class="spinner"></div><h1>Calibrating…</h1><p class="sub">Aligning ${C.speakers.length} speakers in ${esc(C.room)}.</p></div>`;f.innerHTML='';
+  } else if(C.step==='result'){
+    $("calTitle").textContent='Calibration';
+    const p=C.result;
+    if(p){
+      b.innerHTML=`<h1>${esc(C.room)} is tuned</h1><p class="sub">Mode <b>${esc(p.mode)}</b> · speed of sound ${p.speedMs} m/s @ ${p.tempC}°C. Each speaker's delay &amp; trim below are pushed to the Snapcast clients.</p>
+        <div class="list">${p.speakers.map(s=>`<div class="spk"><div class="row between"><span class="row" style="gap:8px"><b>${esc(s.name||s.id)}</b> <span class="badge">${esc(s.role)}</span></span>
+          <span class="small muted">${s.distanceM.toFixed(1)}m → <b style="color:var(--accent)">${s.delayMs}ms</b>${s.trimDb?` · ${s.trimDb}dB`:''}</span></div></div>`).join('')}</div>`;
+    } else b.innerHTML=`<div class="center"><h1>Hmm</h1><p class="sub">Calibration didn't return a profile. Try again.</p></div>`;
+    f.innerHTML=`<button onclick="calGoto('setup')">Adjust</button><button class="primary" onclick="calGoto('done')">Apply</button>`;
+  } else if(C.step==='done'){
+    $("calTitle").textContent='Spatial audio on';
+    b.innerHTML=`<div class="center"><div class="check">✓</div><h1>${esc(C.room)} — spatial audio</h1><p class="sub">Time-aligned &amp; level-matched. Grouped playback in this room now images a soundstage. (Audible once Snapcast runs on the hub — see Setup.)</p></div>`;
+    f.innerHTML=`<button onclick="closeCal()">Done</button>`;
+  }
+}
+
+refresh();setInterval(()=>{if(!$("wizard").classList.contains('show')&&!$("calwiz").classList.contains('show'))refresh();},4000);
 </script>
 </body>
 </html>

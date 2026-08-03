@@ -69,3 +69,37 @@ Everything currently runs as a **mock-but-real-shaped** model in `audio.ts` (sam
 - Bluetooth is single-sink — do we allow BT speakers *inside* a synced zone, or flag them "solo only"?
 - Calibration UX: auto (mic sweep) vs. manual delay tuning — ship auto, expose manual.
 - Per-zone independent sources vs. one house source at a time (Snapcast supports multiple streams).
+
+---
+
+## Room calibration & spatial audio (implemented)
+
+Each room can be tuned into a time-aligned, level-matched spatial soundstage —
+the technique behind Trueplay/Audyssey/Dirac, mapped onto our Snapcast layer
+(`services/hub/src/calibration.ts`).
+
+1. **Time-align** — sound from the farthest speaker takes longest to reach the
+   seat, so every closer speaker is delayed by `(d_far − d) / c`, where
+   `c = 331.3·√(1 + T/273.15)` m/s (temperature-corrected speed of sound). The
+   delay is applied as each **Snapcast client's `latency`**.
+2. **Level-match** — closer speakers are louder (inverse-square), so each gets a
+   trim of `20·log10(d / d_far)` dB (attenuate-only, capped at −9 dB; sub gets a
+   small boost allowance). Applied as **Snapcast client volume**.
+3. **Spatialize** — a role→channel **matrix upmix** turns stereo into
+   L / R / center / surround / sub / virtual-height (a passive matrix decode:
+   center = ½(L+R), surround = ½(L−R) with a Haas delay, sub = lowpass, height =
+   highpass differential). Roles auto-suggest from speaker count (2→L/R … 6→5.1).
+
+Profiles persist per room (`.data/room-calibration.json`) and annotate each
+speaker in `/audio/state` with `{role, delayMs, trimDb}`. The **Calibrate**
+wizard on `/speakers` captures per-speaker distance + room temperature, computes
+the profile, and shows the resulting delays/trims before applying.
+
+**Boundary:** the numbers are real and correct, and are pushed to Snapcast — but
+the audible spatial result needs the Snapcast server + one client per speaker
+running on the hub (see [Run on your Pi](/docs/run-hub)). A future **auto** path
+replaces manual distances with a mic sweep (log-chirp → cross-correlate the
+impulse for per-speaker delay), Trueplay-style.
+
+*Refs: speaker time-alignment (speed-of-sound delay) and Snapcast per-client
+latency/volume — see Calculator Academy, Trinnov, and the Snapcast docs.*

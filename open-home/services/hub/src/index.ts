@@ -22,6 +22,7 @@ import * as spotify from "./spotify.ts";
 import * as curator from "./curator.ts";
 import * as speakerService from "./speakerService.ts";
 import * as localAudio from "./localAudio.ts";
+import * as calibration from "./calibration.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -365,6 +366,14 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "reconnect-speaker": { const sp = await localAudio.reconnect(String(p.id)); hint = sp ? `${sp.name}: ${sp.status}` : "not found"; result = audio.state(); break; }
       case "remove-local": { localAudio.remove(String(p.id)); result = audio.state(); break; }
       case "local-room": { localAudio.setRoom(String(p.id), String(p.room ?? "—")); result = audio.state(); break; }
+      case "calibrate-room": {
+        const room = String(p.room || "");
+        const inputs = Array.isArray(p.speakers) ? p.speakers.map((x: any) => ({ id: String(x.id), name: x.name, role: x.role, distanceM: Number(x.distanceM) })) : [];
+        const profile = calibration.saveProfile(calibration.computeProfile(room, inputs, { mode: p.mode, tempC: Number(p.tempC) }));
+        hint = `Calibrated ${room} — spatial audio active`;
+        result = { profile, state: audio.state() }; break;
+      }
+      case "clear-calibration": { calibration.clearProfile(String(p.room || "")); result = audio.state(); break; }
       case "mute": result = audio.setMuted(String(p.id), !!p.muted); break;
       case "add-speaker": result = audio.addSpeaker(String(p.name ?? ""), String(p.room ?? "—"), p.kind); break;
       case "remove-speaker": result = audio.removeSpeaker(String(p.id)); break;

@@ -16,6 +16,7 @@
 import * as spotify from "./spotify.ts";
 import * as speakerService from "./speakerService.ts";
 import * as localAudio from "./localAudio.ts";
+import * as calibration from "./calibration.ts";
 
 export type SpeakerKind = "wifi" | "bluetooth" | "airplay" | "chromecast" | "snapcast" | "pod";
 export type Role = "mono" | "stereo" | "left" | "right" | "center" | "surround-l" | "surround-r" | "sub";
@@ -114,11 +115,18 @@ export function state() {
     volume: 40, muted: false, zone: null, role: "mono" as const, latencyMs: 0, calibrated: false,
     local: true as const, status: s.status, address: s.address, mac: s.mac,
   }));
-  const allSpeakers = [...live, ...local, ...listSpeakers()];
+  const merged = [...live, ...local, ...listSpeakers()];
+  // annotate each speaker with its room calibration (delay/trim/role) if any
+  const allSpeakers = merged.map((s: any) => {
+    const cal = calibration.forSpeaker(s.room, s.id);
+    return cal ? { ...s, cal, calibrated: true } : s;
+  });
+  const calRooms = calibration.calibratedRooms();
   return {
     nowPlaying: np,
     zones: listZones(),
     speakers: allSpeakers,
+    calibratedRooms: calRooms,
     spotify: spotifyStatus(),
     counts: { speakers: allSpeakers.length, online: allSpeakers.filter((x) => x.online).length, zones: zones.length },
   };
