@@ -39,6 +39,7 @@
   .topnav { display: flex; gap: 4px; flex-wrap: wrap; }
   .topnav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; padding: 6px 11px; border-radius: 999px; border: 1px solid transparent; }
   .topnav a:hover { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+  .topnav a.active { color: var(--accent); border-color: var(--accent-dim); background: rgba(61,220,151,.08); }
   .pill {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
@@ -103,13 +104,11 @@
   <header>
     <div class="brand"><img src="/assets/brand/logo.svg" alt="openhome" height="30" style="display:block"/> <small>Your home. Your data. Your keys.</small></div>
     <nav class="topnav">
+      <a href="/" class="active">Home</a>
       <a href="/control">Control</a>
       <a href="/music">Music</a>
-      <a href="/speakers">Speakers</a>
       <a href="/lights">Lights</a>
-      <a href="/docs/build">Build</a>
-      <a href="/docs/roadmap">Roadmap</a>
-      <a href="/docs/architecture">Architecture</a>
+      <a href="/speakers">Speakers</a>
       <a href="/docs">Docs</a>
     </nav>
     <div class="spacer"></div>

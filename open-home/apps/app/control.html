@@ -22,6 +22,11 @@
   .home b{font-size:16px;font-weight:700}
   .home small{color:var(--muted);font-size:12px}
   .topbar .sp{flex:1}
+  .appnav{display:flex;gap:4px;flex-wrap:wrap;margin-left:6px}
+  .appnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid transparent}
+  .appnav a:hover{color:var(--text);background:var(--panel);border-color:var(--line)}
+  .appnav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  @media(max-width:720px){.appnav{display:none}}
   .live{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:13px;font-weight:600}
   .live .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
   .clock{font-variant-numeric:tabular-nums}
@@ -130,7 +135,10 @@
 </head>
 <body>
   <div class="topbar">
-    <a class="home" href="/"><img src="/assets/brand/mark.svg" alt=""/><b>Home</b><small>· openhome</small></a>
+    <a class="home" href="/"><img src="/assets/brand/mark.svg" alt=""/><b>openhome</b></a>
+    <nav class="appnav">
+      <a href="/">Home</a><a href="/control" class="active">Control</a><a href="/music">Music</a><a href="/lights">Lights</a><a href="/speakers">Speakers</a><a href="/docs">Docs</a>
+    </nav>
     <span class="sp"></span>
     <span class="live"><span class="dot"></span><span class="clock" id="clock">--:--</span> · Local</span>
   </div>
