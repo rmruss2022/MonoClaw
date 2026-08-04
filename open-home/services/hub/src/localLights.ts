@@ -190,6 +190,46 @@ export function remove(id: string): boolean {
   if (lights.length !== n) { save(lights); return true; } return false;
 }
 export function setRoom(id: string, room: string) { const l = lights.find((x) => x.id === id); if (l) { l.room = room || "—"; save(lights); } }
+export function rename(id: string, name: string) { const l = lights.find((x) => x.id === id); if (l && name) { l.name = String(name).slice(0, 60); save(lights); } }
+
+/** Commission a brand-new Matter light from its setup code / QR payload. */
+export async function commission(payload: { code: string; name?: string; room?: string }): Promise<{ ok: boolean; reason?: string; light?: LocalLight }> {
+  const ctl = await matterController();
+  if (ctl !== "chip-tool") return { ok: false, reason: "Matter commissioning needs chip-tool on the hub (see Setup). Discovery works on the LAN, but pairing a new bulb needs the controller." };
+  const code = String(payload.code || "").replace(/[^0-9A-Z:.-]/gi, "");
+  if (!code) return { ok: false, reason: "Enter the 11-digit setup code or QR payload from the bulb." };
+  // Assign a fresh node id and pair over IP (BLE-Thread variants use pairing code-thread).
+  const node = String(1000 + Math.floor(process.hrtime()[1] % 9000));
+  const r = await sh("chip-tool", ["pairing", "code", node, code], 60000);
+  if (!r.ok || /error|fail/i.test(r.out)) return { ok: false, reason: "Pairing failed — check the code and that the bulb is in pairing mode." };
+  const l = onboard({ name: payload.name || "Matter light", backend: "matter", node, endpoint: 1 }, payload.room || "Living Room");
+  return { ok: true, light: l };
+}
+
+/** Flash a light so you can tell which one you're setting up. */
+export async function identify(id: string): Promise<{ ok: boolean; reason?: string }> {
+  const l = lights.find((x) => x.id === id);
+  if (!l) return { ok: false, reason: "not found" };
+  if (l.backend === "matter") {
+    const ctl = await matterController();
+    if (ctl !== "chip-tool" || !l.node) return { ok: false, reason: "Blink needs a Matter controller." };
+    await sh("chip-tool", ["identify", "identify", "3", l.node, String(l.endpoint ?? 1)], 8000);
+    return { ok: true };
+  }
+  if (l.backend === "esphome" && l.address) {
+    // three quick on/off pulses via the web_server API
+    const wasOn = l.on;
+    for (let i = 0; i < 3; i++) {
+      await applyEsphome(l, { on: true, brightness: 100 });
+      await new Promise((r) => setTimeout(r, 350));
+      await applyEsphome(l, { on: false });
+      await new Promise((r) => setTimeout(r, 350));
+    }
+    await applyEsphome(l, { on: wasOn });
+    return { ok: true };
+  }
+  return { ok: false, reason: "Can't blink this light." };
+}
 
 // ---- control ----
 function httpPost(host: string, port: number, path: string, timeoutMs = 3000): Promise<boolean> {

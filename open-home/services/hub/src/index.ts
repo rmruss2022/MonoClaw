@@ -26,6 +26,7 @@ import * as calibration from "./calibration.ts";
 import * as snapcast from "./snapcast.ts";
 import * as lights from "./lights.ts";
 import * as localLights from "./localLights.ts";
+import * as hub from "./hub.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -34,6 +35,7 @@ const CONTROL = new URL("../../../apps/app/control.html", import.meta.url);
 const MUSIC = new URL("../../../apps/app/music.html", import.meta.url);
 const SPEAKERS = new URL("../../../apps/app/speakers.html", import.meta.url);
 const LIGHTS = new URL("../../../apps/app/lights.html", import.meta.url);
+const SETUP = new URL("../../../apps/app/setup.html", import.meta.url);
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -210,6 +212,18 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     }
     return;
   }
+  if (url === "/setup" || url === "/setup.html" || url === "/welcome") {
+    try {
+      const html = await readFile(SETUP, "utf8");
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+    } catch {
+      json(res, { error: "setup_not_found" }, 500);
+    }
+    return;
+  }
 
   // Static assets (images for docs/dashboard)
   if (url.startsWith("/assets/")) {
@@ -353,6 +367,22 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     json(res, { found, note: found.length ? undefined : "No speakers answered on this network. Run the hub on the same LAN as your speakers to find them." }); return;
   }
 
+  // ---- Hub onboarding / status ----
+  if (url === "/hub/status") { json(res, await hub.status(agent.modelLabel)); return; }
+  if (url === "/hub/command" && req.method === "POST") {
+    const body = await readBody(req);
+    let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
+    const cmd = String(p.cmd ?? "");
+    let hint: string | undefined, cfg = hub.config();
+    switch (cmd) {
+      case "name-home": { cfg = hub.setHomeName(String(p.name ?? "")); hint = `Home named “${cfg.homeName}”`; break; }
+      case "complete-setup": { cfg = hub.completeSetup(); hint = "Setup complete"; break; }
+      case "reset-setup": { cfg = hub.resetSetup(); hint = "Setup reset"; break; }
+      default: hint = "Unknown command";
+    }
+    json(res, { ok: true, hint, config: cfg }); return;
+  }
+
   // ---- Lights service ----
   if (url === "/lights/state") { json(res, { ...lights.state(), capabilities: await lights.capabilities() }); return; }
   if (url.startsWith("/lights/discover")) {
@@ -381,6 +411,9 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "onboard-light": { const l = localLights.onboard(p.device || {}, String(p.room ?? "Living Room")); hint = `Added ${l.name} to ${l.room}`; break; }
       case "reconnect-light": { const l = await localLights.reconnect(String(p.id)); hint = l ? `${l.name}: ${l.status}` : "not found"; break; }
       case "remove-light": { localLights.remove(String(p.id)); break; }
+      case "rename-light": { lights.rename(String(p.id), String(p.name ?? "")); hint = "Renamed"; break; }
+      case "identify-light": { const r = await lights.identify(String(p.id)); hint = r.ok ? "Blinking…" : r.reason; break; }
+      case "commission-light": { const r = await localLights.commission({ code: String(p.code ?? ""), name: p.name, room: p.room }); hint = r.ok ? `Paired ${r.light?.name}` : r.reason; break; }
       default: hint = "Unknown command";
     }
     json(res, { ok: true, hint, state: lights.state() }); return;

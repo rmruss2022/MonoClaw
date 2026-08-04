@@ -82,6 +82,24 @@ export function setRoom(id: string, room: string) {
   else { const dev = home.getDevice(id); if (dev) dev.room = room || "—"; }
 }
 
+/** Rename a light. */
+export function rename(id: string, name: string) {
+  const real = localLights.list().find((l) => l.id === id);
+  if (real) localLights.rename(id, name);
+  else { const dev = home.getDevice(id); if (dev && name) dev.name = String(name).slice(0, 60); }
+}
+
+/** Blink a light to identify it (real backends only; mock is a no-op toggle). */
+export async function identify(id: string): Promise<{ ok: boolean; reason?: string }> {
+  const real = localLights.list().find((l) => l.id === id);
+  if (real) return await localLights.identify(id);
+  // mock: bounce it on→off→on so the card visibly flickers
+  const dev = home.getDevice(id);
+  if (!dev) return { ok: false, reason: "not found" };
+  const was = !!dev.state.on; home.setDevice(id, { on: !was }); setTimeout(() => home.setDevice(id, { on: was }), 500);
+  return { ok: true };
+}
+
 /** Turn every light in a room on/off (or the whole home when room is empty). */
 export async function setRoomPower(room: string, on: boolean): Promise<number> {
   const targets = listLights().filter((l) => !room || l.room === room);

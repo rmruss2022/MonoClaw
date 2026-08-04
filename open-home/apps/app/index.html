@@ -117,6 +117,18 @@
   </header>
 
   <main>
+    <a id="setupBanner" href="/setup" style="display:none;align-items:center;gap:14px;padding:15px 18px;border-radius:14px;border:1px solid var(--accent-dim);background:linear-gradient(135deg,#16241d,#141821);text-decoration:none;color:var(--text);margin-bottom:16px">
+      <span style="font-size:26px">🏠</span>
+      <span style="flex:1"><b id="setupTitle">Set up your home</b><div style="color:var(--muted);font-size:13px">Find your hub, name your home, and add your first lights &amp; speakers.</div></span>
+      <span style="color:var(--accent);font-weight:700;white-space:nowrap">Start →</span>
+    </a>
+    <script>
+      fetch("/hub/status").then(r=>r.json()).then(s=>{const b=document.getElementById("setupBanner");if(!b)return;
+        const done=s&&s.home&&s.home.setupComplete;const nm=s&&s.home&&s.home.name;
+        if(!done){b.style.display="flex";}
+        else if(nm){document.getElementById("setupTitle").textContent=nm;b.querySelector("div").textContent="Manage your home — hub, rooms, lights & speakers.";b.style.display="flex";}
+      }).catch(()=>{});
+    </script>
     <a href="/docs/roadmap" class="hero" style="display:block;position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);margin-bottom:18px;text-decoration:none">
       <img src="/assets/photo/box-lifestyle.png" alt="openhome" style="width:100%;display:block;aspect-ratio:16/7;object-fit:cover"/>
       <div style="position:absolute;left:0;right:0;bottom:0;padding:18px 20px;background:linear-gradient(0deg,rgba(10,12,16,.9),transparent);color:var(--text)">
