@@ -24,6 +24,8 @@ import * as speakerService from "./speakerService.ts";
 import * as localAudio from "./localAudio.ts";
 import * as calibration from "./calibration.ts";
 import * as snapcast from "./snapcast.ts";
+import * as lights from "./lights.ts";
+import * as localLights from "./localLights.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -31,6 +33,7 @@ const DASHBOARD = new URL("../../../apps/app/index.html", import.meta.url);
 const CONTROL = new URL("../../../apps/app/control.html", import.meta.url);
 const MUSIC = new URL("../../../apps/app/music.html", import.meta.url);
 const SPEAKERS = new URL("../../../apps/app/speakers.html", import.meta.url);
+const LIGHTS = new URL("../../../apps/app/lights.html", import.meta.url);
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -72,6 +75,9 @@ setInterval(() => { if (!spotify.rateLimited()) speakerService.refresh().catch((
 
 // Maintain onboarded local Wi-Fi/Bluetooth speakers — reconnect on drop.
 setInterval(() => { localAudio.maintain().catch(() => {}); }, 15_000);
+
+// Maintain onboarded local lights (ESPHome/Matter) — reconnect on drop.
+setInterval(() => { localLights.maintain().catch(() => {}); }, 15_000);
 
 // Poll the Snapcast server (synchronized multi-room), if one is running.
 snapcast.refresh().catch(() => {});
@@ -189,6 +195,18 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.end(html);
     } catch {
       json(res, { error: "speakers_not_found" }, 500);
+    }
+    return;
+  }
+  if (url === "/lights" || url === "/lights.html") {
+    try {
+      const html = await readFile(LIGHTS, "utf8");
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+    } catch {
+      json(res, { error: "lights_not_found" }, 500);
     }
     return;
   }
@@ -333,6 +351,39 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     }
     const found = await localAudio.scanWifi();
     json(res, { found, note: found.length ? undefined : "No speakers answered on this network. Run the hub on the same LAN as your speakers to find them." }); return;
+  }
+
+  // ---- Lights service ----
+  if (url === "/lights/state") { json(res, { ...lights.state(), capabilities: await lights.capabilities() }); return; }
+  if (url.startsWith("/lights/discover")) {
+    const backend = (new URL(req.url ?? "/", "http://x").searchParams.get("backend") ?? "esphome") as "esphome" | "matter";
+    if (backend === "matter") {
+      const cap = await lights.capabilities();
+      const found = await localLights.scanMatter();
+      json(res, { found, available: cap.matter, note: found.length ? undefined : (cap.matter ? "No Matter nodes answered. Commission a device first, or check it's on this LAN." : "No Matter controller on the hub yet — discovery works on the LAN, but control needs chip-tool/matter-server (see Setup). Run the hub on your Pi.") }); return;
+    }
+    const found = await localLights.scanEsphome();
+    json(res, { found, available: true, note: found.length ? undefined : "No ESPHome lights answered on this network. Run the hub on the same LAN as your lights to find them." }); return;
+  }
+  if (url === "/lights/command" && req.method === "POST") {
+    const body = await readBody(req);
+    let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
+    const cmd = String(p.cmd ?? "");
+    let hint: string | undefined;
+    switch (cmd) {
+      case "toggle": { const r = await lights.control(String(p.id), { on: !!p.on }); if (!r.ok) hint = r.reason; break; }
+      case "brightness": { const r = await lights.control(String(p.id), { brightness: Number(p.brightness) }); if (!r.ok) hint = r.reason; break; }
+      case "color": { const r = await lights.control(String(p.id), { rgb: p.rgb }); if (!r.ok) hint = r.reason; break; }
+      case "temp": { const r = await lights.control(String(p.id), { colorTempK: Number(p.colorTempK) }); if (!r.ok) hint = r.reason; break; }
+      case "light-room": { lights.setRoom(String(p.id), String(p.room ?? "—")); break; }
+      case "room-power": { const n = await lights.setRoomPower(String(p.room ?? ""), !!p.on); hint = `${p.on ? "On" : "Off"} · ${n} light${n === 1 ? "" : "s"}`; break; }
+      case "scene": { const s = home.activateScene(String(p.id)); hint = (s as any).name ? `${(s as any).name} scene` : undefined; break; }
+      case "onboard-light": { const l = localLights.onboard(p.device || {}, String(p.room ?? "Living Room")); hint = `Added ${l.name} to ${l.room}`; break; }
+      case "reconnect-light": { const l = await localLights.reconnect(String(p.id)); hint = l ? `${l.name}: ${l.status}` : "not found"; break; }
+      case "remove-light": { localLights.remove(String(p.id)); break; }
+      default: hint = "Unknown command";
+    }
+    json(res, { ok: true, hint, state: lights.state() }); return;
   }
   if (url === "/audio/command" && req.method === "POST") {
     const body = await readBody(req);
