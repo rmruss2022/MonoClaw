@@ -25,13 +25,14 @@ export const DOCS: DocEntry[] = [
   { slug: "pod-mesh", title: "Pod Mesh", file: "hardware/openhome-pod-mesh.md", blurb: "Wall-plug pods in every room — agent everywhere, synced music, intercom." },
   { slug: "sound", title: "Sound", file: "services/speaker/DESIGN.md", blurb: "Speaker service + music app — zones, surround, Spotify. Design + tracker." },
   { slug: "run-hub", title: "Run on your Pi", file: "hardware/run-the-hub.md", blurb: "Run the hub on your Pi/Mac so speaker + light discovery goes live." },
+  { slug: "loadout", title: "Starter Loadout", file: "hardware/starter-loadout.md", blurb: "A $300 build — hub radios, ESPHome lights, and synced Snapcast speakers, with buy links." },
   { slug: "contributing", title: "Contributing", file: "CONTRIBUTING.md", blurb: "Ground rules and dev setup." },
 ];
 
 /** Sidebar grouping — organizes the doc index into sections. */
 const DOC_GROUPS: { name: string; slugs: string[] }[] = [
   { name: "Product", slugs: ["readme", "business", "roadmap", "brand", "concepts"] },
-  { name: "Hardware", slugs: ["hardware", "build", "pod-mesh", "run-hub"] },
+  { name: "Hardware", slugs: ["hardware", "build", "pod-mesh", "run-hub", "loadout"] },
   { name: "Engineering", slugs: ["architecture", "sound", "contributing"] },
 ];
 
