@@ -12,6 +12,7 @@ import * as spotify from "./spotify.ts";
 import * as snapcast from "./snapcast.ts";
 import * as localAudio from "./localAudio.ts";
 import * as localLights from "./localLights.ts";
+import * as localClimate from "./localClimate.ts";
 import * as home from "./home.ts";
 
 const DATA_DIR = new URL("../.data/", import.meta.url);
@@ -69,6 +70,7 @@ export async function status(modelLabel: string) {
     services: [
       { key: "lights", label: "Lighting", ok: true, detail: `ESPHome ✓${lightCaps.matter ? " · Matter ✓" : " · Matter needs controller"}`, count: lights.length },
       { key: "speakers", label: "Speakers", ok: true, detail: `Wi-Fi ✓${audioCaps.bluetooth ? " · Bluetooth ✓" : " · no BT radio"}`, count: speakers.length },
+      { key: "climate", label: "Climate", ok: true, detail: `ESPHome ✓${lightCaps.matter ? " · Matter ✓" : " · Matter needs controller"}`, count: localClimate.list().length },
       { key: "music", label: "Music", ok: spotify.connected(), detail: spotify.connected() ? "Spotify connected" : "Sign in to Spotify" },
       { key: "sync", label: "Multi-room sync", ok: snap.available, detail: snap.available ? `Snapcast · ${snap.clients} clients` : "Start Snapcast on the hub" },
       { key: "agent", label: "Assistant", ok: true, detail: modelLabel },

@@ -112,7 +112,7 @@ function renderFound(){
     <div class="card">${svcs.map(s=>`<div class="svc"><span class="ic">${svcIcon(s.key)}</span><div style="flex:1"><b>${esc(s.label)}</b><div class="small muted">${esc(s.detail)}</div></div><span class="dot ${s.ok?'ok':'no'}"></span></div>`).join("")}</div>`;
   $("foot").innerHTML=`<button class="primary" onclick="go(2)">Pair this hub</button>`;
 }
-function svcIcon(k){return {lights:'💡',speakers:'🔊',music:'🎵',sync:'🔗',agent:'🤖'}[k]||'•';}
+function svcIcon(k){return {lights:'💡',speakers:'🔊',climate:'🌡️',music:'🎵',sync:'🔗',agent:'🤖'}[k]||'•';}
 async function saveHome(){const v=($("homeName")||{}).value||"";homeName=v.trim();if(homeName)await post('name-home',{name:homeName});go(3);}
 async function finish(){await post('complete-setup');go(4);}
 

@@ -43,6 +43,7 @@ const APPBAR: [string, string, string][] = [
   ["/music", "Music", "music"],
   ["/lights", "Lights", "lights"],
   ["/speakers", "Speakers", "speakers"],
+  ["/climate", "Climate", "climate"],
   ["/docs", "Docs", "docs"],
 ];
 function appNav(active: string): string {

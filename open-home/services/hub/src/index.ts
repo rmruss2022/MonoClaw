@@ -27,6 +27,8 @@ import * as snapcast from "./snapcast.ts";
 import * as lights from "./lights.ts";
 import * as localLights from "./localLights.ts";
 import * as hub from "./hub.ts";
+import * as climate from "./climate.ts";
+import * as localClimate from "./localClimate.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -36,6 +38,7 @@ const MUSIC = new URL("../../../apps/app/music.html", import.meta.url);
 const SPEAKERS = new URL("../../../apps/app/speakers.html", import.meta.url);
 const LIGHTS = new URL("../../../apps/app/lights.html", import.meta.url);
 const SETUP = new URL("../../../apps/app/setup.html", import.meta.url);
+const CLIMATE = new URL("../../../apps/app/climate.html", import.meta.url);
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -80,6 +83,9 @@ setInterval(() => { localAudio.maintain().catch(() => {}); }, 15_000);
 
 // Maintain onboarded local lights (ESPHome/Matter) — reconnect on drop.
 setInterval(() => { localLights.maintain().catch(() => {}); }, 15_000);
+
+// Maintain onboarded thermostats (ESPHome/Matter) — reconnect on drop.
+setInterval(() => { localClimate.maintain().catch(() => {}); }, 15_000);
 
 // Poll the Snapcast server (synchronized multi-room), if one is running.
 snapcast.refresh().catch(() => {});
@@ -209,6 +215,18 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.end(html);
     } catch {
       json(res, { error: "lights_not_found" }, 500);
+    }
+    return;
+  }
+  if (url === "/climate" || url === "/climate.html") {
+    try {
+      const html = await readFile(CLIMATE, "utf8");
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+    } catch {
+      json(res, { error: "climate_not_found" }, 500);
     }
     return;
   }
@@ -381,6 +399,33 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       default: hint = "Unknown command";
     }
     json(res, { ok: true, hint, config: cfg }); return;
+  }
+
+  // ---- Climate / thermostat service ----
+  if (url === "/climate/state") { json(res, { ...climate.state(), capabilities: await climate.capabilities() }); return; }
+  if (url.startsWith("/climate/discover")) {
+    const backend = (new URL(req.url ?? "/", "http://x").searchParams.get("backend") ?? "esphome") as "esphome" | "matter";
+    const found = await localClimate.scan(backend);
+    const caps = await climate.capabilities();
+    const available = backend === "matter" ? caps.matter : true;
+    json(res, { found, available, note: found.length ? undefined : (backend === "matter" && !caps.matter ? "No Matter controller on the hub yet — pairing needs chip-tool/matter-server (see Setup). Run the hub on your Pi." : "No thermostats answered on this network. Run the hub on the same LAN as your thermostat.") }); return;
+  }
+  if (url === "/climate/command" && req.method === "POST") {
+    const body = await readBody(req);
+    let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
+    const cmd = String(p.cmd ?? "");
+    let hint: string | undefined;
+    switch (cmd) {
+      case "set-temp": { const r = await climate.control(String(p.id), { targetF: Number(p.targetF) }); if (!r.ok) hint = r.reason; break; }
+      case "set-mode": { const r = await climate.control(String(p.id), { mode: p.mode }); if (!r.ok) hint = r.reason; break; }
+      case "climate-room": { climate.setRoom(String(p.id), String(p.room ?? "—")); break; }
+      case "rename-thermostat": { climate.rename(String(p.id), String(p.name ?? "")); hint = "Renamed"; break; }
+      case "onboard-thermostat": { const t = localClimate.onboard(p.device || {}, String(p.room ?? "Hallway")); hint = `Added ${t.name} to ${t.room}`; break; }
+      case "reconnect-thermostat": { const t = await localClimate.reconnect(String(p.id)); hint = t ? `${t.name}: ${t.status}` : "not found"; break; }
+      case "remove-thermostat": { localClimate.remove(String(p.id)); break; }
+      default: hint = "Unknown command";
+    }
+    json(res, { ok: true, hint, state: climate.state() }); return;
   }
 
   // ---- Lights service ----

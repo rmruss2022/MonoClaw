@@ -22,6 +22,7 @@ into what the app already drives — `/setup` → `/lights` → `/speakers`.
 ```
 
 - **Lights** → ESPHome bulbs, discovered and controlled locally by the hub. Zero cloud.
+- **Climate** → an ESPHome thermostat wired to your HVAC; setpoint/mode logic runs on-device.
 - **Speakers** → one snapclient per room, time-aligned by the hub's calibration and
   grouped for sample-synced multi-room playback.
 - **Radios** → a Zigbee/Thread stick future-proofs you for Matter-over-Thread and the
@@ -48,16 +49,41 @@ into what the app already drives — `/setup` → `/lights` → `/speakers`.
 > Athom ships bulbs **pre-flashed with ESPHome** (opt at checkout) — no soldering, no
 > cloud account. They appear in the Lights wizard under **ESPHome → Find on my network**.
 
+### 🌡️ Thermostat — ESPHome, wired to your HVAC — ~$35
+| # | Part | Why | Price | Link |
+|---|------|-----|-------|------|
+| 7 | Sonoff TH Elite (THR320D) **or** ESP32 dev board | the controller, flashed with ESPHome | ~$18 | [buy](https://itead.cc/product/sonoff-thr320d-elite/) |
+| 8 | AHT20 / Si7021 temp + humidity sensor | reads the room | ~$5 | [buy](https://www.adafruit.com/product/4566) |
+| 9 | 2–3 channel relay board (heat / cool / fan) | switches your 24 V HVAC | ~$8 | [buy](https://www.amazon.com/dp/B07FCUYX2X) |
+| 10 | 24 V→5 V buck + wire | power from the HVAC's C-wire | ~$6 | [buy](https://www.amazon.com/dp/B076H3XHXP) |
+
+> Runs ESPHome's on-device `climate` controller — setpoint, mode and hysteresis live
+> **on the thermostat**, so heating/cooling keeps working even if the hub reboots. It
+> appears in the **Climate** tab under ESPHome. Prefer no wiring? A **Matter-over-Thread
+> thermostat** pairs via the ZBDongle-E (item 1) — that's the bring-your-own path.
+>
+> Minimal ESPHome climate config:
+> ```yaml
+> climate:
+>   - platform: thermostat
+>     name: "HVAC"
+>     sensor: room_temp
+>     default_target_temperature_low: 20 °C
+>     heat_action: { switch.turn_on: relay_heat }
+>     cool_action: { switch.turn_on: relay_cool }
+>     idle_action: { switch.turn_off: relay_heat }
+> ```
+
 ### 🔊 Speakers — 2 rooms, truly synced (Snapcast) — ~$135
 | # | Part | Why | Price | Link |
 |---|------|-----|-------|------|
-| 7 | 2× Raspberry Pi Zero 2 W | one snapclient per room | ~$30 | [buy](https://www.adafruit.com/product/5291) |
-| 8 | 2× 16 GB microSD | client OS | ~$12 | [buy](https://www.amazon.com/dp/B073K14CVB) |
-| 9 | 2× MAX98357A I2S amp (or USB DAC) | digital audio out | ~$12 | [buy](https://www.adafruit.com/product/3006) |
-| 10 | 2× powered bookshelf/desktop speaker | the actual sound | ~$60 | your pick |
-| 11 | Power + cables for the two endpoints | — | ~$20 | — |
+| 11 | 2× Raspberry Pi Zero 2 W | one snapclient per room | ~$30 | [buy](https://www.adafruit.com/product/5291) |
+| 12 | 2× 16 GB microSD | client OS | ~$12 | [buy](https://www.amazon.com/dp/B073K14CVB) |
+| 13 | 2× MAX98357A I2S amp (or USB DAC) | digital audio out | ~$12 | [buy](https://www.adafruit.com/product/3006) |
+| 14 | 2× powered bookshelf/desktop speaker | the actual sound | ~$60 | your pick |
+| 15 | Power + cables for the two endpoints | — | ~$20 | — |
 
-### Total ≈ **$265** — leaves ~$35 for tax/shipping or a 5th bulb.
+### Total ≈ **$300** — hub radios + 4 ESPHome lights + a thermostat + two synced audio rooms.
 
 ## Two honest calls
 
