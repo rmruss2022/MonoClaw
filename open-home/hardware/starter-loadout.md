@@ -23,44 +23,51 @@ into what the app already drives — `/setup` → `/lights` → `/speakers`.
 
 - **Lights** → ESPHome bulbs, discovered and controlled locally by the hub. Zero cloud.
 - **Climate** → an ESPHome thermostat wired to your HVAC; setpoint/mode logic runs on-device.
-- **Speakers** → one snapclient per room, time-aligned by the hub's calibration and
-  grouped for sample-synced multi-room playback.
+- **Speakers** → Wi-Fi rooms run a snapclient each, time-aligned by the hub's calibration
+  and grouped for sample-synced multi-room playback; Bluetooth speakers onboard for casual
+  rooms with auto-reconnect.
 - **Radios** → a Zigbee/Thread stick future-proofs you for Matter-over-Thread and the
   cheap Zigbee catalog.
 
-## Bill of materials
+## Your build — bill of materials
+
+> **Matthew's config:** 5 color bulbs (incl. warm orange), hub add-ons, an ESPHome
+> thermostat, and a **2 Wi-Fi + 2 Bluetooth** speaker mix. Links are Amazon **search**
+> pages — pick the current best price/rating. A couple of items are cheaper bought direct;
+> noted inline. Prices are ballparks — verify at checkout.
 
 ### 🧠 Hub add-ons (Pi already owned) — ~$45
 | # | Part | Why | Price | Link |
 |---|------|-----|-------|------|
-| 1 | SONOFF ZBDongle-E (Zigbee + Thread) | Matter-over-Thread + Zigbee later | ~$20 | [buy](https://itead.cc/product/sonoff-zigbee-3-0-usb-dongle-plus-e/) |
-| 2 | USB-C PSU 5.1 V/3 A + 32 GB A2 microSD | clean power + OS (skip if kitted) | ~$18 | [buy](https://www.raspberrypi.com/products/type-c-power-supply/) |
-| 3 | Heatsink + fan | keeps the hub cool under load | ~$7 | [buy](https://www.amazon.com/dp/B07VVDN9K3) |
+| 1 | SONOFF ZBDongle-E (Zigbee + Thread) | Matter-over-Thread + Zigbee later | ~$20 | [Amazon](https://www.amazon.com/s?k=SONOFF+ZBDongle-E) |
+| 2 | USB-C PSU 5.1 V/3 A | clean power (skip if kitted) | ~$10 | [Amazon](https://www.amazon.com/s?k=raspberry+pi+official+usb-c+power+supply) |
+| 3 | 32 GB A2 microSD | hub OS (skip if kitted) | ~$8 | [Amazon](https://www.amazon.com/s?k=SanDisk+Extreme+32GB+microSD+A2) |
+| 4 | Heatsink + fan | keeps the hub cool under load | ~$7 | [Amazon](https://www.amazon.com/s?k=raspberry+pi+4+heatsink+fan) |
 
-*If your Pi is already fully set up, skip this section and put the ~$45 into more bulbs or a third audio room.*
+*If your Pi already has power + SD, skip items 2–3 (−$18).*
 
-### 💡 Lights — ESPHome, pure Wi-Fi, zero cloud — ~$85
+### 🟠 Lights — 5× RGBCW (full color + warm orange) — ~$70
 | # | Part | Why | Price | Link |
 |---|------|-----|-------|------|
-| 4 | 4× Athom RGBCW bulb, pre-flashed ESPHome | our exact backend — instant, local | ~$56 | [buy](https://www.athom.tech/product-page/rgbcw-bulb) |
-| 5 | 1× Athom ESPHome smart plug | makes a lamp smart | ~$11 | [buy](https://www.athom.tech/) |
-| 6 | 1× Athom/ESPHome RGB LED strip | accent lighting | ~$18 | [buy](https://www.athom.tech/) |
+| 5 | **5× Athom RGBCW bulb, pre-flashed ESPHome** | our exact backend — instant, local | ~$70 | [Athom (direct)](https://www.athom.tech/) |
 
-> Athom ships bulbs **pre-flashed with ESPHome** (opt at checkout) — no soldering, no
-> cloud account. They appear in the Lights wizard under **ESPHome → Find on my network**.
+> RGBCW = full RGB color **+** tunable white, so you get every color *and* a warm orange
+> glow (~2200 K white, or an RGB amber). **Buy direct from Athom** and pick "ESPHome" at
+> checkout — Amazon's cheap "smart bulbs" are cloud Tuya, **not** our local backend. They
+> appear in the Lights wizard under **ESPHome → Find on my network**.
 
-### 🌡️ Thermostat — ESPHome, wired to your HVAC — ~$35
+### 🌡️ Thermostat — ESPHome, wired to your HVAC — ~$37
 | # | Part | Why | Price | Link |
 |---|------|-----|-------|------|
-| 7 | Sonoff TH Elite (THR320D) **or** ESP32 dev board | the controller, flashed with ESPHome | ~$18 | [buy](https://itead.cc/product/sonoff-thr320d-elite/) |
-| 8 | AHT20 / Si7021 temp + humidity sensor | reads the room | ~$5 | [buy](https://www.adafruit.com/product/4566) |
-| 9 | 2–3 channel relay board (heat / cool / fan) | switches your 24 V HVAC | ~$8 | [buy](https://www.amazon.com/dp/B07FCUYX2X) |
-| 10 | 24 V→5 V buck + wire | power from the HVAC's C-wire | ~$6 | [buy](https://www.amazon.com/dp/B076H3XHXP) |
+| 6 | Sonoff TH Elite (THR320D) | the controller, flashed with ESPHome | ~$18 | [Amazon](https://www.amazon.com/s?k=SONOFF+TH+Elite+THR320D) |
+| 7 | AHT20 temp + humidity sensor | reads the room | ~$5 | [Amazon](https://www.amazon.com/s?k=AHT20+temperature+humidity+sensor) |
+| 8 | 3-channel 5 V relay board (heat / cool / fan) | switches your 24 V HVAC | ~$8 | [Amazon](https://www.amazon.com/s?k=3+channel+5V+relay+module) |
+| 9 | 24 V→5 V buck converter + wire | power from the HVAC's C-wire | ~$6 | [Amazon](https://www.amazon.com/s?k=24V+to+5V+buck+converter) |
 
 > Runs ESPHome's on-device `climate` controller — setpoint, mode and hysteresis live
-> **on the thermostat**, so heating/cooling keeps working even if the hub reboots. It
-> appears in the **Climate** tab under ESPHome. Prefer no wiring? A **Matter-over-Thread
-> thermostat** pairs via the ZBDongle-E (item 1) — that's the bring-your-own path.
+> **on the thermostat**, so heating/cooling keeps working even if the hub reboots. Shows up
+> in the **Climate** tab under ESPHome. Prefer no wiring? A **Matter-over-Thread thermostat**
+> pairs via the ZBDongle-E (item 1) — the bring-your-own path.
 >
 > Minimal ESPHome climate config:
 > ```yaml
@@ -74,16 +81,28 @@ into what the app already drives — `/setup` → `/lights` → `/speakers`.
 >     idle_action: { switch.turn_off: relay_heat }
 > ```
 
-### 🔊 Speakers — 2 rooms, truly synced (Snapcast) — ~$135
+### 🔊 Speakers — 2 Wi-Fi (synced) + 2 Bluetooth — ~$166
+
+**Wi-Fi — 2 synced rooms (Snapcast):**
 | # | Part | Why | Price | Link |
 |---|------|-----|-------|------|
-| 11 | 2× Raspberry Pi Zero 2 W | one snapclient per room | ~$30 | [buy](https://www.adafruit.com/product/5291) |
-| 12 | 2× 16 GB microSD | client OS | ~$12 | [buy](https://www.amazon.com/dp/B073K14CVB) |
-| 13 | 2× MAX98357A I2S amp (or USB DAC) | digital audio out | ~$12 | [buy](https://www.adafruit.com/product/3006) |
-| 14 | 2× powered bookshelf/desktop speaker | the actual sound | ~$60 | your pick |
-| 15 | Power + cables for the two endpoints | — | ~$20 | — |
+| 10 | 2× Raspberry Pi Zero 2 W | one snapclient per room | ~$30 | [Amazon](https://www.amazon.com/s?k=Raspberry+Pi+Zero+2+W) · cheaper: [PiShop](https://www.pishop.us/product/raspberry-pi-zero-2-w/) |
+| 11 | 2× 16 GB microSD | client OS | ~$12 | [Amazon](https://www.amazon.com/s?k=SanDisk+16GB+microSD) |
+| 12 | 2× MAX98357A I2S amp (or USB DAC) | digital audio out | ~$12 | [Amazon](https://www.amazon.com/s?k=MAX98357A+I2S+amplifier) |
+| 13 | 2× powered bookshelf speaker | the actual sound | ~$56 | [Amazon](https://www.amazon.com/s?k=powered+bookshelf+speakers) |
 
-### Total ≈ **$300** — hub radios + 4 ESPHome lights + a thermostat + two synced audio rooms.
+**Bluetooth — 2 speakers:**
+| # | Part | Why | Price | Link |
+|---|------|-----|-------|------|
+| 14 | 2× Anker Soundcore (or similar) | onboard via Speakers → + Bluetooth | ~$56 | [Amazon](https://www.amazon.com/s?k=Anker+Soundcore+bluetooth+speaker) |
+
+> The Wi-Fi pair plays in **sample-sync** (calibrate + ⇄ Sync). Bluetooth speakers onboard
+> with auto-reconnect but aren't part of the synced group. Prefer zero assembly for Wi-Fi?
+> Swap each Pi-Zero kit for a **plug-and-play AirPlay speaker (~$40)** — the app still sees
+> it over the network, you just lose sample-sync.
+
+### Total ≈ **$318** — 5 color lights + hub radios + ESPHome thermostat + 2 Wi-Fi & 2 Bluetooth speakers.
+### Lean version ≈ **$220** — skip PSU/SD (−$18), 1 Wi-Fi room (−$55), 1 Bluetooth (−$28).
 
 ## Two honest calls
 
