@@ -14,6 +14,7 @@
  * loop tracks reachability (connected / reconnecting / offline).
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import net from "node:net";
 import http from "node:http";
@@ -80,8 +81,11 @@ export async function scan(backend: ClimateBackend) {
 export async function capabilities() { const c = await localLights.capabilities(); return { esphome: true, matter: c.matter }; }
 
 export function onboard(dev: { name: string; backend: ClimateBackend; address?: string; port?: number; entity?: string; node?: string; endpoint?: number }, room: string): Thermostat {
-  const seed = dev.node || (dev.address || "") + dev.name;
-  const id = "th_" + dev.backend + "_" + Buffer.from(seed).toString("hex").slice(0, 12);
+  // Identity must include address+port+entity (+node/name) — hashing just the first
+  // bytes of the address collided every device sharing an IP prefix (e.g. two units
+  // at 192.168.1.x), silently overwriting one with the other.
+  const seed = dev.node || `${dev.address || ""}:${dev.port ?? ""}/${dev.entity || dev.name}`;
+  const id = "th_" + dev.backend + "_" + createHash("sha1").update(seed).digest("hex").slice(0, 12);
   let t = stats.find((x) => x.id === id);
   if (!t) {
     t = {

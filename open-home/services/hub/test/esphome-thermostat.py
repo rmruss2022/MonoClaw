@@ -27,11 +27,20 @@ Temperatures on the wire are °C (as ESPHome emits); the hub converts to/from °
 
 Usage: esphome-thermostat.py <port> [entity]   (default entity: hvac)
 """
-import sys, json, http.server, socketserver
+import sys, os, json, time, http.server, socketserver
 from urllib.parse import urlparse, parse_qs
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 4790
 ENTITY = sys.argv[2] if len(sys.argv) > 2 else "hvac"
+# Set EMU_LOG=1 to print each request (method, path, query) + resulting state to
+# stderr — so an end-to-end walkthrough can see the exact wire format the hub sends.
+LOG = os.environ.get("EMU_LOG") == "1"
+
+
+def log(msg):
+    if LOG:
+        sys.stderr.write(f"[emu {time.strftime('%H:%M:%S')}] {msg}\n")
+        sys.stderr.flush()
 
 # Modes this "device" advertises. Note: no "auto" — a hub must send heat_cool.
 SUPPORTED = {"off", "heat", "cool", "heat_cool", "fan_only", "dry"}
@@ -68,13 +77,26 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         p = urlparse(self.path)
         if p.path == f"/climate/{ENTITY}":
-            self._send(200, json.dumps(state_json()).encode())
+            body = json.dumps(state_json())
+            log(f"GET  {p.path}  →  {body}")
+            self._send(200, body.encode())
         else:
+            log(f"GET  {p.path}  →  404")
             self._send(404, b'{"error":"not found"}')
 
     def do_POST(self):
         p = urlparse(self.path)
+        # Debug-only hook (NOT part of the ESPHome contract): simulate the room
+        # temperature changing so read-back can be demonstrated end-to-end.
+        if p.path == "/debug/set":
+            q = parse_qs(p.query)
+            c = q.get("current_temperature", [None])[0]
+            if c is not None:
+                state["current_temperature"] = float(c)
+                log(f"POST {p.path}?{p.query}  (debug: room now {c}°C)")
+            return self._send(200, json.dumps(state_json()).encode())
         if p.path != f"/climate/{ENTITY}/set":
+            log(f"POST {p.path}  →  404")
             return self._send(404, b'{"error":"not found"}')
         q = parse_qs(p.query)
 
@@ -86,6 +108,7 @@ class H(http.server.BaseHTTPRequestHandler):
         new_mode = (q.get("mode", [None])[0] or "").lower() or None
         if new_mode is not None:
             if new_mode not in SUPPORTED:
+                log(f"POST {p.path}?{p.query}  →  400 REJECTED unsupported mode '{new_mode}'")
                 return self._send(400, json.dumps({"error": f"unsupported mode {new_mode}"}).encode())
             state["mode"] = new_mode
 
@@ -101,7 +124,9 @@ class H(http.server.BaseHTTPRequestHandler):
             t = num("target_temperature")
             if t is not None:
                 state["target_temperature"] = t
-        self._send(200, json.dumps(state_json()).encode())
+        body = json.dumps(state_json())
+        log(f"POST {p.path}?{p.query}  →  200  {body}")
+        self._send(200, body.encode())
 
     def log_message(self, *a):
         pass
