@@ -87,6 +87,9 @@ setInterval(() => { localLights.maintain().catch(() => {}); }, 15_000);
 // Maintain onboarded thermostats (ESPHome/Matter) — reconnect on drop.
 setInterval(() => { localClimate.maintain().catch(() => {}); }, 15_000);
 
+// Mirror agent/scene thermostat changes onto the real primary thermostat.
+setInterval(() => { climate.syncMockToPrimary().catch(() => {}); }, 4_000);
+
 // Poll the Snapcast server (synchronized multi-room), if one is running.
 snapcast.refresh().catch(() => {});
 setInterval(() => { snapcast.refresh().catch(() => {}); }, 20_000);
@@ -294,7 +297,15 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     return;
   }
   if (url === "/devices") {
-    json(res, { devices: home.flat(), summary: home.summary() });
+    // Merge real onboarded thermostats; hide the mock thermostat when a real one exists.
+    const rows = climate.deviceRows();
+    let devices = home.flat();
+    const sum = home.summary();
+    if (rows.length) {
+      devices = devices.filter((d: any) => d.id !== "thermostat_main").concat(rows as any);
+      sum.devices = devices.length;
+    }
+    json(res, { devices, summary: sum });
     return;
   }
   if (url === "/home") {

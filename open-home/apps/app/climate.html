@@ -168,7 +168,8 @@ function renderPanel(){
     </div>`;
   wireDial(t);
 }
-let setT;function setTemp(tF){const t=selected();if(!t)return;t.targetF=Math.max(t.minF,Math.min(t.maxF,tF));renderPanel();clearTimeout(setT);setT=setTimeout(()=>post('set-temp',{id:t.id,targetF:Math.round(t.targetF)}),160);}
+function cAction(mode,cur,tgt){if(mode==='off')return'idle';if(mode==='fan')return'fan';if(mode==='heat')return tgt>cur+0.4?'heating':'idle';if(mode==='cool')return tgt<cur-0.4?'cooling':'idle';return tgt>cur+0.4?'heating':tgt<cur-0.4?'cooling':'idle';}
+let setT;function setTemp(tF){const t=selected();if(!t)return;t.targetF=Math.max(t.minF,Math.min(t.maxF,tF));t.action=cAction(t.mode,t.currentF,t.targetF);renderPanel();clearTimeout(setT);setT=setTimeout(()=>post('set-temp',{id:t.id,targetF:Math.round(t.targetF)}),160);}
 function bump(d){const t=selected();if(t)setTemp(Math.round(t.targetF)+d);}
 function setMode(m){const t=selected();if(!t)return;api('set-mode',{id:t.id,mode:m});}
 function renameT(id){const t=(S.thermostats||[]).find(x=>x.id===id);const v=prompt("Rename thermostat",t?t.name:'');if(v&&v.trim())api('rename-thermostat',{id,name:v.trim()});}

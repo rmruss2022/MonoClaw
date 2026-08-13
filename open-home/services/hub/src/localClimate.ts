@@ -99,9 +99,12 @@ async function applyMatter(t: Thermostat, patch: { mode?: Mode; targetF?: number
   return true;
 }
 
+const VALID_MODES: Mode[] = ["off", "heat", "cool", "auto", "fan"];
 export async function control(id: string, patch: { mode?: Mode; targetF?: number }): Promise<{ ok: boolean; reason?: string; thermostat?: Thermostat }> {
   const t = stats.find((x) => x.id === id);
   if (!t) return { ok: false, reason: "not found" };
+  if (patch.mode !== undefined && !VALID_MODES.includes(patch.mode)) return { ok: false, reason: "invalid mode" };
+  if (patch.targetF !== undefined && !Number.isFinite(patch.targetF)) return { ok: false, reason: "invalid temperature" };
   const ok = t.backend === "esphome" ? await applyEsphome(t, patch) : await applyMatter(t, patch);
   if (ok) {
     if (patch.mode) t.mode = patch.mode;
