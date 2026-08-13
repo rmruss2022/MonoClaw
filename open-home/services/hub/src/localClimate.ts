@@ -42,6 +42,32 @@ let stats: Thermostat[] = load();
 export function list(): Thermostat[] { return stats.map((s) => ({ ...s })); }
 
 const f2c = (f: number) => Math.round(((f - 32) * 5 / 9) * 10) / 10;
+const c2f = (c: number) => Math.round((c * 9 / 5 + 32) * 10) / 10;
+
+// App mode → ESPHome climate mode string (web_server /set?mode=…). ESPHome uses
+// `heat_cool` (two-setpoint) for the both-heat-and-cool mode — NOT `auto` — and
+// `fan_only` for fan. Sending `auto` is rejected by devices that only expose heat_cool.
+const TO_ESPHOME_MODE: Record<Mode, string> = { off: "off", heat: "heat", cool: "cool", auto: "heat_cool", fan: "fan_only" };
+// ESPHome climate mode string → app mode (read-back). Accept both heat_cool and the
+// legacy `auto` as our "auto"; `dry` has no app equivalent so we surface it as cool.
+const FROM_ESPHOME_MODE: Record<string, Mode> = { off: "off", heat: "heat", cool: "cool", heat_cool: "auto", auto: "auto", fan_only: "fan", dry: "cool" };
+// heat_cool needs a low/high band; our model is single-setpoint, so bracket the
+// target with a symmetric deadband (°F).
+const DEADBAND_F = 2;
+
+function entityOf(t: Thermostat): string {
+  return t.entity || t.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+}
+function clampF(t: Thermostat, f: number): number {
+  return Math.max(t.minF, Math.min(t.maxF, Math.round(f)));
+}
+function deriveAction(t: Thermostat): Action {
+  if (t.mode === "off") return "idle";
+  if (t.mode === "fan") return "fan";
+  if (t.mode === "heat") return t.targetF > t.currentF ? "heating" : "idle";
+  if (t.mode === "cool") return t.targetF < t.currentF ? "cooling" : "idle";
+  return t.targetF > t.currentF ? "heating" : t.targetF < t.currentF ? "cooling" : "idle";
+}
 
 function sh(cmd: string, args: string[], timeoutMs = 8000): Promise<{ ok: boolean; out: string }> {
   return new Promise((resolve) => execFile(cmd, args, { timeout: timeoutMs }, (err, stdout) => resolve({ ok: !err, out: String(stdout || "") })));
@@ -82,13 +108,57 @@ function httpPost(host: string, port: number, path: string, timeoutMs = 3000): P
     req.end();
   });
 }
+function httpGetJson(host: string, port: number, path: string, timeoutMs = 3000): Promise<any | null> {
+  return new Promise((resolve) => {
+    const req = http.request({ host, port, path, method: "GET", timeout: timeoutMs }, (res) => {
+      if ((res.statusCode || 500) >= 400) { res.resume(); return resolve(null); }
+      let body = ""; res.setEncoding("utf8");
+      res.on("data", (c) => { body += c; if (body.length > 100_000) req.destroy(); });
+      res.on("end", () => { try { resolve(JSON.parse(body)); } catch { resolve(null); } });
+    });
+    req.on("timeout", () => { req.destroy(); resolve(null); });
+    req.on("error", () => resolve(null));
+    req.end();
+  });
+}
+
 async function applyEsphome(t: Thermostat, patch: { mode?: Mode; targetF?: number }): Promise<boolean> {
   if (!t.address) return false;
-  const entity = t.entity || t.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  const entity = entityOf(t);
+  // Effective mode decides which setpoint fields the device expects: heat_cool
+  // wants target_temperature_low/high, single modes want target_temperature.
+  const effMode: Mode = patch.mode ?? t.mode;
   const q: string[] = [];
-  if (patch.mode) q.push("mode=" + (patch.mode === "fan" ? "fan_only" : patch.mode));
-  if (patch.targetF != null) q.push("target_temperature=" + f2c(patch.targetF));
+  if (patch.mode) q.push("mode=" + TO_ESPHOME_MODE[patch.mode]);
+  if (patch.targetF != null) {
+    if (effMode === "auto") {
+      q.push("target_temperature_low=" + f2c(patch.targetF - DEADBAND_F));
+      q.push("target_temperature_high=" + f2c(patch.targetF + DEADBAND_F));
+    } else {
+      q.push("target_temperature=" + f2c(patch.targetF));
+    }
+  }
+  if (!q.length) return true;
   return await httpPost(t.address, t.port || 80, `/climate/${entity}/set?` + q.join("&"));
+}
+
+/**
+ * Read the device's real state back over the web_server REST API and reconcile it
+ * onto our model — so the dial shows the room's actual temperature and mode, not
+ * our optimistic guess. Returns false if the device didn't answer (used as the
+ * reachability signal for ESPHome, since it's a real API round-trip).
+ */
+async function readEsphome(t: Thermostat): Promise<boolean> {
+  if (!t.address) return false;
+  const j = await httpGetJson(t.address, t.port || 80, `/climate/${entityOf(t)}`);
+  if (!j || typeof j !== "object") return false;
+  if (typeof j.current_temperature === "number") t.currentF = Math.round(c2f(j.current_temperature));
+  if (typeof j.target_temperature === "number") t.targetF = clampF(t, c2f(j.target_temperature));
+  else if (typeof j.target_temperature_low === "number" && typeof j.target_temperature_high === "number")
+    t.targetF = clampF(t, c2f((j.target_temperature_low + j.target_temperature_high) / 2));
+  if (typeof j.mode === "string") { const m = FROM_ESPHOME_MODE[j.mode.toLowerCase()]; if (m) t.mode = m; }
+  t.action = deriveAction(t);
+  return true;
 }
 async function applyMatter(t: Thermostat, patch: { mode?: Mode; targetF?: number }): Promise<boolean> {
   const caps = await localLights.capabilities();
@@ -105,15 +175,18 @@ export async function control(id: string, patch: { mode?: Mode; targetF?: number
   if (!t) return { ok: false, reason: "not found" };
   if (patch.mode !== undefined && !VALID_MODES.includes(patch.mode)) return { ok: false, reason: "invalid mode" };
   if (patch.targetF !== undefined && !Number.isFinite(patch.targetF)) return { ok: false, reason: "invalid temperature" };
-  const ok = t.backend === "esphome" ? await applyEsphome(t, patch) : await applyMatter(t, patch);
+  // Clamp to the device's range *before* sending it on the wire — never push an
+  // out-of-range setpoint to real hardware.
+  const eff: { mode?: Mode; targetF?: number } = { mode: patch.mode };
+  if (patch.targetF != null) eff.targetF = clampF(t, patch.targetF);
+  const ok = t.backend === "esphome" ? await applyEsphome(t, eff) : await applyMatter(t, eff);
   if (ok) {
-    if (patch.mode) t.mode = patch.mode;
-    if (patch.targetF != null) t.targetF = Math.max(t.minF, Math.min(t.maxF, Math.round(patch.targetF)));
-    // reflect a plausible action until the device reports back (respect mode)
-    t.action = t.mode === "off" ? "idle" : t.mode === "fan" ? "fan"
-      : t.mode === "heat" ? (t.targetF > t.currentF ? "heating" : "idle")
-      : t.mode === "cool" ? (t.targetF < t.currentF ? "cooling" : "idle")
-      : (t.targetF > t.currentF ? "heating" : t.targetF < t.currentF ? "cooling" : "idle");
+    if (eff.mode) t.mode = eff.mode;
+    if (eff.targetF != null) t.targetF = eff.targetF;
+    t.action = deriveAction(t); // optimistic until the device reports back
+    // Reconcile against the device's real state so the model matches hardware
+    // (e.g. heat_cool band midpoint, clamped setpoints, actual room temp).
+    if (t.backend === "esphome") await readEsphome(t).catch(() => false);
     t.lastSeen = Date.now(); save(stats);
     return { ok: true, thermostat: { ...t } };
   }
@@ -131,7 +204,10 @@ function tcpReachable(host: string, port: number, timeoutMs = 2500): Promise<boo
 }
 async function checkOne(t: Thermostat): Promise<void> {
   if (t.backend === "esphome" && t.address) {
-    const up = await tcpReachable(t.address, t.port || 80);
+    // A real climate GET is both the reachability probe and the state read-back;
+    // fall back to a TCP check if the device is up but the entity path 404s.
+    const read = await readEsphome(t).catch(() => false);
+    const up = read || await tcpReachable(t.address, t.port || 80);
     if (up) { t.status = "connected"; t.lastSeen = Date.now(); t.attempts = 0; }
     else { t.attempts++; t.status = t.attempts > 3 ? "offline" : "reconnecting"; }
   } else if (t.backend === "matter") {

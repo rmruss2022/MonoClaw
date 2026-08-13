@@ -62,3 +62,35 @@ Browser (Playwright, desktop + iPhone 390px):
 ## Acceptance
 All integration assertions green, both browser flows pass with screenshots, committed to
 `openhome-mvp`, looped until clean.
+
+---
+
+## Addendum — real-device contract hardening (a) + emulator (b)
+
+A "returns 200 to everything" mock proves our state machine but **cannot** prove the wire
+format a real ESPHome thermostat accepts. Three contract bugs it hid, now fixed in
+`localClimate.ts`:
+
+1. **Mode mapping** — the app "auto" now maps to ESPHome `heat_cool` (and "fan" → `fan_only`)
+   via `TO_ESPHOME_MODE`; read-back maps back with `FROM_ESPHOME_MODE`. A bare `auto` is
+   rejected by devices that only expose `heat_cool`.
+2. **Two-setpoint band** — in `heat_cool` the hub now sends `target_temperature_low` +
+   `target_temperature_high` (single-setpoint `target_temperature` only in heat/cool). Our
+   single `targetF` brackets a ±2 °F deadband; read-back uses the band midpoint.
+3. **State read-back** — `readEsphome()` does `GET /climate/<entity>` and reconciles real
+   `current_temperature` / `mode` / setpoint(s) onto the model, so the dial shows the room's
+   actual temperature — not our optimistic guess. It doubles as the ESPHome reachability
+   probe (a real API round-trip), with a TCP fallback. Setpoints are clamped to `[minF,maxF]`
+   *before* being sent on the wire.
+
+**Emulator (`test/esphome-thermostat.py`)** — a faithful, stateful ESPHome web_server climate
+device: `GET /climate/<entity>` returns the real JSON payload; `POST /climate/<entity>/set`
+validates modes (unsupported → 400) and stores setpoints per the effective mode (a lone
+`target_temperature` in `heat_cool` is ignored, like a real device). This makes the test a
+genuine oracle: it 400s the old `auto` and ignores the old lone-setpoint, so the pre-fix code
+fails it. `test-climate.sh` drives it and asserts the mapping, the low/high band round-trip,
+and the current-temp read-back (20 assertions, all green).
+
+**Ground truth still required:** an ESPHome `host`-platform build or a physical unit for final
+sign-off, and a Matter virtual device (`chip-thermostat-app`) to exercise the Matter path the
+same way. The emulator closes the ESPHome contract gap without hardware.

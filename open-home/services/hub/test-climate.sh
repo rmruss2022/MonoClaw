@@ -1,36 +1,30 @@
 #!/usr/bin/env bash
-# Hardened integration test for the thermostat/climate integration.
-# Stands up a mock ESPHome web_server endpoint so the real success paths (reachable
-# device → state updates) are exercised, then checks onboarding-to-a-room, control,
+# Hardened integration + device-contract test for the thermostat/climate integration.
+# Stands up a FAITHFUL ESPHome web_server climate emulator (test/esphome-thermostat.py)
+# that speaks the real REST contract — so it catches device-contract bugs a
+# rubber-stamp 200 mock hides: heat_cool mode mapping, target_temperature_low/high
+# setpoints, and GET state read-back. Then checks onboarding-to-a-room, control,
 # input hardening, /devices merge, and agent/scene → real-primary sync (no-clobber).
 #
 # Usage: HUB=http://127.0.0.1:4700 ./test-climate.sh   (hub must be running new code)
 set -u
 HUB="${HUB:-http://127.0.0.1:4700}"
 MOCK_PORT=4790
+HERE="$(cd "$(dirname "$0")" && pwd)"
 PASS=0; FAIL=0
 ok(){ echo "  ✓ $1"; PASS=$((PASS+1)); }
 bad(){ echo "  ✗ $1"; FAIL=$((FAIL+1)); }
 jq(){ python3 -c "import sys,json;d=json.load(sys.stdin);print($1)" 2>/dev/null; }
 cmd(){ curl -s -X POST "$HUB/climate/command" -H 'Content-Type: application/json' -d "$1"; }
 
-# --- mock ESPHome endpoint: 200 to everything ---
-python3 - "$MOCK_PORT" >/dev/null 2>&1 <<'PY' &
-import sys,http.server,socketserver
-class H(http.server.BaseHTTPRequestHandler):
-    def _ok(self):self.send_response(200);self.end_headers();self.wfile.write(b'{}')
-    def do_POST(self):self._ok()
-    def do_GET(self):self._ok()
-    def log_message(self,*a):pass
-socketserver.TCPServer.allow_reuse_address=True
-socketserver.TCPServer(("127.0.0.1",int(sys.argv[1])),H).serve_forever()
-PY
+# --- faithful ESPHome climate emulator (real contract, not a 200-stamp) ---
+python3 "$HERE/test/esphome-thermostat.py" "$MOCK_PORT" hvac >/dev/null 2>&1 &
 MOCK_PID=$!
 cleanup(){ curl -s -X POST "$HUB/climate/command" -H 'Content-Type: application/json' -d "{\"cmd\":\"remove-thermostat\",\"id\":\"$TID\"}" >/dev/null 2>&1; kill $MOCK_PID 2>/dev/null; }
 trap cleanup EXIT
 sleep 1
 
-echo "1) Onboard ESPHome thermostat to a room (Bedroom)"
+echo "1) Onboard ESPHome thermostat to a room (Bedroom) + read real state back"
 cmd '{"cmd":"onboard-thermostat","device":{"name":"Test Stat","backend":"esphome","address":"127.0.0.1","port":4790,"entity":"hvac"},"room":"Bedroom"}' >/dev/null
 TID=""
 for i in $(seq 1 8); do
@@ -42,17 +36,32 @@ done
 [ -n "$TID" ] && ok "onboarded (id=$TID)" || { bad "onboard failed"; exit 1; }
 RM=$(curl -s "$HUB/climate/state" | jq "next((t['room'] for t in d['thermostats'] if t['id']=='$TID'),'')")
 [ "$RM" = "Bedroom" ] && ok "assigned to room Bedroom" || bad "room wrong: $RM"
-[ "$ST" = "connected" ] && ok "reachable → connected" || bad "status: $ST"
+[ "$ST" = "connected" ] && ok "reachable → connected (via real climate GET)" || bad "status: $ST"
+# device truth is 20.0°C (=68°F), mode heat — NOT our optimistic 70/auto default
+CUR=$(curl -s "$HUB/climate/state" | jq "next((t['currentF'] for t in d['thermostats'] if t['id']=='$TID'),0)")
+[ "$CUR" = "68" ] && ok "read-back: currentF=68 from device (not optimistic 70)" || bad "read-back currentF=$CUR (expected 68)"
+M=$(curl -s "$HUB/climate/state" | jq "next((t['mode'] for t in d['thermostats'] if t['id']=='$TID'),'')")
+[ "$M" = "heat" ] && ok "read-back: mode adopted from device (heat)" || bad "read-back mode=$M (expected heat)"
 
-echo "2) Control: set-temp / set-mode reflect (reachable device)"
+echo "2) Contract: auto→heat_cool mapping + two-setpoint (low/high) band"
+# set-mode auto: the hub must send mode=heat_cool (a bare 'auto' would be 400'd by the
+# device). Success + read-back mapping heat_cool→auto proves the mapping fix.
+cmd "{\"cmd\":\"set-mode\",\"id\":\"$TID\",\"mode\":\"auto\"}" >/dev/null
+M=$(curl -s "$HUB/climate/state" | jq "next((t['mode'] for t in d['thermostats'] if t['id']=='$TID'),'')")
+[ "$M" = "auto" ] && ok "set-mode auto → device accepted heat_cool (mapping ok)" || bad "mode=$M (auto→heat_cool mapping broken)"
+# set-temp 74 in heat_cool: hub must send target_temperature_low/high; the device stores
+# the band and the read-back midpoint returns 74. A lone target_temperature would be
+# ignored by the device → stale read-back → this fails.
+cmd "{\"cmd\":\"set-temp\",\"id\":\"$TID\",\"targetF\":74}" >/dev/null
+T=$(curl -s "$HUB/climate/state" | jq "next((t['targetF'] for t in d['thermostats'] if t['id']=='$TID'),0)")
+[ "$T" = "74" ] && ok "set-temp 74 via low/high band round-trips to 74" || bad "target=$T (heat_cool setpoints broken)"
+A=$(curl -s "$HUB/climate/state" | jq "next((t['action'] for t in d['thermostats'] if t['id']=='$TID'),'')")
+[ "$A" = "heating" ] && ok "action mode-aware (heating, 74>68)" || bad "action=$A"
+# single-setpoint path: switch to heat and confirm target_temperature round-trips
+cmd "{\"cmd\":\"set-mode\",\"id\":\"$TID\",\"mode\":\"heat\"}" >/dev/null
 cmd "{\"cmd\":\"set-temp\",\"id\":\"$TID\",\"targetF\":72}" >/dev/null
 T=$(curl -s "$HUB/climate/state" | jq "next((t['targetF'] for t in d['thermostats'] if t['id']=='$TID'),0)")
-[ "$T" = "72" ] && ok "set-temp 72 applied" || bad "target=$T"
-cmd "{\"cmd\":\"set-mode\",\"id\":\"$TID\",\"mode\":\"heat\"}" >/dev/null
-M=$(curl -s "$HUB/climate/state" | jq "next((t['mode'] for t in d['thermostats'] if t['id']=='$TID'),'')")
-A=$(curl -s "$HUB/climate/state" | jq "next((t['action'] for t in d['thermostats'] if t['id']=='$TID'),'')")
-[ "$M" = "heat" ] && ok "set-mode heat applied" || bad "mode=$M"
-[ "$A" = "heating" ] && ok "action mode-aware (heating, target>current)" || bad "action=$A"
+[ "$T" = "72" ] && ok "heat mode: single target_temperature round-trips to 72" || bad "target=$T (single setpoint broken)"
 
 echo "3) Hardening: invalid inputs rejected/clamped"
 H=$(cmd "{\"cmd\":\"set-mode\",\"id\":\"$TID\",\"mode\":\"banana\"}" | jq "d.get('hint','')")
