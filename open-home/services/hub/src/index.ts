@@ -29,9 +29,13 @@ import * as localLights from "./localLights.ts";
 import * as hub from "./hub.ts";
 import * as climate from "./climate.ts";
 import * as localClimate from "./localClimate.ts";
+import * as devEmulator from "./devEmulator.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
+// Dev mode gates in-app test tooling (e.g. the emulated "test thermostat" button).
+// Off by default; enable with OPEN_HOME_DEV=1.
+const DEV = process.env.OPEN_HOME_DEV === "1";
 const DASHBOARD = new URL("../../../apps/app/index.html", import.meta.url);
 const CONTROL = new URL("../../../apps/app/control.html", import.meta.url);
 const MUSIC = new URL("../../../apps/app/music.html", import.meta.url);
@@ -413,7 +417,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
 
   // ---- Climate / thermostat service ----
-  if (url === "/climate/state") { json(res, { ...climate.state(), capabilities: await climate.capabilities() }); return; }
+  if (url === "/climate/state") { json(res, { ...climate.state(), capabilities: await climate.capabilities(), dev: DEV }); return; }
   if (url.startsWith("/climate/discover")) {
     const backend = (new URL(req.url ?? "/", "http://x").searchParams.get("backend") ?? "esphome") as "esphome" | "matter";
     const found = await localClimate.scan(backend);
@@ -434,6 +438,25 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "onboard-thermostat": { const t = localClimate.onboard(p.device || {}, String(p.room ?? "Hallway")); hint = `Added ${t.name} to ${t.room}`; break; }
       case "reconnect-thermostat": { const t = await localClimate.reconnect(String(p.id)); hint = t ? `${t.name}: ${t.status}` : "not found"; break; }
       case "remove-thermostat": { localClimate.remove(String(p.id)); break; }
+      case "add-demo-thermostat": {
+        if (!DEV) { hint = "Dev mode is off (set OPEN_HOME_DEV=1)"; break; }
+        const em = await devEmulator.ensure();
+        const n = localClimate.list().filter((t) => (t.entity || "").startsWith("demo")).length + 1;
+        const entity = "demo" + n;
+        devEmulator.addEntity(entity, n - 1);
+        const rooms = ["Living Room", "Bedroom", "Kitchen", "Office"];
+        const room = rooms[(n - 1) % rooms.length];
+        const t = localClimate.onboard({ name: "Test Thermostat " + n, backend: "esphome", address: em.host, port: em.port, entity }, room);
+        hint = `Added ${t.name} (emulated) to ${room}`;
+        break;
+      }
+      case "clear-demo-thermostats": {
+        if (!DEV) { hint = "Dev mode is off"; break; }
+        let k = 0;
+        for (const t of localClimate.list()) if ((t.entity || "").startsWith("demo")) { localClimate.remove(t.id); devEmulator.removeEntity(t.entity!); k++; }
+        hint = `Removed ${k} test thermostat${k === 1 ? "" : "s"}`;
+        break;
+      }
       default: hint = "Unknown command";
     }
     json(res, { ok: true, hint, state: climate.state() }); return;

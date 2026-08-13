@@ -93,7 +93,7 @@
       <div class="row between" style="gap:12px;flex-wrap:wrap">
         <div style="min-width:0"><h2 style="color:var(--text)">Climate</h2>
           <div class="note" style="margin-top:4px">Local thermostat control — ESPHome &amp; Matter, no cloud.</div></div>
-        <button class="primary" onclick="openWiz()">＋ Add thermostat</button>
+        <div class="row" style="gap:8px;align-items:center"><span id="devTools"></span><button class="primary" onclick="openWiz()">＋ Add thermostat</button></div>
       </div>
     </section>
 
@@ -132,8 +132,16 @@ function arc(r,d0,d1){const[x0,y0]=polar(r,d0),[x1,y1]=polar(r,d1);const large=(
 function frac(t){return Math.max(0,Math.min(1,(t.targetF-t.minF)/(t.maxF-t.minF)));}
 function ticks(){let s="";for(let i=0;i<=54;i++){const d=A0+(i/54)*SWEEP;const[x0,y0]=polar(R+8,d),[x1,y1]=polar(R+(i%9===0?0:4),d);s+=`<line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="#2a303c" stroke-width="${i%9===0?2:1}"/>`;}return s;}
 
+function renderDevTools(all){
+  const el=$("devTools");if(!el)return;
+  if(!(S&&S.dev)){el.innerHTML="";return;}
+  const hasDemo=all.some(t=>t.real&&/^Test Thermostat/.test(t.name));
+  el.innerHTML=`<button class="small" style="border-color:var(--accent);color:var(--accent)" onclick="api('add-demo-thermostat')" title="Adds an emulated ESPHome thermostat (dev only)">🧪 Add test device</button>`
+    +(hasDemo?`<button class="small" style="margin-left:6px" onclick="api('clear-demo-thermostats')">Clear test</button>`:"");
+}
 function renderPanel(){
   const all=(S&&S.thermostats)||[];const c=(S&&S.counts)||{total:0};
+  renderDevTools(all);
   $("counts").textContent=`${c.total} thermostat${c.total===1?'':'s'}${c.active?` · ${c.active} active`:''}`;
   if(!all.length){$("panel").innerHTML=`<div class="empty"><div class="ic">🌡️</div><h3 style="margin:10px 0 4px">No thermostats yet</h3><div class="note">Add an ESPHome or Matter thermostat to control your heating &amp; cooling.</div><div style="margin-top:16px"><button class="primary" onclick="openWiz()">＋ Add thermostat</button></div></div>`;return;}
   if(!selId||!all.find(t=>t.id===selId))selId=all[0].id;
