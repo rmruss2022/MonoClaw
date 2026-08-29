@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>openhome · lights</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+<meta name="theme-color" content="#0e1014" />
+<style>
+  :root{--bg:#0e1014;--panel:#171a21;--panel2:#1e222b;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56;--warn:#f0b429;--danger:#ef5350;--radius:14px}
+  *{box-sizing:border-box}
+  html,body{overflow-x:hidden;max-width:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  header.top{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:calc(env(safe-area-inset-top,0px) + 14px) 22px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,var(--bg))}
+  .brand a{color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;font-weight:700}
+  nav{display:flex;gap:4px;flex-wrap:wrap}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid transparent}
+  nav a:hover{color:var(--text);background:var(--panel2);border-color:var(--line)}
+  nav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  main{padding:22px;max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:18px;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+  main>*{min-width:0}
+  h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}.muted{color:var(--muted)}.small{font-size:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .badge{font-size:11px;color:var(--accent);background:rgba(61,220,151,.1);border:1px solid var(--accent-dim);padding:1px 7px;border-radius:999px;white-space:nowrap}
+  .badge.esp{color:#3ddc97}
+  .badge.matter{color:#c39bff;background:rgba(195,155,255,.1);border-color:#453a5e}
+  .badge.live{color:#0b0f14;background:var(--accent);border-color:var(--accent);font-weight:700}
+  .badge.off{color:#8a94a6;background:rgba(138,148,166,.12);border-color:#333}
+  .badge.warn{color:#e6b800;background:rgba(230,184,0,.12);border-color:#5a4a00}
+  .roomsel{font-size:12px;padding:3px 7px;border-radius:8px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}.dot.on{background:var(--accent)}.dot.off{background:var(--danger)}.dot.warn{background:#e6b800}
+  button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px}
+  button:hover{border-color:var(--accent-dim)}
+  button.primary{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
+  button.big{width:100%;padding:14px;font-size:16px;border-radius:12px}
+  button.small{padding:5px 10px;font-size:13px;border-radius:8px}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--panel);outline:none;flex:1}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer}
+  input[type=text]{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:11px 13px;width:100%}
+  select{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 8px}
+  .lite{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--panel2)}
+  .lite.on{border-color:var(--accent-dim);background:linear-gradient(135deg,rgba(61,220,151,.06),var(--panel2))}
+  .note{font-size:13px;color:var(--muted)}
+  .roomcard h3{margin:0;font-size:16px}
+  .hero{background:linear-gradient(135deg,#241f16,#141821);border:1px solid #4a3d1f}
+  /* toggle switch */
+  .sw{width:44px;height:26px;border-radius:999px;background:var(--panel);border:1px solid var(--line);position:relative;flex:0 0 auto;cursor:pointer;transition:.18s}
+  .sw:after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:.18s}
+  .sw.on{background:var(--accent);border-color:var(--accent)}.sw.on:after{left:20px;background:#08130d}
+  /* color swatches */
+  .swatches{display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;align-items:center}
+  .swatch{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.14);cursor:pointer}
+  .swatch:hover{transform:scale(1.12)}
+  .swatch.more{display:flex;align-items:center;justify-content:center;font-size:12px;background:var(--panel);color:var(--muted)}
+  /* color sheet */
+  .sheet{position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center}
+  .sheet.show{display:flex}
+  .sheet .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:460px;padding:18px 20px calc(22px + env(safe-area-inset-bottom,0px));animation:up .22s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:translateY(0);opacity:1}}
+  #wheelWrap{position:relative;width:220px;height:220px;margin:12px auto 6px;touch-action:none}
+  #wheel{width:220px;height:220px;border-radius:50%;box-shadow:0 6px 30px rgba(0,0,0,.4)}
+  #wheelDot{position:absolute;width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);transform:translate(-50%,-50%);pointer-events:none}
+  .temp{-webkit-appearance:none;appearance:none;height:16px;border-radius:10px;width:100%;margin:14px 0 2px;background:linear-gradient(90deg,#ffb46b,#fff,#bcd6ff);outline:none}
+  .temp::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--line);cursor:pointer}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:var(--panel2);border:1px solid var(--accent-dim);color:var(--text);padding:10px 16px;border-radius:10px;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .scene{display:inline-flex;flex-direction:column;align-items:center;gap:4px;min-width:74px;padding:12px 10px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);cursor:pointer}
+  .scene:hover{border-color:var(--accent-dim)}
+  .scene .ic{font-size:24px}.scene .nm{font-size:12px;color:var(--muted)}
+  .scenerow{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.scenerow::-webkit-scrollbar{display:none}
+  .empty{text-align:center;padding:34px 16px}.empty .ic{font-size:44px}
+  /* ---- onboarding wizard ---- */
+  .wiz{position:fixed;inset:0;z-index:70;background:var(--bg);display:none;flex-direction:column}
+  .wiz.show{display:flex}
+  .wiz .wh{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 12px;border-bottom:1px solid var(--line)}
+  .wiz .wh b{font-size:16px}
+  .wiz .body{flex:1;overflow:auto;padding:24px 20px;max-width:520px;margin:0 auto;width:100%}
+  .wiz .foot{padding:14px 20px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);max-width:520px;margin:0 auto;width:100%;display:flex;gap:10px}
+  .wiz .foot button{flex:1}
+  .wiz h1{font-size:22px;margin:0 0 6px}
+  .wiz p.sub{color:var(--muted);margin:0 0 20px}
+  .wizcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:18px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);margin-bottom:12px;font-size:16px;color:var(--text);cursor:pointer}
+  .wizcard:hover{border-color:var(--accent-dim);background:#232833}
+  .wizcard .ic{font-size:26px;width:34px;text-align:center}
+  .wizcard .cap{font-size:12px;color:var(--muted);font-weight:400}
+  .devrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);margin-bottom:10px;cursor:pointer}
+  .devrow:hover{border-color:var(--accent-dim)}
+  .radar{width:130px;height:130px;margin:26px auto;position:relative}
+  .radar .ring{position:absolute;inset:0;border:2px solid var(--accent);border-radius:50%;opacity:0;animation:radar 1.9s ease-out infinite}
+  .radar .ring:nth-child(2){animation-delay:.63s}.radar .ring:nth-child(3){animation-delay:1.26s}
+  .radar .core{position:absolute;inset:42%;background:var(--accent);border-radius:50%;box-shadow:0 0 18px var(--accent)}
+  @keyframes radar{0%{transform:scale(.25);opacity:.85}100%{transform:scale(1);opacity:0}}
+  .spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--panel2);border-top-color:var(--accent);margin:28px auto;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+  .chip{padding:10px 15px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:15px}
+  .chip.on{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
+  .check{width:80px;height:80px;border-radius:50%;background:var(--accent);color:#08130d;display:flex;align-items:center;justify-content:center;font-size:42px;margin:14px auto 18px;animation:pop .32s ease}
+  @keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+  .center{text-align:center}
+  @media(max-width:640px){
+    header.top{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;gap:8px 12px}
+    nav{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:2px 0 0;padding:2px 0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    nav::-webkit-scrollbar{display:none}
+    nav a{white-space:nowrap}
+    header.top>div[style*="flex:1"]{display:none}
+    main{padding:16px 14px;gap:16px}
+    .card{padding:14px}
+    .lite .row.between{flex-wrap:wrap;gap:8px 10px}
+    select,input[type=text]{font-size:16px}
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><a href="/"><img src="/assets/brand/logo.svg" alt="openhome" height="24"/></a></div>
+    <nav>
+      <a href="/">Home</a><a href="/control">Control</a>
+      <a href="/music">Music</a><a href="/lights" class="active">Lights</a><a href="/speakers">Speakers</a><a href="/climate">Climate</a><a href="/docs">Docs</a>
+    </nav>
+    <div style="flex:1"></div>
+    <span class="small muted" id="counts"></span>
+  </header>
+
+  <main>
+    <section class="card hero">
+      <div class="row between" style="gap:12px;flex-wrap:wrap">
+        <div style="min-width:0"><h2 style="color:var(--text)">Lights &amp; rooms</h2>
+          <div class="note" style="margin-top:4px">Add ESPHome &amp; Matter lights and control them by room — on/off, brightness, color. All local, no cloud.</div></div>
+        <button class="primary" onclick="openWiz()">＋ Add a light</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row between" style="margin-bottom:10px"><h2>Scenes</h2><span id="capStatus" class="small muted"></span></div>
+      <div class="scenerow" id="scenes"></div>
+    </section>
+
+    <section>
+      <div class="row between" style="margin-bottom:10px"><h2>Your rooms</h2><a href="/docs/run-hub" class="small muted" style="text-decoration:none">Setup help →</a></div>
+      <div id="rooms"></div>
+    </section>
+  </main>
+
+  <!-- onboarding wizard -->
+  <div class="wiz" id="wizard">
+    <div class="wh"><button class="small" onclick="wizBack()" id="wizBack">‹ Back</button><b id="wizTitle">Add a light</b><div style="flex:1"></div><button class="small" onclick="closeWiz()">✕</button></div>
+    <div class="body" id="wizBody"></div>
+    <div class="foot" id="wizFoot"></div>
+  </div>
+
+  <!-- color sheet -->
+  <div class="sheet" id="colorSheet" onclick="if(event.target===this)closeColor()">
+    <div class="panel">
+      <div class="row between"><b id="colorTitle">Color</b><button class="small" onclick="closeColor()">Done</button></div>
+      <div id="wheelWrap"><canvas id="wheel" width="220" height="220"></canvas><div id="wheelDot" style="display:none"></div></div>
+      <div class="small muted">White temperature</div>
+      <input type="range" class="temp" id="tempSlider" min="2200" max="6500" step="50" value="4000" oninput="applyTemp(this.value)">
+      <div class="swatches" style="justify-content:center;margin-top:12px" id="sheetSwatches"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/'/g,"&#39;");
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200);}
+async function state(){return await (await fetch("/lights/state")).json();}
+async function post(cmd,payload={}){try{const r=await fetch("/lights/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cmd,...payload})});return await r.json();}catch(e){return{};}}
+async function api(cmd,payload={}){const j=await post(cmd,payload);if(j.hint)toast(j.hint);if(j.state)render(j.state);else refresh();return j;}
+async function refresh(){try{render(await state());}catch(e){}}
+
+const ROOMS=["Living Room","Kitchen","Bedroom","Office","Bathroom","Dining","Hallway","Entry","Backyard","Garage"];
+const SWATCHES=[[255,255,255],[255,214,170],[255,150,80],[255,70,70],[255,90,200],[150,90,255],[80,150,255],[80,255,180]];
+function roomSelectGen(room,id){const rs=[...new Set([...ROOMS,room,"—"])];
+  return `<select class="roomsel" onchange="api('light-room',{id:'${id}',room:this.value})">${rs.map(r=>`<option ${r===room?'selected':''}>${esc(r)}</option>`).join("")}</select>`;}
+function backendBadge(l){if(!l.real)return `<span class="badge off">demo</span>`;return `<span class="badge ${l.backend==='matter'?'matter':'esp'}">${l.backend==='matter'?'Matter':'ESPHome'}</span>`;}
+function statusBadge(st){if(!st)return'';const c=st==='connected'?'live':(st==='offline'?'off':'warn');const t=st==='connected'?'connected':(st==='offline'?'offline':'reconnecting…');return `<span class="badge ${c}">${t}</span>`;}
+
+function lightRow(l){
+  const dot=l.on?'on':(l.online?'off':'warn');
+  const rc=(l.real&&l.status&&l.status!=='connected')?`<button class="small" onclick="api('reconnect-light',{id:'${l.id}'})">reconnect</button>`:'';
+  const blink=l.real?`<button class="small" title="Blink to identify" onclick="api('identify-light',{id:'${l.id}'})">💡</button>`:'';
+  const ren=l.real?`<button class="small" title="Rename" onclick="renameLight('${l.id}')">✏️</button>`:'';
+  const rm=l.real?`<button class="small" title="Remove" onclick="api('remove-light',{id:'${l.id}'})">✕</button>`:'';
+  const sw=`<div class="sw ${l.on?'on':''}" onclick="api('toggle',{id:'${l.id}',on:${!l.on}})"></div>`;
+  const bri=l.dimmable&&l.on?`<div class="row" style="margin-top:9px"><span class="small muted" style="width:20px">☀️</span><input type="range" min="1" max="100" value="${l.brightness}" oninput="bri('${l.id}',this.value)"></div>`:'';
+  const quick=SWATCHES.slice(0,6).map(c=>`<div class="swatch" style="background:rgb(${c[0]},${c[1]},${c[2]})" onclick="color('${l.id}',${c[0]},${c[1]},${c[2]})"></div>`).join('');
+  const col=(l.color&&l.on)?`<div class="swatches">${quick}<div class="swatch more" onclick="openColor('${l.id}')" title="More colors">🎨</div></div>`:'';
+  return `<div class="lite ${l.on?'on':''}"><div class="row between"><span class="row" style="gap:9px;min-width:0"><span style="font-size:18px">💡</span><span class="dot ${dot}"></span><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name)}</b> ${backendBadge(l)} ${l.real?statusBadge(l.status):''}</span>
+    <span class="row small" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${rc} ${blink} ${ren} ${l.real?roomSelectGen(l.room,l.id):''} ${rm} ${sw}</span></div>${bri}${col}</div>`;
+}
+function renameLight(id){const l=(S&&S.lights||[]).find(x=>x.id===id);const cur=l?l.name:'';const v=prompt("Rename light",cur);if(v!=null&&v.trim())api('rename-light',{id,name:v.trim()});}
+
+/* ============ Color wheel + white temperature ============ */
+let colorId=null,wheelReady=false;
+function hsv2rgb(h,s,v){h/=360;const i=Math.floor(h*6),f=h*6-i,p=v*(1-s),q=v*(1-f*s),t=v*(1-(1-f)*s);let r,g,b;
+  switch(i%6){case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;default:r=v;g=p;b=q;}
+  return [Math.round(r*255),Math.round(g*255),Math.round(b*255)];}
+function drawWheel(){const c=$("wheel"),ctx=c.getContext("2d"),R=110,cx=110,cy=110;const img=ctx.createImageData(220,220);
+  for(let y=0;y<220;y++)for(let x=0;x<220;x++){const dx=x-cx,dy=y-cy,d=Math.sqrt(dx*dx+dy*dy),i=(y*220+x)*4;
+    if(d>R){img.data[i+3]=0;continue;}let h=Math.atan2(dy,dx)*180/Math.PI;if(h<0)h+=360;const s=d/R;const[r,g,b]=hsv2rgb(h,s,1);
+    img.data[i]=r;img.data[i+1]=g;img.data[i+2]=b;img.data[i+3]=255;}
+  ctx.putImageData(img,0,0);wheelReady=true;}
+function openColor(id){colorId=id;$("colorTitle").textContent="Color";$("colorSheet").classList.add('show');
+  if(!wheelReady)drawWheel();$("wheelDot").style.display='none';
+  $("sheetSwatches").innerHTML=SWATCHES.map(c=>`<div class="swatch" style="background:rgb(${c[0]},${c[1]},${c[2]})" onclick="pickSwatch(${c[0]},${c[1]},${c[2]})"></div>`).join('');}
+function closeColor(){$("colorSheet").classList.remove('show');colorId=null;}
+function pickSwatch(r,g,b){if(colorId)color(colorId,r,g,b);}
+let colT;function wheelPick(ev){const c=$("wheel"),rect=c.getBoundingClientRect();const t=ev.touches?ev.touches[0]:ev;
+  const x=t.clientX-rect.left,y=t.clientY-rect.top,dx=x-110,dy=y-110,d=Math.min(110,Math.sqrt(dx*dx+dy*dy));
+  let h=Math.atan2(dy,dx)*180/Math.PI;if(h<0)h+=360;const s=d/110;const[r,g,b]=hsv2rgb(h,s,1);
+  const dot=$("wheelDot");dot.style.display='block';dot.style.left=(110+Math.cos(h*Math.PI/180)*d)+'px';dot.style.top=(110+Math.sin(h*Math.PI/180)*d)+'px';dot.style.background=`rgb(${r},${g},${b})`;
+  if(colorId){clearTimeout(colT);colT=setTimeout(()=>color(colorId,r,g,b),90);}}
+function applyTemp(k){if(!colorId)return;clearTimeout(colT);colT=setTimeout(()=>api('temp',{id:colorId,colorTempK:Number(k)}),120);}
+window.addEventListener('load',()=>{const c=$("wheel");if(!c)return;let down=false;
+  const dn=e=>{down=true;wheelPick(e);e.preventDefault();},mv=e=>{if(down)wheelPick(e);},up=()=>{down=false;};
+  c.addEventListener('mousedown',dn);c.addEventListener('mousemove',mv);window.addEventListener('mouseup',up);
+  c.addEventListener('touchstart',dn,{passive:false});c.addEventListener('touchmove',e=>{wheelPick(e);e.preventDefault();},{passive:false});c.addEventListener('touchend',up);});
+
+let S=null;
+function render(s){
+  S=s;const all=s.lights||[];const c=s.counts||{total:0,on:0,real:0};
+  $("counts").textContent=`${c.on}/${c.total} on${c.real?` · ${c.real} real`:''}`;
+  const cap=s.capabilities||{esphome:true,matter:false};
+  $("capStatus").innerHTML=`ESPHome ✓${cap.matter?' · Matter ✓':' · <span class="muted">Matter needs a controller</span>'}`;
+  $("scenes").innerHTML=(s.scenes||[]).map(sc=>`<div class="scene" onclick="api('scene',{id:'${sc.id}'})"><span class="ic">${sc.icon||'✨'}</span><span class="nm">${esc(sc.name)}</span></div>`).join('');
+  const rooms=s.rooms||[];
+  $("rooms").innerHTML=rooms.map(g=>{
+    const on=g.lights.filter(x=>x.on).length;
+    return `<div class="card roomcard" style="margin-bottom:14px"><div class="row between"><h3>${esc(g.room)}</h3>
+      <span class="row small" style="gap:8px"><span class="muted">${on}/${g.lights.length} on</span>
+      <button class="small" onclick="api('room-power',{room:'${esc(g.room)}',on:true})">All on</button>
+      <button class="small" onclick="api('room-power',{room:'${esc(g.room)}',on:false})">All off</button></span></div>
+      ${g.lights.map(lightRow).join("")}</div>`;
+  }).join("")||`<div class="card"><div class="empty"><div class="ic">💡</div><h3 style="margin:10px 0 4px">No lights yet</h3><div class="note">Add your ESPHome or Matter lights to control them by room.</div><div style="margin-top:16px"><button class="primary" onclick="openWiz()">＋ Add a light</button></div></div></div>`;
+}
+let briT;function bri(id,v){clearTimeout(briT);briT=setTimeout(()=>api("brightness",{id,brightness:Number(v)}),160);}
+function color(id,r,g,b){api("color",{id,rgb:{r,g,b}});}
+
+/* ============ Onboarding wizard ============ */
+const W={step:'type',backend:null,found:[],note:'',available:true,sel:null,liId:null,liName:'',status:'',room:'Living Room',err:'',code:''};
+function openWiz(){Object.assign(W,{step:'type',backend:null,found:[],note:'',available:true,sel:null,liId:null,liName:'',status:'',room:'Living Room',err:'',code:''});$("wizard").classList.add('show');renderWiz();}
+function closeWiz(){$("wizard").classList.remove('show');refresh();}
+function goto(step){W.step=step;renderWiz();if(step==='scan')runScan();}
+function wizBack(){const map={type:null,matter:'type',scan:'type',results:'type',manual:'type',commission:'matter',connect:'results',identify:'connect',room:'identify',done:null};const prev=map[W.step];if(!prev){closeWiz();return;}goto(prev);}
+function pickBackend(b){W.backend=b;goto(b==='matter'?'matter':'scan');}
+
+async function runScan(){
+  try{const r=await (await fetch('/lights/discover?backend='+W.backend)).json();W.found=r.found||[];W.note=r.note||'';W.available=r.available!==false;}
+  catch(e){W.found=[];W.note='Scan failed — try again.';}
+  goto('results');
+}
+function selectDevice(i){W.sel=W.found[i];connectSel();}
+function manualSubmit(){
+  const name=$("mName").value.trim();if(!name){toast("Give it a name");return;}
+  const addr=($("mAddr")?$("mAddr").value.trim():"");
+  const entity=($("mEnt")?$("mEnt").value.trim():"");
+  W.sel={name,backend:W.backend,address:addr||undefined,entity:entity||undefined};
+  connectSel();
+}
+async function connectSel(){
+  W.step='connect';W.err='';W.liName=W.sel.name;renderWiz();
+  await post('onboard-light',{device:{...W.sel,backend:W.backend},room:W.room});
+  for(let i=0;i<8;i++){
+    await sleep(1100);
+    const s=await state();
+    const li=(s.lights||[]).find(x=>x.real&&x.name===W.sel.name);
+    if(li){W.liId=li.id;W.status=li.status;
+      if(li.status==='connected'){goto('identify');return;}
+      if(li.status==='offline'&&i>3){W.err=W.backend==='matter'?'No Matter controller reachable. Discovery works on the LAN, but control needs chip-tool/matter-server on the hub (see Setup).':'Could not reach it on the network. Make sure it’s powered and on this Wi-Fi, then retry.';renderWiz();return;}
+    }
+  }
+  if(W.liId){goto('identify');}else{W.err='Setup timed out.';renderWiz();}
+}
+async function commitCommission(){
+  const code=($("mCode")||{}).value||"";const name=($("cName")||{}).value||"";
+  if(!code.trim()){toast("Enter the setup code from the bulb");return;}
+  W.sel={name:name.trim()||"Matter light"};W.liName=W.sel.name;W.step='connect';W.err='';renderWiz();
+  const j=await post('commission-light',{code:code.trim(),name:W.sel.name,room:W.room});
+  if(j.hint&&/Paired/.test(j.hint)){
+    const s=await state();const li=(s.lights||[]).find(x=>x.real&&x.name===W.sel.name);
+    if(li){W.liId=li.id;W.status=li.status;goto('identify');return;}
+  }
+  W.err=j.hint||'Pairing failed — check the code and that the bulb is in pairing mode.';renderWiz();
+}
+function blinkWiz(){if(W.liId)post('identify-light',{id:W.liId});toast("Blinking the light…");}
+function setRoomWiz(r){W.room=r;if(W.liId)post('light-room',{id:W.liId,room:r});renderWiz();}
+function finishWiz(){const nm=($("wName")||{}).value||"";if(nm.trim()&&W.liId){W.liName=nm.trim();post('rename-light',{id:W.liId,name:W.liName});}W.step='done';renderWiz();}
+
+function renderWiz(){
+  const b=$("wizBody"),f=$("wizFoot");$("wizBack").style.visibility=(W.step==='type'||W.step==='done')?'hidden':'visible';
+  if(W.step==='type'){
+    $("wizTitle").textContent='Add a light';
+    b.innerHTML=`<h1>Add a light</h1><p class="sub">What kind of light are you adding? Both are controlled locally by the hub — no cloud.</p>
+      <button class="wizcard" onclick="pickBackend('esphome')"><span class="ic">🟢</span><span>ESPHome<br><span class="cap">Our own firmware — Athom/Shelly/DIY. Direct local control, zero cloud.</span></span></button>
+      <button class="wizcard" onclick="pickBackend('matter')"><span class="ic">🟣</span><span>Matter<br><span class="cap">Any Matter-certified bulb. Universal standard, local control via the hub.</span></span></button>`;
+    f.innerHTML=`<button onclick="closeWiz()">Cancel</button>`;
+  } else if(W.step==='matter'){
+    $("wizTitle").textContent='Matter light';
+    b.innerHTML=`<h1>Add a Matter light</h1><p class="sub">Pair a brand-new bulb with its setup code, or find one already on your network.</p>
+      <button class="wizcard" onclick="goto('commission')"><span class="ic">🔳</span><span>Pair a new bulb<br><span class="cap">Enter the QR / 11-digit setup code printed on the bulb.</span></span></button>
+      <button class="wizcard" onclick="goto('scan')"><span class="ic">📶</span><span>Find on my network<br><span class="cap">Already commissioned — discover it over mDNS.</span></span></button>`;
+    f.innerHTML=`<button onclick="goto('type')">Back</button>`;
+  } else if(W.step==='commission'){
+    $("wizTitle").textContent='Pair a new bulb';
+    b.innerHTML=`<h1>Scan or enter the code</h1><p class="sub">Put the bulb in pairing mode, then enter the Matter setup code from the bulb or its box.</p>
+      <div style="display:grid;gap:12px">
+        <label class="small muted">Setup code / QR payload<input type="text" id="mCode" placeholder="MT:… or 3497-011-2332" style="margin-top:5px"></label>
+        <label class="small muted">Name <span class="muted">(optional)</span><input type="text" id="cName" placeholder="e.g. Bedroom Bulb" style="margin-top:5px"></label>
+      </div>
+      <div class="note" style="margin-top:12px">Pairing runs on the hub's Matter controller. It can take up to a minute.</div>`;
+    f.innerHTML=`<button onclick="goto('matter')">Back</button><button class="primary" onclick="commitCommission()">Pair</button>`;
+  } else if(W.step==='scan'){
+    $("wizTitle").textContent=W.backend==='matter'?'Matter lights':'ESPHome lights';
+    b.innerHTML=`<div class="center"><div class="radar"><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="core"></div></div>
+      <h1>Searching…</h1><p class="sub">${W.backend==='matter'?'Looking for Matter nodes on your network.':'Looking for ESPHome devices on your network.'}</p></div>`;
+    f.innerHTML='';
+  } else if(W.step==='results'){
+    $("wizTitle").textContent='Choose a light';
+    if(W.found.length){
+      b.innerHTML=`<h1>Found ${W.found.length}</h1><p class="sub">Tap one to add it.</p>`+
+        W.found.map((d,i)=>`<div class="devrow" onclick="selectDevice(${i})"><span class="row" style="gap:11px"><span style="font-size:22px">💡</span><span><b>${esc(d.name)}</b><br><span class="cap muted small">${esc(d.address||d.node||d.backend)}${d.commissionable?' · needs commissioning':''}</span></span></span><span class="badge">add ›</span></div>`).join('');
+    } else {
+      b.innerHTML=`<div class="center"><div style="font-size:40px;margin-top:12px">🔍</div><h1>No lights found</h1>
+        <p class="sub">${esc(W.note||'Nothing responded.')}</p></div>`;
+    }
+    f.innerHTML=`<button onclick="goto('scan')">↻ Scan again</button><button onclick="goto('manual')">Add manually</button>`;
+  } else if(W.step==='manual'){
+    $("wizTitle").textContent='Add manually';
+    b.innerHTML=`<h1>Add manually</h1><p class="sub">Enter your ${W.backend==='matter'?'Matter':'ESPHome'} light details.</p>
+      <div style="display:grid;gap:12px">
+        <label class="small muted">Name<input type="text" id="mName" placeholder="e.g. Kitchen Bulb" style="margin-top:5px"></label>
+        <label class="small muted">IP address ${W.backend==='matter'?'<span class="muted">(or node id)</span>':'<span class="muted">(optional)</span>'}<input type="text" id="mAddr" placeholder="192.168.1.50" style="margin-top:5px"></label>
+        ${W.backend==='esphome'?`<label class="small muted">Entity name <span class="muted">(optional — the light/&lt;name&gt; in ESPHome)</span><input type="text" id="mEnt" placeholder="kitchen_bulb" style="margin-top:5px"></label>`:''}
+      </div>`;
+    f.innerHTML=`<button onclick="goto('results')">Back</button><button class="primary" onclick="manualSubmit()">Add</button>`;
+  } else if(W.step==='connect'){
+    $("wizTitle").textContent='Connecting';
+    if(W.err){
+      b.innerHTML=`<div class="center"><div style="font-size:40px;margin-top:12px">⚠️</div><h1>Couldn’t connect</h1><p class="sub">${esc(W.err)}</p></div>`;
+      f.innerHTML=`<button onclick="goto('results')">Back</button><button class="primary" onclick="connectSel()">Retry</button>`;
+    } else {
+      b.innerHTML=`<div class="center"><div class="spinner"></div><h1>Connecting…</h1><p class="sub">Setting up <b>${esc(W.liName)}</b> and checking the connection.</p></div>`;
+      f.innerHTML='';
+    }
+  } else if(W.step==='identify'){
+    $("wizTitle").textContent='Is this the one?';
+    b.innerHTML=`<div class="center"><div style="font-size:46px;margin:8px 0">💡</div><h1>Found it</h1>
+      <p class="sub"><b>${esc(W.liName)}</b> is connected. Blink it to make sure you're setting up the right light.</p></div>
+      <button class="wizcard" style="justify-content:center" onclick="blinkWiz()"><span class="ic">✨</span><span>Blink this light</span></button>`;
+    f.innerHTML=`<button onclick="goto('connect')">Back</button><button class="primary" onclick="goto('room')">That's the one ›</button>`;
+  } else if(W.step==='room'){
+    $("wizTitle").textContent='Name &amp; room';
+    b.innerHTML=`<h1>Name &amp; room</h1><p class="sub">Give <b>${esc(W.liName)}</b> a name and put it in a room.</p>
+      <label class="small muted">Name<input type="text" id="wName" value="${esc(W.liName)}" style="margin:5px 0 16px"></label>
+      <div class="small muted">Room</div>
+      <div class="chips">${ROOMS.map(r=>`<div class="chip ${r===W.room?'on':''}" onclick="setRoomWiz('${esc(r)}')">${esc(r)}</div>`).join('')}</div>`;
+    f.innerHTML=`<button class="primary big" onclick="finishWiz()">Continue</button>`;
+  } else if(W.step==='done'){
+    $("wizTitle").textContent='All set';
+    b.innerHTML=`<div class="center"><div class="check">✓</div><h1>${esc(W.liName)} is ready</h1><p class="sub">Added to <b>${esc(W.room)}</b>. openhome will keep it connected.</p></div>`;
+    f.innerHTML=`<button onclick="openWiz()">Add another</button><button class="primary" onclick="closeWiz()">Done</button>`;
+  }
+}
+
+refresh();setInterval(()=>{if(!$("wizard").classList.contains('show'))refresh();},4000);
+</script>
+</body>
+</html>

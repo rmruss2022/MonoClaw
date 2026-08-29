@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>openhome · speakers</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+<meta name="theme-color" content="#0e1014" />
+<style>
+  :root{--bg:#0e1014;--panel:#171a21;--panel2:#1e222b;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56;--warn:#f0b429;--danger:#ef5350;--radius:14px}
+  *{box-sizing:border-box}
+  html,body{overflow-x:hidden;max-width:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  header.top{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:calc(env(safe-area-inset-top,0px) + 14px) 22px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,var(--bg))}
+  .brand a{color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;font-weight:700}
+  nav{display:flex;gap:4px;flex-wrap:wrap}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid transparent}
+  nav a:hover{color:var(--text);background:var(--panel2);border-color:var(--line)}
+  nav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  main{padding:22px;max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:18px;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
+  main>*{min-width:0}
+  h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}.muted{color:var(--muted)}.small{font-size:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .badge{font-size:11px;color:var(--accent);background:rgba(61,220,151,.1);border:1px solid var(--accent-dim);padding:1px 7px;border-radius:999px;white-space:nowrap}
+  .badge.bt{color:#7db4ff;background:rgba(125,180,255,.1);border-color:#345}
+  .badge.live{color:#0b0f14;background:var(--accent);border-color:var(--accent);font-weight:700}
+  .badge.warn{color:#e6b800;background:rgba(230,184,0,.12);border-color:#5a4a00}
+  .badge.off{color:#8a94a6;background:rgba(138,148,166,.12);border-color:#333}
+  .roomsel{font-size:12px;padding:3px 7px;border-radius:8px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}.dot.on{background:var(--accent)}.dot.off{background:var(--danger)}.dot.warn{background:#e6b800}
+  button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px}
+  button:hover{border-color:var(--accent-dim)}
+  button.primary{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
+  button.big{width:100%;padding:14px;font-size:16px;border-radius:12px}
+  button.small{padding:5px 10px;font-size:13px;border-radius:8px}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--panel);outline:none;flex:1}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer}
+  input[type=text]{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:11px 13px;width:100%}
+  select{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 8px}
+  .spk{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--panel2)}
+  .note{font-size:13px;color:var(--muted)}
+  .roomcard h3{margin:0;font-size:16px}
+  .hero{background:linear-gradient(135deg,#16241d,#141821);border:1px solid var(--accent-dim)}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:var(--panel2);border:1px solid var(--accent-dim);color:var(--text);padding:10px 16px;border-radius:10px;z-index:80;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  /* empty state */
+  .empty{text-align:center;padding:34px 16px}
+  .empty .ic{font-size:44px}
+  /* ---- onboarding wizard ---- */
+  .wiz{position:fixed;inset:0;z-index:70;background:var(--bg);display:none;flex-direction:column}
+  .wiz.show{display:flex}
+  .wiz .wh{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 14px) 18px 12px;border-bottom:1px solid var(--line)}
+  .wiz .wh b{font-size:16px}
+  .wiz .body{flex:1;overflow:auto;padding:24px 20px;max-width:520px;margin:0 auto;width:100%}
+  .wiz .foot{padding:14px 20px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);max-width:520px;margin:0 auto;width:100%;display:flex;gap:10px}
+  .wiz .foot button{flex:1}
+  .wiz h1{font-size:22px;margin:0 0 6px}
+  .wiz p.sub{color:var(--muted);margin:0 0 20px}
+  .wizcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:18px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);margin-bottom:12px;font-size:16px;color:var(--text);cursor:pointer}
+  .wizcard:hover{border-color:var(--accent-dim);background:#232833}
+  .wizcard .ic{font-size:26px;width:34px;text-align:center}
+  .wizcard .cap{font-size:12px;color:var(--muted);font-weight:400}
+  .devrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);margin-bottom:10px;cursor:pointer}
+  .devrow:hover{border-color:var(--accent-dim)}
+  .radar{width:130px;height:130px;margin:26px auto;position:relative}
+  .radar .ring{position:absolute;inset:0;border:2px solid var(--accent);border-radius:50%;opacity:0;animation:radar 1.9s ease-out infinite}
+  .radar .ring:nth-child(2){animation-delay:.63s}.radar .ring:nth-child(3){animation-delay:1.26s}
+  .radar .core{position:absolute;inset:42%;background:var(--accent);border-radius:50%;box-shadow:0 0 18px var(--accent)}
+  @keyframes radar{0%{transform:scale(.25);opacity:.85}100%{transform:scale(1);opacity:0}}
+  .spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--panel2);border-top-color:var(--accent);margin:28px auto;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+  .chip{padding:10px 15px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:15px}
+  .chip.on{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
+  .check{width:80px;height:80px;border-radius:50%;background:var(--accent);color:#08130d;display:flex;align-items:center;justify-content:center;font-size:42px;margin:14px auto 18px;animation:pop .32s ease}
+  @keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+  .center{text-align:center}
+  @media(max-width:640px){
+    header.top{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;gap:8px 12px}
+    nav{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:2px 0 0;padding:2px 0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    nav::-webkit-scrollbar{display:none}
+    nav a{white-space:nowrap}
+    header.top>div[style*="flex:1"]{display:none}
+    main{padding:16px 14px;gap:16px}
+    .card{padding:14px}
+    .spk .row.between{flex-wrap:wrap;gap:8px 10px}
+    select,input[type=text]{font-size:16px}
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><a href="/"><img src="/assets/brand/logo.svg" alt="openhome" height="24"/></a></div>
+    <nav>
+      <a href="/">Home</a><a href="/control">Control</a>
+      <a href="/music">Music</a><a href="/lights">Lights</a><a href="/speakers" class="active">Speakers</a><a href="/climate">Climate</a><a href="/docs">Docs</a>
+    </nav>
+    <div style="flex:1"></div>
+    <span class="small muted" id="counts"></span>
+  </header>
+
+  <main>
+    <section class="card hero">
+      <div class="row between" style="gap:12px;flex-wrap:wrap">
+        <div style="min-width:0"><h2 style="color:var(--text)">Speakers &amp; rooms</h2>
+          <div class="note" style="margin-top:4px">Set up Wi-Fi &amp; Bluetooth speakers and place them in rooms. openhome keeps them connected for you.</div></div>
+        <button class="primary" onclick="openWiz()">＋ Set up a speaker</button>
+      </div>
+    </section>
+
+    <section>
+      <div class="row between" style="margin-bottom:10px"><h2>Your rooms</h2><span class="row small" style="gap:10px"><span id="syncStatus" class="small"></span><a href="/docs/run-hub" class="small muted" style="text-decoration:none">Setup help →</a></span></div>
+      <div id="rooms"></div>
+    </section>
+  </main>
+
+  <!-- onboarding wizard -->
+  <div class="wiz" id="wizard">
+    <div class="wh"><button class="small" onclick="wizBack()" id="wizBack">‹ Back</button><b id="wizTitle">Set up a speaker</b><div style="flex:1"></div><button class="small" onclick="closeWiz()">✕</button></div>
+    <div class="body" id="wizBody"></div>
+    <div class="foot" id="wizFoot"></div>
+  </div>
+
+  <!-- room calibration wizard -->
+  <div class="wiz" id="calwiz">
+    <div class="wh"><button class="small" onclick="calBack()" id="calBackBtn">‹ Back</button><b id="calTitle">Calibrate room</b><div style="flex:1"></div><button class="small" onclick="closeCal()">✕</button></div>
+    <div class="body" id="calBody"></div>
+    <div class="foot" id="calFoot"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const $=(id)=>document.getElementById(id);
+const esc=(s)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/'/g,"&#39;");
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3000);}
+async function state(){return await (await fetch("/audio/state")).json();}
+async function post(cmd,payload={}){try{const r=await fetch("/audio/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cmd,...payload})});return await r.json();}catch(e){return{};}}
+async function api(cmd,payload={}){const j=await post(cmd,payload);if(j.hint)toast(j.hint);if(j.state)render(j.state);else refresh();return j;}
+async function refresh(){try{render(await state());}catch(e){}}
+
+const ROOMS=["Living Room","Kitchen","Bedroom","Office","Bathroom","Dining","Backyard","Garage"];
+function roomSelectGen(room,cmd,extra){const rs=[...new Set([...ROOMS,room,"—"])];
+  return `<select class="roomsel" onchange="api('${cmd}',{${extra},room:this.value})">${rs.map(r=>`<option ${r===room?'selected':''}>${esc(r)}</option>`).join("")}</select>`;}
+function statusBadge(st){const c=st==='connected'?'live':(st==='offline'?'off':'warn');const t=st==='connected'?'connected':(st==='offline'?'offline':'reconnecting…');return `<span class="badge ${c}">${t}</span>`;}
+function kindIcon(sp){if(sp.real)return sp.type==='Smartphone'?'📱':'💻';if(sp.kind==='bluetooth')return '🔵';if(sp.kind==='chromecast')return '📺';return '🔊';}
+function kindBadge(sp){if(sp.real)return `<span class="badge live">${sp.active?'▶ live':'live'}</span>`;return `<span class="badge ${sp.kind==='bluetooth'?'bt':''}">${esc(sp.kind)}</span>`;}
+
+function speakerRow(sp){
+  const dot=sp.online?'on':(sp.local&&sp.status!=='offline'?'warn':'off');
+  let right='',extra='';
+  if(sp.real){
+    right=`<button class="small primary" onclick="api('spotify-transfer',{deviceId:'${sp.deviceId}'})">▶ here</button>${roomSelectGen(sp.room,'speaker-room',"deviceId:'"+sp.deviceId+"'")}`;
+    extra=`<div class="row" style="margin-top:8px"><span class="small muted">🔊</span><input type="range" min="0" max="100" value="${sp.volume}" oninput="vol('${sp.id}',this.value)"></div>`;
+  } else if(sp.local){
+    const rc=sp.status!=='connected'?`<button class="small" onclick="api('reconnect-speaker',{id:'${sp.id}'})">reconnect</button>`:'';
+    right=`${statusBadge(sp.status)} ${rc} ${roomSelectGen(sp.room,'local-room',"id:'"+sp.id+"'")} <button class="small" onclick="api('remove-local',{id:'${sp.id}'})">✕</button>`;
+  } else {
+    right=`<span class="muted small">demo</span>`;
+    extra=`<div class="row" style="margin-top:8px"><span class="small muted">🔊</span><input type="range" min="0" max="100" value="${sp.volume}" oninput="vol('${sp.id}',this.value)"></div>`;
+  }
+  const calBadge=sp.cal?`<span class="badge" title="calibrated">${esc(sp.cal.role)} · ${sp.cal.delayMs}ms${sp.cal.trimDb?` · ${sp.cal.trimDb}dB`:''}</span>`:'';
+  return `<div class="spk"><div class="row between"><span class="row" style="gap:9px;min-width:0"><span style="font-size:18px">${kindIcon(sp)}</span><span class="dot ${dot}"></span><b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sp.name)}</b> ${kindBadge(sp)} ${calBadge}</span>
+     <span class="row small" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${right}</span></div>${extra}</div>`;
+}
+
+let S=null;
+function render(s){
+  S=s;const sp=s.speakers||[];
+  $("counts").textContent=`${sp.filter(x=>x.online).length}/${sp.length} online`;
+  const order=[],groups={};
+  for(const x of sp){const r=x.room||"—";if(!groups[r]){groups[r]=[];order.push(r);}groups[r].push(x);}
+  const calRooms=new Set(s.calibratedRooms||[]);
+  const snap=s.snapcast||{available:false,groups:[],clients:0};
+  $("syncStatus").innerHTML=snap.available?`<span class="badge live">🔗 sync active · ${snap.clients} clients</span>`:`<span class="muted">multi-room sync: <a href="/docs/run-hub" style="color:var(--accent)">start Snapcast</a></span>`;
+  $("rooms").innerHTML=order.map(room=>{
+    const g=groups[room];const live=g.filter(x=>x.online).length;const cal=calRooms.has(room);
+    const calBtn=g.length>=2?`<button class="small" onclick="openCal('${esc(room)}')">${cal?'✨ Re-tune':'✨ Calibrate'}</button>`:'';
+    const syncBtn=g.length>=2?`<button class="small" onclick="api('sync-room',{room:'${esc(room)}'})" title="Play the same audio in sync across this room">⇄ Sync</button>`:'';
+    return `<div class="card roomcard" style="margin-bottom:14px"><div class="row between"><span class="row" style="gap:8px"><h3>${esc(room)}</h3>${cal?'<span class="badge live">spatial ✓</span>':''}</span><span class="row small" style="gap:8px"><span class="muted">${live}/${g.length} online</span>${syncBtn}${calBtn}</span></div>
+      ${g.map(speakerRow).join("")}</div>`;
+  }).join("")||`<div class="card"><div class="empty"><div class="ic">🔈</div><h3 style="margin:10px 0 4px">No speakers yet</h3><div class="note">Set up your Wi-Fi or Bluetooth speakers to start playing music around the house.</div><div style="margin-top:16px"><button class="primary" onclick="openWiz()">＋ Set up a speaker</button></div></div></div>`;
+}
+function vol(id,v){api("volume",{id,volume:Number(v)});}
+
+/* ============ Onboarding wizard ============ */
+const W={step:'type',kind:null,found:[],note:'',sel:null,spId:null,spName:'',status:'',room:'Living Room',err:''};
+function openWiz(){Object.assign(W,{step:'type',kind:null,found:[],note:'',sel:null,spId:null,spName:'',status:'',room:'Living Room',err:''});$("wizard").classList.add('show');renderWiz();}
+function closeWiz(){$("wizard").classList.remove('show');refresh();}
+function goto(step){W.step=step;renderWiz();if(step==='scan')runScan();}
+function wizBack(){
+  const map={type:null,scan:'type',results:'type',manual:'type',connect:'results',room:'connect',done:null};
+  const prev=map[W.step];if(!prev){closeWiz();return;}goto(prev);
+}
+function pickKind(k){W.kind=k;goto('scan');}
+
+async function runScan(){
+  try{const r=await (await fetch('/audio/discover?kind='+W.kind)).json();W.found=r.found||[];W.note=r.note||'';}
+  catch(e){W.found=[];W.note='Scan failed — try again.';}
+  goto('results');
+}
+function selectDevice(i){W.sel=W.found[i];connectSel();}
+function manualSubmit(){
+  const name=$("mName").value.trim();if(!name){toast("Give it a name");return;}
+  const addr=($("mAddr")?$("mAddr").value.trim():"");
+  W.sel={name,kind:W.kind,address:addr||undefined,service:W.kind==='wifi'?'wifi':undefined};
+  connectSel();
+}
+async function connectSel(){
+  W.step='connect';W.err='';W.spName=W.sel.name;renderWiz();
+  await post('onboard-speaker',{device:W.sel,room:W.room});
+  for(let i=0;i<10;i++){
+    await sleep(1200);
+    const s=await state();
+    const sp=(s.speakers||[]).find(x=>x.local&&x.name===W.sel.name);
+    if(sp){W.spId=sp.id;W.status=sp.status;
+      if(sp.status==='connected'){goto('room');return;}
+      if(sp.status==='offline'&&i>3){W.err='Could not connect. Make sure it’s powered on and in range, then retry.';renderWiz();return;}
+    }
+  }
+  if(W.spId){goto('room');} else {W.err='Setup timed out.';renderWiz();}
+}
+function setRoomWiz(r){W.room=r;if(W.spId)post('local-room',{id:W.spId,room:r});renderWiz();}
+function finishWiz(){W.step='done';renderWiz();}
+
+function renderWiz(){
+  const b=$("wizBody"),f=$("wizFoot");$("wizBack").style.visibility=(W.step==='type'||W.step==='done')?'hidden':'visible';
+  if(W.step==='type'){
+    $("wizTitle").textContent='Set up a speaker';
+    b.innerHTML=`<h1>Add a speaker</h1><p class="sub">How does your speaker connect?</p>
+      <button class="wizcard" onclick="pickKind('wifi')"><span class="ic">📶</span><span>Wi-Fi speaker<br><span class="cap">AirPlay, Chromecast, Sonos, Snapcast — on your network</span></span></button>
+      <button class="wizcard" onclick="pickKind('bluetooth')"><span class="ic">🔵</span><span>Bluetooth speaker<br><span class="cap">Nearby, in pairing mode</span></span></button>`;
+    f.innerHTML=`<button onclick="closeWiz()">Cancel</button>`;
+  } else if(W.step==='scan'){
+    $("wizTitle").textContent=W.kind==='wifi'?'Wi-Fi speakers':'Bluetooth speakers';
+    b.innerHTML=`<div class="center"><div class="radar"><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="core"></div></div>
+      <h1>Searching…</h1><p class="sub">${W.kind==='wifi'?'Looking for speakers on your network.':'Put your speaker in pairing mode. Scanning nearby Bluetooth.'}</p></div>`;
+    f.innerHTML='';
+  } else if(W.step==='results'){
+    $("wizTitle").textContent='Choose a speaker';
+    if(W.found.length){
+      b.innerHTML=`<h1>Found ${W.found.length}</h1><p class="sub">Tap one to connect.</p>`+
+        W.found.map((d,i)=>`<div class="devrow" onclick="selectDevice(${i})"><span class="row" style="gap:11px"><span style="font-size:22px">${W.kind==='bluetooth'?'🔵':'🔊'}</span><span><b>${esc(d.name)}</b><br><span class="cap muted small">${esc(d.address||d.mac||d.kind)}</span></span></span><span class="badge">connect ›</span></div>`).join('');
+    } else {
+      b.innerHTML=`<div class="center"><div style="font-size:40px;margin-top:12px">🔍</div><h1>No speakers found</h1>
+        <p class="sub">${esc(W.note||'Nothing responded.')}</p></div>`;
+    }
+    f.innerHTML=`<button onclick="goto('scan')">↻ Scan again</button><button onclick="goto('manual')">Add manually</button>`;
+  } else if(W.step==='manual'){
+    $("wizTitle").textContent='Add manually';
+    b.innerHTML=`<h1>Add manually</h1><p class="sub">Enter your ${W.kind==='bluetooth'?'Bluetooth':'Wi-Fi'} speaker details.</p>
+      <div style="display:grid;gap:12px">
+        <label class="small muted">Name<input type="text" id="mName" placeholder="e.g. Kitchen Sonos" style="margin-top:5px"></label>
+        ${W.kind==='wifi'?`<label class="small muted">IP address <span class="muted">(optional)</span><input type="text" id="mAddr" placeholder="192.168.1.42" style="margin-top:5px"></label>`:`<div class="note">We’ll pair the next available Bluetooth device with this name.</div>`}
+      </div>`;
+    f.innerHTML=`<button onclick="goto('results')">Back</button><button class="primary" onclick="manualSubmit()">Connect</button>`;
+  } else if(W.step==='connect'){
+    $("wizTitle").textContent='Connecting';
+    if(W.err){
+      b.innerHTML=`<div class="center"><div style="font-size:40px;margin-top:12px">⚠️</div><h1>Couldn’t connect</h1><p class="sub">${esc(W.err)}</p></div>`;
+      f.innerHTML=`<button onclick="goto('results')">Back</button><button class="primary" onclick="connectSel()">Retry</button>`;
+    } else {
+      b.innerHTML=`<div class="center"><div class="spinner"></div><h1>Connecting…</h1><p class="sub">Setting up <b>${esc(W.spName)}</b> and checking the connection.</p></div>`;
+      f.innerHTML='';
+    }
+  } else if(W.step==='room'){
+    $("wizTitle").textContent='Choose a room';
+    b.innerHTML=`<h1>Which room?</h1><p class="sub"><b>${esc(W.spName)}</b> is connected. Put it in a room.</p>
+      <div class="chips">${ROOMS.map(r=>`<div class="chip ${r===W.room?'on':''}" onclick="setRoomWiz('${esc(r)}')">${esc(r)}</div>`).join('')}</div>`;
+    f.innerHTML=`<button class="primary big" onclick="finishWiz()">Continue</button>`;
+  } else if(W.step==='done'){
+    $("wizTitle").textContent='All set';
+    b.innerHTML=`<div class="center"><div class="check">✓</div><h1>${esc(W.spName)} is ready</h1><p class="sub">Playing in <b>${esc(W.room)}</b>. openhome will keep it connected.</p></div>`;
+    f.innerHTML=`<button onclick="openWiz()">Add another</button><button class="primary" onclick="closeWiz()">Done</button>`;
+  }
+}
+
+/* ============ Room calibration / spatial audio wizard ============ */
+const ROLES=["stereo","left","right","center","surround-l","surround-r","sub","height-l","height-r"];
+function suggestRoles(n){if(n<=1)return["stereo"];if(n===2)return["left","right"];if(n===3)return["left","right","center"];if(n===4)return["left","right","surround-l","surround-r"];if(n===5)return["left","right","center","surround-l","surround-r"];const b=["left","right","center","surround-l","surround-r","sub"];while(b.length<n)b.push("stereo");return b;}
+const C={step:'intro',room:'',temp:20,mode:'spatial',speakers:[],result:null};
+function openCal(room){
+  const sp=(S&&S.speakers||[]).filter(x=>x.room===room);
+  const roles=suggestRoles(sp.length);
+  C.room=room;C.temp=20;C.mode=sp.length>=4?'spatial':(sp.length>=2?'surround':'stereo');C.result=null;C.step='intro';
+  C.speakers=sp.map((x,i)=>({id:x.id,name:x.name,role:(x.cal&&x.cal.role)||roles[i]||'stereo',distanceM:3}));
+  $("calwiz").classList.add('show');renderCal();
+}
+function closeCal(){$("calwiz").classList.remove('show');refresh();}
+function calGoto(s){C.step=s;renderCal();}
+function calBack(){const m={intro:null,setup:'intro',result:'setup',done:null};const p=m[C.step];if(!p){closeCal();return;}calGoto(p);}
+async function calCompute(){
+  C.step='computing';renderCal();
+  const j=await post('calibrate-room',{room:C.room,mode:C.mode,tempC:C.temp,speakers:C.speakers.map(s=>({id:s.id,name:s.name,role:s.role,distanceM:s.distanceM}))});
+  C.result=j.result&&j.result.profile?j.result.profile:null;
+  calGoto('result');
+}
+function renderCal(){
+  const b=$("calBody"),f=$("calFoot");$("calBackBtn").style.visibility=(C.step==='intro'||C.step==='done'||C.step==='computing')?'hidden':'visible';
+  if(C.step==='intro'){
+    $("calTitle").textContent='Calibrate '+C.room;
+    b.innerHTML=`<h1>Spatial audio</h1><p class="sub">Tune the ${C.speakers.length} speakers in <b>${esc(C.room)}</b> so they arrive at your seat in perfect time — an immersive, room-filling soundstage.</p>
+      <div class="wizcard" style="cursor:default"><span class="ic">⏱️</span><span>Time-align<br><span class="cap">delay each speaker by distance ÷ speed-of-sound</span></span></div>
+      <div class="wizcard" style="cursor:default"><span class="ic">🎚️</span><span>Level-match<br><span class="cap">balance loudness across the room</span></span></div>
+      <div class="wizcard" style="cursor:default"><span class="ic">🔊</span><span>Spatialize<br><span class="cap">map speakers to L / R / center / surround / sub</span></span></div>`;
+    f.innerHTML=`<button onclick="closeCal()">Cancel</button><button class="primary" onclick="calGoto('setup')">Start</button>`;
+  } else if(C.step==='setup'){
+    $("calTitle").textContent='Measure';
+    b.innerHTML=`<h1>Your speakers</h1><p class="sub">Set each speaker's role and its distance to your listening spot.</p>
+      <div style="margin-bottom:16px"><div class="small muted">Soundstage mode</div>
+        <div class="chips">${['stereo','surround','spatial'].map(m=>`<div class="chip ${C.mode===m?'on':''}" onclick="C.mode='${m}';renderCal()">${m}</div>`).join('')}</div></div>
+      ${C.speakers.map((s,i)=>`<div class="spk"><div class="row between"><b>${esc(s.name)}</b>
+        <select class="roomsel" onchange="C.speakers[${i}].role=this.value">${ROLES.map(r=>`<option ${r===s.role?'selected':''}>${r}</option>`).join('')}</select></div>
+        <div class="row" style="margin-top:8px;gap:10px"><span class="small muted" style="width:74px">${s.distanceM.toFixed(1)} m</span>
+        <input type="range" min="0.5" max="8" step="0.1" value="${s.distanceM}" oninput="C.speakers[${i}].distanceM=Number(this.value);this.previousElementSibling.textContent=Number(this.value).toFixed(1)+' m'"></div></div>`).join('')}
+      <div class="spk"><div class="row between"><span class="small muted">Room temperature (speed of sound)</span><span class="small muted" id="tempLbl">${C.temp}°C</span></div>
+        <input type="range" min="5" max="35" step="1" value="${C.temp}" oninput="C.temp=Number(this.value);document.getElementById('tempLbl').textContent=this.value+'°C'"></div>`;
+    f.innerHTML=`<button onclick="calGoto('intro')">Back</button><button class="primary" onclick="calCompute()">Calculate</button>`;
+  } else if(C.step==='computing'){
+    $("calTitle").textContent='Calibrating';
+    b.innerHTML=`<div class="center"><div class="spinner"></div><h1>Calibrating…</h1><p class="sub">Aligning ${C.speakers.length} speakers in ${esc(C.room)}.</p></div>`;f.innerHTML='';
+  } else if(C.step==='result'){
+    $("calTitle").textContent='Calibration';
+    const p=C.result;
+    if(p){
+      b.innerHTML=`<h1>${esc(C.room)} is tuned</h1><p class="sub">Mode <b>${esc(p.mode)}</b> · speed of sound ${p.speedMs} m/s @ ${p.tempC}°C. Each speaker's delay &amp; trim below are pushed to the Snapcast clients.</p>
+        <div class="list">${p.speakers.map(s=>`<div class="spk"><div class="row between"><span class="row" style="gap:8px"><b>${esc(s.name||s.id)}</b> <span class="badge">${esc(s.role)}</span></span>
+          <span class="small muted">${s.distanceM.toFixed(1)}m → <b style="color:var(--accent)">${s.delayMs}ms</b>${s.trimDb?` · ${s.trimDb}dB`:''}</span></div></div>`).join('')}</div>`;
+    } else b.innerHTML=`<div class="center"><h1>Hmm</h1><p class="sub">Calibration didn't return a profile. Try again.</p></div>`;
+    f.innerHTML=`<button onclick="calGoto('setup')">Adjust</button><button class="primary" onclick="calGoto('done')">Apply</button>`;
+  } else if(C.step==='done'){
+    $("calTitle").textContent='Spatial audio on';
+    b.innerHTML=`<div class="center"><div class="check">✓</div><h1>${esc(C.room)} — spatial audio</h1><p class="sub">Time-aligned &amp; level-matched. Grouped playback in this room now images a soundstage. (Audible once Snapcast runs on the hub — see Setup.)</p></div>`;
+    f.innerHTML=`<button onclick="closeCal()">Done</button>`;
+  }
+}
+
+refresh();setInterval(()=>{if(!$("wizard").classList.contains('show')&&!$("calwiz").classList.contains('show'))refresh();},4000);
+</script>
+</body>
+</html>

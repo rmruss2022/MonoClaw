@@ -1,0 +1,149 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+:root{
+  --ink:#0e1014;--panel:#171a21;--line:#272c37;--mint:#3ddc97;--mintdeep:#1f7a56;
+  --text:#e7ebf3;--muted:#8b93a7;--amber:#f0b429;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--ink);color:var(--text);
+  font-family:-apple-system,"SF Pro Display",Segoe UI,Roboto,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.sheet{width:1440px;height:1020px;position:relative;overflow:hidden;
+  background:radial-gradient(1200px 700px at 70% 20%,#141822 0%,var(--ink) 60%)}
+.header{position:absolute;top:52px;left:64px;right:64px;display:flex;justify-content:space-between;align-items:flex-start}
+.brand{display:flex;align-items:center;gap:14px}
+.mark{width:34px;height:34px}
+.word{font-size:26px;letter-spacing:-.5px}.word b{color:var(--mint);font-weight:800}.word span{font-weight:500}
+.kicker{color:var(--muted);font-size:13px;letter-spacing:3px;text-transform:uppercase;margin-top:6px}
+.tag{text-align:right}
+.tag .t1{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--mint)}
+.tag .t2{font-size:12px;color:var(--muted);margin-top:6px}
+.title{position:absolute;top:150px;left:64px}
+.title h1{font-size:52px;font-weight:800;letter-spacing:-1.5px;line-height:1}
+.title p{color:var(--muted);font-size:17px;margin-top:14px;max-width:520px;line-height:1.5}
+.stage{position:absolute;top:250px;left:0;right:0;height:700px}
+.chips{position:absolute;bottom:54px;left:64px;right:64px;display:flex;gap:14px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;flex:1}
+.chip .k{color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.chip .v{font-size:20px;font-weight:700;margin-top:6px}
+.chip .v small{color:var(--muted);font-weight:500;font-size:13px}
+.floor{position:absolute;bottom:150px;left:50%;transform:translateX(-50%);width:760px;height:60px;
+  background:radial-gradient(closest-side,rgba(61,220,151,.10),transparent 70%);filter:blur(2px)}
+</style></head><body>
+<div class="sheet">
+  <div class="floor"></div>
+  <div class="header">
+    <div>
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 48 48"><path d="M24 5 6 20v22a2 2 0 0 0 2 2h32a2 2 0 0 0 2-2V20L24 5Z" fill="none" stroke="#3ddc97" stroke-width="2.4"/><circle cx="24" cy="26" r="5" fill="none" stroke="#3ddc97" stroke-width="2.4"/><rect x="22.2" y="29" width="3.6" height="9" rx="1.6" fill="#3ddc97"/></svg>
+        <div class="word"><span>open</span><b>home</b></div>
+      </div>
+      <div class="kicker">Pod · MVP industrial design</div>
+    </div>
+    <div class="tag"><div class="t1">Concept R1</div><div class="t2">Raspberry Pi 5 · voice + storage hub</div></div>
+  </div>
+
+  <div class="title">
+    <h1>the openhome pod</h1>
+    <p>A voice assistant and home hub that runs entirely on your own box. Far-field mic array, room-filling speaker, a light that tells the truth — and 1&nbsp;TB that never leaves the house.</p>
+  </div>
+
+  <div class="stage">
+    <!-- 3/4 hero + front view -->
+    <svg viewBox="0 0 1440 700" width="1440" height="700">
+      <defs>
+        <!-- body cylinder shading -->
+        <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#0c0e12"/><stop offset=".18" stop-color="#20242e"/>
+          <stop offset=".5" stop-color="#2b303c"/><stop offset=".82" stop-color="#181b22"/>
+          <stop offset="1" stop-color="#0a0c10"/>
+        </linearGradient>
+        <linearGradient id="cap" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#161922"/><stop offset=".5" stop-color="#2f3542"/><stop offset="1" stop-color="#12141a"/>
+        </linearGradient>
+        <radialGradient id="topface" cx="50%" cy="38%" r="70%">
+          <stop offset="0" stop-color="#2a2f3b"/><stop offset="1" stop-color="#14171e"/>
+        </radialGradient>
+        <radialGradient id="ledglow" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="rgba(61,220,151,.9)"/><stop offset="1" stop-color="rgba(61,220,151,0)"/>
+        </radialGradient>
+        <pattern id="mesh" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(0)">
+          <circle cx="3" cy="3" r="1.7" fill="#000" opacity=".55"/>
+        </pattern>
+        <linearGradient id="meshfade" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#0c0e12"/><stop offset=".5" stop-color="#262b34"/><stop offset="1" stop-color="#0a0c10"/>
+        </linearGradient>
+      </defs>
+
+      <!-- ===== 3/4 HERO (left) ===== -->
+      <g transform="translate(430 350)">
+        <!-- contact shadow -->
+        <ellipse cx="0" cy="235" rx="205" ry="34" fill="#000" opacity=".5"/>
+        <!-- body -->
+        <path d="M-190 -150 A190 46 0 0 0 190 -150 L190 175 A190 46 0 0 1 -190 175 Z" fill="url(#body)"/>
+        <!-- speaker mesh over lower body -->
+        <clipPath id="clipbody"><path d="M-190 -150 A190 46 0 0 0 190 -150 L190 175 A190 46 0 0 1 -190 175 Z"/></clipPath>
+        <g clip-path="url(#clipbody)">
+          <rect x="-190" y="-70" width="380" height="290" fill="url(#meshfade)"/>
+          <rect x="-190" y="-70" width="380" height="290" fill="url(#mesh)"/>
+          <!-- seam highlight -->
+          <ellipse cx="0" cy="-70" rx="190" ry="46" fill="none" stroke="#3a4150" stroke-width="1.5" opacity=".6"/>
+        </g>
+        <!-- top cap ring -->
+        <ellipse cx="0" cy="-150" rx="190" ry="46" fill="url(#cap)"/>
+        <!-- LED ring channel -->
+        <ellipse cx="0" cy="-150" rx="168" ry="40" fill="none" stroke="#0a0c10" stroke-width="9"/>
+        <!-- glowing LED ring -->
+        <ellipse cx="0" cy="-150" rx="168" ry="40" fill="none" stroke="url(#ledglow)" stroke-width="16" opacity=".85"/>
+        <ellipse cx="0" cy="-150" rx="168" ry="40" fill="none" stroke="#3ddc97" stroke-width="3.5"/>
+        <!-- recessed top face -->
+        <ellipse cx="0" cy="-158" rx="150" ry="35" fill="url(#topface)"/>
+        <!-- mic ports (4) -->
+        <g fill="#0a0c10">
+          <circle cx="-70" cy="-165" r="4"/><circle cx="70" cy="-165" r="4"/>
+          <circle cx="0" cy="-150" r="4"/><circle cx="0" cy="-178" r="4"/>
+        </g>
+        <!-- touch mute dot -->
+        <circle cx="0" cy="-158" r="9" fill="none" stroke="#3a4150" stroke-width="2"/>
+        <!-- rubber base foot -->
+        <path d="M-190 168 A190 46 0 0 0 190 168 L190 175 A190 46 0 0 1 -190 175 Z" fill="#07080b"/>
+      </g>
+
+      <!-- ===== FRONT ORTHO (right) ===== -->
+      <g transform="translate(1080 316)">
+        <ellipse cx="0" cy="212" rx="118" ry="20" fill="#000" opacity=".45"/>
+        <!-- body rect w/ rounded -->
+        <rect x="-115" y="-120" width="230" height="330" rx="26" fill="url(#body)"/>
+        <clipPath id="fclip"><rect x="-115" y="-120" width="230" height="330" rx="26"/></clipPath>
+        <g clip-path="url(#fclip)">
+          <rect x="-115" y="-40" width="230" height="250" fill="url(#mesh)"/>
+        </g>
+        <!-- top cap -->
+        <rect x="-115" y="-120" width="230" height="70" rx="26" fill="url(#cap)"/>
+        <rect x="-115" y="-70" width="230" height="20" fill="#101319"/>
+        <!-- LED ring front sliver -->
+        <rect x="-92" y="-58" width="184" height="6" rx="3" fill="#3ddc97"/>
+        <rect x="-92" y="-58" width="184" height="6" rx="3" fill="url(#ledglow)" opacity=".6"/>
+        <!-- dims -->
+        <g stroke="#3a4150" stroke-width="1.2" fill="none">
+          <line x1="150" y1="-120" x2="150" y2="210"/>
+          <line x1="145" y1="-120" x2="155" y2="-120"/><line x1="145" y1="210" x2="155" y2="210"/>
+          <line x1="-115" y1="245" x2="115" y2="245"/>
+          <line x1="-115" y1="240" x2="-115" y2="250"/><line x1="115" y1="240" x2="115" y2="250"/>
+        </g>
+        <text x="168" y="50" fill="#8b93a7" font-size="15" transform="rotate(90 168 50)" text-anchor="middle">132 mm</text>
+        <text x="0" y="268" fill="#8b93a7" font-size="15" text-anchor="middle">104 mm ø</text>
+        <text x="0" y="-150" fill="#8b93a7" font-size="14" text-anchor="middle" letter-spacing="2">FRONT · ORTHO</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="chips">
+    <div class="chip"><div class="k">Compute</div><div class="v">Raspberry Pi 5 <small>8 GB</small></div></div>
+    <div class="chip"><div class="k">Storage</div><div class="v">1 TB NVMe <small>local-only</small></div></div>
+    <div class="chip"><div class="k">Voice</div><div class="v">4-mic array <small>far-field</small></div></div>
+    <div class="chip"><div class="k">Sound</div><div class="v">Full-range + passive <small>driver</small></div></div>
+    <div class="chip"><div class="k">Light</div><div class="v">16-LED ring <small>WS2812B</small></div></div>
+    <div class="chip"><div class="k">Shell</div><div class="v">3D-printed <small>PETG</small></div></div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,110 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><style>
+:root{--ink:#0e1014;--panel:#171a21;--line:#272c37;--mint:#3ddc97;--mintdeep:#1f7a56;--text:#e7ebf3;--muted:#8b93a7;--amber:#f0b429}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--ink);color:var(--text);font-family:-apple-system,"SF Pro Display",Segoe UI,Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.sheet{width:1440px;height:1020px;position:relative;overflow:hidden;background:radial-gradient(1100px 700px at 30% 15%,#141822,var(--ink) 60%)}
+.head{position:absolute;top:52px;left:64px;right:64px;display:flex;justify-content:space-between}
+.word{font-size:22px}.word b{color:var(--mint);font-weight:800}.word span{font-weight:500}
+h1{position:absolute;top:104px;left:64px;font-size:44px;font-weight:800;letter-spacing:-1px}
+.sub{position:absolute;top:162px;left:64px;color:var(--muted);font-size:16px}
+.lbl{fill:#e7ebf3;font-size:16px;font-weight:600}
+.lbl2{fill:#8b93a7;font-size:12.5px}
+.num{fill:#0e1014;font-size:14px;font-weight:800}
+.tag{position:absolute;top:56px;right:64px;color:var(--mint);font-size:13px;letter-spacing:3px;text-transform:uppercase}
+</style></head><body>
+<div class="sheet">
+  <div class="head"><div class="word"><span>open</span><b>home</b></div></div>
+  <div class="tag">Exploded view</div>
+  <h1>What's inside</h1>
+  <div class="sub">Six modules, one 3D-printed shell. Everything screws to a single interior spine — no glue, field-serviceable.</div>
+
+  <svg viewBox="0 0 1440 800" width="1440" height="800" style="position:absolute;top:210px;left:0">
+    <defs>
+      <linearGradient id="metal" x1="0" x2="1"><stop offset="0" stop-color="#20242e"/><stop offset=".5" stop-color="#333b48"/><stop offset="1" stop-color="#171b22"/></linearGradient>
+      <linearGradient id="pcb" x1="0" x2="1"><stop offset="0" stop-color="#0f5c3f"/><stop offset="1" stop-color="#0a3f2b"/></linearGradient>
+      <radialGradient id="glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(61,220,151,.8)"/><stop offset="1" stop-color="rgba(61,220,151,0)"/></radialGradient>
+      <marker id="dot" markerWidth="6" markerHeight="6" refX="3" refY="3"><circle cx="3" cy="3" r="2.5" fill="#3ddc97"/></marker>
+    </defs>
+
+    <!-- center spine axis -->
+    <line x1="430" y1="30" x2="430" y2="740" stroke="#272c37" stroke-width="1.5" stroke-dasharray="4 6"/>
+
+    <!-- 1 TOP CAP + LED RING -->
+    <g transform="translate(430 70)">
+      <ellipse cx="0" cy="0" rx="150" ry="36" fill="url(#metal)"/>
+      <ellipse cx="0" cy="0" rx="120" ry="28" fill="none" stroke="url(#glow)" stroke-width="12"/>
+      <ellipse cx="0" cy="0" rx="120" ry="28" fill="none" stroke="#3ddc97" stroke-width="3"/>
+      <g fill="#0a0c10"><circle cx="-46" cy="-6" r="3.4"/><circle cx="46" cy="-6" r="3.4"/><circle cx="0" cy="6" r="3.4"/><circle cx="0" cy="-14" r="3.4"/></g>
+    </g>
+
+    <!-- 2 MIC ARRAY BOARD -->
+    <g transform="translate(430 180)">
+      <ellipse cx="0" cy="0" rx="128" ry="30" fill="url(#pcb)"/>
+      <g fill="#0a0c10"><circle cx="-60" cy="0" r="6"/><circle cx="60" cy="0" r="6"/><circle cx="0" cy="14" r="6"/><circle cx="0" cy="-14" r="6"/></g>
+      <rect x="-16" y="-8" width="32" height="16" rx="3" fill="#111"/>
+    </g>
+
+    <!-- 3 RASPBERRY PI 5 -->
+    <g transform="translate(430 300)">
+      <ellipse cx="0" cy="18" rx="120" ry="26" fill="#000" opacity=".3"/>
+      <rect x="-95" y="-30" width="190" height="60" rx="8" fill="url(#pcb)"/>
+      <rect x="-70" y="-16" width="46" height="34" rx="3" fill="#1c1c1c"/>
+      <rect x="30" y="-18" width="30" height="14" rx="2" fill="#2a2a2a"/>
+      <rect x="30" y="2" width="30" height="14" rx="2" fill="#2a2a2a"/>
+      <rect x="-95" y="-6" width="10" height="14" fill="#c9a227"/>
+    </g>
+
+    <!-- 4 NVMe HAT + 1TB SSD -->
+    <g transform="translate(430 410)">
+      <rect x="-95" y="-24" width="190" height="48" rx="8" fill="url(#pcb)"/>
+      <rect x="-72" y="-12" width="130" height="24" rx="3" fill="#111"/>
+      <text x="-7" y="5" class="num" fill="#3ddc97" font-size="12" text-anchor="middle">1 TB</text>
+    </g>
+
+    <!-- 5 AMP + SPEAKER DRIVER -->
+    <g transform="translate(430 530)">
+      <rect x="-70" y="-30" width="140" height="20" rx="4" fill="url(#metal)"/>
+      <ellipse cx="0" cy="26" rx="100" ry="24" fill="url(#metal)"/>
+      <ellipse cx="0" cy="26" rx="66" ry="16" fill="#0c0e12"/>
+      <ellipse cx="0" cy="26" rx="30" ry="7" fill="#1a1d24"/>
+    </g>
+
+    <!-- 6 SHELL BASE + PASSIVE RADIATOR -->
+    <g transform="translate(430 660)">
+      <path d="M-150 -30 A150 34 0 0 0 150 -30 L150 30 A150 34 0 0 1 -150 30 Z" fill="url(#metal)"/>
+      <ellipse cx="0" cy="30" rx="150" ry="34" fill="#0a0c10"/>
+      <ellipse cx="0" cy="30" rx="90" ry="20" fill="#141821"/>
+      <ellipse cx="0" cy="26" rx="90" ry="18" fill="none" stroke="#333b48" stroke-width="2"/>
+    </g>
+
+    <!-- callouts LEFT -->
+    <g>
+      <circle cx="150" cy="70" r="13" fill="#3ddc97"/><text x="150" y="75" class="num" text-anchor="middle">1</text>
+      <line x1="163" y1="70" x2="250" y2="70" stroke="#3ddc97" stroke-width="1.4"/>
+      <text x="255" y="66" class="lbl">Top cap + LED ring</text><text x="255" y="86" class="lbl2">16× WS2812B addressable · diffuser · touch-to-mute</text>
+
+      <circle cx="150" cy="410" r="13" fill="#3ddc97"/><text x="150" y="415" class="num" text-anchor="middle">4</text>
+      <line x1="163" y1="410" x2="250" y2="410" stroke="#3ddc97" stroke-width="1.4"/>
+      <text x="255" y="406" class="lbl">1 TB NVMe on M.2 HAT</text><text x="255" y="426" class="lbl2">Recordings, models, your data — never leaves the LAN</text>
+
+      <circle cx="150" cy="660" r="13" fill="#3ddc97"/><text x="150" y="665" class="num" text-anchor="middle">6</text>
+      <line x1="163" y1="660" x2="250" y2="660" stroke="#3ddc97" stroke-width="1.4"/>
+      <text x="255" y="656" class="lbl">Base + passive radiator</text><text x="255" y="676" class="lbl2">Down-firing bass port · rubber ring · USB-C + Ethernet</text>
+    </g>
+    <!-- callouts RIGHT -->
+    <g text-anchor="end">
+      <circle cx="710" cy="180" r="13" fill="#3ddc97"/><text x="710" y="185" class="num" text-anchor="middle">2</text>
+      <line x1="697" y1="180" x2="610" y2="180" stroke="#3ddc97" stroke-width="1.4"/>
+      <text x="1180" y="176" class="lbl">4-mic far-field array</text><text x="1180" y="196" class="lbl2">Beamforming + AEC · wake word ~5 m across a room</text>
+
+      <circle cx="710" cy="300" r="13" fill="#3ddc97"/><text x="710" y="305" class="num" text-anchor="middle">3</text>
+      <line x1="697" y1="300" x2="610" y2="300" stroke="#3ddc97" stroke-width="1.4"/>
+      <text x="1180" y="296" class="lbl">Raspberry Pi 5 · 8 GB</text><text x="1180" y="316" class="lbl2">Runs the hub, wake word + a small local model, offline</text>
+
+      <circle cx="710" cy="530" r="13" fill="#3ddc97"/><text x="710" y="535" class="num" text-anchor="middle">5</text>
+      <line x1="697" y1="530" x2="610" y2="530" stroke="#3ddc97" stroke-width="1.4"/>
+      <text x="1180" y="526" class="lbl">Class-D amp + 3" driver</text><text x="1180" y="546" class="lbl2">15 W RMS full-range · room-filling, Alexa-class clarity</text>
+    </g>
+  </svg>
+</div>
+</body></html>

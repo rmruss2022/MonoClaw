@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>openhome · music</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+<meta name="theme-color" content="#0e1014" />
+<style>
+  :root{--bg:#0e1014;--panel:#171a21;--panel2:#1e222b;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56;--warn:#f0b429;--danger:#ef5350;--radius:14px}
+  *{box-sizing:border-box}
+  html,body{overflow-x:hidden;max-width:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  header{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:calc(env(safe-area-inset-top,0px) + 14px) 22px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,var(--bg))}
+  .brand a{color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;font-weight:700}
+  nav{display:flex;gap:4px;flex-wrap:wrap}
+  nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid transparent}
+  nav a:hover{color:var(--text);background:var(--panel2);border-color:var(--line)}
+  nav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  main{padding:22px;max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:26px;padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+  /* grid/flex children must be allowed to shrink below content width, or the
+     horizontal-scroll shelves expand the whole page (iOS then shrink-to-fits
+     to desktop). minmax(0,1fr) + min-width:0 make overflow-x:auto actually scroll. */
+  main>*,#browse>*{min-width:0}
+  .shelf{min-width:0}
+  section h2{margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+  .row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}.muted{color:var(--muted)}.small{font-size:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .badge{font-size:11px;color:var(--accent);background:rgba(61,220,151,.1);border:1px solid var(--accent-dim);padding:1px 7px;border-radius:999px;white-space:nowrap}
+  .badge.bt{color:#7db4ff;background:rgba(125,180,255,.1);border-color:#345}
+  .badge.live{color:#0b0f14;background:var(--accent);border-color:var(--accent);font-weight:700}
+  .badge.warn{color:#e6b800;background:rgba(230,184,0,.12);border-color:#5a4a00}
+  .badge.off{color:#8a94a6;background:rgba(138,148,166,.12);border-color:#333}
+  .roomsel{font-size:12px;padding:2px 6px;border-radius:8px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}.dot.on{background:var(--accent)}.dot.off{background:var(--danger)}.dot.warn{background:#e6b800}
+  button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+  button:hover{border-color:var(--accent-dim)}
+  button.primary{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
+  button.icon{width:40px;height:40px;border-radius:50%;font-size:15px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  button.play{width:48px;height:48px;font-size:17px}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:6px;background:var(--panel2);outline:none;flex:1}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer}
+  input[type=text]{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:9px 12px;flex:1;min-width:0}
+  select{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 8px}
+  /* browse shelves */
+  .shelf{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}
+  .pcard{width:150px;flex:0 0 auto;cursor:pointer}
+  .pcard .cov{width:150px;height:150px;border-radius:12px;object-fit:cover;border:1px solid var(--line);background:linear-gradient(135deg,#20323a,#101820);display:flex;align-items:center;justify-content:center;font-size:34px}
+  .pcard .nm{font-size:13px;font-weight:600;margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pcard .sub{font-size:12px;color:var(--muted)}
+  .list .item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line)}
+  .list .item:last-child{border:0}
+  .tr{display:flex;align-items:center;gap:10px;min-width:0}
+  .tr img{width:38px;height:38px;border-radius:6px;flex:0 0 auto}
+  .tr .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* speakers */
+  .spk{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--panel2)}
+  .zone{border:1px solid var(--accent-dim);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:rgba(61,220,151,.05)}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+  details>summary{cursor:pointer;color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:10px}
+  /* bottom now-playing bar */
+  .player{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:10px 18px calc(10px + env(safe-area-inset-bottom,0px))}
+  .player .art{width:52px;height:52px;border-radius:8px;background:linear-gradient(135deg,#20323a,#101820);display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto;object-fit:cover}
+  .player .meta{min-width:0;width:210px}
+  .player .meta .t{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .player .prog{flex:1;height:5px;border-radius:5px;background:var(--panel2);overflow:hidden;min-width:60px}
+  .player .prog>i{display:block;height:100%;background:var(--accent);width:0}
+  .player .time{font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:92px;background:var(--panel2);border:1px solid var(--accent-dim);color:var(--text);padding:10px 16px;border-radius:10px;z-index:40;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:50;display:none;align-items:center;justify-content:center;padding:20px}
+  .modal.show{display:flex}
+  .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;max-width:640px;width:100%}
+  .player .prog{cursor:pointer}
+  .player .prog:hover>i{background:#5affb0}
+  @media(max-width:720px){.player .meta{width:120px}.player .time,.player .zonewrap{display:none}}
+  @media(max-width:640px){
+    header{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;gap:8px 12px}
+    nav{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:2px 0 0;padding:2px 0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    nav::-webkit-scrollbar{display:none}
+    nav a{white-space:nowrap}
+    header>div[style*="flex:1"]{display:none}
+    main{padding:16px 14px;gap:20px;padding-bottom:calc(140px + env(safe-area-inset-bottom,0px))}
+    section.card{padding:14px}
+    .pcard,.pcard .cov{width:132px}.pcard .cov{height:132px}
+    /* mini-player: thin full-width scrubber pinned to the top edge, one clean row below */
+    .player{position:fixed;left:0;right:0;bottom:0;z-index:30;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+    .player .art{width:46px;height:46px}
+    .player .meta{width:auto;flex:1;min-width:0}
+    .player .prog{position:absolute;left:0;right:0;top:0;flex:none;min-width:0;height:4px;border-radius:0}
+    .player .icon{width:38px;height:38px}
+    .player .play{width:46px;height:46px}
+    .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+    /* 16px inputs stop iOS from zooming the page on focus */
+    input[type=text],select{font-size:16px}
+    .modal{padding:0;align-items:flex-end}
+    .modal .sheet{max-width:100%;border-radius:16px 16px 0 0;max-height:86vh;overflow:auto}
+    .modal .list .item{padding:11px 4px}
+    /* card header rows (Curator title + mood/Suggest, Speakers header, zone rows)
+       must wrap instead of shoving controls off the right edge */
+    .card .row.between{flex-wrap:wrap;gap:8px 10px}
+    #mood{max-width:none;flex:1 1 140px}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand"><a href="/"><img src="/assets/brand/logo.svg" alt="openhome" height="24"/></a></div>
+    <nav>
+      <a href="/">Home</a><a href="/control">Control</a>
+      <a href="/music" class="active">Music</a><a href="/lights">Lights</a><a href="/speakers">Speakers</a><a href="/climate">Climate</a><a href="/docs">Docs</a>
+    </nav>
+    <div style="flex:1"></div>
+    <span class="row small muted"><span class="dot on" id="hubdot"></span><span id="counts">…</span></span>
+  </header>
+
+  <main>
+    <div id="rlbanner" style="display:none;background:rgba(240,180,41,.12);border:1px solid #5a4a00;color:#f0b429;border-radius:12px;padding:10px 14px;font-size:13px"></div>
+    <!-- Spotify browse -->
+    <section id="spotifyBox"></section>
+    <section id="browse" style="display:none;display:grid;grid-template-columns:minmax(0,1fr);gap:24px">
+      <div class="card"><div class="row between"><h2 style="margin:0">✨ Made for you</h2>
+        <span class="row" style="gap:6px"><input type="text" id="mood" placeholder="mood (optional)" style="max-width:170px" onkeydown="if(event.key==='Enter')curate(true)"><button class="small" onclick="curate(true)">Refresh</button></span></div>
+        <div class="note">openhome mixes, tuned to your taste — tap one to play. Type a mood to steer them.</div>
+        <div id="picks" class="shelf" style="margin-top:10px"></div>
+      </div>
+      <div><h2>Your top playlists</h2><div id="playlists" class="shelf"></div></div>
+      <div class="card"><h2>Recently liked</h2><div id="liked" class="list"></div></div>
+      <div class="card"><details><summary>Your top tracks</summary><div id="top" class="list"></div></details></div>
+      <div class="card"><h2>Search</h2>
+        <div class="row" style="gap:8px"><input type="text" id="q" placeholder="Search Spotify…" onkeydown="if(event.key==='Enter')search()"><button onclick="search()">Search</button></div>
+        <div id="results" class="list" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <!-- Speakers & rooms -->
+    <section class="card">
+      <div class="row between"><h2 style="margin:0">Speakers &amp; rooms</h2>
+        <span class="row" style="gap:6px"><button class="small" onclick="scan('wifi')">+ Wi-Fi</button><button class="small" onclick="scan('bluetooth')">+ Bluetooth</button></span>
+      </div>
+      <div class="note">This is a mock home, so playback is routed to <b>this browser tab on the Mac</b> (Spotify Web Player) instead of real room speakers. Real per-room sync arrives with Snapcast — see <a href="/docs/sound">Sound docs</a>.</div>
+      <div id="zones" style="margin-top:12px"></div><div id="loose"></div>
+      <div class="row" style="margin-top:12px;gap:8px"><input type="text" id="zoneName" placeholder="New zone name (e.g. Downstairs)"><button onclick="makeZone()">Group selected</button></div>
+      <div id="discover" class="list"></div>
+      <details style="margin-top:16px"><summary>Surround &amp; calibration</summary>
+        <select id="calZone" onchange="renderRoles()"></select>
+        <div id="roles" style="margin-top:10px"></div>
+        <button class="primary" style="margin-top:10px" onclick="calibrate()">Calibrate room</button>
+      </details>
+    </section>
+  </main>
+
+  <!-- persistent now-playing bar -->
+  <div class="player">
+    <img class="art" id="plArt" alt="" style="display:none"><span class="art" id="plArtFallback">🎵</span>
+    <div class="meta"><div class="t" id="plTitle">Nothing playing</div><div class="small muted t" id="plSub"></div></div>
+    <button class="icon" onclick="tx('prev')">⏮</button>
+    <button class="icon play primary" id="playBtn" onclick="togglePlay()">▶</button>
+    <button class="icon" onclick="tx('next')">⏭</button>
+    <button class="icon devbtn" id="devBtn" onclick="openDevSheet()" title="Speaker output">📻</button>
+    <span class="time" id="pos">0:00</span><span class="prog" id="progWrap" onclick="seekAt(event)"><i id="progBar"></i></span><span class="time" id="dur">0:00</span>
+    <span class="row zonewrap" style="gap:6px"><span class="small muted">📻</span>
+      <select id="outDev" onchange="onDevPick()" title="Where playback goes"></select>
+      <span class="small muted">🔊</span>
+      <input type="range" min="0" max="100" id="masterVol" style="max-width:120px" oninput="vol(currentZone(),this.value)" onmousedown="editingVol=true" onmouseup="editingVol=false">
+      <select id="zoneSel" onchange="playZone(this.value)"></select></span>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <!-- speaker output chooser -->
+  <div class="modal" id="devModal" onclick="if(event.target===this)closeDevSheet()">
+    <div class="sheet">
+      <div class="row between"><b style="font-size:18px">🔊 Speaker output</b><button class="small" onclick="closeDevSheet()">✕</button></div>
+      <div class="muted small" style="margin:6px 0 12px">Where music plays. Open Spotify/this app on a device for it to show up.</div>
+      <div id="devList" class="list"></div>
+    </div>
+  </div>
+
+  <!-- playlist detail -->
+  <div class="modal" id="plModal" onclick="if(event.target===this)closePl()">
+    <div class="sheet">
+      <div class="row between"><b id="plmName" style="font-size:18px"></b><button class="small" onclick="closePl()">✕</button></div>
+      <div class="row" style="gap:10px;margin:12px 0"><button class="primary" id="plmPlay">▶ Play all</button><span class="muted small" id="plmCount"></span></div>
+      <div id="plmTracks" class="list" style="max-height:60vh;overflow:auto"></div>
+    </div>
+  </div>
+
+<script>
+const $=(id)=>document.getElementById(id);
+let S=null, editingVol=false, spotifyReady=false; const sel=new Set();
+const fmt=(ms)=>{const s=Math.floor((ms||0)/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const esc=(s)=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),3200);}
+async function api(cmd,payload={}){const r=await fetch("/audio/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cmd,...payload})});const j=await r.json();
+  if(j.hint==="no_device") toast("Open Spotify on your MacBook (or a device) to start playback.");
+  else if(j.hint) toast(j.hint);
+  if(j.state) render(j.state); return j;}
+async function refresh(){try{render(await (await fetch("/audio/state")).json());}catch(e){$("hubdot").className="dot off";}}
+function currentZone(){return $("zoneSel").value||(S&&S.nowPlaying.zoneId)||"";}
+
+function render(state){
+  S=state;$("hubdot").className="dot on";
+  const rl=state.spotify&&state.spotify.rateLimited;const rb=$("rlbanner");
+  if(rb){if(rl){const m=Math.max(1,Math.ceil((state.spotify.retryAfterMs||0)/60000));rb.style.display="";rb.innerHTML=`⏳ Spotify is rate-limiting the app (too many requests) — browsing uses cached data and playback resumes automatically in ~${m} min. Avoid spamming Refresh.`;}else rb.style.display="none";}
+  $("counts").textContent=`${state.counts.online}/${state.counts.speakers} speakers · ${state.counts.zones} zones`;
+  // now-playing bar
+  const np=state.nowPlaying;
+  $("plTitle").textContent=np.title||"Nothing playing";
+  $("plSub").textContent=[np.artist,np.device?("· "+np.device):""].filter(Boolean).join(" ");
+  $("playBtn").textContent=np.playing?"⏸":"▶";
+  $("pos").textContent=fmt(np.positionMs);$("dur").textContent=fmt(np.durationMs);
+  $("progBar").style.width=(np.durationMs?100*np.positionMs/np.durationMs:0)+"%";
+  if(np.art){$("plArt").src=np.art;$("plArt").style.display="";$("plArtFallback").style.display="none";}else{$("plArt").style.display="none";$("plArtFallback").style.display="";}
+  // zone selectors
+  const zopts=state.zones.map(z=>`<option value="${z.id}">${esc(z.name)}</option>`).join("");
+  for(const id of["zoneSel","calZone"]){const el=$(id);const keep=el.value;el.innerHTML=zopts||`<option value="">(no zones)</option>`;if([...el.options].some(o=>o.value===keep))el.value=keep;}
+  if(np.zoneId)$("zoneSel").value=np.zoneId;
+  const mz=state.zones.find(z=>z.id===currentZone());if(!editingVol)$("masterVol").value=mz?mz.volume:30;
+  // speakers
+  const inZone=new Set(state.zones.flatMap(z=>z.speakerIds));
+  $("zones").innerHTML=state.zones.map(z=>{const spk=z.speakerIds.map(id=>state.speakers.find(s=>s.id===id)).filter(Boolean);
+    return `<div class="zone"><div class="row between"><b>${esc(z.name)} ${z.surround?'<span class="badge">surround</span>':''}</b>
+      <span class="row small" style="gap:6px"><span class="muted">${spk.length} speakers</span><button class="small" onclick="api('dissolve-zone',{zoneId:'${z.id}'})">ungroup</button></span></div>
+      <div class="row" style="margin-top:8px"><span class="small muted">🔊</span><input type="range" min="0" max="100" value="${z.volume}" onmousedown="editingVol=true" onmouseup="editingVol=false" oninput="vol('${z.id}',this.value)"></div>
+      ${spk.map(sp=>spkRow(sp,true)).join("")}</div>`;}).join("");
+  $("loose").innerHTML=state.speakers.filter(s=>!inZone.has(s.id)).map(sp=>spkRow(sp,false)).join("");
+  renderRoles();renderSpotify(state.spotify);
+}
+const ROOMS=["Living Room","Kitchen","Bedroom","Office","Bathroom","Dining","Backyard","Garage","—"];
+function roomSelectGen(room,cmd,extra){const rs=[...new Set([...ROOMS,room])];
+  return `<select class="roomsel" onchange="api('${cmd}',{${extra},room:this.value})">${rs.map(r=>`<option ${r===room?'selected':''}>${esc(r)}</option>`).join("")}</select>`;}
+function statusBadge(st){const c=st==='connected'?'live':(st==='offline'?'off':'warn');const t=st==='connected'?'connected':(st==='offline'?'offline':'reconnecting…');return `<span class="badge ${c}">${t}</span>`;}
+// onboarded local Wi-Fi/Bluetooth speaker: connection status, room, reconnect, remove
+function localSpkRow(sp){
+  const kb=`<span class="badge ${sp.kind==='bluetooth'?'bt':''}">${esc(sp.kind)}</span>`;
+  const dot=sp.status==='connected'?'on':(sp.status==='offline'?'off':'warn');
+  const reconnect=sp.status!=='connected'?`<button class="small" onclick="api('reconnect-speaker',{id:'${sp.id}'})">reconnect</button>`:'';
+  return `<div class="spk"><div class="row between"><span class="row" style="gap:8px"><span class="dot ${dot}"></span><b>${esc(sp.name)}</b> ${kb} ${statusBadge(sp.status)} ${roomSelectGen(sp.room,'local-room',"id:'"+sp.id+"'")}</span>
+     <span class="row small" style="gap:6px">${reconnect}<button class="small" onclick="api('remove-local',{id:'${sp.id}'})">✕</button></span></div></div>`;
+}
+function spkRow(sp,inZone){
+  if(sp.local)return localSpkRow(sp);
+  const badge=sp.real?`<span class="badge live">${sp.active?'▶ live':'live'}</span>`:(sp.kind==="bluetooth"?`<span class="badge bt">${sp.kind}</span>`:`<span class="badge">${sp.kind}</span>`);
+  const check=(inZone||sp.real)?"":`<input type="checkbox" ${sel.has(sp.id)?"checked":""} onclick="toggleSel('${sp.id}')">`;
+  // real Spotify Connect devices (Mac/iPhone): editable room + "play here", no remove
+  const roomCell=sp.real?roomSelectGen(sp.room,'speaker-room',"deviceId:'"+sp.deviceId+"'"):`<span class="muted small">${esc(sp.room)}</span>`;
+  const action=sp.real
+    ?`<button class="small primary" onclick="api('spotify-transfer',{deviceId:'${sp.deviceId}'})">▶ here</button>`
+    :(inZone?`<button class="small" onclick="api('remove-from-zone',{zoneId:'${sp.zone}',speakerId:'${sp.id}'})">remove</button>`:`<button class="small" onclick="api('remove-speaker',{id:'${sp.id}'})">✕</button>`);
+  return `<div class="spk"><div class="row between"><span class="row" style="gap:8px">${check}<span class="dot ${sp.online?'on':'off'}"></span><b>${esc(sp.name)}</b> ${badge} ${roomCell}</span>
+     <span class="row small">${action}</span></div>
+     <div class="row" style="margin-top:8px"><span class="small muted">🔊</span><input type="range" min="0" max="100" value="${sp.volume}" onmousedown="editingVol=true" onmouseup="editingVol=false" oninput="vol('${sp.id}',this.value)"></div></div>`;
+}
+function renderRoles(){if(!S)return;const z=S.zones.find(x=>x.id===$("calZone").value);if(!z){$("roles").innerHTML='<span class="note">Create a zone to set surround roles.</span>';return;}
+  const roles=["stereo","left","right","center","surround-l","surround-r","sub","mono"];
+  $("roles").innerHTML=z.speakerIds.map(id=>{const sp=S.speakers.find(s=>s.id===id);if(!sp)return"";
+    return `<div class="list"><div class="item"><span>${esc(sp.name)} ${sp.calibrated?`<span class="badge">${sp.latencyMs}ms</span>`:""}</span>
+      <select onchange="api('set-role',{id:'${sp.id}',role:this.value})">${roles.map(r=>`<option ${sp.role===r?"selected":""}>${r}</option>`).join("")}</select></div></div>`;}).join("");
+}
+
+// ---- Spotify ----
+function renderSpotify(sp){
+  const box=$("spotifyBox"),browse=$("browse");
+  if(sp.connected){const p=sp.profile||{};
+    box.innerHTML=`<div class="card"><div class="row between"><span class="row" style="gap:10px">${p.image?`<img src="${p.image}" width="40" height="40" style="border-radius:50%">`:""}
+      <span><b>${esc(p.name||"Spotify")}</b> <span class="badge">${esc(p.product||"connected")}</span></span></span>
+      <button class="small" onclick="fetch('/audio/spotify/disconnect',{method:'POST'}).then(()=>location.reload())">Sign out</button></div></div>`;
+    browse.style.display="grid";
+    if(!spotifyReady){spotifyReady=true;loadHome();}
+  }else if(sp.configured){
+    box.innerHTML=`<div class="card row between"><span>Connect your library, playlists & mixes.</span><a href="/audio/spotify/login" style="text-decoration:none"><button class="primary">Sign in with Spotify</button></a></div>`;
+    browse.style.display="none";
+  }else{
+    box.innerHTML=`<div class="card note">Spotify isn't set up. Add a Spotify app (redirect <code>${esc(sp.redirectUri||"")}</code>) then its Client ID/Secret.</div>`;
+    browse.style.display="none";
+  }
+}
+async function loadHome(){
+  try{const h=await (await fetch("/audio/spotify/home")).json();
+    $("playlists").innerHTML=(h.playlists||[]).map(pcard).join("")||'<span class="note">No playlists.</span>';
+    $("liked").innerHTML=(h.liked||[]).map(trackRow).join("")||'<span class="note">No liked songs.</span>';
+    $("top").innerHTML=(h.top||[]).map(trackRow).join("")||'<span class="note">Nothing here.</span>';
+  }catch(e){/* 401 until token warm */}
+  curate();
+}
+let PICKS={};
+async function curate(force){
+  $("picks").innerHTML='<span class="note">'+(force?'Refreshing your mixes…':'Loading your mixes…')+'</span>';
+  try{const r=await (await fetch('/audio/curator?mood='+encodeURIComponent($("mood").value||'')+(force?'&force=1':''))).json();
+    PICKS={};
+    $("picks").innerHTML=(r.picks||[]).map((p,i)=>{PICKS[i]=p;const cov=p.image?`<img class="cov" src="${p.image}">`:`<div class="cov">✨</div>`;
+      return `<div class="pcard" onclick="openMix(${i})">${cov}<div class="nm">${esc(p.label)}</div><div class="sub">${esc(p.vibe)}</div></div>`;}).join("")||'<span class="note">No picks.</span>';
+  }catch(e){$("picks").innerHTML='<span class="note">Curator unavailable.</span>';}
+}
+function playPick(i){const p=PICKS[i];if(!p||!p.uris||!p.uris.length){toast("Nothing playable found for that pick.");return;}
+  warmTab();toast("▶ "+p.label);api('spotify-play',{uris:p.uris,deviceId:targetDevice(),meta:{title:p.label,artist:p.vibe}});}
+// open a mix and list all its songs (like a playlist), with Play all + per-song play
+function openMix(i){const p=PICKS[i];if(!p)return;
+  $("plmName").textContent=p.label;
+  $("plmCount").textContent=p.vibe||((p.count||0)+" songs");
+  $("plmPlay").onclick=()=>{playPick(i);closePl();};
+  const ts=p.tracks||[];
+  $("plmTracks").innerHTML=ts.length?ts.map((t,idx)=>mixTrackRow(t,i,idx)).join("")
+    :'<div class="note">This mix was built before song lists were saved — hit Refresh on Made for you, then reopen.</div>';
+  $("plModal").classList.add("show");
+}
+function mixTrackRow(t,mix,idx){const img=t.image?`<img src="${t.image}">`:"";
+  return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
+    <button class="small primary" onclick='playMixAt(${mix},${idx},${JSON.stringify({title:t.title,artist:t.artist,album:"",image:t.image,durationMs:t.durationMs}).replace(/'/g,"&#39;")})'>play</button></div>`;}
+// play a mix starting at a given song so next/prev walk the rest of the mix
+function playMixAt(mix,idx,meta){const p=PICKS[mix];if(!p||!p.uris||!p.uris.length)return;
+  warmTab();toast("▶ "+meta.title);api('spotify-play',{uris:p.uris,offset:idx,meta:meta,zoneId:currentZone(),deviceId:targetDevice()});closePl();}
+let PLMAP={};
+function pcard(pl){PLMAP[pl.id]=pl; const cov=pl.image?`<img class="cov" src="${pl.image}">`:`<div class="cov">🎵</div>`;
+  return `<div class="pcard" onclick="openPl('${pl.id}')">${cov}<div class="nm">${esc(pl.name)}</div><div class="sub">${pl.tracks} tracks</div></div>`;}
+async function openPl(id){const pl=PLMAP[id];if(!pl)return;
+  $("plmName").textContent=pl.name;$("plmCount").textContent="";$("plmTracks").innerHTML='<div class="note">Loading…</div>';
+  $("plmPlay").onclick=()=>{playCtx(pl.uri);closePl();};
+  $("plModal").classList.add("show");
+  try{const r=await (await fetch('/audio/spotify/playlist?id='+encodeURIComponent(id))).json();
+    const ts=r.tracks||[];$("plmCount").textContent=ts.length?ts.length+" songs":"";
+    $("plmTracks").innerHTML=ts.length?ts.map((t,i)=>plTrackRow(t,pl.uri,i)).join("")
+      :'<div class="note">Spotify only returns a track list for smaller playlists on our current API tier — very large playlists come back empty until the app is granted <b>Extended Quota Mode</b>. You can still hit <b>Play all</b>, and <b>Liked songs</b> / <b>Top tracks</b> always list in full.</div>';
+  }catch(e){$("plmTracks").innerHTML='<div class="note">Could not load songs.</div>';}
+}
+function closePl(){$("plModal").classList.remove("show");}
+function seekAt(e){if(!S)return;const rect=e.currentTarget.getBoundingClientRect();const frac=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));const ms=Math.round(frac*(S.nowPlaying.durationMs||0));
+  if(webPlayer&&webDeviceId&&tabIsTarget())webPlayer.seek(ms);else api('transport',{action:'seek',ms});$("progBar").style.width=(frac*100)+"%";}
+function trackRow(t){const img=t.image?`<img src="${t.image}">`:"";
+  return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
+    <button class="small primary" onclick='playTrack(${JSON.stringify(t).replace(/'/g,"&#39;")})'>play</button></div>`;}
+function playCtx(uri){ warmTab(); api('spotify-play',{contextUri:uri,zoneId:currentZone(),deviceId:targetDevice()}); }
+function playTrack(t){ warmTab(); api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone(),deviceId:targetDevice()}); }
+// A song tapped inside a playlist plays the playlist *in context* at that
+// track's position, so next/prev walk the playlist instead of replaying it.
+function plTrackRow(t,ctx,pos){const img=t.image?`<img src="${t.image}">`:"";
+  return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
+    <button class="small primary" onclick='playInCtx(${JSON.stringify(ctx)},${pos},${JSON.stringify({title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs}).replace(/'/g,"&#39;")})'>play</button></div>`;}
+function playInCtx(ctx,pos,meta){ warmTab();
+  toast("▶ "+meta.title); api('spotify-play',{contextUri:ctx,offset:pos,meta:meta,zoneId:currentZone(),deviceId:targetDevice()}); closePl(); }
+async function search(){const q=$("q").value;const r=await (await fetch("/audio/spotify/search?q="+encodeURIComponent(q))).json();
+  $("results").innerHTML=(r.tracks||[]).map(t=>t.uri?trackRow(t):`<div class="item"><span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span><button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("")||'<div class="note">No results.</div>';}
+
+// ---- controls ----
+function toggleSel(id){sel.has(id)?sel.delete(id):sel.add(id);render(S);}
+function togglePlay(){tx(S&&S.nowPlaying.playing?"pause":"play");}
+function tx(action){
+  if(webPlayer&&webDeviceId&&tabIsTarget()){ if(action==='play'||action==='pause')webPlayer.togglePlay(); else if(action==='next')webPlayer.nextTrack(); else if(action==='prev')webPlayer.previousTrack(); return; }
+  api("transport",{action});
+}
+function vol(id,v){ if(webPlayer&&webDeviceId&&tabIsTarget()&&id===currentZone())webPlayer.setVolume(Math.max(0,Math.min(1,Number(v)/100))); if(id)api("volume",{id,volume:Number(v)}); }
+function playZone(z){api("play-in-zone",{zoneId:z});}
+function makeZone(){if(sel.size<1){toast("Select speakers to group first.");return;}api("create-zone",{name:$("zoneName").value,speakerIds:[...sel]}).then(()=>{sel.clear();$("zoneName").value="";});}
+function calibrate(){const z=$("calZone").value;if(z)api("calibrate",{zoneId:z});}
+async function scan(kind){$("discover").innerHTML=`<div class="note">Scanning ${kind} for a few seconds…</div>`;
+  let r;try{r=await (await fetch("/audio/discover?kind="+kind)).json();}catch(e){$("discover").innerHTML='<div class="note">Scan failed.</div>';return;}
+  const items=(r.found||[]).map(d=>`<div class="item"><span><span class="badge ${d.kind==='bluetooth'?'bt':''}">${esc(d.kind)}</span> ${esc(d.name)} <span class="muted small">${esc(d.address||d.mac||'')}</span></span>
+    <button class="small primary" onclick='addSpk(${JSON.stringify(d).replace(/'/g,"&#39;")})'>add</button></div>`).join("");
+  $("discover").innerHTML=items||`<div class="note">${esc(r.note||('No '+kind+' speakers found.'))}</div>`;}
+function addSpk(d){api("onboard-speaker",{device:d,room:"Living Room"}).then(()=>{$("discover").innerHTML='<div class="note">✓ Added to Living Room — set its room in the list below.</div>';});}
+
+// ---- Output device picker: send playback to iPhone / Mac / this tab ----
+let outDevices=[];
+const TAB_NAME='openhome Web Player (Mac)';
+function tabIsTarget(){return $("outDev").value==='__tab';}
+function targetDevice(){const v=$("outDev").value; if(v==='__tab')return webDeviceId||undefined; if(!v||v==='__auto')return undefined; return v;}
+function warmTab(){ if(tabIsTarget()&&!webDeviceId)toast("Starting this-tab player… tap play again in a second."); }
+async function loadDevices(){try{const r=await(await fetch('/audio/spotify/devices')).json();outDevices=r.devices||[];renderDevPicker();}catch(e){}}
+function renderDevPicker(){const el=$("outDev");if(!el)return;const keep=el.value;
+  let opts=`<option value="__auto">Auto (follow active)</option>`;
+  if(webDeviceId)opts+=`<option value="__tab">This tab 🔊</option>`;
+  opts+=outDevices.filter(d=>d.name!==TAB_NAME).map(d=>`<option value="${d.id}">${esc(d.name)}${d.active?' · active':''}</option>`).join("");
+  el.innerHTML=opts; el.value=([...el.options].some(o=>o.value===keep))?keep:'__auto'; updateDevBtn();}
+function onDevPick(){const v=$("outDev").value;
+  if(v==='__tab'){ if(webDeviceId)api('spotify-transfer',{deviceId:webDeviceId}); }
+  else if(v&&v!=='__auto'){ api('spotify-transfer',{deviceId:v}); toast("Sending to "+($("outDev").selectedOptions[0].textContent||"device")); } }
+// short label for the player-bar output button
+function deviceLabel(){const el=$("outDev");const o=el&&el.selectedOptions&&el.selectedOptions[0];return o?o.textContent.replace(/ ·.*/,'').replace(' 🔊',''):'Auto';}
+function updateDevBtn(){const b=$("devBtn");if(!b)return;const l=deviceLabel();b.title='Output: '+l;b.textContent=l==='Auto'||l==='Auto (follow active)'?'📻':(l.toLowerCase().includes('iphone')||l.toLowerCase().includes('phone')?'📱':(l.toLowerCase().includes('tab')||l.toLowerCase().includes('mac')?'💻':'🔈'));}
+// tap-friendly output chooser (works on mobile where the inline select is hidden)
+async function openDevSheet(){await loadDevices();renderDevList();$("devModal").classList.add("show");}
+function closeDevSheet(){$("devModal").classList.remove("show");}
+function renderDevList(){const cur=$("outDev").value||'__auto';
+  const opts=[{v:'__auto',n:'Auto (follow active device)',i:'🎯'}];
+  if(webDeviceId)opts.push({v:'__tab',n:'This tab / browser',i:'🔊'});
+  outDevices.filter(d=>d.name!==TAB_NAME).forEach(d=>opts.push({v:d.id,n:d.name+(d.active?' · playing':''),i:d.type==='Smartphone'?'📱':d.type==='Computer'?'💻':'🔈'}));
+  $("devList").innerHTML=opts.map(o=>`<div class="item" style="cursor:pointer" onclick="pickDev('${o.v}')"><span>${o.i} ${esc(o.n)}</span>${o.v===cur?'<span class="badge">current</span>':''}</div>`).join("")||'<div class="note">No devices found. Open Spotify or this app on a device.</div>';}
+function pickDev(v){const el=$("outDev");if(![...el.options].some(o=>o.value===v)){el.innerHTML+=`<option value="${v}"></option>`;}el.value=v;onDevPick();updateDevBtn();toast('Output → '+deviceLabel());closeDevSheet();}
+
+// ---- Spotify Web Playback SDK: play in THIS browser tab (Mac speakers), no desktop app ----
+let webPlayer=null, webDeviceId=null;
+window.onSpotifyWebPlaybackSDKReady=initWeb;
+async function initWeb(){
+  try{
+    const t=await (await fetch('/audio/spotify/token')).json();
+    if(!t.access_token) return; // not signed in yet
+    webPlayer=new Spotify.Player({name:'openhome Web Player (Mac)',volume:0.6,
+      getOAuthToken:cb=>fetch('/audio/spotify/token').then(r=>r.json()).then(j=>cb(j.access_token)).catch(()=>{})});
+    webPlayer.addListener('ready',({device_id})=>{webDeviceId=device_id;toast('This-tab player ready 🔊');loadDevices();});
+    webPlayer.addListener('not_ready',()=>{webDeviceId=null;});
+    webPlayer.addListener('account_error',()=>toast('Spotify Premium is required for in-browser playback.'));
+    webPlayer.addListener('initialization_error',({message})=>console.log('sdk init:',message));
+    webPlayer.addListener('authentication_error',({message})=>console.log('sdk auth:',message));
+    webPlayer.addListener('player_state_changed',s=>{if(s)fastNow(s);});
+    webPlayer.connect();
+  }catch(e){console.log('web player:',e);}
+}
+function fastNow(s){const t=s.track_window&&s.track_window.current_track;if(!t)return;
+  $("plTitle").textContent=t.name;$("plSub").textContent=(t.artists||[]).map(a=>a.name).join(", ")+" · this Mac";
+  $("playBtn").textContent=s.paused?"▶":"⏸";
+  if(t.album&&t.album.images&&t.album.images[0]){$("plArt").src=t.album.images[0].url;$("plArt").style.display="";$("plArtFallback").style.display="none";}
+}
+// if the SDK loaded before this handler was set, kick it now
+if(window.Spotify&&!webPlayer)initWeb();
+
+refresh();setInterval(refresh,3000);
+loadDevices();setInterval(loadDevices,10000);
+</script>
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+</body>
+</html>

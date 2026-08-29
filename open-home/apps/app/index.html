@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>openhome</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+<meta name="theme-color" content="#0e1014" />
+<style>
+  :root {
+    --bg: #0e1014;
+    --panel: #171a21;
+    --panel-2: #1e222b;
+    --line: #272c37;
+    --text: #e7ebf3;
+    --muted: #8b93a7;
+    --accent: #3ddc97;
+    --accent-dim: #1f7a56;
+    --warn: #f0b429;
+    --danger: #ef5350;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { overflow-x: hidden; max-width: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex; align-items: center; gap: 14px 16px; flex-wrap: wrap;
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) 24px 14px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #141821, var(--bg));
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .brand small { color: var(--muted); font-weight: 500; font-size: 13px; letter-spacing: 0; }
+  .spacer { flex: 1; }
+  .topnav { display: flex; gap: 4px; flex-wrap: wrap; }
+  .topnav a { color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 600; padding: 6px 11px; border-radius: 999px; border: 1px solid transparent; }
+  .topnav a:hover { color: var(--text); background: var(--panel-2); border-color: var(--line); }
+  .topnav a.active { color: var(--accent); border-color: var(--accent-dim); background: rgba(61,220,151,.08); }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    background: var(--panel-2); border: 1px solid var(--line);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 0 rgba(61,220,151,.5); }
+  .dot.ok { background: var(--accent); animation: pulse 2.4s infinite; }
+  .dot.down { background: var(--danger); }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(61,220,151,.45)} 70%{box-shadow:0 0 0 8px rgba(61,220,151,0)} 100%{box-shadow:0 0 0 0 rgba(61,220,151,0)} }
+  .model { color: var(--muted); font-size: 13px; }
+  main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px 20px; min-height: 140px;
+  }
+  .card h2 { margin: 0 0 14px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 700; }
+  .stat { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+  .stat.small { font-size: 20px; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .kv { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  .kv:last-child { border-bottom: 0; }
+  .kv span:first-child { color: var(--muted); }
+  .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+  .feed { max-height: 320px; overflow-y: auto; margin: -4px -4px 0; padding: 0 4px; }
+  .ev { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .ev:last-child { border-bottom: 0; }
+  .ev time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; }
+  .ev .type { font-weight: 600; }
+  .tag { font-size: 11px; color: var(--accent); background: rgba(61,220,151,.1); border: 1px solid var(--accent-dim); padding: 1px 7px; border-radius: 999px; }
+  footer { max-width: 1100px; margin: 8px auto 40px; padding: 0 24px; color: var(--muted); font-size: 12px; }
+  footer code { background: var(--panel-2); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--line); }
+  a { color: var(--accent); }
+  .updated { font-size: 12px; color: var(--muted); }
+  .pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .ptile { position: relative; display: block; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); text-decoration: none; aspect-ratio: 4/3; }
+  .ptile img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .4s ease; }
+  .ptile:hover img { transform: scale(1.05); }
+  .ptile span { position: absolute; left: 12px; bottom: 10px; color: var(--text); font-weight: 600; font-size: 14px; text-shadow: 0 2px 8px rgba(0,0,0,.7); }
+  .ptile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10,12,16,.55), transparent 55%); }
+  /* ---- mobile ---- */
+  @media (max-width: 640px) {
+    header { padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 10px; gap: 10px 12px; }
+    .brand { font-size: 17px; }
+    .brand img { height: 26px; }
+    .brand small { display: none; }
+    .spacer { display: none; }
+    .model { display: none; }
+    .topnav { order: 3; width: 100%; flex-wrap: nowrap; overflow-x: auto; gap: 6px; margin: 2px 0 0; padding: 2px 0 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .topnav::-webkit-scrollbar { display: none; }
+    .topnav a { white-space: nowrap; padding: 7px 13px; }
+    main { padding: 16px 14px; }
+    .grid { gap: 14px; }
+    .card { min-height: 0; padding: 16px; }
+    .stat { font-size: 26px; }
+    .hero div { font-size: 17px !important; }
+    footer { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand"><img src="/assets/brand/logo.svg" alt="openhome" height="30" style="display:block"/> <small>Your home. Your data. Your keys.</small></div>
+    <nav class="topnav">
+      <a href="/" class="active">Home</a>
+      <a href="/control">Control</a>
+      <a href="/music">Music</a>
+      <a href="/lights">Lights</a>
+      <a href="/speakers">Speakers</a>
+      <a href="/climate">Climate</a>
+      <a href="/docs">Docs</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="model" id="model">model: …</span>
+    <span class="pill"><span class="dot" id="dot"></span><span id="statusText">connecting…</span></span>
+  </header>
+
+  <main>
+    <a id="setupBanner" href="/setup" style="display:none;align-items:center;gap:14px;padding:15px 18px;border-radius:14px;border:1px solid var(--accent-dim);background:linear-gradient(135deg,#16241d,#141821);text-decoration:none;color:var(--text);margin-bottom:16px">
+      <span style="font-size:26px">🏠</span>
+      <span style="flex:1"><b id="setupTitle">Set up your home</b><div style="color:var(--muted);font-size:13px">Find your hub, name your home, and add your first lights &amp; speakers.</div></span>
+      <span style="color:var(--accent);font-weight:700;white-space:nowrap">Start →</span>
+    </a>
+    <script>
+      fetch("/hub/status").then(r=>r.json()).then(s=>{const b=document.getElementById("setupBanner");if(!b)return;
+        const done=s&&s.home&&s.home.setupComplete;const nm=s&&s.home&&s.home.name;
+        if(!done){b.style.display="flex";}
+        else if(nm){document.getElementById("setupTitle").textContent=nm;b.querySelector("div").textContent="Manage your home — hub, rooms, lights & speakers.";b.style.display="flex";}
+      }).catch(()=>{});
+    </script>
+    <a href="/docs/roadmap" class="hero" style="display:block;position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);margin-bottom:18px;text-decoration:none">
+      <img src="/assets/photo/box-lifestyle.png" alt="openhome" style="width:100%;display:block;aspect-ratio:16/7;object-fit:cover"/>
+      <div style="position:absolute;left:0;right:0;bottom:0;padding:18px 20px;background:linear-gradient(0deg,rgba(10,12,16,.9),transparent);color:var(--text)">
+        <div style="font-size:20px;font-weight:700">Own your home. Not a subscription to it.</div>
+        <div style="color:var(--muted);font-size:14px;margin-top:2px">Local-first automation · your box, your data, your agent — see the roadmap →</div>
+      </div>
+    </a>
+    <div class="grid">
+      <section class="card">
+        <h2>Hub</h2>
+        <div class="stat" id="hubState">—</div>
+        <div class="sub" id="hubSub">contacting hub…</div>
+        <div style="margin-top:14px">
+          <div class="kv"><span>service</span><span id="svc">—</span></div>
+          <div class="kv"><span>uptime</span><span id="uptime">—</span></div>
+          <div class="kv"><span>endpoint</span><span id="endpoint">—</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Devices</h2>
+        <div class="stat" id="deviceCount">0</div>
+        <div class="sub" id="deviceNote">no devices yet</div>
+        <div id="deviceList" style="margin-top:12px;max-height:300px;overflow-y:auto"></div>
+      </section>
+
+      <section class="card" style="grid-column: 1 / -1;">
+        <h2>Event stream <span class="updated" id="updated"></span></h2>
+        <div class="feed" id="feed"><div class="empty">waiting for events…</div></div>
+      </section>
+    </div>
+    <section style="margin-top:26px">
+      <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:0 0 14px">The product</h2>
+      <div class="pgrid">
+        <a class="ptile" href="/docs/business"><img src="/assets/photo/box-studio.png" alt="The box"/><span>The box</span></a>
+        <a class="ptile" href="/docs/business"><img src="/assets/photo/camera.png" alt="Cameras"/><span>Cameras</span></a>
+        <a class="ptile" href="/docs/business"><img src="/assets/photo/doorbell.png" alt="Doorbell"/><span>Doorbell</span></a>
+        <a class="ptile" href="/docs/concepts"><img src="/assets/photo/pod-hand.png" alt="The Pod"/><span>The Pod</span></a>
+        <a class="ptile" href="/docs/roadmap"><img src="/assets/photo/app-hand.png" alt="The app"/><span>The app</span></a>
+        <a class="ptile" href="/docs/business"><img src="/assets/photo/home-golden.png" alt="Your home"/><span>Your home</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Sandbox preview served by the hub · API: <code>/health</code> <code>/devices</code> <code>/events/recent</code> ·
+    <a href="https://openclaw.ai" target="_blank" rel="noopener">built on the open-home stack</a>
+  </footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function fmtUptime(s) {
+  s = Math.floor(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return (h?`${h}h `:"") + (m?`${m}m `:"") + `${sec}s`;
+}
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+async function tick() {
+  try {
+    const [h, d, e] = await Promise.all([
+      fetch("/health").then(r => r.json()),
+      fetch("/devices").then(r => r.json()),
+      fetch("/events/recent").then(r => r.json()),
+    ]);
+
+    // hub
+    $("dot").className = "dot ok";
+    $("statusText").textContent = "online";
+    $("hubState").textContent = h.status === "ok" ? "Online" : "Degraded";
+    $("hubSub").textContent = "hub is responding";
+    $("svc").textContent = h.service ?? "—";
+    $("uptime").textContent = h.uptime != null ? fmtUptime(h.uptime) : "—";
+    $("endpoint").textContent = location.host;
+
+    // devices
+    const devices = d.devices ?? [];
+    const s = d.summary ?? {};
+    $("deviceCount").textContent = devices.length;
+    $("deviceNote").textContent = devices.length
+      ? `${s.rooms ?? ""} rooms · ${s.lightsOn ?? 0}/${s.lightsTotal ?? 0} lights on · ${s.allLocked ? "locked" : "unlocked"} · ${s.temp ?? "–"}°`
+      : (d.note ?? "no devices yet");
+    $("deviceList").innerHTML = devices.map(dev =>
+      `<div class="kv"><span>${dev.icon ?? ""} ${dev.name ?? dev.id} <span style="color:var(--muted);font-weight:400">· ${dev.room ?? ""}</span></span><span style="color:${dev.on ? 'var(--accent)' : 'var(--muted)'};font-weight:600">${dev.state ?? dev.type ?? ""}</span></div>`).join("");
+
+    // events
+    const events = e.events ?? [];
+    $("feed").innerHTML = events.length
+      ? events.map(ev => `<div class="ev"><time>${fmtTime(ev.ts)}</time><span class="type">${ev.type}</span>${
+          ev.type === "hub.heartbeat" ? '<span class="tag">heartbeat</span>' : ""
+        }</div>`).join("")
+      : '<div class="empty">no events yet</div>';
+    $("updated").textContent = "· updated " + fmtTime(Date.now());
+    $("model").textContent = "model: " + (h.model ?? "local-first");
+  } catch (err) {
+    $("dot").className = "dot down";
+    $("statusText").textContent = "offline";
+    $("hubState").textContent = "Unreachable";
+    $("hubSub").textContent = "cannot reach hub — is the service running?";
+  }
+}
+
+tick();
+setInterval(tick, 5000);
+</script>
+</body>
+</html>

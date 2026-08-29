@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+<title>Control · openhome</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg"/>
+<meta name="theme-color" content="#0e1014"/>
+<style>
+  :root{--bg:#0e1014;--panel:#171a21;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{height:100%;background:var(--bg)}
+  body{margin:0;height:100%;background:radial-gradient(1200px 900px at 50% -5%,#141821,var(--bg));color:var(--text);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;overscroll-behavior:none;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+  img{-webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-select:none}
+  .core img{pointer-events:none}
+  /* App chrome */
+  .topbar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0) + 14px) 20px 12px}
+  .home{display:flex;align-items:center;gap:9px}
+  .home img{height:22px;display:block}
+  .home b{font-size:16px;font-weight:700}
+  .home small{color:var(--muted);font-size:12px}
+  .topbar .sp{flex:1}
+  .appnav{display:flex;gap:4px;flex-wrap:wrap;margin-left:6px}
+  .appnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid transparent}
+  .appnav a:hover{color:var(--text);background:var(--panel);border-color:var(--line)}
+  .appnav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  @media(max-width:720px){.appnav{display:none}}
+  .live{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:13px;font-weight:600}
+  .live .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .clock{font-variant-numeric:tabular-nums}
+  /* Stage */
+  .stage{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none}
+  .greeting{position:absolute;top:calc(env(safe-area-inset-top,0) + 104px);width:100%;text-align:center}
+  .greeting h1{font-size:24px;font-weight:700;margin:0;letter-spacing:-.02em}
+  .greeting p{color:var(--muted);font-size:14px;margin:4px 0 0}
+  .radial{position:relative;width:min(88vw,430px);height:min(88vw,430px);touch-action:none}
+  #wedges{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  /* wedges + icons hidden until press */
+  .ring{opacity:0;transform:scale(.86);transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.2,1)}
+  .radial.armed .ring{opacity:1;transform:scale(1)}
+  .sector{fill:var(--panel);stroke:var(--line);stroke-width:1;opacity:0;transition:fill .12s,opacity .12s}
+  .sector.near{opacity:.4}
+  .sector.hot{fill:rgba(61,220,151,.18);stroke:var(--accent);opacity:1}
+  .trail{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px rgba(61,220,151,.6))}
+  .label{position:absolute;transform:translate(-50%,-50%);text-align:center;pointer-events:none;width:78px;
+    opacity:0;transition:opacity .15s}
+  .radial.armed .label{opacity:0}
+  .radial.armed .label.near{opacity:.3}
+  .radial.armed .label.hot{opacity:1}
+  .label .ico{font-size:24px;line-height:1}
+  .label .txt{font-size:12px;color:var(--muted);margin-top:3px;font-weight:600}
+  .label.hot .txt{color:var(--accent)}
+  .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:104px;height:104px;border-radius:50%;
+    background:linear-gradient(180deg,#1e222b,#12151b);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 10px 40px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.02);transition:border-color .15s,box-shadow .15s}
+  .core::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid transparent;transition:border-color .2s}
+  .radial.armed .core{border-color:var(--accent)}
+  .radial.armed .core::before{border-color:rgba(61,220,151,.18)}
+  .core .mark{width:46px;height:46px;opacity:.85}
+  .core .dot{display:none}
+  .breadcrumb{position:absolute;top:calc(50% - 175px);left:50%;transform:translateX(-50%);height:26px;display:flex;align-items:center;gap:6px;
+    color:var(--muted);font-size:16px;font-weight:700;opacity:0;transition:opacity .15s;white-space:nowrap}
+  .breadcrumb.show{opacity:1}
+  .breadcrumb .name{color:var(--accent)}
+  .status{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 92px);left:0;right:0;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:0 16px;pointer-events:none}
+  .chip{font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel);font-weight:600}
+  .chip.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.1)}
+  .toast{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 34px);left:50%;transform:translateX(-50%) translateY(18px);opacity:0;transition:.22s;
+    background:var(--panel);border:1px solid var(--accent-dim);color:var(--text);padding:12px 18px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast b{color:var(--accent)}
+  a{color:var(--muted);text-decoration:none}
+  /* Scene snackbar + label choreography */
+  .greeting,.status{transition:opacity .3s ease, transform .3s ease}
+  body.scene-active .greeting{opacity:0;transform:translateY(-10px)}
+  body.scene-active .status{opacity:0}
+  .scenebar{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0) + 44px);
+    transform:translateX(-50%) translateY(32px) scale(.95);opacity:0;pointer-events:none;
+    display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--accent-dim);
+    border-radius:18px;padding:14px 22px 14px 18px;min-width:230px;z-index:12;
+    box-shadow:0 14px 55px rgba(0,0,0,.55), 0 0 0 4px rgba(61,220,151,.06);
+    transition:opacity .3s ease, transform .38s cubic-bezier(.2,.9,.2,1)}
+  .scenebar.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+  .sb-ico{font-size:34px;line-height:1}
+  .scenebar.show .sb-ico{animation:sbpop .55s cubic-bezier(.2,1.5,.4,1)}
+  @keyframes sbpop{0%{transform:scale(.3) rotate(-14deg);opacity:0}60%{transform:scale(1.18) rotate(3deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+  .sb-name{font-weight:800;font-size:18px;letter-spacing:-.01em}
+  .sb-sub{color:var(--muted);font-size:13px;margin-top:1px}
+  /* Listening — the core morphs in place (no modal) */
+  .core .mark{transition:opacity .2s,transform .2s}
+  .core.listening .mark{opacity:0;transform:scale(.55)}
+  .corewave{position:absolute;display:none;gap:4px;align-items:center;height:34px}
+  .core.listening .corewave{display:flex}
+  .corewave i{width:5px;height:9px;background:var(--accent);border-radius:3px;animation:eq 1s ease-in-out infinite}
+  .corewave i:nth-child(2){animation-delay:.15s}.corewave i:nth-child(3){animation-delay:.3s}
+  .corewave i:nth-child(4){animation-delay:.45s}.corewave i:nth-child(5){animation-delay:.6s}
+  @keyframes eq{0%,100%{height:8px}50%{height:30px}}
+  .core.listening{border-color:var(--accent);box-shadow:0 0 0 7px rgba(61,220,151,.10),0 10px 40px rgba(0,0,0,.5)}
+  .core.listening::before{border-color:var(--accent);animation:corePing 1.6s ease-out infinite}
+  @keyframes corePing{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.8);opacity:0}}
+  .voicecap{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 148px);left:0;right:0;text-align:center;padding:0 24px;color:var(--accent);font-weight:600;font-size:16px;min-height:22px;z-index:6}
+  .voicecap:empty{display:none}
+  .voicechips{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 22px);left:0;right:0;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding:0 20px;z-index:6}
+  .voicechips:empty{display:none}
+  .voicechips button{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 14px;border-radius:999px;font-weight:600;font-size:14px}
+  /* while the agent is listening, hide the device-status row so chips don't overlap */
+  body.talking .status{display:none}
+  body.talking .toast{display:none}
+  /* Tabs */
+  .tabs{position:fixed;top:calc(env(safe-area-inset-top,0) + 50px);left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:9;padding:6px 0}
+  .tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);font-weight:700;font-size:14px;padding:8px 20px;border-radius:999px}
+  .tabs button.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.1)}
+  /* House view */
+  .house{position:fixed;top:calc(env(safe-area-inset-top,0) + 90px);left:0;right:0;bottom:0;overflow-y:auto;z-index:7;display:none;padding:8px 16px calc(env(safe-area-inset-bottom,0) + 28px);background:var(--bg)}
+  .house.show{display:block}
+  .rooms{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .rcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:11px 12px 12px}
+  .rname{font-size:12.5px;font-weight:700;color:var(--text);margin:0 0 9px;display:flex;align-items:center;gap:6px}
+  .rname .re{display:inline-flex;color:var(--muted)}
+  .rname .re svg{width:17px;height:17px;display:block}
+  .rdev{display:flex;flex-wrap:wrap;gap:7px}
+  .badge{width:56px;height:56px;border-radius:15px;background:#0f1216;border:1px solid var(--line);color:var(--muted);overflow:hidden;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:0;transition:transform .1s,border-color .12s,box-shadow .12s,color .12s}
+  .badge:active{transform:scale(.9)}
+  .badge .bico{display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden;border-radius:14px}
+  .badge .bico svg{width:26px;height:26px;display:block}
+  .badge .bico img{width:132%;height:132%;object-fit:cover;object-position:center 46%;display:block;transition:filter .15s,opacity .15s}
+  .badge:not(.on) .bico img{filter:grayscale(.85) brightness(.6);opacity:.72}
+  .badge.on{border-color:var(--accent);box-shadow:0 0 16px rgba(61,220,151,.22);color:var(--accent)}
+  .badge.ro{opacity:.55}
+  .badge .btemp{position:absolute;bottom:2px;right:4px;font-size:9px;font-weight:800;color:var(--accent);text-shadow:0 1px 3px #000}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="home" href="/"><img src="/assets/brand/mark.svg" alt=""/><b>openhome</b></a>
+    <nav class="appnav">
+      <a href="/">Home</a><a href="/control" class="active">Control</a><a href="/music">Music</a><a href="/lights">Lights</a><a href="/speakers">Speakers</a><a href="/climate">Climate</a><a href="/docs">Docs</a>
+    </nav>
+    <span class="sp"></span>
+    <span class="live"><span class="dot"></span><span class="clock" id="clock">--:--</span> · Local</span>
+  </div>
+
+  <div class="tabs">
+    <button class="on" data-tab="control">Control</button>
+    <button data-tab="house">House</button>
+  </div>
+
+  <div class="stage">
+    <div class="greeting"><h1 id="hello">Good evening</h1><p id="subtitle">Hold to act · double-tap to talk · chain for scenes</p></div>
+
+    <div class="radial" id="radial">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <svg id="wedges" viewBox="0 0 400 400" aria-hidden="true">
+        <g class="ring" id="ring"></g>
+        <polyline class="trail" id="trail" points=""></polyline>
+      </svg>
+      <div id="labels"></div>
+      <div class="core" id="core">
+        <img class="mark" src="/assets/brand/mark.svg" alt="" draggable="false"/>
+        <span class="dot"></span>
+        <div class="corewave"><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <div class="voicecap" id="voicecap"></div>
+    <div class="voicechips" id="voicechips"></div>
+    <div class="status" id="status"></div>
+    <div class="toast" id="toast"></div>
+    <div class="scenebar" id="scenebar">
+      <div class="sb-ico" id="sbIco">🌙</div>
+      <div><div class="sb-name" id="sbName">Scene</div><div class="sb-sub" id="sbSub"></div></div>
+    </div>
+  </div>
+
+  <div class="house" id="view-house"><div id="houseGrid"></div></div>
+
+<script>
+// 8 actions, one per 45°. Angle clockwise from East (screen coords: +y down).
+// index: 0 E, 1 SE, 2 S, 3 SW, 4 W, 5 NW, 6 N, 7 NE
+const ACTIONS = [
+  { key:"cameras",   ico:"📷", label:"Cameras" },
+  { key:"doorbell",  ico:"🔔", label:"Doorbell" },
+  { key:"lock",      ico:"🔒", label:"Lock" },
+  { key:"away",      ico:"🚪", label:"Away" },
+  { key:"music",     ico:"🎵", label:"Music" },
+  { key:"goodnight", ico:"🌗", label:"Goodnight" },
+  { key:"lights",    ico:"💡", label:"Lights" },
+  { key:"movie",     ico:"🎬", label:"Movie" },
+];
+// Directional chords (multi-stroke marking menu) -> scenes.
+const ARROW = { 0:"→",1:"↘",2:"↓",3:"↙",4:"←",5:"↖",6:"↑",7:"↗" };
+const CHORDS = [
+  { seq:[6,7], key:"nighttime",     ico:"🌙", label:"Nighttime" },      // up → up-right
+  { seq:[6,2], key:"morning",       ico:"☀️", label:"Good morning" },   // up → down
+  { seq:[2,6], key:"matthews_room", ico:"🛏️", label:"Matthew's Room" }, // down → up
+  { seq:[7,1], key:"party",         ico:"🎉", label:"Party" },          // up-right → down-right
+  { seq:[4,0], key:"reading",       ico:"📖", label:"Reading" },        // left → right
+];
+const N = ACTIONS.length, STEP = 360/N, DEAD = 50;
+
+const radial=document.getElementById("radial"), core=document.getElementById("core");
+const ring=document.getElementById("ring"), trail=document.getElementById("trail");
+const labels=document.getElementById("labels"), toast=document.getElementById("toast");
+const status=document.getElementById("status"), breadcrumb=document.getElementById("breadcrumb");
+const CX=200,CY=200,R=190,INNER=64,MID=(R+INNER)/2+18;
+const pol=(cx,cy,r,d)=>{const a=d*Math.PI/180;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];};
+
+ACTIONS.forEach((act,i)=>{
+  const s=i*STEP-STEP/2,e=i*STEP+STEP/2;
+  const[x1,y1]=pol(CX,CY,R,s),[x2,y2]=pol(CX,CY,R,e),[ix1,iy1]=pol(CX,CY,INNER,s),[ix2,iy2]=pol(CX,CY,INNER,e);
+  const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+  p.setAttribute("d",`M ${ix1} ${iy1} L ${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2} L ${ix2} ${iy2} A ${INNER} ${INNER} 0 0 0 ${ix1} ${iy1} Z`);
+  p.setAttribute("class","sector"); p.dataset.i=i; ring.appendChild(p);
+  const ld=document.createElement("div"); ld.className="label"; ld.dataset.i=i;
+  ld.innerHTML=`<div class="ico">${act.ico}</div><div class="txt">${act.label}</div>`;
+  const[lx,ly]=pol(50,50,38,i*STEP); ld.style.left=lx+"%"; ld.style.top=ly+"%"; labels.appendChild(ld);
+});
+const sectors=[...ring.querySelectorAll(".sector")], labelEls=[...labels.querySelectorAll(".label")];
+
+let active=false, hot=-1, path=[], lastTap=0;
+const centerXY=()=>{const r=radial.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2];};
+function setHot(i){
+  hot=i;
+  const a=(i-1+N)%N, b=(i+1)%N;
+  const isNear=(k)=> i>=0 && (k===a||k===b);
+  sectors.forEach(s=>{const k=+s.dataset.i; s.classList.toggle("hot",k===i); s.classList.toggle("near",isNear(k));});
+  labelEls.forEach(l=>{const k=+l.dataset.i; l.classList.toggle("hot",k===i); l.classList.toggle("near",isNear(k));});
+}
+function arm(on){
+  active=on; radial.classList.toggle("armed",on);
+  if(on){ if(navigator.vibrate)navigator.vibrate(8); }
+  else { setHot(-1); path=[]; trail.setAttribute("points",""); breadcrumb.classList.remove("show"); }
+}
+function drawTrail(){
+  const pts=path.map(i=>{const[x,y]=pol(CX,CY,MID,i*STEP);return `${x},${y}`;});
+  trail.setAttribute("points", pts.length>1?pts.join(" "):"");
+}
+function updateBreadcrumb(){
+  if(!path.length){breadcrumb.classList.remove("show");return;}
+  const arrows=path.map(i=>ARROW[i]).join(" ");
+  const c=matchChord(path);
+  breadcrumb.innerHTML = c ? `${arrows} <span class="name">${c.ico} ${c.label}</span>` : arrows;
+  breadcrumb.classList.add("show");
+}
+function matchChord(p){
+  return CHORDS.find(c=>c.seq.length===p.length && c.seq.every((v,k)=>v===p[k]));
+}
+function pt(e){const t=e.touches?e.touches[0]:e;return[t.clientX,t.clientY];}
+function update(e){
+  if(!active)return;
+  const[px,py]=pt(e),[cx,cy]=centerXY(),dx=px-cx,dy=py-cy,dist=Math.hypot(dx,dy);
+  if(dist<DEAD){ setHot(-1); return; }
+  let deg=Math.atan2(dy,dx)*180/Math.PI; if(deg<0)deg+=360;
+  const i=Math.round(deg/STEP)%N;
+  if(i!==hot){
+    setHot(i);
+    if(path[path.length-1]!==i){ path.push(i); if(navigator.vibrate)navigator.vibrate(6); drawTrail(); updateBreadcrumb(); }
+  }
+}
+function start(e){ e.preventDefault();
+  if(listening){ if(recording && mediaRec && mediaRec.state==="recording"){ try{mediaRec.stop();}catch(_){} } else stopVoice(); return; }
+  try{radial.setPointerCapture(e.pointerId);}catch(_){} path=[]; arm(true); update(e); }
+function end(){
+  if(!active)return;
+  const seq=path.slice(), last=seq[seq.length-1];
+  arm(false);
+  if(seq.length===0){ // tap on center (no direction) -> double-tap wakes the agent
+    const now=performance.now();
+    if(now-lastTap<350){ lastTap=0; startVoice(); } else lastTap=now;
+    return;
+  }
+  const chord=matchChord(seq);
+  if(chord) fire({key:chord.key,ico:chord.ico,label:chord.label}, true);
+  else if(last>=0 && last!=null) fire(ACTIONS[last]);
+}
+radial.addEventListener("pointerdown",start);
+radial.addEventListener("pointermove",update);
+radial.addEventListener("pointerup",end);
+radial.addEventListener("pointercancel",()=>arm(false));
+window.addEventListener("contextmenu",e=>e.preventDefault());
+// kill iOS double-tap-to-zoom (Safari ignores user-scalable=no) + pinch/dbl-click zoom
+let lastTouchEnd=0;
+document.addEventListener("touchend",(e)=>{ const now=Date.now(); if(now-lastTouchEnd<=350) e.preventDefault(); lastTouchEnd=now; },{passive:false});
+document.addEventListener("gesturestart",(e)=>e.preventDefault());
+document.addEventListener("dblclick",(e)=>e.preventDefault());
+
+let toastT;
+async function fire(act, isChord){
+  if(navigator.vibrate)navigator.vibrate(18);
+  try{
+    const r=await fetch("/control",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:act.key})}).then(r=>r.json());
+    if(isChord || r.scene) sceneBurst(act, r);
+    else { showToast(act, r.label); render(); }
+  }catch(_){ showToast(act); }
+}
+
+// Scene moment: labels fade out, a bold snackbar pops in, labels return once it dequeues.
+const scenebar=document.getElementById("scenebar"), sbIco=document.getElementById("sbIco"),
+  sbName=document.getElementById("sbName"), sbSub=document.getElementById("sbSub");
+const SCENE_SUB={
+  nighttime:"Lights off · doors locked · quiet",
+  good_night:"Lights off · doors locked · quiet",
+  morning:"Lights up · coffee on · unlocked",
+  good_morning:"Lights up · coffee on · unlocked",
+  movie:"Dimmed · TV on · shades down",
+  away:"Locked up · lights off · cameras on",
+  home:"Unlocked · warmed up · lit",
+  party:"Every light up · music on 🎶",
+  reading:"Soft light · everything else calm",
+  matthews_room:"Bedroom light · music · shades",
+};
+let sceneT;
+function sceneBurst(act, r){
+  render();
+  document.body.classList.add("scene-active");
+  sbIco.textContent=act.ico; sbName.textContent=act.label;
+  sbSub.textContent=SCENE_SUB[act.key] || r.label || "";
+  scenebar.classList.add("show");
+  if(navigator.vibrate)navigator.vibrate([12,28,12]);
+  clearTimeout(sceneT);
+  sceneT=setTimeout(()=>{
+    scenebar.classList.remove("show");
+    setTimeout(()=>document.body.classList.remove("scene-active"), 320); // labels reappear after it dequeues
+  }, 2400);
+}
+function showToast(act,label){
+  toast.innerHTML=label?`${act.ico} <b>${act.label}</b> → ${label}`:`${act.ico} <b>${act.label}</b>`;
+  toast.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>toast.classList.remove("show"),1700);
+}
+async function render(){
+  try{
+    const d=await fetch("/devices").then(r=>r.json()); const s=d.summary||{};
+    status.innerHTML=[
+      `<span class="chip ${s.lightsOn?'on':''}">💡 ${s.lightsOn}/${s.lightsTotal}</span>`,
+      `<span class="chip ${s.allLocked?'on':''}">${s.allLocked?'🔒 Locked':'🔓 Unlocked'}</span>`,
+      `<span class="chip ${s.anyPlaying?'on':''}">🎵 ${s.anyPlaying?'Playing':'Off'}</span>`,
+      `<span class="chip">🌡 ${s.temp}°</span>`,
+    ].join("");
+  }catch(_){}
+}
+// ---- Double-tap-to-talk: the core wakes in place (no modal) ----
+const hello=document.getElementById("hello"), subtitle=document.getElementById("subtitle"),
+  voicechips=document.getElementById("voicechips"), voicecap=document.getElementById("voicecap");
+const DEFAULT_SUB="Hold to act · double-tap to talk · chain for scenes";
+const SAMPLES=["Good night","Turn on the lights","Lock the door","Play music"];
+let recog=null, listening=false, handled=false, actx=null, mediaRec=null, mediaStream=null, recording=false, recStopT=null;
+
+// Synthesized chime — no audio asset needed.
+function chime(freqs){
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==="suspended") actx.resume();
+    const t0=actx.currentTime;
+    freqs.forEach((f,i)=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type="sine"; o.frequency.value=f; o.connect(g); g.connect(actx.destination);
+      const s=t0+i*0.09;
+      g.gain.setValueAtTime(0,s); g.gain.linearRampToValueAtTime(0.16,s+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,s+0.2);
+      o.start(s); o.stop(s+0.22);
+    });
+  }catch(_){}
+}
+
+function secureHint(){ return window.isSecureContext ? "Didn't catch that — tap a command" : "Open the 🔒 https link to talk — or tap a command"; }
+async function startVoice(){
+  if(listening)return; listening=true; handled=false;
+  core.classList.add("listening"); document.body.classList.add("talking");
+  chime([660,880]);                              // rising "wake" chime
+  ttsWarmup();                                   // unlock iOS speech within this gesture
+  if(navigator.vibrate)navigator.vibrate([10,40,10]);
+  voicecap.textContent=""; voicechips.innerHTML="";   // leave the top greeting untouched
+  const hasMic = navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder;
+  // Explain precisely why the mic can't prompt, instead of failing silently.
+  if(!window.isSecureContext){ voiceSamples("Voice needs the 🔒 https link — or tap:"); return; }
+  if(!hasMic){ voiceSamples("Open in Safari (not the in-app browser) for voice — or tap:"); return; }
+  try{
+    await startRecording();
+  }catch(err){
+    const n = (err&&err.name)||"blocked";
+    const msg = n==="NotAllowedError" ? "Mic blocked — Safari ‘AA’ → Website Settings → Microphone → Allow. Or tap:"
+              : n==="NotFoundError"  ? "No microphone found — or tap:"
+              : "Mic "+n+" — open in Safari & allow. Or tap:";
+    voiceSamples(msg);
+  }
+}
+// Real voice: record mic audio → hub → Gemini transcribes + acts, then speaks back.
+async function startRecording(){
+  mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  const chunks=[];
+  mediaRec=new MediaRecorder(mediaStream);
+  mediaRec.ondataavailable=(e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+  mediaRec.onstop=async ()=>{
+    recording=false; stopStream();
+    if(!listening) return;
+    voicecap.textContent="Thinking…";
+    const blob=new Blob(chunks,{type:(mediaRec&&mediaRec.mimeType)||"audio/webm"});
+    let b64=""; try{ b64=await blobToB64(blob); }catch(_){}
+    try{
+      const r=await fetch("/agent/audio",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({audio:b64,mime:blob.type})}).then(r=>r.json());
+      voicecap.textContent = r.reply || (r.transcript?('"'+r.transcript+'"'):"(no response)");
+      speak(r.reply); chime([880,1320]); render();
+      if(navigator.vibrate)navigator.vibrate(16);
+    }catch(_){ voicecap.textContent="(couldn't reach the agent)"; }
+    setTimeout(stopVoice, 2800);
+  };
+  recording=true; mediaRec.start();
+  voicecap.textContent="Listening… (tap to send)";
+  recStopT=setTimeout(()=>{ try{ if(recording && mediaRec.state==="recording") mediaRec.stop(); }catch(_){} }, 6000);
+}
+function stopStream(){ try{ if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; } }catch(_){} if(recStopT){ clearTimeout(recStopT); recStopT=null; } }
+function blobToB64(blob){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res(String(r.result).split(",")[1]||""); r.onerror=rej; r.readAsDataURL(blob); }); }
+// iOS only lets speech start from a user gesture — "unlock" it on the double-tap.
+function ttsWarmup(){ try{ if(window.speechSynthesis){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(" "); u.volume=0; speechSynthesis.speak(u); } }catch(_){} }
+function speak(t){ try{ if(t && window.speechSynthesis){ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(t); u.rate=1.02; u.pitch=1; u.lang="en-US"; speechSynthesis.speak(u); speechSynthesis.resume(); } }catch(_){} }
+function voiceSamples(msg){
+  voicecap.textContent=msg; voicechips.innerHTML="";
+  SAMPLES.forEach(s=>{ const b=document.createElement("button"); b.textContent=s;
+    b.addEventListener("click",(ev)=>{ ev.stopPropagation(); voicecap.textContent='"'+s+'"'; heard(s); });
+    voicechips.appendChild(b); });
+}
+async function heard(text){
+  handled=true; try{recog&&recog.stop();}catch(_){}
+  voicechips.innerHTML="";
+  try{
+    const r=await fetch("/agent",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})}).then(r=>r.json());
+    voicecap.textContent=r.reply||""; speak(r.reply); chime([880,1320]); render();
+    if(navigator.vibrate)navigator.vibrate(16);
+  }catch(_){ voicecap.textContent="(couldn't reach the hub)"; }
+  setTimeout(stopVoice, 2800);
+}
+function stopVoice(){
+  listening=false; recording=false;
+  core.classList.remove("listening"); document.body.classList.remove("talking");
+  voicechips.innerHTML=""; voicecap.textContent="";
+  try{ if(mediaRec && mediaRec.state!=="inactive") mediaRec.stop(); }catch(_){}
+  stopStream();
+  try{recog&&recog.stop();}catch(_){} recog=null;
+}
+
+function tick(){
+  const now=new Date(), h=now.getHours();
+  document.getElementById("clock").textContent=now.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  if(!listening) hello.textContent = h<5?"Good night":h<12?"Good morning":h<18?"Good afternoon":"Good evening";
+}
+tick(); setInterval(tick,10000); render();
+// On an insecure origin the browser blocks the mic — tell the user up front.
+if(!window.isSecureContext){ subtitle.textContent = "🔒 Voice needs the secure (https) link"; }
+
+// ---- House tab: visualize + directly control every device ----
+const houseEl=document.getElementById("view-house"), houseGrid=document.getElementById("houseGrid");
+const tabBtns=[...document.querySelectorAll(".tabs button")];
+const ACTIONABLE=["light","lock","plug","speaker","shade","garage","camera"];
+let housePoll=null, rawMap={};
+
+function showTab(name){
+  tabBtns.forEach(t=>t.classList.toggle("on",t.dataset.tab===name));
+  if(name==="house"){
+    if(listening) stopVoice();
+    houseEl.classList.add("show"); renderHouse();
+    housePoll=setInterval(renderHouse,4000);
+  } else {
+    houseEl.classList.remove("show");
+    if(housePoll){ clearInterval(housePoll); housePoll=null; }
+  }
+}
+tabBtns.forEach(t=>t.addEventListener("click",()=>showTab(t.dataset.tab)));
+
+const ROOM_SVG={
+  "Entry":'<rect x="6" y="3" width="12" height="18" rx="1"/><circle cx="14.5" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  "Living Room":'<path d="M4 11V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/><path d="M2 12a2 2 0 0 1 4 0v4h12v-4a2 2 0 0 1 4 0v5H2z"/>',
+  "Kitchen":'<path d="M5 2v20"/><path d="M3 2v7a2 2 0 0 0 4 0V2"/><path d="M16 2a4 3 0 0 0-3 5v6h6V2"/><path d="M19 13v9"/>',
+  "Bedroom":'<path d="M2 5v14"/><path d="M2 9h18a2 2 0 0 1 2 2v8"/><path d="M2 16h20"/><path d="M6 9V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+  "Office":'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  "Bathroom":'<path d="M4 12h16v3a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M6 12V6a2 2 0 0 1 4 0"/><path d="M6 19l-1 2"/><path d="M18 19l1 2"/>',
+  "Hallway":'<path d="M12 2v4"/><path d="M8 6h8l2 5H6z"/><path d="M9 11a3 3 0 0 0 6 0"/>',
+  "Garage":'<path d="M2 9 12 4l10 5"/><path d="M4 10v10h16V10"/><path d="M7 20v-5h10v5"/><path d="M7 15h10"/>',
+  "Backyard":'<path d="M12 3 7 10h3l-3 5h4v6h2v-6h4l-3-5h3z"/>',
+};
+function roomSvg(name){ return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ROOM_SVG[name]||""}</svg>`; }
+async function renderHouse(){
+  try{
+    const d=await fetch("/home").then(r=>r.json());
+    rawMap={}; d.devices.forEach(dev=>rawMap[dev.id]=dev.raw);
+    const byRoom={};
+    d.devices.forEach(dev=>{ (byRoom[dev.room]=byRoom[dev.room]||[]).push(dev); });
+    houseGrid.innerHTML=`<div class="rooms">`+ d.rooms.filter(r=>byRoom[r]).map(room=>
+      `<div class="rcard"><div class="rname"><span class="re">${roomSvg(room)}</span> ${room}</div>
+        <div class="rdev">${byRoom[room].map(badgeHtml).join("")}</div></div>`
+    ).join("") + `</div>`;
+    houseGrid.querySelectorAll(".bico img").forEach(img=>img.addEventListener("error",()=>{
+      const t=img.closest(".badge")&&img.closest(".badge").dataset.type; if(t) img.outerHTML=iconSvg(t);
+    }));
+  }catch(_){}
+}
+// Modern monochrome device icons (transparent SVG, currentColor → grey off / mint on).
+const ICONS={
+  light:'<path d="M15 14c.2-1 .7-1.7 1.5-2.5C17.7 10.2 18 9 18 7.5A6 6 0 0 0 6 7.5c0 1.5.5 2.7 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 21h4"/>',
+  lock:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  camera:'<path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  doorbell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+  speaker:'<rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="14" r="4"/><circle cx="12" cy="6" r=".7" fill="currentColor" stroke="none"/>',
+  thermostat:'<path d="M14 14.76V4a2 2 0 0 0-4 0v10.76a4 4 0 1 0 4 0Z"/>',
+  plug:'<path d="M12 22v-5"/><path d="M9 8V3"/><path d="M15 8V3"/><path d="M6 8h12v3a6 6 0 0 1-12 0V8Z"/>',
+  garage:'<path d="M2 9 12 4l10 5"/><path d="M4 10v10h16V10"/><path d="M7 20v-5h10v5"/><path d="M7 15h10"/>',
+  shade:'<path d="M4 3h16"/><path d="M5 3v10"/><path d="M19 3v14"/><path d="M9 13h10"/><path d="M9 17h10"/><circle cx="5" cy="17" r="2"/>',
+  vacuum:'<circle cx="12" cy="12" r="9"/><path d="M4 9.5h16"/><circle cx="12" cy="13" r="1.4"/>',
+  sensor:'<circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 15.5a5 5 0 0 1 0-7"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M6 18a9 9 0 0 1 0-12"/><path d="M18 6a9 9 0 0 1 0 12"/>',
+};
+function iconSvg(type){
+  const p=ICONS[type]||ICONS.sensor;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+}
+const PRODUCTS=new Set(["light","lock","camera","doorbell","speaker","thermostat","plug","garage","shade","vacuum","sensor"]);
+function badgeHtml(dev){
+  const tappable=ACTIONABLE.includes(dev.type) || dev.type==="thermostat";
+  const ro = tappable ? "" : "ro";
+  const isThermo = dev.type==="thermostat";
+  const media = PRODUCTS.has(dev.type)
+    ? `<img src="/assets/products/${dev.type}.png" alt="" draggable="false"/>`
+    : iconSvg(dev.type);
+  return `<button class="badge ${dev.on?'on':''} ${ro}" data-id="${dev.id}" data-type="${dev.type}" title="${dev.name}: ${dev.state}">
+    <span class="bico">${media}</span>${isThermo?`<span class="btemp">${dev.raw.target}°</span>`:''}
+  </button>`;
+}
+function patchFor(type,raw){
+  switch(type){
+    case "light": return {on:!raw.on};
+    case "lock": return {locked:!raw.locked};
+    case "plug": return {on:!raw.on};
+    case "speaker": return {playing:!raw.playing};
+    case "shade": return {position: raw.position>0?0:100};
+    case "garage": return {open:!raw.open};
+    case "camera": return {recording:!raw.recording};
+    default: return null;
+  }
+}
+async function setDev(id,patch){
+  if(navigator.vibrate)navigator.vibrate(8);
+  try{ await fetch("/device",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,patch})}); }catch(_){}
+  renderHouse();
+}
+houseGrid.addEventListener("click", async (e)=>{
+  const b=e.target.closest(".badge"); if(!b || b.classList.contains("ro")) return;
+  const id=b.dataset.id, type=b.dataset.type, raw=rawMap[id]; if(!raw) return;
+  if(type==="thermostat"){ let t=(raw.target||70)+1; if(t>76) t=64; return setDev(id,{target:t}); }
+  const patch=patchFor(type,raw); if(patch) setDev(id,patch);
+});
+</script>
+</body>
+</html>
