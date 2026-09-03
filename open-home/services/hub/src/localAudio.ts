@@ -16,7 +16,7 @@
  * cloud host will correctly report an empty scan.
  */
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import dgram from "node:dgram";
 import net from "node:net";
 
@@ -155,15 +155,49 @@ export function scanWifi(timeoutMs = 4000): Promise<Array<{ id: string; name: st
 }
 
 // ---- Bluetooth discovery via bluetoothctl ----
+// A Bluetooth "Class of Device" whose major class is Audio/Video (0x04).
+function isAudioClass(cls: string): boolean {
+  const n = cls ? parseInt(cls, 16) : 0;
+  if (!n) return false;
+  return ((n >> 8) & 0x1f) === 0x04;
+}
 export async function scanBluetooth(timeoutMs = 8000): Promise<{ available: boolean; reason?: string; devices: Array<{ id: string; name: string; mac: string; kind: string }> }> {
   if (!(await bluetoothAvailable())) return { available: false, reason: "No Bluetooth adapter on this host.", devices: [] };
+  const pw = await sh("bluetoothctl", ["power", "on"], 4000);
+  console.log(`[bt] power on -> ${(pw.out.trim().split("\n").pop() || pw.ok)}`);
+  console.log(`[bt] scanning for ${timeoutMs}ms...`);
   await sh("bluetoothctl", ["--timeout", String(Math.ceil(timeoutMs / 1000)), "scan", "on"], timeoutMs + 2000);
   const r = await sh("bluetoothctl", ["devices"], 4000);
-  const devices: any[] = [];
+  const raw: Array<{ mac: string; rawName: string }> = [];
   for (const line of r.out.split("\n")) {
     const m = line.match(/Device\s+([0-9A-F:]{17})\s+(.+)/i);
-    if (m) { const mac = m[1], name = m[2].trim(); devices.push({ id: "bt_" + mac.replace(/:/g, ""), name, mac, kind: "bluetooth" }); }
+    if (m) raw.push({ mac: m[1], rawName: m[2].trim() });
   }
+  // Enrich each device with its real name + device class so we show NAMES (not MACs)
+  // and surface actual speakers instead of every stray BLE beacon/phone/bulb nearby.
+  const enriched = await Promise.all(raw.map(async ({ mac, rawName }) => {
+    const info = await sh("bluetoothctl", ["info", mac], 2500);
+    const grab = (re: RegExp) => (info.out.match(re)?.[1] || "").trim();
+    const candidate = grab(/\bAlias:\s*(.+)/) || grab(/\bName:\s*(.+)/) || rawName;
+    const icon = grab(/\bIcon:\s*(.+)/);
+    const cls = grab(/\bClass:\s*(0x[0-9a-fA-F]+)/);
+    const macDash = mac.replace(/:/g, "-");
+    // A "real" name is anything that isn't just the MAC echoed back.
+    const named = !!candidate && candidate.replace(/:/g, "-").toUpperCase() !== macDash.toUpperCase();
+    const audio = isAudioClass(cls)
+      || /audio|headset|headphone|speaker|sound|hifi/i.test(icon)
+      || /audio|speaker|headphone|headset|sound|jbl|bose|sonos|soundcore|marshall|anker|beats|echo|homepod/i.test(candidate);
+    const name = named ? candidate : (audio ? "Bluetooth speaker" : macDash);
+    return { id: "bt_" + mac.replace(/:/g, ""), name, mac, kind: "bluetooth", audio, named };
+  }));
+  // This is a SPEAKER picker: show audio devices only (speakers/headphones/AV).
+  // Fall back to named devices, then everything, so the list is never mysteriously empty.
+  let picked = enriched.filter((d) => d.audio);
+  if (!picked.length) picked = enriched.filter((d) => d.named);
+  if (!picked.length) picked = enriched;
+  picked.sort((a, b) => (Number(b.audio) - Number(a.audio)) || (Number(b.named) - Number(a.named)));
+  const devices = picked.map(({ id, name, mac, kind }) => ({ id, name, mac, kind }));
+  console.log(`[bt] scan: ${raw.length} seen → ${devices.length} shown: ${devices.map((d) => d.name).join(", ") || "none"}`);
   return { available: true, devices };
 }
 
@@ -198,14 +232,62 @@ async function btConnected(mac: string): Promise<boolean> {
   const r = await sh("bluetoothctl", ["info", mac], 4000);
   return /Connected:\s*yes/i.test(r.out);
 }
+
+// Run a sequence of bluetoothctl commands in ONE interactive session (so an agent
+// stays registered for pairing). Resolves early on a terminal marker or on timeout.
+function btShell(commands: string[], timeoutMs = 24000): Promise<string> {
+  return new Promise((resolve) => {
+    let out = "", done = false;
+    const p = spawn("bluetoothctl", []);
+    const finish = () => {
+      if (done) return; done = true; clearTimeout(timer);
+      try { p.stdin.write("quit\n"); } catch {}
+      try { p.kill(); } catch {}
+      resolve(out);
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    p.stdout.on("data", (d) => {
+      out += d;
+      if (/Connection successful|Failed to connect|Failed to pair|not available|org\.bluez\.Error/i.test(out)) setTimeout(finish, 900);
+    });
+    p.stderr.on("data", (d) => { out += d; });
+    p.on("close", () => finish());
+    p.on("error", () => finish());
+    // Feed commands spaced out so async pair/connect can complete before the next one.
+    let i = 0;
+    const feed = () => {
+      if (done || i >= commands.length) return;
+      try { p.stdin.write(commands[i++] + "\n"); } catch {}
+      setTimeout(feed, 1600);
+    };
+    feed();
+  });
+}
+
+// Pair (idempotent) → trust → connect, in one session with an agent. Logs the key lines.
+async function btPairConnect(mac: string): Promise<boolean> {
+  const out = await btShell([
+    "power on",
+    "agent NoInputNoOutput",
+    "default-agent",
+    `pair ${mac}`,
+    `trust ${mac}`,
+    `connect ${mac}`,
+  ]);
+  const key = out.split("\n").filter((l) => /pair|trust|connect|success|fail|agent|error|not available/i.test(l)).map((l) => l.trim()).join(" | ");
+  console.log(`[bt] pair/connect ${mac}: ${key || "(no output)"}`);
+  return /Connection successful/i.test(out) || /Connected:\s*yes/i.test(out);
+}
 async function checkOne(sp: LocalSpeaker): Promise<void> {
   if (sp.kind === "bluetooth" && sp.mac) {
-    if (!(await bluetoothAvailable())) { sp.status = "offline"; return; }
-    if (await btConnected(sp.mac)) { sp.status = "connected"; sp.lastSeen = Date.now(); sp.attempts = 0; return; }
+    if (!(await bluetoothAvailable())) { sp.status = "offline"; console.log(`[bt] ${sp.name}: no adapter`); return; }
+    await sh("bluetoothctl", ["power", "on"], 3000);
+    if (await btConnected(sp.mac)) { sp.status = "connected"; sp.lastSeen = Date.now(); sp.attempts = 0; console.log(`[bt] ${sp.name} (${sp.mac}): already connected`); return; }
     sp.status = "reconnecting"; sp.attempts++;
-    const r = await sh("bluetoothctl", ["connect", sp.mac], 8000);
-    if (r.ok && /Connection successful/i.test(r.out)) { sp.status = "connected"; sp.lastSeen = Date.now(); sp.attempts = 0; }
-    else if (sp.attempts > 3) sp.status = "offline";
+    console.log(`[bt] ${sp.name} (${sp.mac}): attempt ${sp.attempts} — pairing/connecting…`);
+    const ok = await btPairConnect(sp.mac);
+    if (ok) { sp.status = "connected"; sp.lastSeen = Date.now(); sp.attempts = 0; console.log(`[bt] ${sp.name}: CONNECTED ✅`); }
+    else { if (sp.attempts > 3) sp.status = "offline"; console.log(`[bt] ${sp.name}: connect failed (status ${sp.status})`); }
   } else if (sp.address) {
     const port = sp.port || (sp.service === "chromecast" ? 8009 : sp.service === "airplay" ? 7000 : sp.service === "snapcast" ? 1704 : 80);
     const up = await tcpReachable(sp.address, port);

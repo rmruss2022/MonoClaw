@@ -4,6 +4,7 @@
  * decides. Falls back to the keyword NLU in home.ts when no provider is available.
  */
 import * as home from "./home.ts";
+import * as lights from "./lights.ts";
 import { spawn } from "node:child_process";
 import { writeFile, readFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -17,8 +18,13 @@ export function aiEnabled(): boolean { return !!ANTHROPIC_KEY || !!GEMINI_TOKEN;
 export function provider(): string { return ANTHROPIC_KEY ? "Anthropic Claude" : GEMINI_TOKEN ? "Gemini" : "keyword"; }
 
 function systemPrompt(): string {
-  const devs = home.allDevices()
-    .map((d) => `- ${d.id} (${d.type}, ${d.room}) = ${JSON.stringify(d.state)}`).join("\n");
+  // Real onboarded lights (ESPHome/Matter) are the source of truth for lighting;
+  // remaining mock devices (locks, plugs, thermostat, cameras…) come from home.ts.
+  const realLights = lights.listLights().filter((l) => l.real)
+    .map((l) => `- ${l.id} (light, ${l.room}) = {"on":${l.on},"brightness":${l.brightness}}`);
+  const mockDevs = home.allDevices()
+    .map((d) => `- ${d.id} (${d.type}, ${d.room}) = ${JSON.stringify(d.state)}`);
+  const devs = [...realLights, ...mockDevs].join("\n");
   const scenes = home.getScenes().map((s) => `- ${s.id}: ${s.description}`).join("\n");
   return `You are "openhome", a warm, concise local smart-home agent. Control the house by returning actions.
 
@@ -38,7 +44,7 @@ Each action is exactly one of:
   {"allOff":true}                        // turn EVERYTHING off: all lights (INCLUDING the porch light), plugs, speakers, cameras, garage, vacuum, thermostat
   {"allOn":true}                         // turn all lights and plugs on
 Rules:
-- The porch light (light_porch) IS a light; "all lights off" / "turn everything off" MUST include it.
+- "all lights off" / "turn everything off" MUST include every light listed above.
 - For "turn off everything / all devices / all off" return exactly [{"allOff":true}].
 - For "turn on everything" return exactly [{"allOn":true}].
 - Locks are security: only unlock when explicitly asked, never as part of "all off".
@@ -136,11 +142,19 @@ export async function aiAudio(base64: string, mime: string): Promise<AiResult> {
 }
 
 /** Apply the model's actions to the mock house. Returns what changed for events. */
-export function execute(actions: any[]): Array<{ label: string }> {
+// Route light actions to the REAL onboarded devices (lights.control); everything
+// else (locks/plugs/thermostat/etc.) still applies to the mock home model.
+const realLightPatch = (p: any) => ({ on: p?.on, brightness: p?.brightness, rgb: p?.rgb, colorTempK: p?.colorTempK });
+async function setAllRealLights(patch: any): Promise<void> {
+  for (const l of lights.listLights().filter((x) => x.real)) { try { await lights.control(l.id, realLightPatch(patch)); } catch {} }
+}
+export async function execute(actions: any[]): Promise<Array<{ label: string }>> {
   const done: Array<{ label: string }> = [];
+  const isRealLight = (id: string) => lights.listLights().some((l) => l.real && l.id === id);
   for (const a of actions ?? []) {
     try {
       if (a?.allOff) {
+        await setAllRealLights({ on: false });
         home.setByType("light", { on: false });
         home.setByType("plug", { on: false });
         home.setByType("speaker", { playing: false });
@@ -150,13 +164,19 @@ export function execute(actions: any[]): Array<{ label: string }> {
         home.setDevice("thermostat_main", { mode: "off" });
         done.push({ label: "all_off" });
       } else if (a?.allOn) {
+        await setAllRealLights({ on: true });
         home.setByType("light", { on: true });
         home.setByType("plug", { on: true });
         home.setDevice("thermostat_main", { mode: "auto" });
         done.push({ label: "all_on" });
       } else if (a?.scene) { home.activateScene(String(a.scene)); done.push({ label: `scene.${a.scene}` }); }
-      else if (a?.type && a?.patch) { home.setByType(String(a.type), a.patch); done.push({ label: `type.${a.type}` }); }
-      else if (a?.device && a?.patch) { if (home.setDevice(String(a.device), a.patch)) done.push({ label: `device.${a.device}` }); }
+      else if (a?.type === "light" && a?.patch) {
+        await setAllRealLights(a.patch); home.setByType("light", a.patch); done.push({ label: "type.light" });
+      } else if (a?.type && a?.patch) { home.setByType(String(a.type), a.patch); done.push({ label: `type.${a.type}` }); }
+      else if (a?.device && a?.patch) {
+        if (isRealLight(String(a.device))) { const r = await lights.control(String(a.device), realLightPatch(a.patch)); if (r.ok) done.push({ label: `device.${a.device}` }); }
+        else if (home.setDevice(String(a.device), a.patch)) done.push({ label: `device.${a.device}` });
+      }
     } catch { /* skip bad action */ }
   }
   return done;

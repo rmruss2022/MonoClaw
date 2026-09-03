@@ -76,7 +76,7 @@ setInterval(() => audio.tick(2_000), 2_000);
 setInterval(async () => {
   if (!spotify.connected() || spotify.rateLimited()) return;
   try { const np = await spotify.currentlyPlaying(); if (np) audio.applySpotifyPlayback(np); } catch {}
-}, 5_000);
+}, 12_000);
 
 // Keep the live Connect devices (Mac/iPhone/…) synced into the speaker model.
 speakerService.refresh().catch(() => {});
@@ -113,8 +113,23 @@ function json(res: import("node:http").ServerResponse, body: unknown, code = 200
 const handler = async (req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse) => {
   const url = (req.url ?? "/").split("?")[0];
 
-  // Dashboard (same-origin UI)
-  if (url === "/" || url === "/index.html") {
+  // Home = the control surface (same-origin UI)
+  if (url === "/") {
+    try {
+      const html = await readFile(CONTROL, "utf8");
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+      return;
+    } catch {
+      json(res, { error: "control_not_found" }, 500);
+      return;
+    }
+  }
+
+  // Legacy hub dashboard (status / devices / event stream)
+  if (url === "/dashboard" || url === "/index.html") {
     try {
       const html = await readFile(DASHBOARD, "utf8");
       res.statusCode = 200;
@@ -136,7 +151,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     if (ai.aiEnabled()) {
       try {
         const r = await ai.aiText(text);
-        const done = ai.execute(r.actions);
+        const done = await ai.execute(r.actions);
         console.log(`[agent] in=${JSON.stringify(text)} model=${JSON.stringify(r.actions)} executed=${JSON.stringify(done)} reply=${JSON.stringify(r.reply)}`);
         done.forEach((a) => bus.publish({ type: `agent.${a.label}`, ts: Date.now(), payload: { via: "voice", text } }));
         json(res, { ok: true, heard: text, reply: r.reply, understood: done.length > 0, actions: done, source: "ai", summary: home.summary() });
@@ -151,17 +166,27 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
 
   // Voice agent — real speech: browser sends captured audio, Gemini transcribes + acts.
   if (url === "/agent/audio" && req.method === "POST") {
-    if (!ai.aiEnabled()) { json(res, { ok: false, error: "ai_disabled" }, 503); return; }
+    if (!ai.aiEnabled()) { console.log("[agent/audio] rejected: ai_disabled"); json(res, { ok: false, error: "ai_disabled" }, 503); return; }
     const body = await readBody(req);
     let audio = "", mime = "audio/webm";
     try { const p = JSON.parse(body || "{}"); audio = String(p.audio ?? ""); mime = String(p.mime ?? mime); } catch {}
+    console.log(`[agent/audio] received b64bytes=${audio.length} mime=${mime}`);
+    if (!audio) { json(res, { ok: false, error: "empty_audio", reply: "I didn't catch any audio — hold a moment longer." }, 200); return; }
     try {
       const r = await ai.aiAudio(audio, mime);
-      const done = ai.execute(r.actions);
+      const done = await ai.execute(r.actions);
       console.log(`[agent/audio] transcript=${JSON.stringify(r.transcript)} model=${JSON.stringify(r.actions)} executed=${JSON.stringify(done)}`);
       done.forEach((a) => bus.publish({ type: `agent.${a.label}`, ts: Date.now(), payload: { via: "audio" } }));
       json(res, { ok: true, transcript: r.transcript ?? "", reply: r.reply, actions: done, source: "ai-audio", summary: home.summary() });
-    } catch { json(res, { ok: false, error: "ai_error" }, 502); }
+    } catch (e) { console.log("[agent/audio] AI error:", (e as Error)?.message); json(res, { ok: false, error: "ai_error" }, 502); }
+    return;
+  }
+
+  // Client-side voice diagnostics (so we can see where iOS mic capture fails).
+  if (url === "/debug/voice" && req.method === "POST") {
+    const body = await readBody(req);
+    console.log("[voice-debug]", body.slice(0, 400));
+    json(res, { ok: true });
     return;
   }
 
@@ -260,13 +285,14 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     const types: Record<string, string> = {
       ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
       ".webp": "image/webp", ".svg": "image/svg+xml",
+      ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8",
     };
     const ext = name.slice(name.lastIndexOf("."));
     try {
       const buf = await readFile(new URL(`../../../apps/app/assets/${name}`, import.meta.url));
       res.statusCode = 200;
       res.setHeader("Content-Type", types[ext] ?? "application/octet-stream");
-      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Cache-Control", "no-store");
       res.end(buf);
     } catch {
       json(res, { error: "asset_not_found", name }, 404);

@@ -150,8 +150,11 @@ function mdnsScan(services: string[], timeoutMs: number): Promise<Discovered[]> 
       if (!backend) return;
       const address = rinfo.address;
       const name = decodeURIComponent(instance || `${backend} ${address}`);
-      const id = backend + "_" + Buffer.from(address + name).toString("hex").slice(0, 12);
-      if (!found.has(id)) found.set(id, { id, name, backend, address, port, node: backend === "matter" ? instance : undefined, commissionable });
+      const id = stableId(backend, name || address);
+      // ESPHome is controlled over its web_server (port 80), NOT the mDNS-advertised
+      // native-API port (6053) — that one speaks a binary protocol, not HTTP.
+      const controlPort = backend === "esphome" ? 80 : port;
+      if (!found.has(id)) found.set(id, { id, name, backend, address, port: controlPort, node: backend === "matter" ? instance : undefined, commissionable });
     });
     try {
       sock.bind(0, () => {
@@ -165,10 +168,18 @@ function mdnsScan(services: string[], timeoutMs: number): Promise<Discovered[]> 
   });
 }
 
+// Stable, collision-free id from the FULL seed (device name preferred — unique &
+// stable across DHCP changes). The old code hashed only the first 6 chars, so every
+// device on a 192.168.x.x LAN collided to the same id.
+function stableId(backend: string, seed: string): string {
+  let h = 5381;
+  for (let i = 0; i < seed.length; i++) h = (((h << 5) + h) + seed.charCodeAt(i)) >>> 0;
+  return backend + "_" + h.toString(16).padStart(8, "0");
+}
+
 // ---- onboarding ----
 export function onboard(dev: Partial<LocalLight> & { name: string; backend: LightBackend }, room: string): LocalLight {
-  const seed = dev.node || (dev.address || "") + dev.name;
-  const id = dev.id || dev.backend + "_" + Buffer.from(seed).toString("hex").slice(0, 12);
+  const id = dev.id || stableId(dev.backend, dev.node || dev.name || dev.address || "");
   let l = lights.find((x) => x.id === id);
   if (!l) {
     l = {
@@ -180,7 +191,12 @@ export function onboard(dev: Partial<LocalLight> & { name: string; backend: Ligh
       status: "reconnecting", lastSeen: 0, attempts: 0,
     };
     lights.push(l);
-  } else { l.room = room || l.room; }
+  } else {
+    l.room = room || l.room;
+    if (dev.address) l.address = dev.address;   // refresh on re-onboard (IP may have changed)
+    if (dev.port) l.port = dev.port;
+    if (dev.entity) l.entity = dev.entity;
+  }
   save(lights);
   checkOne(l).catch(() => {});
   return { ...l };
@@ -294,10 +310,31 @@ function tcpReachable(host: string, port: number, timeoutMs = 2500): Promise<boo
     try { sock.connect(port, host); } catch { finish(false); }
   });
 }
+// ESPHome web_server v2 exposes entities on its SSE /events stream as `light-<entity>`.
+// The node/device name (e.g. "kauf-bulb-7b54a4") is NOT the light entity (e.g. "kauf_bulb"),
+// so we sniff the real entity from the device instead of guessing from the name.
+function detectEsphomeEntity(host: string, port: number, windowMs = 2500): Promise<string | null> {
+  return new Promise((resolve) => {
+    let buf = "", done = false;
+    const finish = (v: string | null) => { if (!done) { done = true; try { req.destroy(); } catch {} resolve(v); } };
+    const req = http.get({ host, port, path: "/events" }, (res) => { res.on("data", (d) => { buf += d; }); });
+    req.on("error", () => finish(null));
+    // Collect the whole initial state burst, then pick the PRIMARY light entity.
+    // Multi-light bulbs (e.g. Kauf) expose several `light-*`; the primary has the
+    // shortest object_id (aux/config lights carry suffixes like _warm_rgb, _aux).
+    setTimeout(() => {
+      const ids = [...buf.matchAll(/"id"\s*:\s*"light-([^"]+)"/g)].map((m) => m[1]);
+      finish(ids.length ? ids.sort((a, b) => a.length - b.length)[0] : null);
+    }, windowMs);
+  });
+}
 async function checkOne(l: LocalLight): Promise<void> {
   if (l.backend === "esphome" && l.address) {
     const up = await tcpReachable(l.address, l.port || 80);
-    if (up) { l.status = "connected"; l.lastSeen = Date.now(); l.attempts = 0; }
+    if (up) {
+      l.status = "connected"; l.lastSeen = Date.now(); l.attempts = 0;
+      if (!l.entity) { const e = await detectEsphomeEntity(l.address, l.port || 80); if (e) { l.entity = e; save(lights); } }
+    }
     else { l.attempts++; l.status = l.attempts > 3 ? "offline" : "reconnecting"; }
   } else if (l.backend === "matter") {
     const ctl = await matterController();

@@ -65,18 +65,11 @@ function s(id: string, name: string, room: string, kind: SpeakerKind, volume: nu
   return { id, name, room, kind, online, volume, muted: false, zone: null, role: "mono", latencyMs: 0, calibrated: false };
 }
 
-const speakers: Speaker[] = [
-  s("spk_living", "Living Room", "Living Room", "wifi", 35),
-  s("spk_living_r", "Living Room (Right)", "Living Room", "wifi", 35),
-  s("spk_kitchen", "Kitchen", "Kitchen", "wifi", 28),
-  s("spk_bedroom", "Bedroom Pod", "Bedroom", "pod", 20),
-  s("spk_office", "Office", "Office", "airplay", 30),
-  s("spk_portable", "Portable Speaker", "—", "bluetooth", 50, false),
-];
+// No demo speakers — only real speakers show (Spotify Connect live devices +
+// onboarded Wi-Fi/Bluetooth speakers merged in via state()).
+const speakers: Speaker[] = [];
 
-const zones: Zone[] = [
-  { id: "zone_living", name: "Living Room", speakerIds: ["spk_living", "spk_living_r"], surround: false, volume: 35 },
-];
+const zones: Zone[] = [];
 // reflect membership on the seeded speakers
 for (const z of zones) for (const id of z.speakerIds) { const sp = speakers.find((x) => x.id === id); if (sp) sp.zone = z.id; }
 

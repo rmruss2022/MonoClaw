@@ -16,3 +16,4 @@ recordings/
 *.sqlite
 *.sqlite-journal
 certs/
+services/hub/.data/

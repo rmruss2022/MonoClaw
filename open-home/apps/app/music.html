@@ -102,6 +102,22 @@
     #mood{max-width:none;flex:1 1 140px}
   }
 </style>
+<style>
+  /* Bottom tab bar (mobile): move nav from top → bottom */
+  .oh-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:90;display:none;
+    background:rgba(14,16,20,.92);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+    border-top:1px solid var(--line);padding:6px 6px calc(env(safe-area-inset-bottom,0) + 6px)}
+  .oh-tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;
+    color:var(--muted);font-size:10.5px;font-weight:600;padding:6px 2px;border:0;border-radius:12px;background:none}
+  .oh-tabbar a .ic{font-size:21px;line-height:1;opacity:.75}
+  .oh-tabbar a.active{color:var(--accent);background:none}
+  .oh-tabbar a.active .ic{opacity:1}
+  @media(max-width:720px){
+    .oh-tabbar{display:flex}
+    header.top nav{display:none}
+    body{padding-bottom:calc(env(safe-area-inset-bottom,0) + 70px)}
+  }
+</style>
 </head>
 <body>
   <header>
@@ -417,5 +433,12 @@ refresh();setInterval(refresh,3000);
 loadDevices();setInterval(loadDevices,10000);
 </script>
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
+<nav class="oh-tabbar" aria-label="Primary navigation">
+  <a href="/"><span class="ic">🏠</span><span>Home</span></a>
+  <a href="/music" class="active"><span class="ic">🎵</span><span>Music</span></a>
+  <a href="/lights"><span class="ic">💡</span><span>Lights</span></a>
+  <a href="/speakers"><span class="ic">🔊</span><span>Speakers</span></a>
+  <a href="/climate"><span class="ic">🌡️</span><span>Climate</span></a>
+</nav>
 </body>
 </html>

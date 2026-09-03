@@ -27,14 +27,8 @@ function d(id: string, name: string, type: string, room: string, icon: string, s
 }
 
 const devices: Device[] = [
-  // Lights
-  d("light_living", "Living Room Lights", "light", "Living Room", "💡", { on: false, brightness: 80 }),
-  d("light_kitchen", "Kitchen Lights", "light", "Kitchen", "💡", { on: false, brightness: 90 }),
-  d("light_bedroom", "Bedroom Lights", "light", "Bedroom", "💡", { on: false, brightness: 60 }),
-  d("light_office", "Office Lights", "light", "Office", "💡", { on: false, brightness: 100 }),
-  d("light_bathroom", "Bathroom Lights", "light", "Bathroom", "💡", { on: false, brightness: 70 }),
-  d("light_hallway", "Hallway Lights", "light", "Hallway", "💡", { on: false, brightness: 50 }),
-  d("light_porch", "Porch Light", "light", "Entry", "💡", { on: true, brightness: 100 }),
+  // Lights — no demo lights; only real onboarded lights (ESPHome/Matter) show.
+  // Scenes that reference old mock light ids simply no-op (setDevice ignores unknown ids).
   // Locks
   d("lock_front", "Front Door", "lock", "Entry", "🔒", { locked: true }),
   d("lock_back", "Back Door", "lock", "Kitchen", "🔒", { locked: true }),
