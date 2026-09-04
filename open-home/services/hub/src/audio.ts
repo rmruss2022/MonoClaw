@@ -116,9 +116,22 @@ export function state() {
     return cal ? { ...s, cal, calibrated: true } : s;
   });
   const calRooms = calibration.calibratedRooms();
+  // Rooms are the first-class playback targets in the Music tab: any room that has
+  // at least one speaker. Spotify audio is routed (server-side, via librespot) to
+  // the room's speaker — the user picks a *room*, never a phone/Mac/tab.
+  const roomMap: Record<string, { id: string; name: string; speakerIds: string[]; speakers: string[]; online: boolean }> = {};
+  for (const sp of allSpeakers as any[]) {
+    const name = sp.room || "Unassigned";
+    (roomMap[name] ||= { id: "room_" + name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), name, speakerIds: [], speakers: [], online: false });
+    roomMap[name].speakerIds.push(sp.id);
+    roomMap[name].speakers.push(sp.name);
+    if (sp.online) roomMap[name].online = true;
+  }
+  const rooms = Object.values(roomMap);
   return {
     nowPlaying: np,
     zones: listZones(),
+    rooms,
     speakers: allSpeakers,
     calibratedRooms: calRooms,
     snapcast: snapcast.cached(),

@@ -183,7 +183,23 @@ export async function search(q: string, want = 10) {
 
 export async function devices() {
   const j = await api("/me/player/devices");
-  return (j.devices || []).map((d: any) => ({ id: d.id, name: d.name, type: d.type, active: d.is_active, volume: d.volume_percent }));
+  return (j.devices || []).map((d: any) => ({
+    id: d.id, name: d.name, type: d.type, active: d.is_active, volume: d.volume_percent,
+    // a "room" is a server-side openhome endpoint (librespot Speaker) — never the
+    // user's phone / Mac / a browser tab. These are the only things the Music tab
+    // offers as rooms: Spotify → this server (librespot) → the room's speaker.
+    room: d.type === "Speaker" || /^openhome[\s·:-]/i.test(String(d.name || "")),
+  }));
+}
+
+/** Resolve an openhome room name to its server-side librespot Connect endpoint.
+ *  Returns null when no openhome endpoint is logged in yet (needs one activation). */
+export async function deviceForRoom(room: string): Promise<{ id: string; name: string } | null> {
+  const ds = await devices();
+  const rooms = ds.filter((d: any) => d.room);
+  if (!rooms.length) return null;
+  const r = (room || "").toLowerCase().trim();
+  return rooms.find((d: any) => String(d.name).toLowerCase().includes(r)) || rooms[0];
 }
 
 /** Pick a Connect device. "auto" follows whatever is already playing (so the

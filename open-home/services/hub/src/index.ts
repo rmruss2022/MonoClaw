@@ -590,7 +590,10 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "spotify-play": {
         const uris = Array.isArray(p.uris) ? p.uris.map(String) : (p.uri ? [String(p.uri)] : undefined);
         if (spotify.connected() && (uris || p.contextUri)) {
-          try { const r = await spotify.play({ uris, contextUri: p.contextUri, offset: p.offset, deviceId: p.deviceId }); hint = r.device ? `Playing on ${r.device}` : undefined; }
+          // route to the selected room's server-side endpoint (librespot) when given a room
+          let deviceId = p.deviceId;
+          if (!deviceId && p.room) { const d = await spotify.deviceForRoom(String(p.room)); if (d) deviceId = d.id; }
+          try { const r = await spotify.play({ uris, contextUri: p.contextUri, offset: p.offset, deviceId }); hint = r.device ? `Playing in ${p.room || r.device}` : undefined; }
           catch (e) { const m = (e as Error).message || ""; hint = spotifyHint(m); console.log("[spotify] play:", m); }
           result = p.meta ? audio.setTrack(p.meta, p.zoneId) : audio.state().nowPlaying;
         } else {
@@ -603,6 +606,16 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
           try { await spotify.transfer(String(p.deviceId), p.play !== false); hint = "Moved playback"; }
           catch (e) { const m = (e as Error).message || ""; hint = m.includes("404") ? "no_device" : m; }
         }
+        result = audio.state().nowPlaying; break;
+      }
+      // Pick a room → move Spotify playback to that room's server endpoint (librespot → room speaker).
+      case "play-in-room": {
+        const room = String(p.room || "");
+        if (!spotify.connected()) { hint = "Connect Spotify first."; result = audio.state().nowPlaying; break; }
+        const d = await spotify.deviceForRoom(room);
+        if (!d) { hint = `No endpoint for ${room} yet — open Spotify → Connect → "openhome · ${room}" → play once (only needed one time).`; result = audio.state().nowPlaying; break; }
+        try { await spotify.transfer(d.id, true); hint = `Playing in ${room}`; }
+        catch (e) { const m = (e as Error).message || ""; hint = m.includes("404") ? "no_device" : m; }
         result = audio.state().nowPlaying; break;
       }
       case "play-in-zone": result = audio.playInZone(String(p.zoneId)); break;

@@ -73,7 +73,8 @@
   .modal .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;max-width:640px;width:100%}
   .player .prog{cursor:pointer}
   .player .prog:hover>i{background:#5affb0}
-  @media(max-width:720px){.player .meta{width:120px}.player .time,.player .zonewrap{display:none}}
+  .player .roompick{gap:6px}.player .roompick select{min-width:130px;max-width:180px}
+  @media(max-width:720px){.player{flex-wrap:wrap}.player .meta{width:120px}.player .time{display:none}.player .roompick{display:flex;order:5;width:100%;margin-top:6px;gap:8px}.player .roompick select{flex:1;max-width:none}}
   @media(max-width:640px){
     header{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;gap:8px 12px}
     nav{order:3;width:100%;flex-wrap:nowrap;overflow-x:auto;gap:6px;margin:2px 0 0;padding:2px 0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
@@ -114,8 +115,9 @@
   .oh-tabbar a.active .ic{opacity:1}
   @media(max-width:720px){
     .oh-tabbar{display:flex}
-    header.top nav{display:none}
-    body{padding-bottom:calc(env(safe-area-inset-bottom,0) + 70px)}
+    header nav{display:none}                       /* hide the top nav; bottom bar is the nav */
+    .player{bottom:calc(env(safe-area-inset-bottom,0px) + 58px);padding-bottom:8px}  /* sit the player bar ABOVE the tab bar */
+    main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 210px)}               /* clear both bars */
   }
 </style>
 </head>
@@ -173,13 +175,14 @@
     <button class="icon" onclick="tx('prev')">⏮</button>
     <button class="icon play primary" id="playBtn" onclick="togglePlay()">▶</button>
     <button class="icon" onclick="tx('next')">⏭</button>
-    <button class="icon devbtn" id="devBtn" onclick="openDevSheet()" title="Speaker output">📻</button>
     <span class="time" id="pos">0:00</span><span class="prog" id="progWrap" onclick="seekAt(event)"><i id="progBar"></i></span><span class="time" id="dur">0:00</span>
-    <span class="row zonewrap" style="gap:6px"><span class="small muted">📻</span>
-      <select id="outDev" onchange="onDevPick()" title="Where playback goes"></select>
+    <span class="row roompick">
+      <span class="small muted">Room</span>
+      <select id="outDev" onchange="onDevPick()" title="Which room playback goes to"></select>
       <span class="small muted">🔊</span>
-      <input type="range" min="0" max="100" id="masterVol" style="max-width:120px" oninput="vol(currentZone(),this.value)" onmousedown="editingVol=true" onmouseup="editingVol=false">
-      <select id="zoneSel" onchange="playZone(this.value)"></select></span>
+      <input type="range" min="0" max="100" id="masterVol" style="max-width:110px" oninput="vol(currentZone(),this.value)" onmousedown="editingVol=true" onmouseup="editingVol=false">
+    </span>
+    <select id="zoneSel" onchange="playZone(this.value)" style="display:none"></select>
   </div>
   <div class="toast" id="toast"></div>
 
@@ -231,7 +234,8 @@ function render(state){
   const zopts=state.zones.map(z=>`<option value="${z.id}">${esc(z.name)}</option>`).join("");
   for(const id of["zoneSel","calZone"]){const el=$(id);const keep=el.value;el.innerHTML=zopts||`<option value="">(no zones)</option>`;if([...el.options].some(o=>o.value===keep))el.value=keep;}
   if(np.zoneId)$("zoneSel").value=np.zoneId;
-  const mz=state.zones.find(z=>z.id===currentZone());if(!editingVol)$("masterVol").value=mz?mz.volume:30;
+  renderRooms(state);
+  if(!editingVol){const rs=(state.rooms||[]).find(r=>r.name===targetRoom());const sp=rs&&state.speakers.find(s=>rs.speakerIds.includes(s.id));$("masterVol").value=sp?sp.volume:40;}
   // speakers
   const inZone=new Set(state.zones.flatMap(z=>z.speakerIds));
   $("zones").innerHTML=state.zones.map(z=>{const spk=z.speakerIds.map(id=>state.speakers.find(s=>s.id===id)).filter(Boolean);
@@ -309,7 +313,7 @@ async function curate(force){
   }catch(e){$("picks").innerHTML='<span class="note">Curator unavailable.</span>';}
 }
 function playPick(i){const p=PICKS[i];if(!p||!p.uris||!p.uris.length){toast("Nothing playable found for that pick.");return;}
-  warmTab();toast("▶ "+p.label);api('spotify-play',{uris:p.uris,deviceId:targetDevice(),meta:{title:p.label,artist:p.vibe}});}
+  warmTab();toast("▶ "+p.label);api('spotify-play',{uris:p.uris,room:targetRoom(),meta:{title:p.label,artist:p.vibe}});}
 // open a mix and list all its songs (like a playlist), with Play all + per-song play
 function openMix(i){const p=PICKS[i];if(!p)return;
   $("plmName").textContent=p.label;
@@ -325,7 +329,7 @@ function mixTrackRow(t,mix,idx){const img=t.image?`<img src="${t.image}">`:"";
     <button class="small primary" onclick='playMixAt(${mix},${idx},${JSON.stringify({title:t.title,artist:t.artist,album:"",image:t.image,durationMs:t.durationMs}).replace(/'/g,"&#39;")})'>play</button></div>`;}
 // play a mix starting at a given song so next/prev walk the rest of the mix
 function playMixAt(mix,idx,meta){const p=PICKS[mix];if(!p||!p.uris||!p.uris.length)return;
-  warmTab();toast("▶ "+meta.title);api('spotify-play',{uris:p.uris,offset:idx,meta:meta,zoneId:currentZone(),deviceId:targetDevice()});closePl();}
+  warmTab();toast("▶ "+meta.title);api('spotify-play',{uris:p.uris,offset:idx,meta:meta,zoneId:currentZone(),room:targetRoom()});closePl();}
 let PLMAP={};
 function pcard(pl){PLMAP[pl.id]=pl; const cov=pl.image?`<img class="cov" src="${pl.image}">`:`<div class="cov">🎵</div>`;
   return `<div class="pcard" onclick="openPl('${pl.id}')">${cov}<div class="nm">${esc(pl.name)}</div><div class="sub">${pl.tracks} tracks</div></div>`;}
@@ -345,17 +349,17 @@ function seekAt(e){if(!S)return;const rect=e.currentTarget.getBoundingClientRect
 function trackRow(t){const img=t.image?`<img src="${t.image}">`:"";
   return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
     <button class="small primary" onclick='playTrack(${JSON.stringify(t).replace(/'/g,"&#39;")})'>play</button></div>`;}
-function playCtx(uri){ warmTab(); api('spotify-play',{contextUri:uri,zoneId:currentZone(),deviceId:targetDevice()}); }
-function playTrack(t){ warmTab(); api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone(),deviceId:targetDevice()}); }
+function playCtx(uri){ warmTab(); api('spotify-play',{contextUri:uri,zoneId:currentZone(),room:targetRoom()}); }
+function playTrack(t){ warmTab(); api('spotify-play',{uri:t.uri,meta:{title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs},zoneId:currentZone(),room:targetRoom()}); }
 // A song tapped inside a playlist plays the playlist *in context* at that
 // track's position, so next/prev walk the playlist instead of replaying it.
 function plTrackRow(t,ctx,pos){const img=t.image?`<img src="${t.image}">`:"";
   return `<div class="item"><span class="tr">${img}<span class="t">${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span></span>
     <button class="small primary" onclick='playInCtx(${JSON.stringify(ctx)},${pos},${JSON.stringify({title:t.title,artist:t.artist,album:t.album,image:t.image,durationMs:t.durationMs}).replace(/'/g,"&#39;")})'>play</button></div>`;}
 function playInCtx(ctx,pos,meta){ warmTab();
-  toast("▶ "+meta.title); api('spotify-play',{contextUri:ctx,offset:pos,meta:meta,zoneId:currentZone(),deviceId:targetDevice()}); closePl(); }
+  toast("▶ "+meta.title); api('spotify-play',{contextUri:ctx,offset:pos,meta:meta,zoneId:currentZone(),room:targetRoom()}); closePl(); }
 async function search(){const q=$("q").value;const r=await (await fetch("/audio/spotify/search?q="+encodeURIComponent(q))).json();
-  $("results").innerHTML=(r.tracks||[]).map(t=>t.uri?trackRow(t):`<div class="item"><span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span><button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',zoneId:currentZone()})">play</button></div>`).join("")||'<div class="note">No results.</div>';}
+  $("results").innerHTML=(r.tracks||[]).map(t=>t.uri?trackRow(t):`<div class="item"><span>${esc(t.title)} <span class="muted small">— ${esc(t.artist)}</span></span><button class="small primary" onclick="api('spotify-play',{trackId:'${t.id}',room:targetRoom()})">play</button></div>`).join("")||'<div class="note">No results.</div>';}
 
 // ---- controls ----
 function toggleSel(id){sel.has(id)?sel.delete(id):sel.add(id);render(S);}
@@ -364,7 +368,7 @@ function tx(action){
   if(webPlayer&&webDeviceId&&tabIsTarget()){ if(action==='play'||action==='pause')webPlayer.togglePlay(); else if(action==='next')webPlayer.nextTrack(); else if(action==='prev')webPlayer.previousTrack(); return; }
   api("transport",{action});
 }
-function vol(id,v){ if(webPlayer&&webDeviceId&&tabIsTarget()&&id===currentZone())webPlayer.setVolume(Math.max(0,Math.min(1,Number(v)/100))); if(id)api("volume",{id,volume:Number(v)}); }
+function vol(id,v){ const sid=id||roomSpeakerId(); if(sid)api("volume",{id:sid,volume:Number(v)}); }
 function playZone(z){api("play-in-zone",{zoneId:z});}
 function makeZone(){if(sel.size<1){toast("Select speakers to group first.");return;}api("create-zone",{name:$("zoneName").value,speakerIds:[...sel]}).then(()=>{sel.clear();$("zoneName").value="";});}
 function calibrate(){const z=$("calZone").value;if(z)api("calibrate",{zoneId:z});}
@@ -375,38 +379,41 @@ async function scan(kind){$("discover").innerHTML=`<div class="note">Scanning ${
   $("discover").innerHTML=items||`<div class="note">${esc(r.note||('No '+kind+' speakers found.'))}</div>`;}
 function addSpk(d){api("onboard-speaker",{device:d,room:"Living Room"}).then(()=>{$("discover").innerHTML='<div class="note">✓ Added to Living Room — set its room in the list below.</div>';});}
 
-// ---- Output device picker: send playback to iPhone / Mac / this tab ----
-let outDevices=[];
-const TAB_NAME='openhome Web Player (Mac)';
-function tabIsTarget(){return $("outDev").value==='__tab';}
-function targetDevice(){const v=$("outDev").value; if(v==='__tab')return webDeviceId||undefined; if(!v||v==='__auto')return undefined; return v;}
-function warmTab(){ if(tabIsTarget()&&!webDeviceId)toast("Starting this-tab player… tap play again in a second."); }
-async function loadDevices(){try{const r=await(await fetch('/audio/spotify/devices')).json();outDevices=r.devices||[];renderDevPicker();}catch(e){}}
-function renderDevPicker(){const el=$("outDev");if(!el)return;const keep=el.value;
-  let opts=`<option value="__auto">Auto (follow active)</option>`;
-  if(webDeviceId)opts+=`<option value="__tab">This tab 🔊</option>`;
-  opts+=outDevices.filter(d=>d.name!==TAB_NAME).map(d=>`<option value="${d.id}">${esc(d.name)}${d.active?' · active':''}</option>`).join("");
-  el.innerHTML=opts; el.value=([...el.options].some(o=>o.value===keep))?keep:'__auto'; updateDevBtn();}
-function onDevPick(){const v=$("outDev").value;
-  if(v==='__tab'){ if(webDeviceId)api('spotify-transfer',{deviceId:webDeviceId}); }
-  else if(v&&v!=='__auto'){ api('spotify-transfer',{deviceId:v}); toast("Sending to "+($("outDev").selectedOptions[0].textContent||"device")); } }
-// short label for the player-bar output button
-function deviceLabel(){const el=$("outDev");const o=el&&el.selectedOptions&&el.selectedOptions[0];return o?o.textContent.replace(/ ·.*/,'').replace(' 🔊',''):'Auto';}
-function updateDevBtn(){const b=$("devBtn");if(!b)return;const l=deviceLabel();b.title='Output: '+l;b.textContent=l==='Auto'||l==='Auto (follow active)'?'📻':(l.toLowerCase().includes('iphone')||l.toLowerCase().includes('phone')?'📱':(l.toLowerCase().includes('tab')||l.toLowerCase().includes('mac')?'💻':'🔈'));}
-// tap-friendly output chooser (works on mobile where the inline select is hidden)
-async function openDevSheet(){await loadDevices();renderDevList();$("devModal").classList.add("show");}
+// ---- Room picker: play in one of YOUR openhome rooms (server-routed) ----
+// The dropdown lists rooms from the hub (any room with a speaker). Picking one
+// transfers Spotify → this server (librespot) → that room's speaker.
+let ROOMS=[];
+function tabIsTarget(){return false;}                 // browser playback removed — server-routed only
+function targetRoom(){return $("outDev").value||"";}
+function targetDevice(){return undefined;}            // playback is targeted by room, resolved server-side
+function warmTab(){}
+function renderRooms(state){const el=$("outDev");if(!el)return;const keep=el.value;
+  ROOMS=(state.rooms||[]).filter(r=>r.speakerIds&&r.speakerIds.length);
+  el.innerHTML=ROOMS.length
+    ? ROOMS.map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join("")
+    : `<option value="">No rooms yet</option>`;
+  // keep the user's pick; else the room that holds now-playing; else the first room
+  const npRoom=state.nowPlaying&&state.nowPlaying.room;
+  el.value=([...el.options].some(o=>o.value===keep)&&keep)?keep:(npRoom&&ROOMS.some(r=>r.name===npRoom)?npRoom:(ROOMS[0]?ROOMS[0].name:""));
+  updateDevBtn();}
+function roomSpeakerId(){const r=ROOMS.find(x=>x.name===targetRoom());return r&&r.speakerIds&&r.speakerIds[0];}
+function onDevPick(){const v=targetRoom(); if(v){ api('play-in-room',{room:v}); toast("Playing in "+v); } }
+function deviceLabel(){return targetRoom()||'Room';}
+function updateDevBtn(){const b=$("devBtn");if(!b)return;b.title='Room: '+deviceLabel();}
+async function openDevSheet(){renderDevList();$("devModal").classList.add("show");}
 function closeDevSheet(){$("devModal").classList.remove("show");}
-function renderDevList(){const cur=$("outDev").value||'__auto';
-  const opts=[{v:'__auto',n:'Auto (follow active device)',i:'🎯'}];
-  if(webDeviceId)opts.push({v:'__tab',n:'This tab / browser',i:'🔊'});
-  outDevices.filter(d=>d.name!==TAB_NAME).forEach(d=>opts.push({v:d.id,n:d.name+(d.active?' · playing':''),i:d.type==='Smartphone'?'📱':d.type==='Computer'?'💻':'🔈'}));
-  $("devList").innerHTML=opts.map(o=>`<div class="item" style="cursor:pointer" onclick="pickDev('${o.v}')"><span>${o.i} ${esc(o.n)}</span>${o.v===cur?'<span class="badge">current</span>':''}</div>`).join("")||'<div class="note">No devices found. Open Spotify or this app on a device.</div>';}
-function pickDev(v){const el=$("outDev");if(![...el.options].some(o=>o.value===v)){el.innerHTML+=`<option value="${v}"></option>`;}el.value=v;onDevPick();updateDevBtn();toast('Output → '+deviceLabel());closeDevSheet();}
+function renderDevList(){const cur=targetRoom();
+  const opts=ROOMS.map(r=>({v:r.name,n:r.name+(r.speakers&&r.speakers.length?' · '+r.speakers.join(", "):''),i:'🔈'}));
+  $("devList").innerHTML=opts.map(o=>`<div class="item" style="cursor:pointer" onclick="pickDev('${esc(o.v)}')"><span>${o.i} ${esc(o.n)}</span>${o.v===cur?'<span class="badge">current</span>':''}</div>`).join("")||'<div class="note">No rooms with a speaker yet — add one in the Speakers tab.</div>';}
+function pickDev(v){const el=$("outDev");if(![...el.options].some(o=>o.value===v)){el.innerHTML+=`<option value="${v}"></option>`;}el.value=v;onDevPick();updateDevBtn();closeDevSheet();}
 
 // ---- Spotify Web Playback SDK: play in THIS browser tab (Mac speakers), no desktop app ----
 let webPlayer=null, webDeviceId=null;
-window.onSpotifyWebPlaybackSDKReady=initWeb;
-async function initWeb(){
+// Browser playback intentionally disabled: openhome routes Spotify → this server
+// (librespot) → the room's speaker. The in-tab web player is never a room.
+window.onSpotifyWebPlaybackSDKReady=function(){};
+async function initWeb(){ return;
+  // eslint-disable-next-line no-unreachable
   try{
     const t=await (await fetch('/audio/spotify/token')).json();
     if(!t.access_token) return; // not signed in yet
@@ -429,16 +436,15 @@ function fastNow(s){const t=s.track_window&&s.track_window.current_track;if(!t)r
 // if the SDK loaded before this handler was set, kick it now
 if(window.Spotify&&!webPlayer)initWeb();
 
-refresh();setInterval(refresh,3000);
-loadDevices();setInterval(loadDevices,10000);
+refresh();setInterval(refresh,3000);   // rooms + now-playing come from /audio/state
 </script>
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
 <nav class="oh-tabbar" aria-label="Primary navigation">
-  <a href="/"><span class="ic">🏠</span><span>Home</span></a>
-  <a href="/music" class="active"><span class="ic">🎵</span><span>Music</span></a>
-  <a href="/lights"><span class="ic">💡</span><span>Lights</span></a>
-  <a href="/speakers"><span class="ic">🔊</span><span>Speakers</span></a>
-  <a href="/climate"><span class="ic">🌡️</span><span>Climate</span></a>
+  <a href="/"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg><span>Home</span></a>
+  <a href="/music" class="active"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><span>Music</span></a>
+  <a href="/lights"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M8.5 14a6 6 0 1 1 7 0c-.6.5-1 1.2-1 2H9.5c0-.8-.4-1.5-1-2Z"/></svg><span>Lights</span></a>
+  <a href="/speakers"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="7" r="1"/></svg><span>Speakers</span></a>
+  <a href="/climate"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/></svg><span>Climate</span></a>
 </nav>
 </body>
 </html>
