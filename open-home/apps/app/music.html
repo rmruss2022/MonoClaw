@@ -156,7 +156,7 @@
       <div class="row between"><h2 style="margin:0">Speakers &amp; rooms</h2>
         <span class="row" style="gap:6px"><button class="small" onclick="scan('wifi')">+ Wi-Fi</button><button class="small" onclick="scan('bluetooth')">+ Bluetooth</button></span>
       </div>
-      <div class="note">This is a mock home, so playback is routed to <b>this browser tab on the Mac</b> (Spotify Web Player) instead of real room speakers. Real per-room sync arrives with Snapcast — see <a href="/docs/sound">Sound docs</a>.</div>
+      <div class="note">Pick a <b>room</b> in the player bar to play there — Spotify streams through your hub and out that room's speaker. Synced multi-room arrives with Snapcast — see <a href="/docs/sound">Sound docs</a>.</div>
       <div id="zones" style="margin-top:12px"></div><div id="loose"></div>
       <div class="row" style="margin-top:12px;gap:8px"><input type="text" id="zoneName" placeholder="New zone name (e.g. Downstairs)"><button onclick="makeZone()">Group selected</button></div>
       <div id="discover" class="list"></div>
@@ -382,28 +382,28 @@ function addSpk(d){api("onboard-speaker",{device:d,room:"Living Room"}).then(()=
 // ---- Room picker: play in one of YOUR openhome rooms (server-routed) ----
 // The dropdown lists rooms from the hub (any room with a speaker). Picking one
 // transfers Spotify → this server (librespot) → that room's speaker.
-let ROOMS=[];
+let PLAYROOMS=[];
 function tabIsTarget(){return false;}                 // browser playback removed — server-routed only
 function targetRoom(){return $("outDev").value||"";}
 function targetDevice(){return undefined;}            // playback is targeted by room, resolved server-side
 function warmTab(){}
 function renderRooms(state){const el=$("outDev");if(!el)return;const keep=el.value;
-  ROOMS=(state.rooms||[]).filter(r=>r.speakerIds&&r.speakerIds.length);
-  el.innerHTML=ROOMS.length
-    ? ROOMS.map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join("")
+  PLAYROOMS=(state.rooms||[]).filter(r=>r.speakerIds&&r.speakerIds.length);
+  el.innerHTML=PLAYROOMS.length
+    ? PLAYROOMS.map(r=>`<option value="${esc(r.name)}">${esc(r.name)}</option>`).join("")
     : `<option value="">No rooms yet</option>`;
   // keep the user's pick; else the room that holds now-playing; else the first room
   const npRoom=state.nowPlaying&&state.nowPlaying.room;
-  el.value=([...el.options].some(o=>o.value===keep)&&keep)?keep:(npRoom&&ROOMS.some(r=>r.name===npRoom)?npRoom:(ROOMS[0]?ROOMS[0].name:""));
+  el.value=([...el.options].some(o=>o.value===keep)&&keep)?keep:(npRoom&&PLAYROOMS.some(r=>r.name===npRoom)?npRoom:(PLAYROOMS[0]?PLAYROOMS[0].name:""));
   updateDevBtn();}
-function roomSpeakerId(){const r=ROOMS.find(x=>x.name===targetRoom());return r&&r.speakerIds&&r.speakerIds[0];}
+function roomSpeakerId(){const r=PLAYROOMS.find(x=>x.name===targetRoom());return r&&r.speakerIds&&r.speakerIds[0];}
 function onDevPick(){const v=targetRoom(); if(v){ api('play-in-room',{room:v}); toast("Playing in "+v); } }
 function deviceLabel(){return targetRoom()||'Room';}
 function updateDevBtn(){const b=$("devBtn");if(!b)return;b.title='Room: '+deviceLabel();}
 async function openDevSheet(){renderDevList();$("devModal").classList.add("show");}
 function closeDevSheet(){$("devModal").classList.remove("show");}
 function renderDevList(){const cur=targetRoom();
-  const opts=ROOMS.map(r=>({v:r.name,n:r.name+(r.speakers&&r.speakers.length?' · '+r.speakers.join(", "):''),i:'🔈'}));
+  const opts=PLAYROOMS.map(r=>({v:r.name,n:r.name+(r.speakers&&r.speakers.length?' · '+r.speakers.join(", "):''),i:'🔈'}));
   $("devList").innerHTML=opts.map(o=>`<div class="item" style="cursor:pointer" onclick="pickDev('${esc(o.v)}')"><span>${o.i} ${esc(o.n)}</span>${o.v===cur?'<span class="badge">current</span>':''}</div>`).join("")||'<div class="note">No rooms with a speaker yet — add one in the Speakers tab.</div>';}
 function pickDev(v){const el=$("outDev");if(![...el.options].some(o=>o.value===v)){el.innerHTML+=`<option value="${v}"></option>`;}el.value=v;onDevPick();updateDevBtn();closeDevSheet();}
 
@@ -436,6 +436,9 @@ function fastNow(s){const t=s.track_window&&s.track_window.current_track;if(!t)r
 // if the SDK loaded before this handler was set, kick it now
 if(window.Spotify&&!webPlayer)initWeb();
 
+// if Safari restores this page from the back-forward cache, force a fresh load
+// so a rapidly-iterating build never shows stale JS/markup.
+window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
 refresh();setInterval(refresh,3000);   // rooms + now-playing come from /audio/state
 </script>
 <script src="https://sdk.scdn.co/spotify-player.js"></script>
