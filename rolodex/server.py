@@ -40,6 +40,13 @@ def init_db():
             follow_up_date TEXT, follow_up_note TEXT,
             priority INTEGER DEFAULT 0, tags TEXT, notes TEXT,
             created_at TEXT, updated_at TEXT)""")
+        # migrations: the curated "to reach out" running list
+        existing = {r[1] for r in c.execute("PRAGMA table_info(contacts)")}
+        for col, ddl in [("reach_out", "reach_out INTEGER DEFAULT 0"),
+                         ("reach_out_reason", "reach_out_reason TEXT"),
+                         ("reach_out_added", "reach_out_added TEXT")]:
+            if col not in existing:
+                c.execute(f"ALTER TABLE contacts ADD COLUMN {ddl}")
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -89,6 +96,9 @@ def list_contacts(q="", category="", flt=""):
         rows = [r for r in rows if (r["days_since_contact"] is not None and r["days_since_contact"] >= n)]
     elif flt == "priority":
         rows = [r for r in rows if (r.get("priority") or 0) >= 2]
+    elif flt == "reachout":
+        rows = [r for r in rows if r.get("reach_out")]
+        rows.sort(key=lambda r: (r.get("reach_out_added") or ""))  # oldest on the list first
     return rows
 
 def get_contact(cid):
@@ -122,6 +132,13 @@ def log_touch(cid):
         c.execute("UPDATE contacts SET last_contacted=?, updated_at=? WHERE id=?",
                   (today(), now_iso(), cid))
 
+def set_reachout(cid, on, reason=None):
+    with db() as c:
+        row = c.execute("SELECT reach_out_added FROM contacts WHERE id=?", (cid,)).fetchone()
+        added = ((row["reach_out_added"] if (row and row["reach_out_added"]) else now_iso()) if on else None)
+        c.execute("UPDATE contacts SET reach_out=?, reach_out_reason=?, reach_out_added=?, updated_at=? WHERE id=?",
+                  (1 if on else 0, (reason if on else None), added, now_iso(), cid))
+
 def delete_contact(cid):
     with db() as c:
         c.execute("DELETE FROM contacts WHERE id=?", (cid,))
@@ -143,8 +160,9 @@ def stats():
     t = today()
     followups_due = sum(1 for r in rows if r.get("follow_up_date") and r["follow_up_date"] <= t)
     stale30 = sum(1 for r in rows if r["days_since_contact"] is not None and r["days_since_contact"] >= 30)
+    to_reach_out = sum(1 for r in rows if r.get("reach_out"))
     return {"total": total, "categories": cat_list, "byMonth": month_list,
-            "followupsDue": followups_due, "stale30": stale30}
+            "followupsDue": followups_due, "stale30": stale30, "toReachOut": to_reach_out}
 
 # ---------- minimal vCard import ----------
 def parse_vcards(text):
@@ -221,11 +239,15 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/contacts":
                 cid = upsert(json.loads(self._body() or b"{}"))
                 self._send(200, {"ok": True, "id": cid}); return
-            m = re.match(r"^/api/contacts/(\d+)(/(touch|delete))?$", p)
+            m = re.match(r"^/api/contacts/(\d+)(/(touch|delete|reachout))?$", p)
             if m:
                 cid = int(m.group(1)); action = m.group(3)
                 if action == "touch": log_touch(cid); self._send(200, {"ok": True}); return
                 if action == "delete": delete_contact(cid); self._send(200, {"ok": True}); return
+                if action == "reachout":
+                    d = json.loads(self._body() or b"{}")
+                    set_reachout(cid, d.get("on", True), d.get("reason"))
+                    self._send(200, {"ok": True}); return
                 upsert(json.loads(self._body() or b"{}"), cid); self._send(200, {"ok": True, "id": cid}); return
             if p == "/api/import":
                 added = import_vcards(self._body().decode("utf-8", "ignore"))
@@ -358,6 +380,7 @@ function contactCard(c){
   const star=(c.priority>=2)?' ⭐':'';
   const sub=[c.title,c.company].filter(Boolean).join(' @ ');
   const fu=(c.follow_up_date)?`<span class="chip" style="border-color:var(--warn);color:var(--warn)">↻ ${esc(c.follow_up_date)}${c.follow_up_note?' · '+esc(c.follow_up_note):''}</span>`:'';
+  const ro=(c.reach_out)?`<span class="chip" style="border-color:var(--accent);color:var(--accent)">📌 to reach out${c.reach_out_reason?' · '+esc(c.reach_out_reason):''}</span>`:'';
   return `<div class="card"><div class="row between"><div class="row" style="gap:11px;min-width:0">
       <div class="avatar" style="background:${col}">${esc(initials(c.name))}</div>
       <div style="min-width:0"><div class="name">${esc(c.name)}${star}</div>
@@ -369,9 +392,11 @@ function contactCard(c){
       ${dtxt?`<span>💬 ${dtxt}</span>`:''}
       ${(c.tags||'').split(',').filter(x=>x.trim()).map(t=>`<span class="chip">${esc(t.trim())}</span>`).join('')}</div>
     ${c.notes?`<div class="small" style="margin-top:8px;color:#cdd5e4">${esc(c.notes)}</div>`:''}
-    ${fu?`<div style="margin-top:8px">${fu}</div>`:''}
-    <div class="row" style="gap:6px;margin-top:10px">
-      <button class="sm primary" onclick="touch(${c.id})">Log touch</button>
+    ${(fu||ro)?`<div class="row wrap" style="gap:6px;margin-top:8px">${fu}${ro}</div>`:''}
+    <div class="row wrap" style="gap:6px;margin-top:10px">
+      ${c.reach_out?`<button class="sm primary" onclick="reachedOut(${c.id})">✅ Reached out</button>`
+                   :`<button class="sm primary" onclick="touch(${c.id})">Log touch</button>`}
+      <button class="sm" onclick="toggleReach(${c.id},${c.reach_out?0:1})">${c.reach_out?'📌 Remove from list':'📌 Add to reach-out'}</button>
       <button class="sm" onclick="edit(${c.id})">Edit</button>
       ${c.phone?`<a class="chip" href="tel:${esc(c.phone)}">📱 Call</a>`:''}
       ${c.email?`<a class="chip" href="mailto:${esc(c.email)}">✉️ Email</a>`:''}
@@ -394,6 +419,7 @@ function setCat(c){CURCAT=c;load();}
 async function loadReach(){
   const box=$('reach');
   const groups=[
+    {t:'📌 My reach-out list',f:'reachout',d:"People you've flagged to reach out to — tap ✅ Reached out when you do"},
     {t:'↻ Follow-ups due',f:'followups',d:'You set a reminder that has arrived'},
     {t:'😴 Gone quiet · 30d+',f:'stale:30',d:"Haven't connected in a month"},
     {t:'🧊 Cold · 90d+',f:'stale:90',d:'Long overdue for a check-in'},
@@ -418,6 +444,7 @@ async function loadViz(){
    <div class="tiles">
      <div class="tile"><div class="n">${s.total}</div><div class="l">People in network</div></div>
      <div class="tile"><div class="n">${s.categories.length}</div><div class="l">Categories</div></div>
+     <div class="tile"><div class="n" style="color:var(--accent)">${s.toReachOut||0}</div><div class="l">📌 On reach-out list</div></div>
      <div class="tile"><div class="n" style="color:var(--warn)">${s.followupsDue}</div><div class="l">Follow-ups due</div></div>
      <div class="tile"><div class="n" style="color:var(--accent2)">${s.stale30}</div><div class="l">Quiet 30d+</div></div>
    </div>
@@ -443,7 +470,14 @@ async function save(){
   resetForm();tab('net');
 }
 async function touch(id){await api('api/contacts/'+id+'/touch',{method:'POST'});load();}
-async function del(id){if(!confirm('Delete this contact?'))return;await api('api/contacts/'+id+'/delete',{method:'POST'});load();}
+async function del(id){if(!confirm('Delete this contact?'))return;await api('api/contacts/'+id+'/delete',{method:'POST'});refreshActive();}
+function refreshActive(){if(!$('reach').classList.contains('hidden'))loadReach();else{load();}}
+async function toggleReach(id,on){let reason=null;if(on){reason=prompt('Add to reach-out list — why? (optional)')||'';}
+  await api('api/contacts/'+id+'/reachout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:!!on,reason:reason})});
+  refreshActive();}
+async function reachedOut(id){await api('api/contacts/'+id+'/touch',{method:'POST'});
+  await api('api/contacts/'+id+'/reachout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:false})});
+  refreshActive();}
 async function importVcf(){const t=$('vcf').value;if(!t.trim())return;$('impMsg').textContent='Importing…';
   const r=await api('api/import',{method:'POST',body:t});$('impMsg').textContent='Added '+(r.added||0)+' contacts';$('vcf').value='';load();}
 function closeSheet(){$('modal').classList.remove('on');}
