@@ -99,6 +99,9 @@ def list_contacts(q="", category="", flt=""):
     elif flt == "reachout":
         rows = [r for r in rows if r.get("reach_out")]
         rows.sort(key=lambda r: (r.get("reach_out_added") or ""))  # oldest on the list first
+    elif flt == "recent":
+        rows.sort(key=lambda r: (r.get("created_at") or ""), reverse=True)
+        rows = rows[:10]
     return rows
 
 def get_contact(cid):
@@ -310,13 +313,16 @@ label.f{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
 </header>
 <main>
   <div class="tabs">
-    <div class="tab on" data-t="net" onclick="tab('net')">👥 Network</div>
+    <div class="tab on" data-t="home" onclick="tab('home')">🏠 Overview</div>
+    <div class="tab" data-t="net" onclick="tab('net')">👥 Network</div>
     <div class="tab" data-t="reach" onclick="tab('reach')">📞 Reach out</div>
     <div class="tab" data-t="viz" onclick="tab('viz')">📊 Insights</div>
     <div class="tab" data-t="add" onclick="tab('add')">＋ Add</div>
   </div>
 
-  <div id="net">
+  <div id="home"></div>
+
+  <div id="net" class="hidden">
     <div class="row" style="margin-bottom:10px"><input id="q" placeholder="Search name, company, category, notes…" oninput="load()"></div>
     <div id="cats" class="row wrap" style="gap:6px;margin-bottom:12px"></div>
     <div id="list"></div>
@@ -367,8 +373,18 @@ const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 let CURCAT='';
 
 function tab(t){for(const el of document.querySelectorAll('.tab'))el.classList.toggle('on',el.dataset.t===t);
-  for(const id of['net','reach','viz','add'])$(id).classList.toggle('hidden',id!==t);
-  if(t==='reach')loadReach();if(t==='viz')loadViz();if(t==='net')load();}
+  for(const id of['home','net','reach','viz','add'])$(id).classList.toggle('hidden',id!==t);
+  if(t==='home')loadOverview();if(t==='reach')loadReach();if(t==='viz')loadViz();if(t==='net')load();}
+
+async function loadOverview(){
+  const rec=await api('api/contacts?filter=recent');
+  const ro=await api('api/contacts?filter=reachout');
+  $('home').innerHTML=
+    `<div class="row between" style="margin:2px 2px 8px"><b>🆕 Recently added <span class="muted small">· ${rec.contacts.length}</span></b></div>`+
+    (rec.contacts.length?rec.contacts.map(contactCard).join(''):'<div class="empty">No contacts yet — add your first from the ＋ Add tab, or paste a vCard export.</div>')+
+    `<div class="row between" style="margin:18px 2px 8px"><b>📌 Reach out to… <span class="muted small">· ${ro.contacts.length}</span></b></div>`+
+    (ro.contacts.length?ro.contacts.map(contactCard).join(''):'<div class="card small muted">Your reach-out list is empty. Tap 📌 on anyone, or tell me to add someone.</div>');
+}
 
 async function api(path,opts){const r=await fetch(path,opts);return r.json();}
 
@@ -471,7 +487,7 @@ async function save(){
 }
 async function touch(id){await api('api/contacts/'+id+'/touch',{method:'POST'});load();}
 async function del(id){if(!confirm('Delete this contact?'))return;await api('api/contacts/'+id+'/delete',{method:'POST'});refreshActive();}
-function refreshActive(){if(!$('reach').classList.contains('hidden'))loadReach();else{load();}}
+function refreshActive(){if(!$('home').classList.contains('hidden'))loadOverview();else if(!$('reach').classList.contains('hidden'))loadReach();else load();}
 async function toggleReach(id,on){let reason=null;if(on){reason=prompt('Add to reach-out list — why? (optional)')||'';}
   await api('api/contacts/'+id+'/reachout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:!!on,reason:reason})});
   refreshActive();}
@@ -482,7 +498,7 @@ async function importVcf(){const t=$('vcf').value;if(!t.trim())return;$('impMsg'
   const r=await api('api/import',{method:'POST',body:t});$('impMsg').textContent='Added '+(r.added||0)+' contacts';$('vcf').value='';load();}
 function closeSheet(){$('modal').classList.remove('on');}
 
-load();
+loadOverview();
 </script></body></html>"""
 
 if __name__ == "__main__":
