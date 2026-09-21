@@ -13,7 +13,7 @@ Env:
   WAYPOINT_PORT   (default 18822)
   WAYPOINT_BASE   base path when mounted under the command hub, e.g. "/waypoint"
 """
-import os
+import os, json, math, urllib.request, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("WAYPOINT_PORT", "18822"))
@@ -123,6 +123,7 @@ PAGE = r'''<!DOCTYPE html>
   <div id="sheetHead"><div class="tt" id="sheetTitle">Waypoint</div><div class="badge" id="sheetBadge" style="display:none"></div></div>
   <div id="tabs">
     <div class="tab active" data-tab="area">About the area</div>
+    <div class="tab" data-tab="ask">Ask AI</div>
     <div class="tab" data-tab="route">Directions</div>
   </div>
   <div id="body"></div>
@@ -133,6 +134,7 @@ PAGE = r'''<!DOCTYPE html>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* ---------- tiny helpers ---------- */
+const API="__BASE__";
 const $=s=>document.querySelector(s);
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
 function toast(m,ms=2600){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',ms);}
@@ -319,35 +321,36 @@ async function wikiNearby(lat,lon){
   const pages=(j2.query&&j2.query.pages)||{};
   return list.map(x=>({title:x.title,dist:x.dist,extract:(pages[x.pageid]||{}).extract||'',thumb:((pages[x.pageid]||{}).thumbnail||{}).source||''}));
 }
+async function fetchBrief(lat,lon){
+  try{const r=await fetch(API+'/api/brief',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat,lon})});return await r.json();}catch(_){return null;}
+}
 async function showArea(narrate){
   switchTab('area');openSheet();
   const body=$('#body');
   const at=me||{lat:map.getCenter().lat,lon:map.getCenter().lng};
-  body.innerHTML='<div class="empty">Reading the area around you…</div>';
-  let place=null;try{place=await reverse(at.lat,at.lon);}catch(_){}
-  const a=(place&&place.address)||{};
-  const where=[a.neighbourhood||a.suburb||a.hamlet, a.city||a.town||a.village||a.county, a.state].filter(Boolean).join(', ');
+  body.innerHTML='<div class="empty">Asking your AI guide about this area…</div>';
+  const d=await fetchBrief(at.lat,at.lon);
+  body.innerHTML='';
+  const where=(d&&d.place)||'';
+  const guideText=(d&&d.text)||'';
   $('#sheetTitle').textContent=where||'About the area';
   $('#sheetBadge').style.display='none';
-  let arts=[];try{arts=await wikiNearby(at.lat,at.lon);}catch(_){}
-  body.innerHTML='';
-  const intro=el('div','card',`<h3>📍 ${where||'Right here'}</h3>${place?`<div class="meta">${place.display_name}</div>`:''}<p>${arts.length?`${arts.length} notable spots within ~2 miles. Tap any to hear it.`:'No Wikipedia landmarks nearby — you are off the beaten path.'}</p>`);
-  body.appendChild(intro);
+  const guide=el('div','card',`<h3>🧭 Local guide${where?` · ${where}`:''}</h3><p>${guideText||'Couldn\'t load a briefing right now — check your connection.'}</p>`+(guideText?`<div class="row"><button id="briefSay">🔊 Read aloud</button></div>`:''));
+  body.appendChild(guide);
+  const sb=guide.querySelector('#briefSay');if(sb)sb.onclick=()=>speak(guideText);
+  const arts=(d&&d.articles)||[];
   arts.forEach(x=>{
     const c=el('div','card',
       `<h3>${x.thumb?`<img src="${x.thumb}" style="width:34px;height:34px;border-radius:8px;object-fit:cover"/>`:''}${x.title}</h3>`+
-      `<div class="meta">${fmtDist(x.dist)} away</div>`+
+      `<div class="meta">${x.dist!=null?fmtDist(x.dist)+' away':''}</div>`+
       `<p>${x.extract||'No summary available.'}</p>`+
-      `<div class="row"><button data-say="1">🔊 Read aloud</button><button data-wiki="${encodeURIComponent(x.title)}">Open article</button></div>`);
+      `<div class="row"><button data-say="1">🔊 Read aloud</button><button data-wiki="1">Open article</button></div>`);
     c.querySelector('[data-say]').onclick=()=>speak(`${x.title}. ${x.extract}`);
     c.querySelector('[data-wiki]').onclick=()=>window.open('https://en.wikipedia.org/wiki/'+encodeURIComponent(x.title.replace(/ /g,'_')),'_blank');
     body.appendChild(c);
   });
   lastAreaAt={lat:at.lat,lon:at.lon};
-  if(narrate&&(where||arts.length)){
-    const lead=arts[0];
-    speak(`You're in ${where||'this area'}.`+(lead?` Nearby: ${lead.title}. ${lead.extract}`:''));
-  }
+  if(narrate&&guideText)speak(guideText);
 }
 // auto-briefing when you move into a meaningfully new area (~700m) and not actively turning
 function maybeArea(force){
@@ -360,18 +363,15 @@ let autoBusy=false;
 async function autoArea(){
   if(autoBusy)return;autoBusy=true;
   try{
-    const at=me;let place=null;try{place=await reverse(at.lat,at.lon);}catch(_){}
-    const a=(place&&place.address)||{};
-    const where=[a.neighbourhood||a.suburb||a.hamlet,a.city||a.town||a.village].filter(Boolean).join(', ');
-    let arts=[];try{arts=await wikiNearby(at.lat,at.lon);}catch(_){}
+    const at=me;
+    const d=await fetchBrief(at.lat,at.lon);
     lastAreaAt={lat:at.lat,lon:at.lon};
-    if(where||arts.length){
-      toast('📍 '+(where||'New area'));
-      const lead=arts[0];
-      speak(`Now entering ${where||'a new area'}.`+(lead?` ${lead.title}: ${lead.extract}`:''));
+    if(d&&(d.place||d.text)){
+      toast('📍 '+(d.place||'New area'));
+      if(d.text)speak(d.text);
       if(activeTab==='area')showArea(false);
     }
-  }finally{setTimeout(()=>autoBusy=false,15000);}
+  }finally{setTimeout(()=>autoBusy=false,20000);}
 }
 
 /* ---------- route render ---------- */
@@ -405,8 +405,55 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.t
 function switchTab(name){
   activeTab=name;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
-  if(name==='route')renderRoute();else showAreaCached();
+  if(name==='route')renderRoute();
+  else if(name==='ask')renderAsk();
+  else showAreaCached();
   openSheet();
+}
+
+/* ---------- Ask AI (agentic) ---------- */
+function renderAsk(){
+  $('#sheetTitle').textContent='Ask Waypoint';$('#sheetBadge').style.display='none';
+  const body=$('#body');body.innerHTML='';
+  const wrap=el('div','card',
+    `<h3>🤖 Ask anything</h3>`+
+    `<p style="margin-bottom:10px">“Find good coffee near me”, “take me to a park”, “what's interesting around here?”</p>`+
+    `<div style="display:flex;gap:8px">`+
+      `<input id="askIn" placeholder="Ask…" autocomplete="off" enterkeyhint="send" style="flex:1;background:#0b1118;border:1px solid var(--line);color:var(--text);border-radius:11px;padding:12px;font-size:15px"/>`+
+      `<button id="askMic" class="iconbtn" style="width:46px;height:46px"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg></button>`+
+      `<button id="askSend" style="background:var(--accent);color:#04120a;border:0;font-weight:700;border-radius:11px;padding:0 16px;font-size:15px">Go</button>`+
+    `</div>`);
+  body.appendChild(wrap);
+  const out=el('div','',''); out.id='askOut'; body.appendChild(out);
+  $('#askSend').onclick=()=>doAsk($('#askIn').value.trim());
+  $('#askIn').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doAsk($('#askIn').value.trim());}});
+  $('#askMic').onclick=startDictation;
+}
+async function doAsk(q){
+  if(!q)return;
+  const out=$('#askOut');out.innerHTML='<div class="empty">Thinking…</div>';
+  const at=me||{lat:map.getCenter().lat,lon:map.getCenter().lng};
+  let d=null;
+  try{const r=await fetch(API+'/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:at.lat,lon:at.lon,query:q})});d=await r.json();}catch(_){}
+  if(!d){out.innerHTML='<div class="empty">Couldn\'t reach the assistant (network).</div>';return;}
+  out.innerHTML='';
+  const c=el('div','card',`<h3>🤖 Waypoint</h3><p>${d.say||'—'}</p>`);
+  if(d.destination&&d.destination.name){
+    const row=el('div','row');
+    const go=el('button',null,`🧭 Route to ${d.destination.name}`);
+    go.onclick=()=>navigateTo(d.destination.lat,d.destination.lon,d.destination.name);
+    row.appendChild(go);c.appendChild(row);
+  }
+  out.appendChild(c);
+  speak(d.say||'');
+}
+function startDictation(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('Voice input not supported here — just type it');return;}
+  try{const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=1;
+    r.onresult=e=>{const t=e.results[0][0].transcript;if($('#askIn'))$('#askIn').value=t;doAsk(t);};
+    r.onerror=()=>toast('Didn\'t catch that');
+    r.start();toast('🎙️ Listening…');}catch(_){toast('Voice input unavailable');}
 }
 let areaRendered=false;
 function showAreaCached(){ if(!areaRendered){areaRendered=true;showArea(false);} }
@@ -430,6 +477,171 @@ document.body.addEventListener('touchend',function prime(){try{speechSynthesis.s
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+# ---- AI + geo backend (agentic layer) --------------------------------------
+UA = {"User-Agent": "Waypoint/1.0 (personal navigation app; contact: matthew)"}
+
+def _load_key():
+    k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if k:
+        return k
+    try:
+        with open("/root/.openclaw/.env") as f:
+            for line in f:
+                line = line.strip()
+                for name in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+                    if line.startswith(name + "="):
+                        v = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if v:
+                            return v
+    except OSError:
+        pass
+    return ""
+
+GEMINI_KEY = _load_key()
+
+def get_json(url, timeout=12):
+    req = urllib.request.Request(url, headers=UA)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8", "replace"))
+
+def gemini(prompt, want_json=False, timeout=16):
+    if not GEMINI_KEY:
+        return None
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_KEY}"
+    body = {"contents": [{"parts": [{"text": prompt}]}]}
+    if want_json:
+        body["generationConfig"] = {"response_mime_type": "application/json"}
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            j = json.loads(r.read().decode("utf-8", "replace"))
+        return j["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception:
+        return None
+
+def reverse_geocode(lat, lon):
+    return get_json(f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&addressdetails=1&lat={lat}&lon={lon}")
+
+def nominatim_search(q, lat, lon, limit=8):
+    vb = f"&viewbox={lon-0.15},{lat+0.12},{lon+0.15},{lat-0.12}&bounded=0"
+    return get_json(f"https://nominatim.openstreetmap.org/search?format=jsonv2&limit={limit}&addressdetails=1&q={urllib.parse.quote(q)}{vb}")
+
+def wiki_nearby(lat, lon, limit=6):
+    j = get_json(f"https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord={lat}%7C{lon}&gsradius=3000&gslimit={limit}&format=json")
+    lst = (j.get("query", {}) or {}).get("geosearch", []) or []
+    if not lst:
+        return []
+    ids = "|".join(str(x["pageid"]) for x in lst)
+    j2 = get_json(f"https://en.wikipedia.org/w/api.php?action=query&prop=extracts%7Cpageimages&exintro&explaintext&exsentences=3&piprop=thumbnail&pithumbsize=90&pilimit={limit}&pageids={urllib.parse.quote(ids)}&format=json")
+    pages = (j2.get("query", {}) or {}).get("pages", {}) or {}
+    out = []
+    for x in lst:
+        pg = pages.get(str(x["pageid"]), {}) or {}
+        out.append({"title": x["title"], "dist": x.get("dist"),
+                    "extract": pg.get("extract", ""),
+                    "thumb": (pg.get("thumbnail", {}) or {}).get("source", "")})
+    return out
+
+def hav(lat1, lon1, lat2, lon2):
+    R = 6371000.0
+    dlat = math.radians(lat2 - lat1); dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
+    return 2*R*math.asin(math.sqrt(a))
+
+OVERPASS_HOSTS = ["https://overpass-api.de/api/interpreter",
+                  "https://overpass.kumi.systems/api/interpreter"]
+
+def overpass_nearby(tag, lat, lon, radius=2500, limit=8):
+    q = (f"[out:json][timeout:12];("
+         f"node(around:{radius},{lat},{lon})[{tag}];"
+         f"way(around:{radius},{lat},{lon})[{tag}];);out center {limit*3};")
+    for host in OVERPASS_HOSTS:
+        try:
+            j = get_json(host + "?data=" + urllib.parse.quote(q), timeout=14)
+        except Exception:
+            continue
+        out = []
+        for e in j.get("elements", []):
+            tags = e.get("tags", {}) or {}
+            name = tags.get("name")
+            if not name:
+                continue
+            la = e.get("lat") if e.get("lat") is not None else (e.get("center", {}) or {}).get("lat")
+            lo = e.get("lon") if e.get("lon") is not None else (e.get("center", {}) or {}).get("lon")
+            if la is None or lo is None:
+                continue
+            out.append({"name": name, "lat": la, "lon": lo, "dist": hav(lat, lon, la, lo),
+                        "kind": tags.get("amenity") or tags.get("shop") or tags.get("leisure") or tags.get("tourism")})
+        if out:
+            out.sort(key=lambda x: x["dist"])
+            return out[:limit]
+    return []
+
+def photon_search(term, lat, lon, key=None, value=None, limit=8, maxkm=25):
+    url = f"https://photon.komoot.io/api/?q={urllib.parse.quote(term)}&lat={lat}&lon={lon}&limit=20"
+    j = get_json(url, timeout=14)
+    prim, sec = [], []
+    for f in j.get("features", []):
+        p = f.get("properties", {}) or {}
+        name = p.get("name")
+        c = (f.get("geometry", {}) or {}).get("coordinates", [None, None])
+        if not name or c[0] is None:
+            continue
+        lo, la = c[0], c[1]
+        d = hav(lat, lon, la, lo)
+        if d > maxkm * 1000:
+            continue
+        rec = {"name": name, "lat": la, "lon": lo, "dist": d, "kind": p.get("osm_value")}
+        if (value and p.get("osm_value") == value) or (key and p.get("osm_key") == key):
+            prim.append(rec)
+        else:
+            sec.append(rec)
+    res = prim if prim else sec
+    res.sort(key=lambda x: x["dist"])
+    return res[:limit]
+
+def find_places(tag, label, lat, lon):
+    key = value = None
+    if tag and "=" in tag:
+        key, value = tag.split("=", 1)
+    cands = []
+    # Photon first — fast and reliable, filtered to the intended category.
+    for term in [t for t in (label, value) if t]:
+        try:
+            cands = photon_search(term, lat, lon, key, value)
+        except Exception:
+            cands = []
+        if cands:
+            break
+    # Overpass as a category-accurate upgrade when Photon is weak (but it's flaky/slow).
+    if len(cands) < 2 and tag:
+        try:
+            ov = overpass_nearby(tag, lat, lon)
+            if ov:
+                cands = ov
+        except Exception:
+            pass
+    if not cands:  # last resort: bounded freeform name search
+        try:
+            for r in nominatim_search(label, lat, lon, 8):
+                d = hav(lat, lon, float(r["lat"]), float(r["lon"]))
+                if d < 60000:
+                    cands.append({"name": r.get("display_name", "").split(",")[0],
+                                  "lat": float(r["lat"]), "lon": float(r["lon"]), "dist": d})
+        except Exception: pass
+    cands.sort(key=lambda x: x.get("dist") if x.get("dist") is not None else 9e9)
+    return cands[:8]
+
+def _where_str(place, short=False):
+    a = (place or {}).get("address", {}) if place else {}
+    parts = [a.get("neighbourhood") or a.get("suburb") or a.get("hamlet"),
+             a.get("city") or a.get("town") or a.get("village") or a.get("county")]
+    if not short:
+        parts.append(a.get("state"))
+    return ", ".join([x for x in parts if x])
+
+
 MANIFEST = ('{'
   '"name":"Waypoint","short_name":"Waypoint",'
   f'"start_url":"{BASE}/","scope":"{BASE}/","display":"standalone",'
@@ -443,7 +655,7 @@ MANIFEST = ('{'
 )
 
 SW = (
-  "const C='waypoint-v2';"
+  "const C='waypoint-v3';"
   f"const SHELL=['{BASE}/','{BASE}/icon.png','{BASE}/icon-192.png','{BASE}/icon-512.png','{BASE}/manifest.webmanifest'];"
   "self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()).catch(()=>self.skipWaiting()));});"
   "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});"
@@ -480,6 +692,108 @@ class H(BaseHTTPRequestHandler):
                 self._send(f.read(), ctype, cache='public, max-age=86400')
         except OSError:
             self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+
+    def _json(self, obj, code=200):
+        body = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        p = self._route()
+        try:
+            n = int(self.headers.get('Content-Length', '0') or 0)
+        except ValueError:
+            n = 0
+        raw = self.rfile.read(n) if n else b'{}'
+        try:
+            req = json.loads(raw or b'{}')
+        except Exception:
+            req = {}
+        if p == '/api/brief':
+            self._brief(req)
+        elif p == '/api/ask':
+            self._ask(req)
+        else:
+            self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+
+    def _brief(self, req):
+        lat, lon = req.get('lat'), req.get('lon')
+        if lat is None or lon is None:
+            return self._json({'error': 'no location'}, 400)
+        place = None
+        try: place = reverse_geocode(lat, lon)
+        except Exception: pass
+        where = _where_str(place)
+        arts = []
+        try: arts = wiki_nearby(lat, lon, 6)
+        except Exception: pass
+        landmarks = '; '.join(f"{x['title']}: {x['extract'][:180]}" for x in arts[:5] if x.get('extract'))
+        prompt = ("You are a warm, knowledgeable local guide riding shotgun with a driver. "
+                  "In 2-3 short spoken sentences (no markdown, no lists, no emoji), tell them what's "
+                  f"interesting about where they are: {where or 'this area'}. "
+                  f"Ground it in these nearby landmarks when relevant: {landmarks or 'none found'}. "
+                  "Be vivid but brief; it will be read aloud while driving.")
+        text = gemini(prompt)
+        if not text:
+            text = ((f"You're in {where}. " if where else "") +
+                    (f"Nearby: {arts[0]['title']}. {arts[0]['extract']}" if arts else
+                     "No notable landmarks right around here."))
+        self._json({'text': text.strip(), 'place': where, 'articles': arts})
+
+    def _ask(self, req):
+        lat, lon = req.get('lat'), req.get('lon')
+        q = (req.get('query') or '').strip()
+        if lat is None or lon is None or not q:
+            return self._json({'say': "Tell me where you'd like to go.", 'destination': None})
+        place = None
+        try: place = reverse_geocode(lat, lon)
+        except Exception: pass
+        where = _where_str(place, short=True)
+
+        # Step 1 — the agent decides: is this "find a place" or a general question?
+        cls = gemini(
+            f"A driver near {where or 'here'} said: \"{q}\".\n"
+            'If they want to find or be taken to a TYPE of place, reply JSON '
+            '{"mode":"find","osm":"<one valid OpenStreetMap tag filter, e.g. amenity=cafe, shop=supermarket, '
+            'leisure=park, amenity=fuel, amenity=restaurant, amenity=bar, amenity=pharmacy>","label":"<short plural noun>"}. '
+            'If it is a general question about the area, reply JSON {"mode":"chat","say":"<one friendly spoken sentence, no markdown/emoji>"}. '
+            'Reply ONLY JSON.', want_json=True)
+        spec = {}
+        if cls:
+            try: spec = json.loads(cls)
+            except Exception: spec = {}
+        if spec.get('mode') == 'chat' and spec.get('say'):
+            return self._json({'say': spec['say'], 'destination': None})
+
+        tag = spec.get('osm'); label = spec.get('label') or q
+        cands = find_places(tag, label, lat, lon)
+        if not cands:
+            return self._json({'say': f"I couldn't find {label} near you right now.", 'destination': None})
+
+        # Step 2 — the agent picks the best and pitches it
+        slim = [{'name': c['name'], 'lat': c['lat'], 'lon': c['lon'],
+                 'meters': (round(c['dist']) if c.get('dist') is not None else None)} for c in cands[:8]]
+        pick = gemini(
+            f"Driver near {where or 'here'} asked: \"{q}\". Candidate places (JSON, nearest first): {json.dumps(slim)}. "
+            'Pick the single best one and reply ONLY JSON '
+            '{"say":"<one friendly spoken sentence naming it and how far>","name":"..","lat":..,"lon":..} '
+            'using values copied from a candidate.', want_json=True)
+        say, dest = None, None
+        if pick:
+            try:
+                j = json.loads(pick); say = j.get('say')
+                if j.get('name') and j.get('lat') is not None and j.get('lon') is not None:
+                    dest = {'name': j['name'], 'lat': float(j['lat']), 'lon': float(j['lon'])}
+            except Exception: pass
+        if not dest:
+            c = cands[0]; dest = {'name': c['name'], 'lat': c['lat'], 'lon': c['lon']}
+            if not say:
+                say = f"Closest is {c['name']}" + (f", about {round(c['dist'])} meters away." if c.get('dist') is not None else ".")
+        self._json({'say': say, 'destination': dest})
 
     def do_GET(self):
         p = self._route()
