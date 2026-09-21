@@ -159,6 +159,7 @@ let follow=true;
 let routeData=null;     // OSRM route
 let steps=[];           // flattened maneuvers
 let stepIdx=0;
+let routeReq=0;         // guards against overlapping/stale route requests
 let lastAreaAt=null;    // {lat,lon}
 let activeTab='area';
 
@@ -221,24 +222,40 @@ $('#go').onclick=async()=>{
 $('#q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#go').click();}});
 
 /* ---------- routing (OSRM) ---------- */
+// Reliable public OSRM instances (FOSSGIS first — far less rate-limited than the demo server).
+const OSRM_HOSTS=['https://routing.openstreetmap.de/routed-car','https://router.project-osrm.org'];
+async function osrmRoute(from,to){
+  const path=`/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson&steps=true`;
+  for(let attempt=0;attempt<2;attempt++){
+    for(const h of OSRM_HOSTS){
+      try{
+        const r=await fetch(h+path);
+        if(!r.ok)continue;
+        const j=await r.json();
+        if(j.code==='Ok'&&j.routes&&j.routes.length)return j.routes[0];
+      }catch(_){/* try next host */}
+    }
+    if(attempt===0)await new Promise(res=>setTimeout(res,600));
+  }
+  return null;
+}
 async function navigateTo(lat,lon,label){
-  if(!me){toast('Waiting for your GPS fix…');}
+  const myReq=++routeReq;              // only the newest request may render or error
+  if(!me)toast('Waiting for your GPS fix…');
   if(destMarker)map.removeLayer(destMarker);
   destMarker=L.marker([lat,lon]).addTo(map);
   const from=me||{lat:map.getCenter().lat,lon:map.getCenter().lng};
   toast('Routing…');
-  try{
-    const url=`https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${lon},${lat}?overview=full&geometries=geojson&steps=true&annotations=false`;
-    const r=await fetch(url);const j=await r.json();
-    if(!j.routes||!j.routes.length){toast('No driving route found');return;}
-    routeData=j.routes[0];drawRoute(routeData);buildSteps(routeData);
-    switchTab('route');openSheet();
-    const sum=`${fmtDur(routeData.duration)} · ${fmtDist(routeData.distance)}`;
-    $('#sheetTitle').textContent=label||'Destination';
-    $('#sheetBadge').style.display='inline-block';$('#sheetBadge').textContent=sum;
-    speak(`Starting drive to ${label||'your destination'}. ${fmtDur(routeData.duration)}, ${fmtDist(routeData.distance)}.`);
-    stepIdx=0;updateNav();
-  }catch(e){toast('Routing failed (network)');}
+  const rt=await osrmRoute(from,{lat,lon});
+  if(myReq!==routeReq)return;          // a newer search superseded this one — stay silent
+  if(!rt){toast('No route found — try adding a street name or city');return;}
+  routeData=rt;drawRoute(routeData);buildSteps(routeData);
+  switchTab('route');openSheet();
+  const sum=`${fmtDur(routeData.duration)} · ${fmtDist(routeData.distance)}`;
+  $('#sheetTitle').textContent=label||'Destination';
+  $('#sheetBadge').style.display='inline-block';$('#sheetBadge').textContent=sum;
+  speak(`Starting drive to ${label||'your destination'}. ${fmtDur(routeData.duration)}, ${fmtDist(routeData.distance)}.`);
+  stepIdx=0;updateNav();
 }
 function drawRoute(rt){
   if(routeLine)map.removeLayer(routeLine);
