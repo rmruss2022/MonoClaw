@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0e1620"/><stop offset="1" stop-color="#0a0f15"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#16a34a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="0" stop-color="#22c55e" stop-opacity="0.35"/><stop offset="1" stop-color="#22c55e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="212" r="180" fill="url(#glow)"/>
+  <!-- route dashes -->
+  <path d="M120 392 C 200 360, 180 300, 256 300" fill="none" stroke="#38bdf8" stroke-width="14" stroke-linecap="round" stroke-dasharray="4 30" opacity="0.85"/>
+  <!-- pin -->
+  <path d="M256 116 c -66 0 -118 52 -118 118 c 0 84 118 190 118 190 c 0 0 118 -106 118 -190 c 0 -66 -52 -118 -118 -118 z" fill="url(#pin)"/>
+  <circle cx="256" cy="234" r="46" fill="#04120a"/>
+  <circle cx="256" cy="234" r="20" fill="#eafff3"/>
+</svg>

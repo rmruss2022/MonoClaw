@@ -25,6 +25,12 @@ PAGE = r'''<!DOCTYPE html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <meta name="theme-color" content="#0b0f14"/>
+<link rel="manifest" href="__BASE__/manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="__BASE__/icon.png"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Waypoint"/>
 <title>Waypoint</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
@@ -396,6 +402,7 @@ $('#areaBtn').onclick=()=>{areaRendered=true;showArea(true);};
 $('#voiceBtn').onclick=()=>{voiceOn=!voiceOn;$('#voiceBtn').classList.toggle('on',voiceOn);toast(voiceOn?'Voice on':'Voice muted');if(voiceOn)speak('Voice on.');else speechSynthesis.cancel();};
 
 /* ---------- boot ---------- */
+if('serviceWorker'in navigator){navigator.serviceWorker.register('__BASE__/sw.js',{scope:'__BASE__/'}).catch(()=>{});}
 renderRoute();
 startGeo();
 // iOS: speechSynthesis needs a user gesture to unlock — prime it on first tap
@@ -403,6 +410,32 @@ document.body.addEventListener('touchend',function prime(){try{speechSynthesis.s
 </script>
 </body>
 </html>'''
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+MANIFEST = ('{'
+  '"name":"Waypoint","short_name":"Waypoint",'
+  f'"start_url":"{BASE}/","scope":"{BASE}/","display":"standalone",'
+  '"orientation":"portrait","background_color":"#0b0f14","theme_color":"#0b0f14",'
+  '"description":"Driving GPS with spoken area briefings.",'
+  '"icons":['
+    f'{{"src":"{BASE}/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"}},'
+    f'{{"src":"{BASE}/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"}},'
+    f'{{"src":"{BASE}/icon-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}}'
+  ']}'
+)
+
+SW = (
+  "const C='waypoint-v2';"
+  f"const SHELL=['{BASE}/','{BASE}/icon.png','{BASE}/icon-192.png','{BASE}/icon-512.png','{BASE}/manifest.webmanifest'];"
+  "self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()).catch(()=>self.skipWaiting()));});"
+  "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});"
+  "self.addEventListener('fetch',e=>{const u=new URL(e.request.url);"
+  "if(e.request.method!=='GET'||u.origin!==location.origin){return;}"
+  "if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).catch(()=>caches.match(SHELL[0])));return;}"
+  "e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));});"
+)
+
 
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a):  # quiet
@@ -414,18 +447,35 @@ class H(BaseHTTPRequestHandler):
             p = p[len(BASE):] or '/'
         return p
 
+    def _send(self, body, ctype, cache='no-cache'):
+        if isinstance(body, str):
+            body = body.encode('utf-8')
+        self.send_response(200)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', cache)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _file(self, name, ctype):
+        try:
+            with open(os.path.join(HERE, name), 'rb') as f:
+                self._send(f.read(), ctype, cache='public, max-age=86400')
+        except OSError:
+            self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+
     def do_GET(self):
         p = self._route()
         if p in ('/', '/index.html'):
-            body = PAGE.encode('utf-8')
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
-            self.send_header('Content-Length', str(len(body)))
-            self.send_header('Cache-Control', 'no-cache')
-            self.end_headers()
-            self.wfile.write(body)
+            self._send(PAGE.replace('__BASE__', BASE), 'text/html; charset=utf-8')
+        elif p == '/manifest.webmanifest':
+            self._send(MANIFEST, 'application/manifest+json')
+        elif p == '/sw.js':
+            self._send(SW, 'application/javascript; charset=utf-8')
+        elif p in ('/icon.png', '/icon-192.png', '/icon-512.png'):
+            self._file(p.lstrip('/'), 'image/png')
         elif p in ('/health', '/healthz'):
-            self.send_response(200); self.send_header('Content-Type','text/plain'); self.end_headers(); self.wfile.write(b'ok')
+            self._send('ok', 'text/plain')
         else:
             self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
 
