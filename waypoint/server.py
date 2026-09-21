@@ -61,10 +61,11 @@ PAGE = r'''<!DOCTYPE html>
   #nav .man{font-size:18px;font-weight:700;line-height:1.25}
   #nav .sub{color:var(--dim);font-size:13px;margin-top:3px}
   /* Bottom sheet */
-  #sheet{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:var(--panel);border-top:1px solid var(--line);border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);transform:translateY(calc(100% - 92px));transition:transform .28s cubic-bezier(.2,.8,.2,1);max-height:78vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+  #sheet{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:var(--panel);border-top:1px solid var(--line);border-radius:20px 20px 0 0;box-shadow:0 -10px 40px rgba(0,0,0,.5);transform:translateY(calc(100% - 128px));transition:transform .28s cubic-bezier(.2,.8,.2,1);max-height:80vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);touch-action:none}
   #sheet.open{transform:translateY(0)}
-  #grip{padding:10px 0 6px;display:flex;justify-content:center}
-  #grip .bar{width:44px;height:5px;border-radius:5px;background:#2b3a49}
+  #grip{padding:14px 0 8px;display:flex;justify-content:center;cursor:grab}
+  #grip .bar{width:48px;height:6px;border-radius:6px;background:#3a4c5e}
+  #sheetHead{cursor:grab}
   #sheetHead{padding:0 16px 10px;display:flex;align-items:center;gap:10px}
   #sheetHead .tt{font-weight:700;font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #sheetHead .badge{font-size:12px;color:var(--accent);border:1px solid #1f6f3f;background:#0f2a1a;border-radius:999px;padding:3px 9px}
@@ -183,7 +184,12 @@ function onPos(p){
 
 /* ---------- geocoding (Nominatim) ---------- */
 async function geocode(q){
-  const b=me?`&viewbox=${me.lon-.6},${me.lat+.4},${me.lon+.6},${me.lat-.4}&bounded=0`:'';
+  let b='';
+  if(me){
+    // Keep short/bare-number searches (e.g. "123") local instead of matching another country.
+    const bounded=(/^\d{1,5}$/.test(q.trim())||q.trim().length<4)?1:0;
+    b=`&viewbox=${me.lon-.5},${me.lat+.35},${me.lon+.5},${me.lat-.35}&bounded=${bounded}`;
+  }
   const url=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&addressdetails=1&q=${encodeURIComponent(q)}${b}`;
   const r=await fetch(url,{headers:{'Accept':'application/json'}});
   return r.ok?await r.json():[];
@@ -252,7 +258,8 @@ async function navigateTo(lat,lon,label){
   if(myReq!==routeReq)return;          // a newer search superseded this one — stay silent
   if(!rt){toast('No route found — try adding a street name or city');return;}
   routeData=rt;drawRoute(routeData);buildSteps(routeData);
-  switchTab('route');openSheet();
+  switchTab('route');collapseSheet();
+  if(me){follow=true;setFollowUI();map.setView([me.lat,me.lon],16);}   // Waze-style: track the driver, map stays visible
   const sum=`${fmtDur(routeData.duration)} · ${fmtDist(routeData.distance)}`;
   $('#sheetTitle').textContent=label||'Destination';
   $('#sheetBadge').style.display='inline-block';$('#sheetBadge').textContent=sum;
@@ -396,19 +403,51 @@ function clearRoute(){
   switchTab('area');renderRoute();
 }
 
-/* ---------- sheet / tabs ---------- */
-function openSheet(){$('#sheet').classList.add('open');}
-function closeSheet(){$('#sheet').classList.remove('open');}
-$('#grip').onclick=()=>$('#sheet').classList.toggle('open');
-$('#sheetHead').onclick=()=>$('#sheet').classList.toggle('open');
-document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+/* ---------- draggable bottom sheet (Google Maps / Waze style) ---------- */
+const sheetEl=$('#sheet');
+const PEEK=128;
+function openSheet(){sheetEl.style.transition='';sheetEl.style.transform='';sheetEl.classList.add('open');}
+function collapseSheet(){sheetEl.style.transition='';sheetEl.style.transform='';sheetEl.classList.remove('open');}
+function toggleSheet(){sheetEl.classList.contains('open')?collapseSheet():openSheet();}
+let sdrag=null;
+function sheetStart(y){sdrag={y0:y,moved:0,open:sheetEl.classList.contains('open'),h:sheetEl.offsetHeight};sheetEl.style.transition='none';}
+function sheetMove(y){
+  if(!sdrag)return;
+  const peekOff=sdrag.h-PEEK;
+  const dy=y-sdrag.y0;sdrag.moved=Math.max(sdrag.moved,Math.abs(dy));
+  const base=sdrag.open?0:peekOff;
+  const t=Math.min(peekOff,Math.max(0,base+dy));
+  sheetEl.style.transform=`translateY(${t}px)`;
+}
+function sheetEnd(){
+  if(!sdrag)return;
+  const peekOff=sdrag.h-PEEK;
+  const m=/translateY\(([-0-9.]+)px\)/.exec(sheetEl.style.transform||'');
+  const t=m?parseFloat(m[1]):(sdrag.open?0:peekOff);
+  sheetEl.style.transition='';sheetEl.style.transform='';
+  if(sdrag.moved<6){toggleSheet();}
+  else if(t<peekOff*0.5){sheetEl.classList.add('open');}
+  else{sheetEl.classList.remove('open');}
+  sdrag=null;
+}
+['#grip','#sheetHead'].forEach(sel=>{
+  const e=$(sel);if(!e)return;
+  e.addEventListener('touchstart',ev=>sheetStart(ev.touches[0].clientY),{passive:true});
+  e.addEventListener('touchmove',ev=>{sheetMove(ev.touches[0].clientY);ev.preventDefault();},{passive:false});
+  e.addEventListener('touchend',sheetEnd);
+  e.addEventListener('touchcancel',sheetEnd);
+  e.addEventListener('mousedown',ev=>{sheetStart(ev.clientY);
+    const mm=e2=>sheetMove(e2.clientY);
+    const mu=()=>{sheetEnd();document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);};
+    document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);});
+});
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{switchTab(t.dataset.tab);openSheet();});
 function switchTab(name){
   activeTab=name;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
   if(name==='route')renderRoute();
   else if(name==='ask')renderAsk();
   else showAreaCached();
-  openSheet();
 }
 
 /* ---------- Ask AI (agentic) ---------- */
@@ -655,7 +694,7 @@ MANIFEST = ('{'
 )
 
 SW = (
-  "const C='waypoint-v3';"
+  "const C='waypoint-v4';"
   f"const SHELL=['{BASE}/','{BASE}/icon.png','{BASE}/icon-192.png','{BASE}/icon-512.png','{BASE}/manifest.webmanifest'];"
   "self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()).catch(()=>self.skipWaiting()));});"
   "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});"
