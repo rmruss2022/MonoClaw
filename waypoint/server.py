@@ -34,7 +34,7 @@ PAGE = r'''<!DOCTYPE html>
 <title>Waypoint</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-  :root{ --bg:#0b0f14; --panel:#121820; --panel2:#0e141b; --line:#1e2833; --text:#e8eef5; --dim:#8aa0b4; --accent:#22c55e; --accent2:#38bdf8; --danger:#ef4444; }
+  :root{ --bg:#0b0f14; --panel:#121820; --panel2:#0e141b; --line:#1e2833; --text:#e8eef5; --dim:#8aa0b4; --accent:#6366f1; --accent2:#38bdf8; --danger:#ef4444; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
   #map{position:absolute;inset:0;background:var(--bg);z-index:1}
@@ -44,7 +44,7 @@ PAGE = r'''<!DOCTYPE html>
   #searchWrap{flex:1;display:flex;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.45);overflow:hidden}
   #q{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:16px;padding:13px 14px}
   #q::placeholder{color:var(--dim)}
-  #go{background:var(--accent);color:#04120a;border:0;font-weight:700;padding:0 16px;font-size:15px}
+  #go{background:var(--accent);color:#ffffff;border:0;font-weight:700;padding:0 16px;font-size:15px}
   #go:active{filter:brightness(.9)}
   .iconbtn{width:46px;height:46px;flex:0 0 auto;border-radius:13px;background:var(--panel);border:1px solid var(--line);color:var(--text);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 24px rgba(0,0,0,.45)}
   .iconbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -57,7 +57,7 @@ PAGE = r'''<!DOCTYPE html>
   /* right side controls */
   #side{position:absolute;right:10px;top:calc(env(safe-area-inset-top) + 68px);z-index:1000;display:flex;flex-direction:column;gap:8px}
   /* Nav banner (active turn) */
-  #nav{position:absolute;top:calc(env(safe-area-inset-top) + 62px);left:10px;right:66px;z-index:999;background:linear-gradient(135deg,#0f2a1a,#123);border:1px solid #1f6f3f;border-radius:16px;padding:12px 14px;display:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  #nav{position:absolute;top:calc(env(safe-area-inset-top) + 62px);left:10px;right:66px;z-index:999;background:linear-gradient(135deg,#1e1b4b,#123);border:1px solid #4f46e5;border-radius:16px;padding:12px 14px;display:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
   #nav .man{font-size:18px;font-weight:700;line-height:1.25}
   #nav .sub{color:var(--dim);font-size:13px;margin-top:3px}
   /* Bottom sheet */
@@ -68,7 +68,7 @@ PAGE = r'''<!DOCTYPE html>
   #sheetHead{cursor:grab}
   #sheetHead{padding:0 16px 10px;display:flex;align-items:center;gap:10px}
   #sheetHead .tt{font-weight:700;font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #sheetHead .badge{font-size:12px;color:var(--accent);border:1px solid #1f6f3f;background:#0f2a1a;border-radius:999px;padding:3px 9px}
+  #sheetHead .badge{font-size:12px;color:var(--accent);border:1px solid #4f46e5;background:#1e1b4b;border-radius:999px;padding:3px 9px}
   #tabs{display:flex;gap:6px;padding:0 12px 8px}
   .tab{flex:1;text-align:center;padding:9px;border-radius:11px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:600}
   .tab.active{color:var(--text);border-color:#2b6cb0;background:#0d2233}
@@ -91,7 +91,38 @@ PAGE = r'''<!DOCTYPE html>
   #toast{position:absolute;bottom:104px;left:50%;transform:translateX(-50%);z-index:2000;background:#0d2233;border:1px solid #24425a;color:var(--text);padding:10px 14px;border-radius:12px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;max-width:82vw;text-align:center}
   .pulse{position:relative}
   .gpsdot{width:18px;height:18px;border-radius:50%;background:var(--accent2);border:3px solid #fff;box-shadow:0 0 0 6px rgba(56,189,248,.25)}
-  .leaflet-routeline{filter:drop-shadow(0 0 6px rgba(34,197,94,.5))}
+  .leaflet-routeline{filter:drop-shadow(0 0 6px rgba(99,102,241,.5))}
+  /* ---- AI voice FAB + overlay ---- */
+  #voiceFab{position:absolute;right:16px;bottom:150px;z-index:1500;width:62px;height:62px;border-radius:50%;border:0;
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 12px 28px rgba(79,70,229,.5);
+    display:flex;align-items:center;justify-content:center}
+  #voiceFab svg{width:27px;height:27px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #voiceFab:active{transform:scale(.95)}
+  #voice{position:fixed;inset:0;z-index:3000;background:rgba(8,11,17,.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center}
+  #voice.open{display:flex}
+  #voiceClose{position:absolute;top:calc(env(safe-area-inset-top) + 14px);right:20px;background:none;border:0;color:#9aa7ba;font-size:26px;line-height:1}
+  .vorb{width:134px;height:134px;border-radius:50%;background:radial-gradient(circle at 50% 38%,#818cf8,#4f46e5);
+    display:flex;align-items:center;justify-content:center;position:relative}
+  .vorb svg{width:50px;height:50px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  #voice.listening .vorb{animation:vpulse 1.5s ease-out infinite}
+  @keyframes vpulse{0%{box-shadow:0 0 0 0 rgba(99,102,241,.5)}100%{box-shadow:0 0 0 46px rgba(99,102,241,0)}}
+  #vStatus{margin-top:28px;color:#aeb8c8;font-size:15px;font-weight:500}
+  #vTranscript{margin-top:10px;color:#fff;font-size:22px;font-weight:600;max-width:22ch;line-height:1.3;min-height:10px}
+  #vAnswer{margin-top:18px;color:#dfe7f1;font-size:16px;line-height:1.5;max-width:30ch}
+  #vActions{margin-top:22px;display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px}
+  #vActions button{border:0;border-radius:13px;padding:14px;font-size:15px;font-weight:600}
+  #vActions .vgo{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+  #vActions .vagain{background:#141922;color:#cfe0ee;border:1px solid #222b38}
+  /* branded launch splash */
+  #splash{position:fixed;inset:0;z-index:4000;background:#0b0e14;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;transition:opacity .55s ease}
+  #splash.hide{opacity:0;pointer-events:none}
+  #splash .slogo{width:88px;height:88px;border-radius:23px;background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 18px 44px rgba(79,70,229,.45)}
+  #splash .slogo svg{width:44px;height:44px}
+  #splash .sname{font-size:25px;font-weight:700;letter-spacing:-.01em;color:#fff}
+  #splash .stag{font-size:12px;color:#8a97a9;letter-spacing:.18em;text-transform:uppercase}
 </style>
 </head>
 <body>
@@ -131,6 +162,26 @@ PAGE = r'''<!DOCTYPE html>
 </div>
 
 <div id="toast"></div>
+
+<!-- AI voice assistant -->
+<button id="voiceFab" aria-label="Talk to the AI assistant">
+  <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+</button>
+<div id="voice" aria-hidden="true">
+  <button id="voiceClose" aria-label="Close">&times;</button>
+  <div class="vorb" role="button" tabindex="0" aria-label="Tap to speak"><svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></div>
+  <div id="vStatus">Tap the mic and speak</div>
+  <div id="vTranscript"></div>
+  <div id="vAnswer"></div>
+  <div id="vActions"></div>
+</div>
+
+<!-- branded launch splash -->
+<div id="splash">
+  <div class="slogo"><svg viewBox="0 0 52 52"><path d="M26 10l11 31-11-7-11 7z" fill="#fff"/></svg></div>
+  <div class="sname">Waypoint</div>
+  <div class="stag">AI Navigation</div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -271,7 +322,7 @@ async function navigateTo(lat,lon,label){
 function drawRoute(rt){
   if(routeLine)map.removeLayer(routeLine);
   const pts=rt.geometry.coordinates.map(c=>[c[1],c[0]]);
-  routeLine=L.polyline(pts,{color:'#22c55e',weight:6,opacity:.9,className:'leaflet-routeline'}).addTo(map);
+  routeLine=L.polyline(pts,{color:'#6366f1',weight:6,opacity:.9,className:'leaflet-routeline'}).addTo(map);
   try{map.fitBounds(routeLine.getBounds().pad(.18));}catch(_){}
   follow=false;setFollowUI();
 }
@@ -462,7 +513,7 @@ function renderAsk(){
     `<div style="display:flex;gap:8px">`+
       `<input id="askIn" placeholder="Ask…" autocomplete="off" enterkeyhint="send" style="flex:1;background:#0b1118;border:1px solid var(--line);color:var(--text);border-radius:11px;padding:12px;font-size:15px"/>`+
       `<button id="askMic" class="iconbtn" style="width:46px;height:46px"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg></button>`+
-      `<button id="askSend" style="background:var(--accent);color:#04120a;border:0;font-weight:700;border-radius:11px;padding:0 16px;font-size:15px">Go</button>`+
+      `<button id="askSend" style="background:var(--accent);color:#ffffff;border:0;font-weight:700;border-radius:11px;padding:0 16px;font-size:15px">Go</button>`+
     `</div>`);
   body.appendChild(wrap);
   const out=el('div','',''); out.id='askOut'; body.appendChild(out);
@@ -506,8 +557,48 @@ map.on('dragstart',()=>{follow=false;setFollowUI();});
 $('#areaBtn').onclick=()=>{areaRendered=true;showArea(true);};
 $('#voiceBtn').onclick=()=>{voiceOn=!voiceOn;$('#voiceBtn').classList.toggle('on',voiceOn);toast(voiceOn?'Voice on':'Voice muted');if(voiceOn)speak('Voice on.');else speechSynthesis.cancel();};
 
+/* ---------- AI voice assistant ---------- */
+let vRec=null, vListening=false;
+function vSet(on){const v=$('#voice');if(v)v.classList.toggle('listening',on);vListening=on;}
+function openVoice(){const v=$('#voice');v.classList.add('open');v.setAttribute('aria-hidden','false');$('#vTranscript').textContent='';$('#vAnswer').textContent='';$('#vActions').innerHTML='';startVoice();}
+function closeVoice(){const v=$('#voice');v.classList.remove('open');v.setAttribute('aria-hidden','true');try{vRec&&vRec.stop();}catch(_){}vSet(false);try{speechSynthesis.cancel();}catch(_){}}
+function startVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){$('#vStatus').textContent='Voice input is not supported in this browser — use the Ask tab instead';return;}
+  try{
+    vRec=new SR();vRec.lang='en-US';vRec.interimResults=true;vRec.maxAlternatives=1;
+    vRec.onstart=()=>{vSet(true);$('#vStatus').textContent='Listening…';};
+    vRec.onresult=e=>{let fin='',itm='';for(let i=0;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)fin+=r[0].transcript;else itm+=r[0].transcript;}$('#vTranscript').textContent=(fin||itm);};
+    vRec.onerror=()=>{vSet(false);$('#vStatus').textContent='Didn\'t catch that — tap the mic to retry';};
+    vRec.onend=()=>{vSet(false);const q=($('#vTranscript').textContent||'').trim();if(q)voiceAsk(q);else $('#vStatus').textContent='Tap the mic to speak';};
+    vRec.start();
+  }catch(_){$('#vStatus').textContent='Voice unavailable';}
+}
+async function voiceAsk(q){
+  $('#vStatus').textContent='Thinking…';$('#vActions').innerHTML='';
+  const at=me||{lat:map.getCenter().lat,lon:map.getCenter().lng};
+  let d=null;
+  try{const r=await fetch(API+'/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat:at.lat,lon:at.lon,query:q})});d=await r.json();}catch(_){}
+  if(!d){$('#vStatus').textContent='Network error — tap the mic to try again';return;}
+  $('#vStatus').textContent='';
+  $('#vAnswer').textContent=d.say||'';
+  speak(d.say||'');
+  if(d.destination&&d.destination.name){
+    const b=document.createElement('button');b.className='vgo';b.textContent='🧭 Navigate to '+d.destination.name;
+    b.onclick=()=>{closeVoice();navigateTo(d.destination.lat,d.destination.lon,d.destination.name);};
+    $('#vActions').appendChild(b);
+  }
+  const again=document.createElement('button');again.className='vagain';again.textContent='Ask again';
+  again.onclick=()=>{$('#vTranscript').textContent='';$('#vAnswer').textContent='';$('#vActions').innerHTML='';startVoice();};
+  $('#vActions').appendChild(again);
+}
+
 /* ---------- boot ---------- */
 if('serviceWorker'in navigator){navigator.serviceWorker.register('__BASE__/sw.js',{scope:'__BASE__/'}).catch(()=>{});}
+$('#voiceFab').onclick=openVoice;
+$('#voiceClose').onclick=closeVoice;
+$('.vorb').onclick=()=>{if(!vListening)startVoice();};
+setTimeout(()=>{const s=$('#splash');if(s){s.classList.add('hide');setTimeout(()=>{if(s&&s.remove)s.remove();},650);}},1200);
 renderRoute();
 startGeo();
 // iOS: speechSynthesis needs a user gesture to unlock — prime it on first tap
@@ -696,7 +787,7 @@ MANIFEST = ('{'
 )
 
 SW = (
-  "const C='waypoint-v5';"
+  "const C='waypoint-v6';"
   f"const SHELL=['{BASE}/','{BASE}/icon.png','{BASE}/icon-192.png','{BASE}/icon-512.png','{BASE}/manifest.webmanifest'];"
   "self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()).catch(()=>self.skipWaiting()));});"
   "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});"
