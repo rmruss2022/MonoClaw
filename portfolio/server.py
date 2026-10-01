@@ -56,7 +56,13 @@ FAVICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
            '<defs><linearGradient id="m" x1="0" y1="0" x2="1" y2="1">'
            '<stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>'
            '<rect width="64" height="64" rx="16" fill="url(#m)"/>'
-           '<text x="32" y="44" text-anchor="middle" font-family="Georgia,serif" font-weight="700" font-size="34" fill="#fff">M</text></svg>')
+           '<g fill="#fff"><rect x="16" y="16" width="14" height="14" rx="4"/><rect x="34" y="16" width="14" height="14" rx="4"/>'
+           '<rect x="16" y="34" width="14" height="14" rx="4"/><rect x="34" y="34" width="14" height="14" rx="4"/></g></svg>')
+
+# small white app-grid glyph for the header brand tile
+BRANDMARK = ('<svg class="bmk" viewBox="0 0 64 64"><g fill="#fff">'
+             '<rect x="16" y="16" width="14" height="14" rx="4"/><rect x="34" y="16" width="14" height="14" rx="4"/>'
+             '<rect x="16" y="34" width="14" height="14" rx="4"/><rect x="34" y="34" width="14" height="14" rx="4"/></g></svg>')
 
 def app_card(key, name, url, desc, status):
     tag = TAGS.get(status, "")
@@ -71,7 +77,9 @@ def app_card(key, name, url, desc, status):
 
 def render():
     apps = "\n".join(app_card(*a) for a in APPS)
-    return PAGE.replace("__APPS__", apps).replace("__N__", str(len(APPS)))
+    return (PAGE.replace("__APPS__", apps)
+                .replace("__N__", str(len(APPS)))
+                .replace("__MARK__", BRANDMARK))
 
 PAGE = r'''<!DOCTYPE html>
 <html lang="en">
@@ -79,15 +87,15 @@ PAGE = r'''<!DOCTYPE html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="theme-color" content="#f5f4f1"/>
-<title>Matthew Russell — Apps</title>
-<meta name="description" content="A hub of apps built by Matthew Russell — AI driving GPS, a smart-home system, a travel journal, and more."/>
+<title>Home Dash</title>
+<meta name="description" content="Home Dash — Matthew's personal hub of apps: AI driving GPS, a smart-home system, a travel journal, and more."/>
 <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-<meta name="apple-mobile-web-app-title" content="Apps"/>
+<meta name="apple-mobile-web-app-title" content="Home Dash"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -112,8 +120,8 @@ PAGE = r'''<!DOCTYPE html>
   /* brand bar */
   .bar{display:flex;align-items:center;gap:11px;padding:24px 0 0}
   .brandtile{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#4f46e5,#7c3aed);
-             display:flex;align-items:center;justify-content:center;color:#fff;
-             font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:18px;box-shadow:var(--shadow)}
+             display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+  .bmk{width:18px;height:18px;display:block}
   .brandname{font-weight:600;font-size:15px;letter-spacing:-.01em}
   .brandname span{color:var(--muted);font-weight:500}
 
@@ -154,15 +162,15 @@ PAGE = r'''<!DOCTYPE html>
 <body>
 <div class="wrap">
   <div class="bar">
-    <div class="brandtile">M</div>
-    <div class="brandname">Matthew Russell <span>· Apps</span></div>
+    <div class="brandtile">__MARK__</div>
+    <div class="brandname">Home Dash <span>· by Matthew</span></div>
   </div>
 </div>
 
 <header><div class="wrap">
-  <div class="kick">Software Engineer</div>
-  <h1>Things I've built.</h1>
-  <p class="sub">A living hub of the __N__ apps I'm building — an AI driving companion, a smart home, a travel journal, and more.</p>
+  <div class="kick">Personal App Hub</div>
+  <h1>Home Dash</h1>
+  <p class="sub">My __N__ apps, one tap away — an AI driving companion, a smart home, a travel journal, and more.</p>
   <div class="legend">
     <span><span class="dot a"></span><b>Private</b> — opens on my devices</span>
     <span><span class="dot n"></span><b>In progress</b> — building</span>
@@ -179,7 +187,7 @@ PAGE = r'''<!DOCTYPE html>
 </html>'''
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MANIFEST = ('{"name":"Matthew Russell — Apps","short_name":"Apps","start_url":"./",'
+MANIFEST = ('{"name":"Home Dash","short_name":"Home Dash","start_url":"./",'
             '"display":"standalone","background_color":"#f5f4f1","theme_color":"#f5f4f1",'
             '"icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},'
             '{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}')
