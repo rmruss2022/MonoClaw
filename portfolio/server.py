@@ -68,7 +68,7 @@ def app_card(key, name, url, desc, status):
     tag = TAGS.get(status, "")
     icon = ICONS.get(key, "")
     inner = (f'{icon}'
-             f'<div class="cmain"><div class="crow"><span class="nm">{name}</span>{tag}</div>'
+             f'<div class="cmain"><div class="crow"><span class="nm">{name}</span></div>'
              f'<p>{desc}</p></div>')
     if url:
         return (f'<a class="card" href="{url}" target="_blank" rel="noopener">{inner}'
@@ -98,7 +98,7 @@ PAGE = r'''<!DOCTYPE html>
 <meta name="apple-mobile-web-app-title" content="HomeDash"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
   :root{
     --bg:#f5f4f1; --ink:#15171c; --muted:#656f7d; --card:#ffffff;
@@ -125,14 +125,21 @@ PAGE = r'''<!DOCTYPE html>
   .brandname{font-weight:600;font-size:15px;letter-spacing:-.01em}
   .brandname span{color:var(--muted);font-weight:500}
 
-  header{padding:52px 0 40px;text-align:center}
-  .kick{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);font-weight:600}
-  h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(42px,8.5vw,72px);line-height:1.02;letter-spacing:-.02em;margin:16px 0 16px}
-  .sub{color:var(--muted);font-size:18px;max-width:50ch;margin:0 auto}
-  .legend{display:inline-flex;gap:18px;margin-top:24px;font-size:12.5px;color:var(--muted);align-items:center}
-  .legend b{font-weight:600;color:var(--ink)}
-  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
-  .dot.a{background:#caa43a}.dot.n{background:#9aa1ac}
+  header{position:relative;padding:58px 0 48px;text-align:center;overflow:hidden}
+  .blob{position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:460px;max-width:128vw;height:320px;
+        background:radial-gradient(closest-side, rgba(124,58,237,.22), rgba(79,70,229,.10), transparent 72%);
+        filter:blur(20px);pointer-events:none;z-index:0}
+  .eyebrow{position:relative;z-index:1;display:inline-flex;align-items:center;gap:12px;color:var(--muted);
+           font-size:12px;letter-spacing:.26em;text-transform:uppercase;font-weight:600}
+  .eyebrow::before,.eyebrow::after{content:"";width:28px;height:1px}
+  .eyebrow::before{background:linear-gradient(90deg,transparent,#c9bce8)}
+  .eyebrow::after{background:linear-gradient(90deg,#c9bce8,transparent)}
+  h1{position:relative;z-index:1;font-family:'Fraunces',Georgia,serif;font-weight:600;
+     font-size:clamp(56px,13.5vw,96px);line-height:.96;letter-spacing:-.03em;margin:20px 0 16px;
+     background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 48%,#db2777 100%);
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{position:relative;z-index:1;color:var(--muted);font-size:18px;max-width:44ch;margin:0 auto}
+  .sub em{font-family:'Fraunces',Georgia,serif;font-style:italic;color:var(--ink);font-weight:500}
 
   h2{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700;margin:40px 0 18px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
@@ -167,15 +174,14 @@ PAGE = r'''<!DOCTYPE html>
   </div>
 </div>
 
-<header><div class="wrap">
-  <div class="kick">Personal App Hub</div>
-  <h1>HomeDash</h1>
-  <p class="sub">My __N__ apps, one tap away — an AI driving companion, a smart home, a travel journal, and more.</p>
-  <div class="legend">
-    <span><span class="dot a"></span><b>Private</b> — opens on my devices</span>
-    <span><span class="dot n"></span><b>In progress</b> — building</span>
+<header>
+  <div class="blob"></div>
+  <div class="wrap">
+    <div class="eyebrow">Personal app hub</div>
+    <h1>HomeDash</h1>
+    <p class="sub">All my apps, <em>one tap away.</em></p>
   </div>
-</div></header>
+</header>
 
 <main class="wrap">
   <h2>Apps</h2>
