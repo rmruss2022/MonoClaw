@@ -152,8 +152,10 @@ function speak(text){
 
 /* ---------- map ---------- */
 const map=L.map('map',{zoomControl:false,attributionControl:false}).setView([40.7128,-74.006],13);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
-L.control.attribution({position:'bottomleft',prefix:false}).addAttribution('© OpenStreetMap · CARTO · OSRM · Wikipedia').addTo(map);
+// Keyless dark basemap (Esri dark-gray canvas) — CARTO's no-key tiles now demand an API key.
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+L.control.attribution({position:'bottomleft',prefix:false}).addAttribution('© Esri · OpenStreetMap · OSRM · Wikipedia').addTo(map);
 
 const meIcon=L.divIcon({className:'',html:'<div class="gpsdot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
 let meMarker=null, destMarker=null, routeLine=null;
@@ -694,7 +696,7 @@ MANIFEST = ('{'
 )
 
 SW = (
-  "const C='waypoint-v4';"
+  "const C='waypoint-v5';"
   f"const SHELL=['{BASE}/','{BASE}/icon.png','{BASE}/icon-192.png','{BASE}/icon-512.png','{BASE}/manifest.webmanifest'];"
   "self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()).catch(()=>self.skipWaiting()));});"
   "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim()));});"
