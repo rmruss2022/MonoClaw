@@ -82,6 +82,12 @@ PAGE = r'''<!DOCTYPE html>
 <title>Matthew Russell — Apps</title>
 <meta name="description" content="A hub of apps built by Matthew Russell — AI driving GPS, a smart-home system, a travel journal, and more."/>
 <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
+<link rel="manifest" href="manifest.webmanifest"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Apps"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -172,6 +178,13 @@ PAGE = r'''<!DOCTYPE html>
 </body>
 </html>'''
 
+HERE = os.path.dirname(os.path.abspath(__file__))
+MANIFEST = ('{"name":"Matthew Russell — Apps","short_name":"Apps","start_url":"./",'
+            '"display":"standalone","background_color":"#f5f4f1","theme_color":"#f5f4f1",'
+            '"icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},'
+            '{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}')
+
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -195,6 +208,14 @@ class H(BaseHTTPRequestHandler):
             self._send(render(), 'text/html; charset=utf-8')
         elif p == '/favicon.svg':
             self._send(FAVICON, 'image/svg+xml')
+        elif p == '/manifest.webmanifest':
+            self._send(MANIFEST, 'application/manifest+json')
+        elif p in ('/apple-touch-icon.png', '/icon-192.png', '/icon-512.png'):
+            try:
+                with open(os.path.join(HERE, p.lstrip('/')), 'rb') as f:
+                    self._send(f.read(), 'image/png')
+            except OSError:
+                self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
         elif p in ('/health', '/healthz'):
             self._send('ok', 'text/plain')
         else:
