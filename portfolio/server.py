@@ -52,17 +52,22 @@ TAGS = {
     "wip":     '<span class="tag wip">In&nbsp;progress</span>',
 }
 
+# HomeDash mark: a house whose windows are app-colored tiles (home + app grid)
+MARK_INNER = (
+    '<path d="M32 9 55 31 9 31 Z" fill="#fff"/>'
+    '<rect x="14" y="30" width="36" height="26" rx="4" fill="#fff"/>'
+    '<rect x="22" y="33" width="9" height="9" rx="2.5" fill="#6366f1"/>'
+    '<rect x="33" y="33" width="9" height="9" rx="2.5" fill="#38bdf8"/>'
+    '<rect x="22" y="44" width="9" height="9" rx="2.5" fill="#ec4899"/>'
+    '<rect x="33" y="44" width="9" height="9" rx="2.5" fill="#10b981"/>')
+
 FAVICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
            '<defs><linearGradient id="m" x1="0" y1="0" x2="1" y2="1">'
            '<stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>'
-           '<rect width="64" height="64" rx="16" fill="url(#m)"/>'
-           '<g fill="#fff"><rect x="16" y="16" width="14" height="14" rx="4"/><rect x="34" y="16" width="14" height="14" rx="4"/>'
-           '<rect x="16" y="34" width="14" height="14" rx="4"/><rect x="34" y="34" width="14" height="14" rx="4"/></g></svg>')
+           '<rect width="64" height="64" rx="16" fill="url(#m)"/>' + MARK_INNER + '</svg>')
 
-# small white app-grid glyph for the header brand tile
-BRANDMARK = ('<svg class="bmk" viewBox="0 0 64 64"><g fill="#fff">'
-             '<rect x="16" y="16" width="14" height="14" rx="4"/><rect x="34" y="16" width="14" height="14" rx="4"/>'
-             '<rect x="16" y="34" width="14" height="14" rx="4"/><rect x="34" y="34" width="14" height="14" rx="4"/></g></svg>')
+# brand glyph for the header tile (sits on the gradient tile; no bg rect)
+BRANDMARK = '<svg class="bmk" viewBox="0 0 64 64">' + MARK_INNER + '</svg>'
 
 def app_card(key, name, url, desc, status):
     tag = TAGS.get(status, "")
