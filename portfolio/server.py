@@ -18,52 +18,43 @@ PORT = int(os.environ.get("PORTFOLIO_PORT", "18824"))
 BASE = (os.environ.get("PORTFOLIO_BASE", "").rstrip("/"))
 HUB = "https://bushwick.tail9d821f.ts.net"
 
-# (emoji, name, url, description, access)  access: "public" | "private"
+# (emoji, name, url_or_None, description, status)  status: "public" | "private" | "wip"
 APPS = [
     ("🧭", "Waypoint", HUB + "/waypoint/",
      "AI driving GPS — spoken turn-by-turn, an agentic “ask &amp; route” assistant, and live local-area briefings.", "private"),
     ("🧳", "Travelog", HUB + "/travelog/",
      "AI travel journal — place &amp; history briefings, reflective journaling, and AI photo collages.", "private"),
-    ("⚡", "Daylight", "https://web-production-970f8.up.railway.app/",
-     "Energy-management dashboard with live visualizations. Django · React · Postgres.", "public"),
     ("🏠", "openhome", "https://pi.tail9d821f.ts.net/",
      "Self-hosted smart-home hub — lights, music, and climate with a voice agent.", "private"),
     ("👥", "Rolodex", HUB + "/rolodex/",
      "Personal network CRM — contacts, follow-ups, a reach-out queue, and insights.", "private"),
-    ("📄", "Reports &amp; Voice", HUB + "/reports/",
-     "Daily briefing archive with inline voice notes.", "private"),
-    ("🛰️", "Command Hub", HUB + "/",
-     "Central control hub — scheduler dashboard and links to everything.", "private"),
+    ("🩺", "Ora Health", None,
+     "Agentic-AI iOS wellness app — dynamic conversations, daily meditations &amp; mindset work. React Native · ElevenLabs.", "wip"),
+    ("🤝", "Favorly", None,
+     "Microfavors &amp; Helping Hands — a community favor-exchange app. MVP backend built.", "wip"),
+    ("🎵", "Dropstick", None,
+     "Offline Wi-Fi USB stick for peer-to-peer music sharing — no internet needed. Go · SQLite.", "wip"),
 ]
 
-MORE = [
-    ("🎵", "Dropstick", "Offline Wi-Fi USB music-sharing stick. Go · SQLite."),
-    ("📈", "Arbitrage Scanner", "Prediction-market arbitrage detection. TypeScript · SQLite."),
-    ("🩺", "Ora Health", "Agentic-AI iOS wellness app. React Native · ElevenLabs."),
-    ("🪄", "Doctor Strange Lab", "Hand-tracked arcane FX. Three.js · MediaPipe."),
-    ("🐔", "Coupe", "Dating app with Elo matchmaking."),
-    ("🤝", "Favorly", "Microfavors &amp; Helping Hands."),
-    ("🐝", "Agent Swarm", "Kanban board for multi-agent orchestration."),
-    ("🎉", "Raves", "Events &amp; outings tracker."),
-]
+TAGS = {
+    "public":  '<span class="tag pub">Public</span>',
+    "private": '<span class="tag priv">Private</span>',
+    "wip":     '<span class="tag wip">In&nbsp;progress</span>',
+}
 
-def app_card(emoji, name, url, desc, access):
-    tag = ('<span class="tag pub">Public</span>' if access == "public"
-           else '<span class="tag priv">Private</span>')
-    return (f'<a class="card" href="{url}" target="_blank" rel="noopener">'
-            f'<div class="ico">{emoji}</div>'
-            f'<div class="cmain"><div class="crow"><span class="nm">{name}</span>{tag}</div>'
-            f'<p>{desc}</p></div>'
-            f'<span class="go" aria-hidden="true">&rarr;</span></a>')
-
-def more_card(emoji, name, desc):
-    return (f'<div class="mini"><span class="mi">{emoji}</span>'
-            f'<div><div class="mn">{name}</div><div class="md">{desc}</div></div></div>')
+def app_card(emoji, name, url, desc, status):
+    tag = TAGS.get(status, "")
+    inner = (f'<div class="ico">{emoji}</div>'
+             f'<div class="cmain"><div class="crow"><span class="nm">{name}</span>{tag}</div>'
+             f'<p>{desc}</p></div>')
+    if url:
+        return (f'<a class="card" href="{url}" target="_blank" rel="noopener">{inner}'
+                f'<span class="go" aria-hidden="true">&rarr;</span></a>')
+    return f'<div class="card wipcard">{inner}</div>'
 
 def render():
     apps = "\n".join(app_card(*a) for a in APPS)
-    more = "\n".join(more_card(*m) for m in MORE)
-    return PAGE.replace("__APPS__", apps).replace("__MORE__", more).replace("__N__", str(len(APPS) + len(MORE)))
+    return PAGE.replace("__APPS__", apps).replace("__N__", str(len(APPS)))
 
 PAGE = r'''<!DOCTYPE html>
 <html lang="en">
@@ -101,7 +92,7 @@ PAGE = r'''<!DOCTYPE html>
   .legend{display:inline-flex;gap:18px;margin-top:24px;font-size:12.5px;color:var(--muted);align-items:center}
   .legend b{font-weight:600;color:var(--ink)}
   .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
-  .dot.g{background:#12a25a}.dot.a{background:#caa43a}
+  .dot.g{background:#12a25a}.dot.a{background:#caa43a}.dot.n{background:#9aa1ac}
 
   h2{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700;margin:56px 0 18px}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
@@ -117,6 +108,9 @@ PAGE = r'''<!DOCTYPE html>
   .tag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;letter-spacing:.02em}
   .tag.pub{color:#0a7d49;background:#e4f6ec}
   .tag.priv{color:#8a6d1a;background:#f7eecf}
+  .tag.wip{color:#5b6472;background:#edeef1}
+  .card.wipcard{cursor:default}
+  .card.wipcard:hover{transform:none;box-shadow:var(--shadow)}
   .card p{margin:5px 0 0;color:var(--muted);font-size:14px;line-height:1.52}
   .go{position:absolute;top:17px;right:18px;color:#cdd0d7;font-size:17px;transition:transform .2s, color .2s}
   .card:hover .go{color:var(--accent);transform:translate(3px,-3px)}
@@ -138,17 +132,14 @@ PAGE = r'''<!DOCTYPE html>
   <h1>Things I've built.</h1>
   <p class="sub">A living hub of __N__ apps and projects — an AI driving companion, a smart home, dashboards, and more.</p>
   <div class="legend">
-    <span><span class="dot g"></span><b>Public</b> — open to anyone</span>
     <span><span class="dot a"></span><b>Private</b> — opens on my devices</span>
+    <span><span class="dot n"></span><b>In progress</b> — building</span>
   </div>
 </div></header>
 
 <main class="wrap">
   <h2>Apps</h2>
   <div class="cards">__APPS__</div>
-
-  <h2>More projects</h2>
-  <div class="minis">__MORE__</div>
 </main>
 
 <footer><div class="wrap">
