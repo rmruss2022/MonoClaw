@@ -68,11 +68,10 @@ def app_card(key, name, url, desc, status):
     tag = TAGS.get(status, "")
     icon = ICONS.get(key, "")
     inner = (f'{icon}'
-             f'<div class="cmain"><div class="crow"><span class="nm">{name}</span></div>'
+             f'<div class="cmain"><span class="nm">{name}</span>'
              f'<p>{desc}</p></div>')
     if url:
-        return (f'<a class="card" href="{url}" target="_blank" rel="noopener">{inner}'
-                f'<span class="go" aria-hidden="true">&rarr;</span></a>')
+        return f'<a class="card" href="{url}" target="_blank" rel="noopener">{inner}</a>'
     return f'<div class="card wipcard">{inner}</div>'
 
 def render():
@@ -142,22 +141,18 @@ PAGE = r'''<!DOCTYPE html>
   .sub em{font-family:'Fraunces',Georgia,serif;font-style:italic;color:var(--ink);font-weight:500}
 
   h2{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700;margin:40px 0 18px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
-  .card{position:relative;display:flex;align-items:flex-start;gap:14px;background:var(--card);
-        border:1px solid var(--line);border-radius:18px;padding:18px 18px 19px;box-shadow:var(--shadow);
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media (min-width:680px){.cards{grid-template-columns:repeat(3,1fr);gap:14px}}
+  @media (min-width:920px){.cards{grid-template-columns:repeat(4,1fr)}}
+  .card{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:12px;background:var(--card);
+        border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow);
         transition:transform .2s cubic-bezier(.2,.7,.2,1), box-shadow .2s}
   .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-h)}
-  .ai{width:50px;height:50px;flex:0 0 auto;display:block;border-radius:13px;box-shadow:0 2px 7px rgba(20,23,30,.14)}
-  .cmain{flex:1;min-width:0}
-  .crow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .nm{font-weight:600;font-size:16.5px;letter-spacing:-.01em}
-  .tag{font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:999px;letter-spacing:.02em}
-  .tag.pub{color:#0a7d49;background:#e4f6ec}
-  .tag.priv{color:#8a6d1a;background:#f7eecf}
-  .tag.wip{color:#5b6472;background:#edeef1}
-  .card p{margin:5px 0 0;color:var(--muted);font-size:14px;line-height:1.52}
-  .go{position:absolute;top:17px;right:18px;color:#cdd0d7;font-size:17px;transition:transform .2s, color .2s}
-  .card:hover .go{color:var(--accent);transform:translate(3px,-3px)}
+  .card:active{transform:scale(.98)}
+  .ai{width:56px;height:56px;flex:0 0 auto;display:block;border-radius:15px;box-shadow:0 3px 9px rgba(20,23,30,.16)}
+  .cmain{min-width:0}
+  .nm{font-weight:600;font-size:15.5px;letter-spacing:-.01em;display:block}
+  .card p{margin:5px 0 0;color:var(--muted);font-size:12.5px;line-height:1.46}
   .card.wipcard{cursor:default}
   .card.wipcard:hover{transform:none;box-shadow:var(--shadow)}
 
