@@ -62,14 +62,14 @@ TAGS = {
     "wip":     '<span class="tag wip">In&nbsp;progress</span>',
 }
 
-# HomeDash mark: a house whose windows are app-colored tiles (home + app grid)
+# Dash mark: a dashboard gauge / speedometer — unique and on-theme for "Dash"
 MARK_INNER = (
-    '<path d="M32 9 55 31 9 31 Z" fill="#fff"/>'
-    '<rect x="14" y="30" width="36" height="26" rx="4" fill="#fff"/>'
-    '<rect x="22" y="33" width="9" height="9" rx="2.5" fill="#6366f1"/>'
-    '<rect x="33" y="33" width="9" height="9" rx="2.5" fill="#38bdf8"/>'
-    '<rect x="22" y="44" width="9" height="9" rx="2.5" fill="#ec4899"/>'
-    '<rect x="33" y="44" width="9" height="9" rx="2.5" fill="#10b981"/>')
+    '<path d="M15 39 A17 17 0 0 1 49 39" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>'
+    '<circle cx="18.5" cy="35" r="1.6" fill="#fff" opacity="0.85"/>'
+    '<circle cx="32" cy="24.2" r="1.6" fill="#fff" opacity="0.85"/>'
+    '<circle cx="45.5" cy="35" r="1.6" fill="#fff" opacity="0.85"/>'
+    '<line x1="32" y1="39" x2="41" y2="28.5" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>'
+    '<circle cx="32" cy="39" r="3.9" fill="#fff"/>')
 
 FAVICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
            '<defs><linearGradient id="m" x1="0" y1="0" x2="1" y2="1">'
@@ -138,15 +138,15 @@ PAGE = r'''<!DOCTYPE html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="theme-color" content="#f5f4f1"/>
-<title>HomeDash</title>
-<meta name="description" content="HomeDash — Matthew's personal hub of apps: AI driving GPS, a smart-home system, a travel journal, and more."/>
+<title>Dash</title>
+<meta name="description" content="Dash — Matthew's personal hub of apps: AI driving GPS, a smart-home system, a travel journal, and more."/>
 <link rel="icon" href="favicon.svg" type="image/svg+xml"/>
 <link rel="apple-touch-icon" href="apple-touch-icon.png"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
-<meta name="apple-mobile-web-app-title" content="HomeDash"/>
+<meta name="apple-mobile-web-app-title" content="Dash"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -218,7 +218,7 @@ PAGE = r'''<!DOCTYPE html>
 <div class="wrap">
   <div class="bar">
     <div class="brandtile">__MARK__</div>
-    <div class="brandname">HomeDash <span>· by Matthew</span></div>
+    <div class="brandname">Dash <span>· by Matthew</span></div>
   </div>
 </div>
 
@@ -226,7 +226,7 @@ PAGE = r'''<!DOCTYPE html>
   <div class="blob"></div>
   <div class="wrap">
     <div class="eyebrow">Personal app hub</div>
-    <h1>HomeDash</h1>
+    <h1>Dash</h1>
     <p class="sub">All my apps, <em>one tap away.</em></p>
   </div>
 </header>
@@ -241,7 +241,7 @@ PAGE = r'''<!DOCTYPE html>
 </html>'''
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-MANIFEST = ('{"name":"HomeDash","short_name":"HomeDash","start_url":"./",'
+MANIFEST = ('{"name":"Dash","short_name":"Dash","start_url":"./",'
             '"display":"standalone","background_color":"#f5f4f1","theme_color":"#f5f4f1",'
             '"icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},'
             '{"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}')
