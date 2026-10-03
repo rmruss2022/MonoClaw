@@ -20,7 +20,7 @@ PORT = int(os.environ.get("ROLODEX_PORT", "18821"))
 BASE = (os.environ.get("ROLODEX_BASE", "").rstrip("/") + "/") or "/"
 DB   = os.environ.get("ROLODEX_DB", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "rolodex.db"))
 
-FIELDS = ["name","company","title","category","phone","email","location",
+FIELDS = ["name","company","title","category","phone","email","location","instagram",
           "how_met","met_date","last_contacted","follow_up_date","follow_up_note",
           "priority","tags","notes"]
 
@@ -44,7 +44,8 @@ def init_db():
         existing = {r[1] for r in c.execute("PRAGMA table_info(contacts)")}
         for col, ddl in [("reach_out", "reach_out INTEGER DEFAULT 0"),
                          ("reach_out_reason", "reach_out_reason TEXT"),
-                         ("reach_out_added", "reach_out_added TEXT")]:
+                         ("reach_out_added", "reach_out_added TEXT"),
+                         ("instagram", "instagram TEXT")]:
             if col not in existing:
                 c.execute(f"ALTER TABLE contacts ADD COLUMN {ddl}")
 
@@ -203,6 +204,52 @@ def import_vcards(text):
         added += 1
     return added
 
+def _add_ig_handles(pairs):
+    added = 0; seen = set()
+    for handle, href in pairs:
+        h = (handle or "").lstrip("@").strip()
+        if not h or h.lower() in seen:
+            continue
+        seen.add(h.lower())
+        with db() as c:
+            dup = c.execute("SELECT id FROM contacts WHERE lower(ifnull(instagram,''))=?",
+                            (h.lower(),)).fetchone()
+        if dup:
+            continue
+        upsert({"name": "@" + h, "instagram": h, "category": "Instagram",
+                "how_met": "Instagram", "notes": href or ("https://instagram.com/" + h)})
+        added += 1
+    return added
+
+def import_instagram(text):
+    """Import from Instagram's official 'Download Your Information' export
+    (followers/following JSON), or a plain list of @handles (one per line)."""
+    text = (text or "").strip()
+    if not text:
+        return 0
+    try:
+        data = json.loads(text)
+    except Exception:
+        handles = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        return _add_ig_handles([(h, "") for h in handles])
+    found = []
+    def walk(o):
+        if isinstance(o, dict):
+            sld = o.get("string_list_data")
+            if isinstance(sld, list):
+                for s in sld:
+                    if isinstance(s, dict):
+                        u = (s.get("value") or "").strip()
+                        if u:
+                            found.append((u, s.get("href") or ""))
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(data)
+    return _add_ig_handles(found)
+
 # ---------- HTTP ----------
 class H(BaseHTTPRequestHandler):
     def _send(self, code, body, ct="application/json"):
@@ -254,6 +301,9 @@ class H(BaseHTTPRequestHandler):
                 upsert(json.loads(self._body() or b"{}"), cid); self._send(200, {"ok": True, "id": cid}); return
             if p == "/api/import":
                 added = import_vcards(self._body().decode("utf-8", "ignore"))
+                self._send(200, {"ok": True, "added": added}); return
+            if p == "/api/import/instagram":
+                added = import_instagram(self._body().decode("utf-8", "ignore"))
                 self._send(200, {"ok": True, "added": added}); return
         except Exception as e:
             self._send(400, {"error": str(e)}); return
@@ -350,6 +400,7 @@ label.f{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
       <label class="f">Tags (comma-separated)</label><input id="f_tags">
       <div class="grid2"><div><label class="f">Follow-up date</label><input id="f_follow_up_date" type="date"></div>
         <div><label class="f">Follow-up note</label><input id="f_follow_up_note"></div></div>
+      <label class="f">Instagram</label><input id="f_instagram" placeholder="@handle">
       <label class="f">Notes</label><textarea id="f_notes"></textarea>
       <div class="row" style="margin-top:12px;gap:8px"><button class="primary" onclick="save()">Save contact</button>
         <button onclick="resetForm();tab('net')">Cancel</button><span id="saveMsg" class="small muted"></span></div>
@@ -359,6 +410,11 @@ label.f{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
       <div class="small muted" style="margin-bottom:8px">Export contacts as a .vcf (vCard) on your phone/Mac and paste the contents here — names, company, title, phone, email, notes come in automatically.</div>
       <textarea id="vcf" placeholder="BEGIN:VCARD …"></textarea>
       <div class="row" style="margin-top:8px"><button class="primary" onclick="importVcf()">Import vCards</button><span id="impMsg" class="small muted"></span></div>
+
+      <div style="font-weight:800;margin:18px 0 4px">Import from Instagram</div>
+      <div class="small muted" style="margin-bottom:8px">In the Instagram app: <b>Settings → Account Center → Your information & permissions → Download your information</b> → pick <b>Followers and following</b>, Format <b>JSON</b>. When it arrives, paste the followers/following JSON here — or just paste <b>@handles, one per line</b>. Re-run anytime to pull in new follows.</div>
+      <textarea id="ig" placeholder='Paste Instagram followers/following JSON — or @handle per line'></textarea>
+      <div class="row" style="margin-top:8px"><button class="primary" onclick="importIg()">Import Instagram</button><span id="igMsg" class="small muted"></span></div>
     </div>
   </div>
 </main>
@@ -496,6 +552,8 @@ async function reachedOut(id){await api('api/contacts/'+id+'/touch',{method:'POS
   refreshActive();}
 async function importVcf(){const t=$('vcf').value;if(!t.trim())return;$('impMsg').textContent='Importing…';
   const r=await api('api/import',{method:'POST',body:t});$('impMsg').textContent='Added '+(r.added||0)+' contacts';$('vcf').value='';load();}
+async function importIg(){const t=$('ig').value;if(!t.trim())return;$('igMsg').textContent='Importing…';
+  const r=await api('api/import/instagram',{method:'POST',body:t});$('igMsg').textContent='Added '+(r.added||0)+' from Instagram';$('ig').value='';load();}
 function closeSheet(){$('modal').classList.remove('on');}
 
 loadOverview();
