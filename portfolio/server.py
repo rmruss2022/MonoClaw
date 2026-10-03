@@ -17,6 +17,13 @@ PORT = int(os.environ.get("PORTFOLIO_PORT", "18824"))
 BASE = (os.environ.get("PORTFOLIO_BASE", "").rstrip("/"))
 HUB = "https://bushwick.tail9d821f.ts.net"
 
+# Title font (Fraunces) inlined as base64 @font-face so it can't fail to load / revert.
+try:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts.css")) as _f:
+        FONTS_CSS = _f.read()
+except OSError:
+    FONTS_CSS = ""
+
 # ---- branded SVG app icons (rounded tiles, unique gradient + white glyph) ----
 ICONS = {
  "waypoint": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_wp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_wp)"/><path d="M26 13l9.5 27-9.5-6.3-9.5 6.3z" fill="#fff"/></svg>',
@@ -26,10 +33,13 @@ ICONS = {
  "ora": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_or" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2dd4bf"/><stop offset="1" stop-color="#10b981"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_or)"/><path d="M35 15c-13 0-19 6.5-19 15.5 0 1.8.4 3.5.4 3.5s1.7.4 3.6.4C29 34 37 27 37 16c0-.4-2-1-2-1z" fill="#fff"/><path d="M20 35c3.5-8 9-11.5 12.5-13" stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
  "favorly": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_fv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb7185"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_fv)"/><path d="M26 38s-11.5-6.8-11.5-14.4A6.5 6.5 0 0 1 26 19.3a6.5 6.5 0 0 1 11.5 4.3C37.5 31.2 26 38 26 38z" fill="#fff"/></svg>',
  "dropstick": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ds" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#d946ef"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ds)"/><path d="M34 14l-13 3.2v16.1a4.3 4.3 0 1 0 2 3.6V22.2l9-2.2v8.9a4.3 4.3 0 1 0 2 3.6V14z" fill="#fff"/></svg>',
+ "inkling": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ik" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0b063"/><stop offset="1" stop-color="#b8863a"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ik)"/><rect x="15" y="11" width="22" height="30" rx="3" fill="none" stroke="#fff" stroke-width="2.4"/><line x1="26" y1="12.5" x2="26" y2="39.5" stroke="#fff" stroke-width="2"/><path d="M33 16l5-2.2-1.1 5.2-15 15-4.4.9.9-4.4z" fill="#fff"/></svg>',
 }
 
 # (icon_key, name, url_or_None, description, status)  status: public | private | wip
 APPS = [
+    ("inkling", "Inkling", "__INKLING__",
+     "Voice-first writing room — speak, and an AI librarian co-writes your book in your voice, tending your ideas like rare books.", "public"),
     ("waypoint", "Waypoint", HUB + "/waypoint/",
      "AI driving GPS — spoken turn-by-turn, an agentic “ask &amp; route” assistant, and live local-area briefings.", "private"),
     ("travelog", "Travelog", HUB + "/travelog/",
@@ -79,11 +89,28 @@ def app_card(key, name, url, desc, status):
         return f'<a class="card" href="{url}" target="_blank" rel="noopener">{inner}</a>'
     return f'<div class="card wipcard">{inner}</div>'
 
+def inkling_url():
+    """Resolve Inkling's live public (quick-tunnel) URL, which rotates on restart."""
+    try:
+        u = open("/root/MonoClaw/inkling/data/public_url.txt").read().strip()
+        if u.startswith("http"):
+            return u
+    except OSError:
+        pass
+    return None
+
 def render():
-    apps = "\n".join(app_card(*a) for a in APPS)
+    rows = []
+    for a in APPS:
+        if a[0] == "inkling":
+            u = inkling_url()
+            a = (a[0], a[1], u, a[3], "public" if u else "wip")
+        rows.append(app_card(*a))
+    apps = "\n".join(rows)
     return (PAGE.replace("__APPS__", apps)
                 .replace("__N__", str(len(APPS)))
-                .replace("__MARK__", BRANDMARK))
+                .replace("__MARK__", BRANDMARK)
+                .replace("/*__FONTS__*/", FONTS_CSS))
 
 PAGE = r'''<!DOCTYPE html>
 <html lang="en">
@@ -102,8 +129,9 @@ PAGE = r'''<!DOCTYPE html>
 <meta name="apple-mobile-web-app-title" content="HomeDash"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
+/*__FONTS__*/
   :root{
     --bg:#f5f4f1; --ink:#15171c; --muted:#656f7d; --card:#ffffff;
     --line:#e9e8e3; --accent:#4f46e5; --accent-soft:#eef0fd;
