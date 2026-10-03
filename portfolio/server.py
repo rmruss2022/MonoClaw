@@ -53,7 +53,7 @@ APPS = [
     ("favorly", "Favorly", None,
      "Microfavors &amp; Helping Hands — a community favor-exchange app. MVP backend built.", "wip"),
     ("dropstick", "Dropstick", None,
-     "Offline Wi-Fi USB stick for peer-to-peer music sharing — no internet needed. Go · SQLite.", "wip"),
+     "Peer-to-peer music sharing for DJs — swap tracks &amp; crates device-to-device over local Wi-Fi, no internet. Go · SQLite.", "wip"),
 ]
 
 TAGS = {

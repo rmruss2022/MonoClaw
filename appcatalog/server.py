@@ -20,6 +20,7 @@ LIVE_HUB = [
     ("Reports & Voice",    "📄", HUB + "/reports",  "Daily NYC digests archive with inline mp3 voice notes.", "hub"),
     ("Rolodex",            "👥", HUB + "/rolodex",  "Personal network CRM — contacts, follow-ups, reach-out list, insights.", "hub"),
     ("Waypoint",           "🧭", HUB + "/waypoint", "AI driving GPS — turn-by-turn, spoken area briefings, agentic Ask.", "hub"),
+    ("Travelog",           "🧳", HUB + "/travelog", "Travel journal with an AI companion — place/history briefings, reflective journaling, and AI photo collages.", "hub"),
 ]
 LIVE_OTHER = [
     ("openhome",   "🏠", "https://pi.tail9d821f.ts.net/", "Smart-home hub — lights, music, climate, voice agent. Runs on the Pi (needs Pi online + Tailscale).", "pi"),
@@ -28,7 +29,7 @@ LIVE_OTHER = [
 BUILT = [
     ("Coupe",                "🐔", "Chicken-coop themed dating app with HTN Elo rating. (workspace/coupe)"),
     ("Favorly",              "🤝", "Microfavors + Helping Hands app — MVP backend built."),
-    ("Dropstick",            "🎵", "Offline Wi-Fi USB music-sharing stick — Go + SQLite."),
+    ("Dropstick",            "🎵", "P2P music sharing for DJs — swap tracks/crates device-to-device over local Wi-Fi, no internet. Go + SQLite."),
     ("Arbitrage Scanner",    "📈", "Prediction-market arbitrage detection (Polymarket/Kalshi)."),
     ("Ora Health",           "🩺", "Community health app + Life OS redesign (React Native)."),
     ("Daily Blog",           "✍️", "Auto-generated daily blog → GitHub → Vercel."),
