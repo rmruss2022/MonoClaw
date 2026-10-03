@@ -99,12 +99,32 @@ def inkling_url():
         pass
     return None
 
+def live_url(app, suffix=""):
+    """Resolve an app's live public (quick-tunnel) URL, which rotates on restart."""
+    try:
+        u = open(f"/root/MonoClaw/{app}/data/public_url.txt").read().strip()
+        if u.startswith("http"):
+            return u + suffix
+    except OSError:
+        pass
+    return None
+
 def render():
+    seen = set()
     rows = []
     for a in APPS:
+        if a[0] in seen:          # guard against duplicate catalog entries
+            continue
+        seen.add(a[0])
         if a[0] == "inkling":
             u = inkling_url()
             a = (a[0], a[1], u, a[3], "public" if u else "wip")
+        elif a[0] == "travelog":
+            u = live_url("travelog", "/travelog/")
+            a = (a[0], a[1], u or (HUB + "/travelog/"), a[3], "public" if u else "private")
+        elif a[0] == "rolodex":
+            u = live_url("rolodex", "/")   # public instance is served at root, login-gated
+            a = (a[0], a[1], u or (HUB + "/rolodex/"), a[3], "public" if u else "private")
         rows.append(app_card(*a))
     apps = "\n".join(rows)
     return (PAGE.replace("__APPS__", apps)

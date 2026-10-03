@@ -12,13 +12,48 @@ Env:
   ROLODEX_BASE   base path when mounted under the command hub, e.g. "/rolodex"
   ROLODEX_DB     sqlite path (default ./data/rolodex.db)
 """
-import json, os, re, sqlite3, urllib.parse
+import json, os, re, sqlite3, urllib.parse, hashlib, hmac, secrets, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime, timezone, date
 
 PORT = int(os.environ.get("ROLODEX_PORT", "18821"))
 BASE = (os.environ.get("ROLODEX_BASE", "").rstrip("/") + "/") or "/"
 DB   = os.environ.get("ROLODEX_DB", os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "rolodex.db"))
+
+# ---------- auth (only enforced when ROLODEX_AUTH=1, i.e. the public instance) ----------
+AUTH = os.environ.get("ROLODEX_AUTH") == "1"
+USERS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "users.json")
+SESSION_TTL = 60 * 60 * 24 * 30
+SESSIONS = {}  # token -> (email, expires_epoch)
+
+def _users():
+    try:
+        return json.load(open(USERS_DB))
+    except Exception:
+        return {}
+
+def _hash_pw(pw, salt):
+    return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
+
+def verify_login(email, pw):
+    u = _users().get((email or "").strip().lower())
+    if not u:
+        return False
+    return hmac.compare_digest(_hash_pw(pw or "", u["salt"]), u["hash"])
+
+def new_session(email):
+    tok = secrets.token_urlsafe(32)
+    SESSIONS[tok] = (email, time.time() + SESSION_TTL)
+    return tok
+
+def session_ok(tok):
+    v = SESSIONS.get(tok)
+    if not v:
+        return False
+    if v[1] < time.time():
+        SESSIONS.pop(tok, None)
+        return False
+    return True
 
 FIELDS = ["name","company","title","category","phone","email","location","instagram",
           "how_met","met_date","last_contacted","follow_up_date","follow_up_note",
@@ -250,6 +285,37 @@ def import_instagram(text):
     walk(data)
     return _add_ig_handles(found)
 
+LOGIN_PAGE = r"""<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<base href="__BASE__"><title>Rolodex · sign in</title>
+<style>
+:root{--bg:#0e1014;--panel:#171a21;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#6366f1}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:340px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px}
+h1{margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:-.02em}h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+input{width:100%;background:#0e1118;border:1px solid var(--line);border-radius:11px;color:var(--text);padding:12px;font-size:16px}
+button{width:100%;margin-top:18px;background:var(--accent);color:#fff;border:0;border-radius:11px;padding:13px;font-size:15px;font-weight:700}
+.err{color:#f0768a;font-size:13px;margin-top:12px;min-height:16px;text-align:center}
+</style></head><body>
+<form class="card" onsubmit="return go(event)">
+  <h1>Rolo<span>dex</span></h1>
+  <div class="sub">Sign in to your network.</div>
+  <label>Email</label><input id="email" type="email" autocomplete="username" autofocus>
+  <label>Password</label><input id="pw" type="password" autocomplete="current-password">
+  <button type="submit">Sign in</button>
+  <div class="err" id="err"></div>
+</form>
+<script>
+async function go(e){e.preventDefault();document.getElementById('err').textContent='';
+ const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('pw').value})});
+ if(r.ok){location.reload();}else{document.getElementById('err').textContent='Wrong email or password.';}
+ return false;}
+</script></body></html>"""
+
 # ---------- HTTP ----------
 class H(BaseHTTPRequestHandler):
     def _send(self, code, body, ct="application/json"):
@@ -267,10 +333,27 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length", 0))
         return self.rfile.read(n) if n else b""
 
+    def _cookie(self, name):
+        for part in (self.headers.get("Cookie", "") or "").split(";"):
+            k, _, v = part.strip().partition("=")
+            if k == name:
+                return v
+        return None
+
+    def _authed(self):
+        if not AUTH:
+            return True
+        tok = self._cookie("rolo_sess")
+        return bool(tok and session_ok(tok))
+
     def do_GET(self):
         u = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(u.query)
         p = u.path
+        if AUTH and not self._authed():
+            if p in ("/", "/index.html"):
+                self._send(200, LOGIN_PAGE.replace("__BASE__", BASE), "text/html; charset=utf-8"); return
+            self._send(401, {"error": "auth"}); return
         if p in ("/", "/index.html"):
             self._send(200, PAGE.replace("__BASE__", BASE), "text/html; charset=utf-8"); return
         if p == "/api/contacts":
@@ -285,6 +368,24 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urllib.parse.urlparse(self.path); p = u.path
+        if p == "/api/login":
+            try: d = json.loads(self._body() or b"{}")
+            except Exception: d = {}
+            if verify_login(d.get("email", ""), d.get("password", "")):
+                tok = new_session((d.get("email", "") or "").strip().lower())
+                body = json.dumps({"ok": True}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Set-Cookie", f"rolo_sess={tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={SESSION_TTL}")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers(); self.wfile.write(body); return
+            self._send(401, {"error": "invalid credentials"}); return
+        if p == "/api/logout":
+            tok = self._cookie("rolo_sess")
+            if tok: SESSIONS.pop(tok, None)
+            self._send(200, {"ok": True}); return
+        if AUTH and not self._authed():
+            self._send(401, {"error": "auth"}); return
         try:
             if p == "/api/contacts":
                 cid = upsert(json.loads(self._body() or b"{}"))
