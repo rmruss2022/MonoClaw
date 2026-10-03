@@ -34,6 +34,8 @@ ICONS = {
  "favorly": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_fv" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb7185"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_fv)"/><path d="M26 38s-11.5-6.8-11.5-14.4A6.5 6.5 0 0 1 26 19.3a6.5 6.5 0 0 1 11.5 4.3C37.5 31.2 26 38 26 38z" fill="#fff"/></svg>',
  "dropstick": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ds" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#d946ef"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ds)"/><path d="M34 14l-13 3.2v16.1a4.3 4.3 0 1 0 2 3.6V22.2l9-2.2v8.9a4.3 4.3 0 1 0 2 3.6V14z" fill="#fff"/></svg>',
  "inkling": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ik" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0b063"/><stop offset="1" stop-color="#b8863a"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ik)"/><rect x="15" y="11" width="22" height="30" rx="3" fill="none" stroke="#fff" stroke-width="2.4"/><line x1="26" y1="12.5" x2="26" y2="39.5" stroke="#fff" stroke-width="2"/><path d="M33 16l5-2.2-1.1 5.2-15 15-4.4.9.9-4.4z" fill="#fff"/></svg>',
+ "croppa": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_cr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_cr)"/><path d="M18 11v23a2 2 0 0 0 2 2h23" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M11 18h23a2 2 0 0 1 2 2v23" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>',
+ "chase": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ch" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#ef4444"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ch)"/><circle cx="26" cy="26" r="11" fill="none" stroke="#fff" stroke-width="3"/><circle cx="26" cy="26" r="3" fill="#fff"/><path d="M26 9v6M26 37v6M9 26h6M37 26h6" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>',
 }
 
 # (icon_key, name, url_or_None, description, status)  status: public | private | wip
@@ -52,6 +54,10 @@ APPS = [
      "Self-hosted smart-home hub — lights, music, and climate with a voice agent.", "private"),
     ("rolodex", "Rolodex", HUB + "/rolodex/",
      "Personal network CRM — contacts, follow-ups, a reach-out queue, and insights.", "private"),
+    ("croppa", "Croppa", HUB + "/crop/",
+     "AI photo auto-crop — detects the subject and frames it, with one-tap ratios and full manual control.", "private"),
+    ("chase", "Chase", HUB + "/track/",
+     "AI video follow-cam — lock onto a car or object and it stays centered as it moves. Built for race footage.", "private"),
     ("dropstick", "Dropstick", None,
      "Peer-to-peer music sharing for DJs — swap tracks &amp; crates device-to-device over local Wi-Fi, no internet. Go · SQLite.", "wip"),
 ]
