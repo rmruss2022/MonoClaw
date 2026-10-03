@@ -38,6 +38,10 @@ ICONS = {
 
 # (icon_key, name, url_or_None, description, status)  status: public | private | wip
 APPS = [
+    ("ora", "Ora Health", None,
+     "Agentic-AI iOS wellness app — dynamic conversations, daily meditations &amp; mindset work. React Native · ElevenLabs.", "wip"),
+    ("favorly", "Favorly", None,
+     "Microfavors &amp; Helping Hands — a community favor-exchange app. MVP backend built.", "wip"),
     ("inkling", "Inkling", "__INKLING__",
      "Voice-first writing room — speak, and an AI librarian co-writes your book in your voice, tending your ideas like rare books.", "public"),
     ("waypoint", "Waypoint", HUB + "/waypoint/",
@@ -48,10 +52,6 @@ APPS = [
      "Self-hosted smart-home hub — lights, music, and climate with a voice agent.", "private"),
     ("rolodex", "Rolodex", HUB + "/rolodex/",
      "Personal network CRM — contacts, follow-ups, a reach-out queue, and insights.", "private"),
-    ("ora", "Ora Health", None,
-     "Agentic-AI iOS wellness app — dynamic conversations, daily meditations &amp; mindset work. React Native · ElevenLabs.", "wip"),
-    ("favorly", "Favorly", None,
-     "Microfavors &amp; Helping Hands — a community favor-exchange app. MVP backend built.", "wip"),
     ("dropstick", "Dropstick", None,
      "Peer-to-peer music sharing for DJs — swap tracks &amp; crates device-to-device over local Wi-Fi, no internet. Go · SQLite.", "wip"),
 ]
