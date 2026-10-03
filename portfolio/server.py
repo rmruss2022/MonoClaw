@@ -131,6 +131,12 @@ def render():
         elif a[0] == "rolodex":
             u = live_url("rolodex", "/")   # public instance is served at root, login-gated
             a = (a[0], a[1], u or (HUB + "/rolodex/"), a[3], "public" if u else "private")
+        elif a[0] == "croppa":
+            u = live_url("croppa", "/")    # public, login-gated
+            a = (a[0], a[1], u or (HUB + "/crop/"), a[3], "public" if u else "private")
+        elif a[0] == "chase":
+            u = live_url("chase", "/")     # public, login-gated
+            a = (a[0], a[1], u or (HUB + "/track/"), a[3], "public" if u else "private")
         rows.append(app_card(*a))
     apps = "\n".join(rows)
     return (PAGE.replace("__APPS__", apps)

@@ -6,11 +6,48 @@ race footage like cars in a sand-dune race.
 
 Env: CHASE_PORT (default 18833), CHASE_BASE (e.g. "/track")
 """
-import os
+import os, json, hashlib, hmac, secrets, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("CHASE_PORT", "18833"))
 BASE = (os.environ.get("CHASE_BASE", "").rstrip("/"))
+
+# ---- optional email/password gate (enabled with CHASE_AUTH=1 on the public instance) ----
+AUTH = os.environ.get("CHASE_AUTH") == "1"
+USERS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "users.json")
+SESS = {}; TTL = 60*60*24*30
+def _users():
+    try: return json.load(open(USERS))
+    except Exception: return {}
+def _verify(e, p):
+    u = _users().get((e or "").strip().lower())
+    if not u: return False
+    try: return hmac.compare_digest(hashlib.pbkdf2_hmac("sha256",(p or "").encode(),bytes.fromhex(u["salt"]),200000).hex(), u["hash"])
+    except Exception: return False
+def _newsess(e):
+    t = secrets.token_urlsafe(32); SESS[t] = (e, time.time()+TTL); return t
+def _sessok(t):
+    v = SESS.get(t)
+    if not v: return False
+    if v[1] < time.time(): SESS.pop(t, None); return False
+    return True
+LOGIN_PAGE = r'''<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Chase · sign in</title>
+<style>:root{--bg:#0b0e14;--panel:#141922;--line:#222b38;--text:#eaf0f7;--muted:#90a0b4;--accent:#f59e0b}
+*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:340px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px}
+h1{margin:0 0 4px;font-size:22px;font-weight:800}.sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+input{width:100%;background:#0e1118;border:1px solid var(--line);border-radius:11px;color:var(--text);padding:12px;font-size:16px}
+button{width:100%;margin-top:18px;background:var(--accent);color:#1c1200;border:0;border-radius:11px;padding:13px;font-size:15px;font-weight:800}
+.err{color:#f0768a;font-size:13px;margin-top:12px;min-height:16px;text-align:center}</style></head><body>
+<form class="card" onsubmit="return go(event)"><h1>Chase</h1><div class="sub">Sign in to continue.</div>
+<label>Email</label><input id="e" type="email" autocomplete="username" autofocus>
+<label>Password</label><input id="p" type="password" autocomplete="current-password">
+<button type="submit">Sign in</button><div class="err" id="err"></div></form>
+<script>async function go(ev){ev.preventDefault();document.getElementById('err').textContent='';
+const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('e').value,password:document.getElementById('p').value})});
+if(r.ok)location.reload();else document.getElementById('err').textContent='Wrong email or password.';return false;}</script></body></html>'''
 
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head>
@@ -223,8 +260,38 @@ class H(BaseHTTPRequestHandler):
         p=self.path.split('?',1)[0]
         if BASE and p.startswith(BASE): p=p[len(BASE):] or '/'
         return p
+    def _cookie(self, name):
+        for part in (self.headers.get("Cookie","") or "").split(";"):
+            k,_,v = part.strip().partition("=")
+            if k==name: return v
+        return None
+    def _authed(self):
+        if not AUTH: return True
+        t=self._cookie("sess"); return bool(t and _sessok(t))
+    def do_POST(self):
+        p=self._route()
+        if p=='/api/login':
+            n=int(self.headers.get('Content-Length',0) or 0); raw=self.rfile.read(n) if n else b'{}'
+            try: d=json.loads(raw or b'{}')
+            except Exception: d={}
+            if _verify(d.get('email',''), d.get('password','')):
+                t=_newsess((d.get('email','') or '').strip().lower()); body=b'{"ok":true}'
+                self.send_response(200); self.send_header('Content-Type','application/json')
+                self.send_header('Set-Cookie', f"sess={t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={TTL}")
+                self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
+            self.send_response(401); self.end_headers(); self.wfile.write(b'{"error":"invalid"}'); return
+        if p=='/api/logout':
+            t=self._cookie('sess');
+            if t: SESS.pop(t,None)
+            self.send_response(200); self.end_headers(); self.wfile.write(b'{"ok":true}'); return
+        self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
     def do_GET(self):
         p=self._route()
+        if AUTH and not self._authed():
+            if p in ('/','/index.html'):
+                b=LOGIN_PAGE.encode(); self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8')
+                self.send_header('Content-Length',str(len(b))); self.send_header('Cache-Control','no-store'); self.end_headers(); self.wfile.write(b); return
+            self.send_response(401); self.end_headers(); self.wfile.write(b'auth'); return
         if p in ('/','/index.html'):
             b=PAGE.encode(); self.send_response(200)
             self.send_header('Content-Type','text/html; charset=utf-8'); self.send_header('Content-Length',str(len(b)))
