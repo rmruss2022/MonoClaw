@@ -454,7 +454,7 @@ async function sendSay(){const text=el('say').value.trim();if(!text)return;
    box.innerHTML=`<div class="who">The Keeper · revised</div>${esc(r.draft)}
     <div class="toolbar"><button class="btn sm" onclick='applyRevise(this)'>Replace selection</button>
     <button class="btn sm ghost" onclick="this.closest('.keeper').remove()">Keep mine</button></div>`;
-   box._draft=r.draft;box._sel=selection;speak('Here's a revision.');
+   box._draft=r.draft;box._sel=selection;speak("Here's a revision.");
  } else {
    box.innerHTML=`<div class="who">The Keeper</div>${esc(r.reply||'…')}`;speak(r.reply);
  }
