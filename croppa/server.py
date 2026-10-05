@@ -18,6 +18,9 @@ SESS = {}; TTL = 60*60*24*30
 def _users():
     try: return json.load(open(USERS))
     except Exception: return {}
+def _save_users(u):
+    os.makedirs(os.path.dirname(USERS), exist_ok=True)
+    json.dump(u, open(USERS, "w")); os.chmod(USERS, 0o600)
 def _verify(e, p):
     u = _users().get((e or "").strip().lower())
     if not u: return False
@@ -43,10 +46,20 @@ button{width:100%;margin-top:18px;background:var(--accent);color:#fff;border:0;b
 <form class="card" onsubmit="return go(event)"><h1>Croppa</h1><div class="sub">Sign in to continue.</div>
 <label>Email</label><input id="e" type="email" autocomplete="username" autofocus>
 <label>Password</label><input id="p" type="password" autocomplete="current-password">
-<button type="submit">Sign in</button><div class="err" id="err"></div></form>
-<script>async function go(ev){ev.preventDefault();document.getElementById('err').textContent='';
-const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:document.getElementById('e').value,password:document.getElementById('p').value})});
-if(r.ok)location.reload();else document.getElementById('err').textContent='Wrong email or password.';return false;}</script></body></html>'''
+<button type="submit" id="go">Sign in</button>
+<button type="button" id="tog" onclick="tog()" style="width:100%;margin-top:9px;background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">New here? Create an account</button>
+<div class="err" id="err"></div></form>
+<script>let mode='login';
+function tog(){mode=mode==='login'?'signup':'login';
+ document.getElementById('go').textContent=mode==='login'?'Sign in':'Create account';
+ document.getElementById('tog').textContent=mode==='login'?'New here? Create an account':'Have an account? Sign in';
+ document.getElementById('err').textContent='';}
+async function go(ev){ev.preventDefault();document.getElementById('err').textContent='';
+ const email=document.getElementById('e').value,password=document.getElementById('p').value;let r;
+ try{r=await fetch('api/'+(mode==='signup'?'signup':'login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});}catch(_){document.getElementById('err').textContent='Network error.';return false;}
+ if(r.ok){location.reload();return false;}
+ let m=mode==='signup'?'Could not create account.':'Wrong email or password.';try{const j=await r.json();if(j.error)m=j.error;}catch(_){}
+ document.getElementById('err').textContent=m;return false;}</script></body></html>'''
 
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head>
@@ -260,6 +273,21 @@ class H(BaseHTTPRequestHandler):
                 self.send_header('Set-Cookie', f"sess={t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={TTL}")
                 self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
             self.send_response(401); self.end_headers(); self.wfile.write(b'{"error":"invalid"}'); return
+        if p=='/api/signup':
+            n=int(self.headers.get('Content-Length',0) or 0); raw=self.rfile.read(n) if n else b'{}'
+            try: d=json.loads(raw or b'{}')
+            except Exception: d={}
+            email=(d.get('email') or '').strip().lower(); pw=d.get('password') or ''
+            if '@' not in email or '.' not in email.split('@')[-1] or len(pw)<6:
+                self.send_response(400); self.end_headers(); self.wfile.write(b'{"error":"Enter a valid email and a password of at least 6 characters."}'); return
+            users=_users()
+            if email in users:
+                self.send_response(400); self.end_headers(); self.wfile.write(b'{"error":"That email already has an account \\u2014 sign in instead."}'); return
+            salt=secrets.token_hex(16); users[email]={"salt":salt,"hash":hashlib.pbkdf2_hmac("sha256",pw.encode(),bytes.fromhex(salt),200000).hex()}; _save_users(users)
+            t=_newsess(email); body=b'{"ok":true}'
+            self.send_response(200); self.send_header('Content-Type','application/json')
+            self.send_header('Set-Cookie', f"sess={t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={TTL}")
+            self.send_header('Content-Length',str(len(body))); self.end_headers(); self.wfile.write(body); return
         if p=='/api/logout':
             t=self._cookie('sess');
             if t: SESS.pop(t,None)
