@@ -32,7 +32,7 @@ def _sessok(t):
     if v[1] < time.time(): SESS.pop(t, None); return False
     return True
 LOGIN_PAGE = r'''<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Chase · sign in</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Slipstream · sign in</title>
 <style>:root{--bg:#0b0e14;--panel:#141922;--line:#222b38;--text:#eaf0f7;--muted:#90a0b4;--accent:#f59e0b}
 *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;padding:24px}
 .card{width:100%;max-width:340px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px}
@@ -41,7 +41,7 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px;font-wei
 input{width:100%;background:#0e1118;border:1px solid var(--line);border-radius:11px;color:var(--text);padding:12px;font-size:16px}
 button{width:100%;margin-top:18px;background:var(--accent);color:#1c1200;border:0;border-radius:11px;padding:13px;font-size:15px;font-weight:800}
 .err{color:#f0768a;font-size:13px;margin-top:12px;min-height:16px;text-align:center}</style></head><body>
-<form class="card" onsubmit="return go(event)"><h1>Chase</h1><div class="sub">Sign in to continue.</div>
+<form class="card" onsubmit="return go(event)"><h1>Slipstream</h1><div class="sub">Sign in to continue.</div>
 <label>Email</label><input id="e" type="email" autocomplete="username" autofocus>
 <label>Password</label><input id="p" type="password" autocomplete="current-password">
 <button type="submit">Sign in</button><div class="err" id="err"></div></form>
@@ -55,8 +55,8 @@ PAGE = r'''<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <meta name="theme-color" content="#0b0e14"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-title" content="Chase"/>
-<title>Chase — AI follow-cam</title>
+<meta name="apple-mobile-web-app-title" content="Slipstream"/>
+<title>Slipstream — AI follow-cam</title>
 <style>
   :root{--bg:#0b0e14;--panel:#141922;--panel2:#0f141c;--line:#222b38;--text:#eaf0f7;--dim:#90a0b4;--accent:#f59e0b;--accent2:#ef4444}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -89,7 +89,7 @@ PAGE = r'''<!DOCTYPE html>
 <body>
 <header>
   <div class="logo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg></div>
-  <h1>Chase</h1><div id="status">loading AI…</div>
+  <h1>Slipstream</h1><div id="status">loading AI…</div>
 </header>
 
 <div id="stage">

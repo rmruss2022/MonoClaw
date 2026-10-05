@@ -56,7 +56,7 @@ APPS = [
      "Personal network CRM — contacts, follow-ups, a reach-out queue, and insights.", "private"),
     ("croppa", "Croppa", HUB + "/crop/",
      "AI photo auto-crop — detects the subject and frames it, with one-tap ratios and full manual control.", "private"),
-    ("chase", "Chase", HUB + "/track/",
+    ("chase", "Slipstream", HUB + "/track/",
      "AI video follow-cam — lock onto a car or object and it stays centered as it moves. Built for race footage.", "private"),
     ("dropstick", "Dropstick", None,
      "Peer-to-peer music sharing for DJs — swap tracks &amp; crates device-to-device over local Wi-Fi, no internet. Go · SQLite.", "wip"),
