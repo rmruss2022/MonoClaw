@@ -32,6 +32,10 @@ def _users():
     except Exception:
         return {}
 
+def _save_users(u):
+    os.makedirs(os.path.dirname(USERS_DB), exist_ok=True)
+    json.dump(u, open(USERS_DB, "w")); os.chmod(USERS_DB, 0o600)
+
 def _hash_pw(pw, salt):
     return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
 
@@ -80,9 +84,18 @@ def init_db():
         for col, ddl in [("reach_out", "reach_out INTEGER DEFAULT 0"),
                          ("reach_out_reason", "reach_out_reason TEXT"),
                          ("reach_out_added", "reach_out_added TEXT"),
-                         ("instagram", "instagram TEXT")]:
+                         ("instagram", "instagram TEXT"),
+                         ("owner", "owner TEXT")]:
             if col not in existing:
-                c.execute(f"ALTER TABLE contacts ADD COLUMN {ddl}")
+                try:
+                    c.execute(f"ALTER TABLE contacts ADD COLUMN {ddl}")
+                except sqlite3.OperationalError:
+                    pass  # another instance added it first (shared DB, concurrent start)
+        # multi-tenant: every contact belongs to one account (owner=email). Claim any
+        # pre-existing (unowned) contacts for the primary account so legacy data stays private.
+        c.execute("UPDATE contacts SET owner=? WHERE owner IS NULL OR owner=''",
+                  (os.environ.get("ROLODEX_DEFAULT_OWNER", "matthew.motivate@proton.me").lower(),))
+        c.execute("CREATE INDEX IF NOT EXISTS idx_contacts_owner ON contacts(owner)")
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -107,9 +120,9 @@ def row_to_dict(r):
     d["days_since_contact"] = days_since(d.get("last_contacted") or d.get("met_date"))
     return d
 
-def list_contacts(q="", category="", flt=""):
+def list_contacts(q="", category="", flt="", owner=None):
     sql = "SELECT * FROM contacts"
-    where, args = [], []
+    where, args = ["owner=?"], [owner]
     if q:
         like = f"%{q.lower()}%"
         where.append("(lower(name) LIKE ? OR lower(company) LIKE ? OR lower(title) LIKE ? "
@@ -140,12 +153,12 @@ def list_contacts(q="", category="", flt=""):
         rows = rows[:10]
     return rows
 
-def get_contact(cid):
+def get_contact(cid, owner=None):
     with db() as c:
-        r = c.execute("SELECT * FROM contacts WHERE id=?", (cid,)).fetchone()
+        r = c.execute("SELECT * FROM contacts WHERE id=? AND owner=?", (cid, owner)).fetchone()
     return row_to_dict(r) if r else None
 
-def upsert(data, cid=None):
+def upsert(data, cid=None, owner=None):
     vals = {k: (data.get(k) or None) for k in FIELDS}
     if not vals["name"]:
         raise ValueError("name required")
@@ -155,36 +168,36 @@ def upsert(data, cid=None):
         if cid:
             vals["updated_at"] = now_iso()
             sets = ", ".join(f"{k}=?" for k in FIELDS + ["updated_at"])
-            c.execute(f"UPDATE contacts SET {sets} WHERE id=?",
-                      [vals[k] for k in FIELDS] + [vals["updated_at"], cid])
+            c.execute(f"UPDATE contacts SET {sets} WHERE id=? AND owner=?",
+                      [vals[k] for k in FIELDS] + [vals["updated_at"], cid, owner])
             return cid
         vals["created_at"] = vals["updated_at"] = now_iso()
         if not vals.get("met_date"):
             vals["met_date"] = today()
-        cols = FIELDS + ["created_at","updated_at"]
+        cols = FIELDS + ["created_at", "updated_at", "owner"]
         cur = c.execute(f"INSERT INTO contacts({','.join(cols)}) VALUES ({','.join('?'*len(cols))})",
-                        [vals[k] for k in cols])
+                        [vals[k] for k in FIELDS] + [vals["created_at"], vals["updated_at"], owner])
         return cur.lastrowid
 
-def log_touch(cid):
+def log_touch(cid, owner=None):
     with db() as c:
-        c.execute("UPDATE contacts SET last_contacted=?, updated_at=? WHERE id=?",
-                  (today(), now_iso(), cid))
+        c.execute("UPDATE contacts SET last_contacted=?, updated_at=? WHERE id=? AND owner=?",
+                  (today(), now_iso(), cid, owner))
 
-def set_reachout(cid, on, reason=None):
+def set_reachout(cid, on, reason=None, owner=None):
     with db() as c:
-        row = c.execute("SELECT reach_out_added FROM contacts WHERE id=?", (cid,)).fetchone()
+        row = c.execute("SELECT reach_out_added FROM contacts WHERE id=? AND owner=?", (cid, owner)).fetchone()
         added = ((row["reach_out_added"] if (row and row["reach_out_added"]) else now_iso()) if on else None)
-        c.execute("UPDATE contacts SET reach_out=?, reach_out_reason=?, reach_out_added=?, updated_at=? WHERE id=?",
-                  (1 if on else 0, (reason if on else None), added, now_iso(), cid))
+        c.execute("UPDATE contacts SET reach_out=?, reach_out_reason=?, reach_out_added=?, updated_at=? WHERE id=? AND owner=?",
+                  (1 if on else 0, (reason if on else None), added, now_iso(), cid, owner))
 
-def delete_contact(cid):
+def delete_contact(cid, owner=None):
     with db() as c:
-        c.execute("DELETE FROM contacts WHERE id=?", (cid,))
+        c.execute("DELETE FROM contacts WHERE id=? AND owner=?", (cid, owner))
 
-def stats():
+def stats(owner=None):
     with db() as c:
-        rows = [row_to_dict(r) for r in c.execute("SELECT * FROM contacts").fetchall()]
+        rows = [row_to_dict(r) for r in c.execute("SELECT * FROM contacts WHERE owner=?", (owner,)).fetchall()]
     total = len(rows)
     cats = {}
     months = {}
@@ -227,19 +240,19 @@ def parse_vcards(text):
             elif k == "CATEGORIES" and not cur.get("category"): cur["category"] = val.split(",")[0]
     return out
 
-def import_vcards(text):
+def import_vcards(text, owner=None):
     added = 0
     for v in parse_vcards(text):
         with db() as c:
-            dup = c.execute("SELECT id FROM contacts WHERE lower(name)=? AND ifnull(lower(email),'')=ifnull(?,'')",
-                            (v["name"].lower(), (v.get("email") or "").lower())).fetchone()
+            dup = c.execute("SELECT id FROM contacts WHERE owner=? AND lower(name)=? AND ifnull(lower(email),'')=ifnull(?,'')",
+                            (owner, v["name"].lower(), (v.get("email") or "").lower())).fetchone()
         if dup:
             continue
-        upsert(v)
+        upsert(v, owner=owner)
         added += 1
     return added
 
-def _add_ig_handles(pairs):
+def _add_ig_handles(pairs, owner=None):
     added = 0; seen = set()
     for handle, href in pairs:
         h = (handle or "").lstrip("@").strip()
@@ -247,16 +260,16 @@ def _add_ig_handles(pairs):
             continue
         seen.add(h.lower())
         with db() as c:
-            dup = c.execute("SELECT id FROM contacts WHERE lower(ifnull(instagram,''))=?",
-                            (h.lower(),)).fetchone()
+            dup = c.execute("SELECT id FROM contacts WHERE owner=? AND lower(ifnull(instagram,''))=?",
+                            (owner, h.lower())).fetchone()
         if dup:
             continue
         upsert({"name": "@" + h, "instagram": h, "category": "Instagram",
-                "how_met": "Instagram", "notes": href or ("https://instagram.com/" + h)})
+                "how_met": "Instagram", "notes": href or ("https://instagram.com/" + h)}, owner=owner)
         added += 1
     return added
 
-def import_instagram(text):
+def import_instagram(text, owner=None):
     """Import from Instagram's official 'Download Your Information' export
     (followers/following JSON), or a plain list of @handles (one per line)."""
     text = (text or "").strip()
@@ -266,7 +279,7 @@ def import_instagram(text):
         data = json.loads(text)
     except Exception:
         handles = [ln.strip() for ln in text.splitlines() if ln.strip()]
-        return _add_ig_handles([(h, "") for h in handles])
+        return _add_ig_handles([(h, "") for h in handles], owner=owner)
     found = []
     def walk(o):
         if isinstance(o, dict):
@@ -283,7 +296,7 @@ def import_instagram(text):
             for v in o:
                 walk(v)
     walk(data)
-    return _add_ig_handles(found)
+    return _add_ig_handles(found, owner=owner)
 
 LOGIN_PAGE = r"""<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -302,18 +315,26 @@ button{width:100%;margin-top:18px;background:var(--accent);color:#fff;border:0;b
 </style></head><body>
 <form class="card" onsubmit="return go(event)">
   <h1>Rolo<span>dex</span></h1>
-  <div class="sub">Sign in to your network.</div>
+  <div class="sub" id="sub">Sign in to your network.</div>
   <label>Email</label><input id="email" type="email" autocomplete="username" autofocus>
   <label>Password</label><input id="pw" type="password" autocomplete="current-password">
-  <button type="submit">Sign in</button>
+  <button type="submit" id="go">Sign in</button>
+  <button type="button" id="tog" onclick="tog()" style="width:100%;margin-top:9px;background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">New here? Create an account</button>
   <div class="err" id="err"></div>
 </form>
 <script>
+let mode='login';
+function tog(){mode=mode==='login'?'signup':'login';
+ document.getElementById('go').textContent=mode==='login'?'Sign in':'Create account';
+ document.getElementById('tog').textContent=mode==='login'?'New here? Create an account':'Have an account? Sign in';
+ document.getElementById('sub').textContent=mode==='login'?'Sign in to your network.':'Create your private network.';
+ document.getElementById('err').textContent='';}
 async function go(e){e.preventDefault();document.getElementById('err').textContent='';
- const r=await fetch('api/login',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('pw').value})});
- if(r.ok){location.reload();}else{document.getElementById('err').textContent='Wrong email or password.';}
- return false;}
+ const email=document.getElementById('email').value,password=document.getElementById('pw').value;let r;
+ try{r=await fetch('api/'+(mode==='signup'?'signup':'login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});}catch(_){document.getElementById('err').textContent='Network error.';return false;}
+ if(r.ok){location.reload();return false;}
+ let m=mode==='signup'?'Could not create account.':'Wrong email or password.';try{const j=await r.json();if(j.error)m=j.error;}catch(_){}
+ document.getElementById('err').textContent=m;return false;}
 </script></body></html>"""
 
 # ---------- HTTP ----------
@@ -346,6 +367,13 @@ class H(BaseHTTPRequestHandler):
         tok = self._cookie("rolo_sess")
         return bool(tok and session_ok(tok))
 
+    def _user(self):
+        """The owner (email) whose data this request may touch."""
+        if not AUTH:
+            return os.environ.get("ROLODEX_DEFAULT_OWNER", "matthew.motivate@proton.me").lower()
+        tok = self._cookie("rolo_sess"); v = SESSIONS.get(tok) if tok else None
+        return v[0] if v else None
+
     def do_GET(self):
         u = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(u.query)
@@ -356,13 +384,14 @@ class H(BaseHTTPRequestHandler):
             self._send(401, {"error": "auth"}); return
         if p in ("/", "/index.html"):
             self._send(200, PAGE.replace("__BASE__", BASE), "text/html; charset=utf-8"); return
+        owner = self._user()
         if p == "/api/contacts":
             self._send(200, {"contacts": list_contacts(
-                qs.get("q", [""])[0], qs.get("category", [""])[0], qs.get("filter", [""])[0])}); return
+                qs.get("q", [""])[0], qs.get("category", [""])[0], qs.get("filter", [""])[0], owner=owner)}); return
         if p == "/api/stats":
-            self._send(200, stats()); return
+            self._send(200, stats(owner=owner)); return
         if re.match(r"^/api/contacts/\d+$", p):
-            cid = int(p.rsplit("/", 1)[1]); r = get_contact(cid)
+            cid = int(p.rsplit("/", 1)[1]); r = get_contact(cid, owner=owner)
             self._send(200 if r else 404, r or {"error": "not found"}); return
         self._send(404, {"error": "not found"})
 
@@ -384,27 +413,42 @@ class H(BaseHTTPRequestHandler):
             tok = self._cookie("rolo_sess")
             if tok: SESSIONS.pop(tok, None)
             self._send(200, {"ok": True}); return
+        if p == "/api/signup":
+            try: d = json.loads(self._body() or b"{}")
+            except Exception: d = {}
+            email = (d.get("email", "") or "").strip().lower(); pw = d.get("password", "") or ""
+            if "@" not in email or "." not in email.split("@")[-1] or len(pw) < 6:
+                self._send(400, {"error": "Enter a valid email and a password of at least 6 characters."}); return
+            users = _users()
+            if email in users:
+                self._send(400, {"error": "That email already has an account — sign in instead."}); return
+            salt = secrets.token_hex(16); users[email] = {"salt": salt, "hash": _hash_pw(pw, salt)}; _save_users(users)
+            tok = new_session(email); body = json.dumps({"ok": True}).encode()
+            self.send_response(200); self.send_header("Content-Type", "application/json")
+            self.send_header("Set-Cookie", f"rolo_sess={tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={SESSION_TTL}")
+            self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body); return
         if AUTH and not self._authed():
             self._send(401, {"error": "auth"}); return
+        owner = self._user()
         try:
             if p == "/api/contacts":
-                cid = upsert(json.loads(self._body() or b"{}"))
+                cid = upsert(json.loads(self._body() or b"{}"), owner=owner)
                 self._send(200, {"ok": True, "id": cid}); return
             m = re.match(r"^/api/contacts/(\d+)(/(touch|delete|reachout))?$", p)
             if m:
                 cid = int(m.group(1)); action = m.group(3)
-                if action == "touch": log_touch(cid); self._send(200, {"ok": True}); return
-                if action == "delete": delete_contact(cid); self._send(200, {"ok": True}); return
+                if action == "touch": log_touch(cid, owner=owner); self._send(200, {"ok": True}); return
+                if action == "delete": delete_contact(cid, owner=owner); self._send(200, {"ok": True}); return
                 if action == "reachout":
                     d = json.loads(self._body() or b"{}")
-                    set_reachout(cid, d.get("on", True), d.get("reason"))
+                    set_reachout(cid, d.get("on", True), d.get("reason"), owner=owner)
                     self._send(200, {"ok": True}); return
-                upsert(json.loads(self._body() or b"{}"), cid); self._send(200, {"ok": True, "id": cid}); return
+                upsert(json.loads(self._body() or b"{}"), cid, owner=owner); self._send(200, {"ok": True, "id": cid}); return
             if p == "/api/import":
-                added = import_vcards(self._body().decode("utf-8", "ignore"))
+                added = import_vcards(self._body().decode("utf-8", "ignore"), owner=owner)
                 self._send(200, {"ok": True, "added": added}); return
             if p == "/api/import/instagram":
-                added = import_instagram(self._body().decode("utf-8", "ignore"))
+                added = import_instagram(self._body().decode("utf-8", "ignore"), owner=owner)
                 self._send(200, {"ok": True, "added": added}); return
         except Exception as e:
             self._send(400, {"error": str(e)}); return
