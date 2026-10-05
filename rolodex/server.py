@@ -318,23 +318,19 @@ button{width:100%;margin-top:18px;background:var(--accent);color:#fff;border:0;b
   <div class="sub" id="sub">Sign in to your network.</div>
   <label>Email</label><input id="email" type="email" autocomplete="username" autofocus>
   <label>Password</label><input id="pw" type="password" autocomplete="current-password">
-  <button type="submit" id="go">Sign in</button>
-  <button type="button" id="tog" onclick="tog()" style="width:100%;margin-top:9px;background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">New here? Create an account</button>
+  <button type="button" onclick="sub('login')">Sign in</button>
+  <button type="button" onclick="sub('signup')" style="margin-top:9px;background:transparent;border:1px solid var(--line);color:var(--text)">Create account</button>
   <div class="err" id="err"></div>
 </form>
 <script>
-let mode='login';
-function tog(){mode=mode==='login'?'signup':'login';
- document.getElementById('go').textContent=mode==='login'?'Sign in':'Create account';
- document.getElementById('tog').textContent=mode==='login'?'New here? Create an account':'Have an account? Sign in';
- document.getElementById('sub').textContent=mode==='login'?'Sign in to your network.':'Create your private network.';
- document.getElementById('err').textContent='';}
-async function go(e){e.preventDefault();document.getElementById('err').textContent='';
- const email=document.getElementById('email').value,password=document.getElementById('pw').value;let r;
- try{r=await fetch('api/'+(mode==='signup'?'signup':'login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});}catch(_){document.getElementById('err').textContent='Network error.';return false;}
- if(r.ok){location.reload();return false;}
+function go(e){e.preventDefault();sub('login');return false;}
+async function sub(mode){const email=document.getElementById('email').value,password=document.getElementById('pw').value,err=document.getElementById('err');err.textContent='';
+ if(!email||!password){err.textContent='Enter your email and password.';return;}
+ if(mode==='signup')document.getElementById('sub').textContent='Create your private network.';
+ let r;try{r=await fetch('api/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});}catch(_){err.textContent='Network error.';return;}
+ if(r.ok){location.reload();return;}
  let m=mode==='signup'?'Could not create account.':'Wrong email or password.';try{const j=await r.json();if(j.error)m=j.error;}catch(_){}
- document.getElementById('err').textContent=m;return false;}
+ err.textContent=m;}
 </script></body></html>"""
 
 # ---------- HTTP ----------

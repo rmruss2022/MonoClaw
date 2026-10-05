@@ -47,20 +47,17 @@ button{width:100%;margin-top:18px;background:var(--accent);color:#1c1200;border:
 <form class="card" onsubmit="return go(event)"><h1>Slipstream</h1><div class="sub">Sign in to continue.</div>
 <label>Email</label><input id="e" type="email" autocomplete="username" autofocus>
 <label>Password</label><input id="p" type="password" autocomplete="current-password">
-<button type="submit" id="go">Sign in</button>
-<button type="button" id="tog" onclick="tog()" style="width:100%;margin-top:9px;background:transparent;border:0;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">New here? Create an account</button>
+<button type="button" onclick="sub('login')">Sign in</button>
+<button type="button" onclick="sub('signup')" style="margin-top:9px;background:transparent;border:1px solid var(--line);color:var(--text)">Create account</button>
 <div class="err" id="err"></div></form>
-<script>let mode='login';
-function tog(){mode=mode==='login'?'signup':'login';
- document.getElementById('go').textContent=mode==='login'?'Sign in':'Create account';
- document.getElementById('tog').textContent=mode==='login'?'New here? Create an account':'Have an account? Sign in';
- document.getElementById('err').textContent='';}
-async function go(ev){ev.preventDefault();document.getElementById('err').textContent='';
- const email=document.getElementById('e').value,password=document.getElementById('p').value;let r;
- try{r=await fetch('api/'+(mode==='signup'?'signup':'login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});}catch(_){document.getElementById('err').textContent='Network error.';return false;}
- if(r.ok){location.reload();return false;}
+<script>
+function go(ev){ev.preventDefault();sub('login');return false;}
+async function sub(mode){const e=document.getElementById('e').value,p=document.getElementById('p').value,err=document.getElementById('err');err.textContent='';
+ if(!e||!p){err.textContent='Enter your email and password.';return;}
+ let r;try{r=await fetch('api/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});}catch(_){err.textContent='Network error.';return;}
+ if(r.ok){location.reload();return;}
  let m=mode==='signup'?'Could not create account.':'Wrong email or password.';try{const j=await r.json();if(j.error)m=j.error;}catch(_){}
- document.getElementById('err').textContent=m;return false;}</script></body></html>'''
+ err.textContent=m;}</script></body></html>'''
 
 PAGE = r'''<!DOCTYPE html>
 <html lang="en"><head>
