@@ -101,6 +101,7 @@ PAGE = r'''<!DOCTYPE html>
   <div class="logo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M12 1v3M12 20v3M1 12h3M20 12h3"/></svg></div>
   <h1>Slipstream</h1><div id="status">loading AI…</div>
 </header>
+<div id="dbg" style="display:none;font:11px ui-monospace,Menlo,monospace;color:#9aa4b2;padding:4px 14px;white-space:pre-wrap;word-break:break-word"></div>
 
 <div id="stage">
   <canvas id="out"></canvas>
@@ -137,19 +138,42 @@ let smooth=null; // smoothed follow box {cx,cy,w,h}
 const CO={w:720}; // output width baseline
 
 function status(t){ $('#status').textContent=t; }
-(async()=>{ try{ model=await cocoSsd.load(); status('AI ready — add a video'); }catch(e){ status('AI failed to load'); } })();
+function dbg(m){ const d=$('#dbg'); d.style.display='block'; d.textContent=m; }
+// AI model (~27MB) loads from CDN — slow/stalls on weak cell links. Report honestly + don't block video.
+let aiTimer=setTimeout(()=>{ if(!model) status('AI still downloading (27MB)… faster on Wi-Fi. You can add a video now.'); }, 12000);
+(async()=>{
+  if(typeof cocoSsd==='undefined'){ clearTimeout(aiTimer); status('AI scripts blocked — check connection / reload.'); dbg('tfjs/coco-ssd CDN did not load'); return; }
+  try{ model=await cocoSsd.load(); clearTimeout(aiTimer); status('AI ready — add a video'); }
+  catch(e){ clearTimeout(aiTimer); status('AI failed to load — reload on Wi-Fi.'); dbg('model load error: '+(e&&e.message||e)); }
+})();
 
 $('#drop').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{ const f=e.target.files[0]; if(f) loadVideo(f); };
 
 function loadVideo(f){
+  status('loading video…');
+  dbg('picked: '+(f.name||'?')+'  '+(f.size/1048576).toFixed(1)+'MB  type='+(f.type||'unknown'));
+  let loaded=false;
+  // if metadata never arrives, the browser can't decode it (usually iPhone HEVC .mov)
+  const watchdog=setTimeout(()=>{ if(!loaded){ dbg(dbgtxt()+'\nSTUCK: no metadata after 12s (readyState='+vid.readyState+') — codec likely unsupported'); videoFail(f); } }, 12000);
+  vid.onerror=()=>{ clearTimeout(watchdog); const c=vid.error&&vid.error.code; dbg(dbgtxt()+'\nERROR code='+c+' ('+({1:'aborted',2:'network',3:'decode',4:'format-unsupported'}[c]||'?')+')'); videoFail(f); };
   vid.src=URL.createObjectURL(f);
   vid.onloadedmetadata=()=>{
+    if(!vid.videoWidth || !vid.videoHeight){ clearTimeout(watchdog); dbg(dbgtxt()+'\nmetadata loaded but 0×0 — audio-only or unsupported video track'); return videoFail(f); }
+    loaded=true; clearTimeout(watchdog);
+    dbg('OK: '+vid.videoWidth+'×'+vid.videoHeight+'  '+(vid.duration||0).toFixed(1)+'s');
     work.width=vid.videoWidth; work.height=vid.videoHeight;
     sizeOut(); $('#drop').style.display='none';
     vid.currentTime=Math.min(0.1, (vid.duration||1)/2);
   };
-  vid.onseeked=()=>{ drawFrameToWork(); renderPreviewFull(); status('tap ① Detect & pick'); };
+  vid.onseeked=()=>{ drawFrameToWork(); renderPreviewFull(); status(model?'tap ① Detect & pick':'video ready — waiting on AI model…'); };
+}
+function dbgtxt(){ return 'readyState='+vid.readyState+' networkState='+vid.networkState; }
+function videoFail(f){
+  const mov=/\.(mov|hevc|m4v)$/i.test(f?.name||'') || /quicktime/i.test(f?.type||'');
+  $('#drop').style.display='';
+  status(mov ? "can't decode this clip — looks like an iPhone HEVC .mov. Open Slipstream in Safari, or convert to H.264 MP4."
+            : "can't decode this clip — try an H.264 MP4, or open in Safari.");
 }
 function sizeOut(){
   let w,h;
