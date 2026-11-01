@@ -143,6 +143,7 @@ h1,h2,.greeting h1,.home b,.brand b,.sb-name{font-family:var(--serif);letter-spa
 </style>
 </head>
 <body>
+<canvas class="stars" style="position:fixed;inset:0;z-index:-1;pointer-events:none"></canvas>
   <header class="top">
     <div class="brand"><a href="/"><img src="/assets/brand/logo.svg" alt="openhome" height="24"/></a></div>
     <nav>
@@ -406,5 +407,12 @@ refresh();setInterval(()=>{if(!$("wizard").classList.contains('show'))refresh();
   <a href="/speakers"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="7" r="1"/></svg><span>Speakers</span></a>
   <a href="/climate"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/></svg><span>Climate</span></a>
 </nav>
+<script>
+(function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
+function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+var st=Array.from({length:70},function(){return{x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.2+.2,a:Math.random()*6};});
+(function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<st.length;i++){var s=st[i];s.a+=0.015;var o=.25+.35*Math.sin(s.a);x.fillStyle='rgba(220,210,255,'+o+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();
+})();
+</script>
 </body>
 </html>

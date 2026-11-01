@@ -65,6 +65,7 @@ h1,h2,.greeting h1,.home b,.brand b,.sb-name{font-family:var(--serif);letter-spa
 </style>
 </head>
 <body>
+<canvas class="stars" style="position:fixed;inset:0;z-index:-1;pointer-events:none"></canvas>
   <div class="shell">
     <div class="steps" id="steps"></div>
     <div class="body" id="body"></div>
@@ -131,6 +132,13 @@ async function saveHome(){const v=($("homeName")||{}).value||"";homeName=v.trim(
 async function finish(){await post('complete-setup');go(4);}
 
 render();
+</script>
+<script>
+(function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
+function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+var st=Array.from({length:70},function(){return{x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.2+.2,a:Math.random()*6};});
+(function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<st.length;i++){var s=st[i];s.a+=0.015;var o=.25+.35*Math.sin(s.a);x.fillStyle='rgba(220,210,255,'+o+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();
+})();
 </script>
 </body>
 </html>
