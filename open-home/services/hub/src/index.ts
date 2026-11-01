@@ -24,6 +24,7 @@ import * as speakerService from "./speakerService.ts";
 import * as localAudio from "./localAudio.ts";
 import * as calibration from "./calibration.ts";
 import * as snapcast from "./snapcast.ts";
+import * as pwRouter from "./pwRouter.ts";
 import * as lights from "./lights.ts";
 import * as localLights from "./localLights.ts";
 import * as hub from "./hub.ts";
@@ -526,6 +527,8 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   // ---- Speaker service / music ----
   if (url === "/speakers") { json(res, { speakers: audio.listSpeakers(), zones: audio.listZones() }); return; }
   if (url === "/audio/state") { json(res, audio.state()); return; }
+  // PipeWire output router — openhome's own audio routing (no Spotify device-picker).
+  if (url === "/audio/outputs") { json(res, await pwRouter.status()); return; }
   if (url === "/audio/spotify/search") {
     const q = new URL(req.url ?? "/", "http://x").searchParams.get("q") ?? "";
     if (spotify.connected()) { try { json(res, { tracks: await spotify.search(q, 20) }); return; } catch (e) { console.log("[spotify] search error:", (e as Error).message); } }
@@ -771,6 +774,26 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
         result = audio.state().nowPlaying; break;
       }
       case "play-in-zone": result = audio.playInZone(String(p.zoneId)); break;
+      // ---- PipeWire output router (internal audio routing) ----
+      case "route-output": {
+        // Route audio to a sink by node name or id. openhome owns the output —
+        // no "go pick a device in Spotify" needed.
+        let ok = false;
+        if (p.nodeName) ok = await pwRouter.routeByNode(String(p.nodeName));
+        else if (p.sinkId != null) ok = await pwRouter.route(Number(p.sinkId));
+        hint = ok ? `Output → ${p.label || p.nodeName || p.sinkId}` : "Couldn't switch output (PipeWire unavailable?)";
+        result = await pwRouter.status(); break;
+      }
+      case "test-output": {
+        const node = String(p.nodeName || "");
+        const ok = node ? await pwRouter.testTone(node) : false;
+        hint = ok ? "Playing test tone 🔊" : "Couldn't play test tone";
+        result = await pwRouter.status(); break;
+      }
+      case "output-volume": {
+        const ok = await pwRouter.setVolume(Number(p.sinkId), Number(p.volume));
+        hint = ok ? undefined : "Volume change failed"; result = await pwRouter.status(); break;
+      }
       default: json(res, { ok: false, error: "unknown_cmd", cmd }, 400); return;
     }
     bus.publish({ type: `audio.${cmd}`, ts: Date.now(), payload: { via: "music-app" } });

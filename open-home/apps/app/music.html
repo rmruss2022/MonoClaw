@@ -172,6 +172,7 @@ h1,h2,.greeting h1,.home b,.brand b,.sb-name{font-family:var(--serif);letter-spa
         <span class="row" style="gap:6px"><button class="small" onclick="scan('wifi')">+ Wi-Fi</button><button class="small" onclick="scan('bluetooth')">+ Bluetooth</button></span>
       </div>
       <div class="note">Pick a <b>room</b> in the player bar to play there — Spotify streams through your hub and out that room's speaker. Synced multi-room arrives with Snapcast — see <a href="/docs/sound">Sound docs</a>.</div>
+      <div id="outputs" style="margin-top:10px"></div>
       <div id="zones" style="margin-top:12px"></div><div id="loose"></div>
       <div class="row" style="margin-top:12px;gap:8px"><input type="text" id="zoneName" placeholder="New zone name (e.g. Downstairs)"><button onclick="makeZone()">Group selected</button></div>
       <div id="discover" class="list"></div>
@@ -229,7 +230,21 @@ async function api(cmd,payload={}){const r=await fetch("/audio/command",{method:
   if(j.hint==="no_device") toast("Open Spotify on your MacBook (or a device) to start playback.");
   else if(j.hint) toast(j.hint);
   if(j.state) render(j.state); return j;}
-async function refresh(){try{render(await (await fetch("/audio/state")).json());}catch(e){$("hubdot").className="dot off";}}
+async function refresh(){try{render(await (await fetch("/audio/state")).json());}catch(e){$("hubdot").className="dot off";}loadOutputs();}
+// ---- PipeWire output router: openhome's own audio outputs on this hub ----
+function kindIcon(k){return k==="bluetooth"?"🔵":k==="hdmi"?"🖥️":k==="analog"?"🎧":"🔈";}
+async function loadOutputs(){
+  const el=$("outputs"); if(!el) return;
+  let d; try{ d=await (await fetch("/audio/outputs")).json(); }catch(_){ return; }
+  if(!d||!d.available||!(d.sinks||[]).length){ el.innerHTML=""; return; }
+  el.innerHTML=`<div class="note" style="margin-bottom:6px"><b>Outputs on this hub</b> — openhome routes audio here directly (no Spotify needed). ★ = active.</div>`+
+    d.sinks.map(s=>`<div class="spk"><div class="row between">
+      <span class="row" style="gap:8px"><span>${kindIcon(s.kind)}</span><b>${esc(s.name)}</b> ${s.isDefault?'<span class="badge live">★ active</span>':''}</span>
+      <span class="row small" style="gap:6px">
+        <button class="small" onclick="api('test-output',{nodeName:'${s.nodeName}'})">Test 🔊</button>
+        ${s.isDefault?'':`<button class="small primary" onclick="api('route-output',{nodeName:'${s.nodeName}',label:'${esc(s.name)}'}).then(loadOutputs)">Play here</button>`}
+      </span></div></div>`).join("");
+}
 function currentZone(){return $("zoneSel").value||(S&&S.nowPlaying.zoneId)||"";}
 
 function render(state){
