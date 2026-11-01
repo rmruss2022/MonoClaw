@@ -45,10 +45,30 @@ cheapest offer (sub < free < rent < buy) → then price → then a **title-level
 link** over app-search → then user preference order. Emits a launchable deep-link
 URI + Android package.
 
-## Providers
-`providers/*.ts` implement `MetadataProvider` / `AvailabilityProvider`. **sample**
-(keyless), **tmdb** (metadata + JustWatch-backed availability). Watchmode (title-
-level deep links) is the P2 drop-in.
+## Integrations — how "real" each one is
+
+A streaming stick doesn't have a secret "play Netflix" API — neither does Fire TV.
+It runs the **real apps** and **deep-links** into them, driven by an availability
+database. So integrations come in two honest tiers:
+
+**Tier 1 — deep-link + the real installed app** (Netflix, Hulu, Disney+, Max,
+Prime, Peacock, Paramount+, Tubi, Apple TV). Identical to how Fire TV works. The
+stick runs the real Android-TV app; we open it to the exact title.
+- `TMDB_API_KEY` → metadata (titles, posters, cast, trending).
+- `WATCHMODE_API_KEY` → **availability + title-level Android deep links** (`android_url`).
+  This is the integration that makes universal search *accurate* ("open Dune in Max
+  directly" vs. "open Max's search"). Without it we fall back to app-search links.
+
+**Tier 2 — full-API services** (`SearchContributor`s — real search *and* play,
+because these expose open APIs):
+- **YouTube** (`YOUTUBE_API_KEY`) — Data API search → opens the YouTube app to the video.
+- **Plex** (`PLEX_URL`,`PLEX_TOKEN`) / **Jellyfin** (`JELLYFIN_URL`,`JELLYFIN_TOKEN`,
+  `JELLYFIN_USER`) — *your own* media server: true browse/search/play, no walled garden.
+- **Spotify** — already integrated in the openhome hub (Connect/Web API).
+
+`providers/*.ts`: `sample` (keyless demo), `tmdb`, `watchmode`, `youtube`, `plex`,
+`jellyfin`. Each activates automatically when its key/config is present; the engine
+prefers Watchmode deep links and merges contributor results into search.
 
 ## Deploy
 Mirror `openhome-cloud`: Railway, Nixpacks (Node 22), a volume at `/data`

@@ -6,19 +6,35 @@
 import type { MetadataProvider, AvailabilityProvider, Title, SearchQuery, MediaType, Source } from "./types.ts";
 import { sampleMetadata, sampleAvailability } from "./providers/sample.ts";
 import { tmdbMetadata, tmdbAvailability } from "./providers/tmdb.ts";
-import { resolveDeepLink, type ServiceId } from "./deeplinks.ts";
+import { watchmodeAvailability } from "./providers/watchmode.ts";
+import { youtube } from "./providers/youtube.ts";
+import { plex } from "./providers/plex.ts";
+import { jellyfin } from "./providers/jellyfin.ts";
+import type { SearchContributor } from "./types.ts";
+import { resolveDeepLink, SERVICES, type ServiceId } from "./deeplinks.ts";
+
+// Full-API services that contribute their own titles (real search + play).
+const CONTRIBUTORS: SearchContributor[] = [plex, jellyfin, youtube];
+function activeContributors(): SearchContributor[] {
+  return CONTRIBUTORS.filter((c) => c.ready());
+}
 
 function metadataProvider(): MetadataProvider {
   return tmdbMetadata.ready() ? tmdbMetadata : sampleMetadata;
 }
 function availabilityProvider(): AvailabilityProvider {
-  return tmdbAvailability.ready() ? tmdbAvailability : sampleAvailability;
+  // Watchmode gives title-level deep links (best); TMDB gives service lists; sample is offline.
+  if (watchmodeAvailability.ready()) return watchmodeAvailability;
+  if (tmdbAvailability.ready()) return tmdbAvailability;
+  return sampleAvailability;
 }
 
 export function providerStatus() {
   return {
     metadata: metadataProvider().id,
     availability: availabilityProvider().id,
+    deepLinks: watchmodeAvailability.ready() ? "title-level (watchmode)" : "service-level",
+    contributors: activeContributors().map((c) => c.id),
     live: tmdbMetadata.ready(),
   };
 }
@@ -28,7 +44,10 @@ function mergeSources(a: Source[], b: Source[]): Source[] {
   for (const s of b) {
     const existing = out.find((x) => x.service === s.service);
     if (!existing) out.push(s);
-    else if (!existing.contentId && s.contentId) existing.contentId = s.contentId;
+    else {
+      if (!existing.contentId && s.contentId) existing.contentId = s.contentId;
+      if (!existing.deepLink && s.deepLink) existing.deepLink = s.deepLink; // prefer exact links
+    }
   }
   return out;
 }
@@ -58,15 +77,36 @@ function rank(titles: Title[], q: string): Title[] {
     .map((x) => x.t);
 }
 
+// Bounded cache of titles we've shown, so /route can resolve any title id —
+// including contributor titles (YouTube/Plex/Jellyfin) that have no detail fetch.
+const titleCache = new Map<string, Title>();
+function remember(titles: Title[]) {
+  for (const t of titles) {
+    titleCache.set(t.id, t);
+    if (titleCache.size > 2000) titleCache.delete(titleCache.keys().next().value);
+  }
+}
+
 export async function search(q: SearchQuery): Promise<Title[]> {
   const region = q.region || "US";
-  const base = await metadataProvider().search(q);
+  // Primary metadata (TMDB/sample) enriched with availability, plus every active
+  // full-API contributor (Plex/Jellyfin/YouTube) that carries its own sources.
+  const [base, ...contribLists] = await Promise.all([
+    metadataProvider().search(q),
+    ...activeContributors().map((c) => c.search(q).catch(() => [])),
+  ]);
   const enriched = await Promise.all(base.slice(0, 20).map((t) => enrich(t, region)));
-  return rank(enriched, q.q);
+  const all = rank([...enriched, ...contribLists.flat()], q.q);
+  remember(all);
+  return all;
 }
 
 export async function detail(id: string, region = "US"): Promise<Title | null> {
-  const [, type, providerId] = id.split(":") as [string, MediaType, string];
+  const cached = titleCache.get(id);
+  if (cached) return cached;
+  const [provider, type, providerId] = id.split(":") as [string, MediaType, string];
+  // Contributor titles have no detail endpoint; they live only in the cache.
+  if (provider !== "tmdb" && provider !== "sample") return null;
   const t = await metadataProvider().detail(providerId, type);
   if (!t) return null;
   return enrich(t, region);
@@ -74,7 +114,9 @@ export async function detail(id: string, region = "US"): Promise<Title | null> {
 
 export async function trending(type?: MediaType, region = "US"): Promise<Title[]> {
   const base = await metadataProvider().trending(type);
-  return Promise.all(base.slice(0, 20).map((t) => enrich(t, region)));
+  const all = await Promise.all(base.slice(0, 20).map((t) => enrich(t, region)));
+  remember(all);
+  return all;
 }
 
 // ----- Routing algorithm --------------------------------------------------
@@ -123,6 +165,14 @@ export function chooseSource(title: Title, ctx: RouteContext = {}): RouteResult 
     return prefIndex(a.service) - prefIndex(b.service);
   });
   const best = candidates[0];
+  // Prefer an exact provider-supplied deep link (Watchmode/Plex/Jellyfin); else
+  // fall back to our per-service template (title-level if we have a contentId).
+  if (best.deepLink) {
+    return {
+      ok: true, service: best.service, offer: best.offer,
+      deepLink: best.deepLink, level: "title", androidPackage: SERVICES[best.service].androidPackage,
+    };
+  }
   const link = resolveDeepLink(best.service, { contentId: best.contentId, query: title.name });
   return {
     ok: true,
