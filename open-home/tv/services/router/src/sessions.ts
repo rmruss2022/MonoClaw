@@ -111,8 +111,8 @@ export const sticks = {
 
 /** A stick with no account yet generates a pairing code; the phone claims it. */
 export const pairing = {
-  begin(stickId: string, name: string): { code: string; expiresAt: number } {
-    const code = String(randomBytes(3).readUIntBE(0, 3) % 1000000).padStart(6, "0");
+  begin(stickId: string, name: string, fixedCode?: string): { code: string; expiresAt: number } {
+    const code = fixedCode ?? String(randomBytes(3).readUIntBE(0, 3) % 1000000).padStart(6, "0");
     const expiresAt = Date.now() + 10 * 60 * 1000;
     db.prepare("INSERT OR REPLACE INTO pairings (code, stick_id, name, expires_at) VALUES (?, ?, ?, ?)")
       .run(code, stickId, name, expiresAt);

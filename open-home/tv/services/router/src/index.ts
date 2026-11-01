@@ -13,6 +13,10 @@ import * as engine from "./engine.ts";
 import { accountFromToken, stickFromToken, issueStickToken, authConfigured, sticks, pairing } from "./sessions.ts";
 import type { MediaType } from "./types.ts";
 import type { ServiceId } from "./deeplinks.ts";
+import { mockStickPage } from "./mockStick.ts";
+import { remotePage } from "./remoteCtrl.ts";
+
+const CLOUD_URL = process.env.CLOUD_URL || "https://openhome-cloud-production.up.railway.app";
 
 const PORT = Number(process.env.PORT ?? 8090);
 
@@ -59,6 +63,41 @@ const handler = async (req: IncomingMessage, res: ServerResponse) => {
     return send(res, { status: "ok", service: "openhome-content-router", providers: engine.providerStatus(), auth: authConfigured() });
   }
 
+  // Browser mock stick — open in a tab, pairs with code 000000.
+  if (path === "/mock" || path === "/mock/") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.end(mockStickPage());
+  }
+  // Browser remote — sign in + search + cast (no native app needed).
+  if (path === "/remote" || path === "/remote/") {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-store");
+    return res.end(remotePage());
+  }
+  // Proxy the control-plane login server-side (avoids browser CORS); returns the
+  // account's home grant so the remote page can cast.
+  if (path === "/remote/login" && method === "POST") {
+    let p: any = {};
+    try { p = JSON.parse((await readBody(req)) || "{}"); } catch {}
+    try {
+      const lr = await fetch(`${CLOUD_URL}/api/login`, {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ email: p.email, password: p.password }),
+      });
+      const lj: any = await lr.json().catch(() => ({}));
+      if (!lj.ok || !lj.token) return send(res, { ok: false, error: "bad_login" }, 401);
+      const hr = await fetch(`${CLOUD_URL}/api/home`, { headers: { Authorization: `Bearer ${lj.token}` } });
+      const hj: any = await hr.json().catch(() => ({}));
+      if (!hj.ok || !hj.homeToken) return send(res, { ok: false, error: "no_home" }, 400);
+      return send(res, { ok: true, homeToken: hj.homeToken, email: lj.account?.email });
+    } catch {
+      return send(res, { ok: false, error: "cloud_unreachable" }, 502);
+    }
+  }
+
   // ---- Public content API ----
   if (path === "/search") {
     const q = u.searchParams.get("q") ?? "";
@@ -82,7 +121,9 @@ const handler = async (req: IncomingMessage, res: ServerResponse) => {
     const stickId = String(p.stickId || "");
     const name = String(p.name || "openhome TV");
     if (!stickId) return send(res, { error: "stickId_required" }, 400);
-    return send(res, { ...pairing.begin(stickId, name), stickToken: issueStickToken(stickId) });
+    // The browser mock stick (id "stick-mock") may request a fixed code (000000).
+    const fixed = stickId === "stick-mock" && typeof p.code === "string" && p.code ? String(p.code) : undefined;
+    return send(res, { ...pairing.begin(stickId, name, fixed), stickToken: issueStickToken(stickId) });
   }
 
   // ---- Everything below needs an account grant or a stick token ----
@@ -99,7 +140,10 @@ const handler = async (req: IncomingMessage, res: ServerResponse) => {
   if (path.startsWith("/stick/") && path.endsWith("/stream")) {
     const stickId = path.slice("/stick/".length, -"/stream".length);
     const st = sticks.get(stickId);
-    if (!st || !ownsStick(stickId)) { res.statusCode = 401; return res.end(); }
+    // Browser EventSource can't set an Authorization header, so for the stream we
+    // also accept the stick token via ?token= query (used by the /mock browser stick).
+    const qTokStick = stickFromToken(u.searchParams.get("token") || "");
+    if (!st || !(ownsStick(stickId) || qTokStick === stickId)) { res.statusCode = 401; return res.end(); }
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-store");
