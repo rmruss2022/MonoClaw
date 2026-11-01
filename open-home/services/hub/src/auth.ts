@@ -146,29 +146,33 @@ export function loginPage(msg = ""): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>Sign in · openhome</title>
 <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg"/>
-<meta name="theme-color" content="#0e1014"/>
+<meta name="theme-color" content="#0b0a12"/>
 <style>
-  :root{--bg:#0e1014;--panel:#171a21;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97}
+  :root{--bg:#0b0a12;--panel:#181527;--line:#2a2540;--text:#ece9f5;--muted:#9a93b8;--accent:#f5c977;--purple:#a855f7;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif}
   *{box-sizing:border-box}
   html,body{height:100%}
-  body{margin:0;background:radial-gradient(1200px 900px at 50% -5%,#141821,var(--bg));color:var(--text);
-    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  body{margin:0;background:radial-gradient(1200px 900px at 50% -5%,#140f22,var(--bg));color:var(--text);
+    font:15px/1.5 ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
     display:flex;align-items:center;justify-content:center;padding:24px}
-  .card{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);
-    border-radius:18px;padding:28px 24px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
-  .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-weight:700;font-size:18px}
-  .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+  .stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+  .card{width:100%;max-width:360px;background:rgba(24,21,39,.78);backdrop-filter:blur(8px);border:1px solid var(--line);
+    border-radius:20px;padding:28px 24px;box-shadow:0 24px 70px rgba(0,0,0,.5),0 0 0 1px rgba(168,85,247,.08)}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-weight:600;font-size:22px;font-family:var(--serif);letter-spacing:.2px}
+  .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
   p.sub{margin:0 0 20px;color:var(--muted);font-size:13px}
   label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
   input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);
-    background:#0e1014;color:var(--text);font-size:16px;outline:none}
-  input:focus{border-color:var(--accent)}
-  button{margin-top:16px;width:100%;padding:13px;border:0;border-radius:12px;background:var(--accent);
-    color:#05251a;font-weight:700;font-size:15px;cursor:pointer}
+    background:#0b0a12;color:var(--text);font-size:16px;outline:none}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,201,119,.15)}
+  button{margin-top:16px;width:100%;padding:13px;border:0;border-radius:12px;
+    background:linear-gradient(180deg,#f7d58c,var(--accent));color:#2a1e05;font-weight:800;font-size:15px;cursor:pointer;
+    box-shadow:0 10px 30px rgba(245,201,119,.22)}
   .err{color:#ff6b6b;font-size:13px;margin:12px 0 0}
-  .foot{margin-top:18px;color:var(--muted);font-size:11px;text-align:center}
+  .foot{margin-top:18px;color:var(--muted);font-size:11px;text-align:center;letter-spacing:.3px}
 </style></head>
 <body>
+  <canvas class="stars"></canvas>
   <form class="card" method="POST" action="/login">
     <div class="brand"><span class="dot"></span>openhome</div>
     <p class="sub">This home is private. Enter the passphrase to continue.</p>
@@ -178,5 +182,9 @@ export function loginPage(msg = ""): string {
     ${err}
     <div class="foot">Your home. Your keys.</div>
   </form>
+  <script>(function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
+  function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+  var st=Array.from({length:60},function(){return{x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.2+.2,a:Math.random()*6};});
+  (function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<st.length;i++){var s=st[i];s.a+=0.015;var o=.22+.33*Math.sin(s.a);x.fillStyle='rgba(220,210,255,'+o+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();})();</script>
 </body></html>`;
 }
