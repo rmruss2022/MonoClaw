@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <title>Control · openhome</title>
 <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg"/>
-<meta name="theme-color" content="#0e1014"/>
+<meta name="theme-color" content="#0b0a12"/>
 <style>
-  :root{--bg:#0e1014;--panel:#171a21;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56}
+  :root{--bg:#0b0a12;--panel:#181527;--line:#2a2540;--text:#ece9f5;--muted:#9a93b8;--accent:#f5c977;--accent-dim:#b78a2e}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html{height:100%;background:var(--bg)}
-  body{margin:0;height:100%;background:radial-gradient(1200px 900px at 50% -5%,#141821,var(--bg));color:var(--text);
+  body{margin:0;height:100%;background:radial-gradient(1200px 900px at 50% -5%,#13111d,var(--bg));color:var(--text);
     font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;overscroll-behavior:none;
     -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
   img{-webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;user-select:none}
@@ -25,7 +25,7 @@
   .appnav{display:flex;gap:4px;flex-wrap:wrap;margin-left:6px}
   .appnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid transparent}
   .appnav a:hover{color:var(--text);background:var(--panel);border-color:var(--line)}
-  .appnav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  .appnav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.08)}
   @media(max-width:720px){.appnav{display:none}}
   .live{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:13px;font-weight:600}
   .live .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
@@ -42,8 +42,8 @@
   .radial.armed .ring{opacity:1;transform:scale(1)}
   .sector{fill:var(--panel);stroke:var(--line);stroke-width:1;opacity:0;transition:fill .12s,opacity .12s}
   .sector.near{opacity:.4}
-  .sector.hot{fill:rgba(61,220,151,.18);stroke:var(--accent);opacity:1}
-  .trail{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px rgba(61,220,151,.6))}
+  .sector.hot{fill:rgba(245,201,119,.18);stroke:var(--accent);opacity:1}
+  .trail{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 6px rgba(245,201,119,.6))}
   .label{position:absolute;transform:translate(-50%,-50%);text-align:center;pointer-events:none;width:78px;
     opacity:0;transition:opacity .15s}
   .radial.armed .label{opacity:0}
@@ -53,11 +53,11 @@
   .label .txt{font-size:12px;color:var(--muted);margin-top:3px;font-weight:600}
   .label.hot .txt{color:var(--accent)}
   .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:104px;height:104px;border-radius:50%;
-    background:linear-gradient(180deg,#1e222b,#12151b);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#1b1730,#15111f);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
     box-shadow:0 10px 40px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.02);transition:border-color .15s,box-shadow .15s}
   .core::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid transparent;transition:border-color .2s}
   .radial.armed .core{border-color:var(--accent)}
-  .radial.armed .core::before{border-color:rgba(61,220,151,.18)}
+  .radial.armed .core::before{border-color:rgba(245,201,119,.18)}
   .core .mark{width:46px;height:46px;opacity:.85}
   .core .dot{display:none}
   .breadcrumb{position:absolute;top:calc(50% - 175px);left:50%;transform:translateX(-50%);height:26px;display:flex;align-items:center;gap:6px;
@@ -66,7 +66,7 @@
   .breadcrumb .name{color:var(--accent)}
   .status{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 158px);left:0;right:0;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:0 16px;pointer-events:none}
   .chip{font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel);font-weight:600}
-  .chip.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.1)}
+  .chip.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.1)}
   .toast{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 100px);left:50%;transform:translateX(-50%) translateY(18px);opacity:0;transition:.22s;
     background:var(--panel);border:1px solid var(--accent-dim);color:var(--text);padding:12px 18px;border-radius:999px;font-weight:600;white-space:nowrap}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -80,7 +80,7 @@
     transform:translateX(-50%) translateY(32px) scale(.95);opacity:0;pointer-events:none;
     display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--accent-dim);
     border-radius:18px;padding:14px 22px 14px 18px;min-width:230px;z-index:12;
-    box-shadow:0 14px 55px rgba(0,0,0,.55), 0 0 0 4px rgba(61,220,151,.06);
+    box-shadow:0 14px 55px rgba(0,0,0,.55), 0 0 0 4px rgba(245,201,119,.06);
     transition:opacity .3s ease, transform .38s cubic-bezier(.2,.9,.2,1)}
   .scenebar.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
   .sb-ico{font-size:34px;line-height:1}
@@ -97,7 +97,7 @@
   .corewave i:nth-child(2){animation-delay:.15s}.corewave i:nth-child(3){animation-delay:.3s}
   .corewave i:nth-child(4){animation-delay:.45s}.corewave i:nth-child(5){animation-delay:.6s}
   @keyframes eq{0%,100%{height:8px}50%{height:30px}}
-  .core.listening{border-color:var(--accent);box-shadow:0 0 0 7px rgba(61,220,151,.10),0 10px 40px rgba(0,0,0,.5)}
+  .core.listening{border-color:var(--accent);box-shadow:0 0 0 7px rgba(245,201,119,.10),0 10px 40px rgba(0,0,0,.5)}
   .core.listening::before{border-color:var(--accent);animation:corePing 1.6s ease-out infinite}
   @keyframes corePing{0%{transform:scale(1);opacity:.55}100%{transform:scale(1.8);opacity:0}}
   .voicecap{position:absolute;bottom:calc(env(safe-area-inset-bottom,0) + 214px);left:0;right:0;text-align:center;padding:0 24px;color:var(--accent);font-weight:600;font-size:16px;min-height:22px;z-index:6}
@@ -111,7 +111,7 @@
   /* Tabs */
   .tabs{position:fixed;top:calc(env(safe-area-inset-top,0) + 50px);left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:9;padding:6px 0}
   .tabs button{background:var(--panel);border:1px solid var(--line);color:var(--muted);font-weight:700;font-size:14px;padding:8px 20px;border-radius:999px}
-  .tabs button.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.1)}
+  .tabs button.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.1)}
   /* House view */
   .house{position:fixed;top:calc(env(safe-area-inset-top,0) + 90px);left:0;right:0;bottom:0;overflow-y:auto;z-index:7;display:none;padding:8px 16px calc(env(safe-area-inset-bottom,0) + 28px);background:var(--bg)}
   .house.show{display:block}
@@ -121,23 +121,37 @@
   .rname .re{display:inline-flex;color:var(--muted)}
   .rname .re svg{width:17px;height:17px;display:block}
   .rdev{display:flex;flex-wrap:wrap;gap:7px}
-  .badge{width:56px;height:56px;border-radius:15px;background:#0f1216;border:1px solid var(--line);color:var(--muted);overflow:hidden;
+  .badge{width:56px;height:56px;border-radius:15px;background:#0e0b1a;border:1px solid var(--line);color:var(--muted);overflow:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:0;transition:transform .1s,border-color .12s,box-shadow .12s,color .12s}
   .badge:active{transform:scale(.9)}
   .badge .bico{display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden;border-radius:14px}
   .badge .bico svg{width:26px;height:26px;display:block}
   .badge .bico img{width:132%;height:132%;object-fit:cover;object-position:center 46%;display:block;transition:filter .15s,opacity .15s}
   .badge:not(.on) .bico img{filter:grayscale(.85) brightness(.6);opacity:.72}
-  .badge.on{border-color:var(--accent);box-shadow:0 0 16px rgba(61,220,151,.22);color:var(--accent)}
+  .badge.on{border-color:var(--accent);box-shadow:0 0 16px rgba(245,201,119,.22);color:var(--accent)}
   .badge.ro{opacity:.55}
   .badge .btemp{position:absolute;bottom:2px;right:4px;font-size:9px;font-weight:800;color:var(--accent);text-shadow:0 1px 3px #000}
+</style>
+<style id="oh-lumen">
+:root{--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --gold:#f5c977;--purple:#a855f7;--purple2:#7c3aed;--pink:#ec4899;--glow:rgba(168,85,247,.22)}
+body{font-family:ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+h1,h2,.greeting h1,.home b,.brand b,.sb-name{font-family:var(--serif);letter-spacing:.2px;font-weight:600}
+.greeting h1{background:linear-gradient(180deg,#fff,#d9cbf0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+/* gold→purple accents + soft glow on highlighted chrome */
+.appnav a.active,.tabs button.on,.chip.on,.badge.on{box-shadow:0 0 0 1px rgba(245,201,119,.18),0 6px 24px var(--glow)}
+.core.listening,.badge.on{box-shadow:0 0 22px rgba(245,201,119,.25)}
+/* nav icons */
+.appnav a .i,.tabs button .i{width:16px;height:16px;vertical-align:-3px;margin-right:6px;stroke-width:1.9}
+.i{width:18px;height:18px}
+.pillglow{box-shadow:0 8px 30px var(--glow)}
 </style>
 </head>
 <body>
   <div class="topbar">
     <a class="home" href="/"><img src="/assets/brand/mark.svg" alt=""/><b>openhome</b></a>
     <nav class="appnav">
-      <a href="/">Home</a><a href="/control" class="active">Control</a><a href="/music">Music</a><a href="/lights">Lights</a><a href="/speakers">Speakers</a><a href="/climate">Climate</a><a href="/docs">Docs</a>
+      <a href="/"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</a><a href="/control" class="active"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2"/></svg>Control</a><a href="/music"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="18" r="2.4"/><circle cx="18" cy="16" r="2.4"/><path d="M9.4 18V6l11-2v10"/></svg>Music</a><a href="/lights"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5"/><path d="M10 21h4"/><path d="M8 11a4 4 0 1 1 8 0c0 2-2 3-2 5h-4c0-2-2-3-2-5z"/></svg>Lights</a><a href="/speakers"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><circle cx="12" cy="14" r="3"/><circle cx="12" cy="7" r="1"/></svg>Speakers</a><a href="/climate"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a2 2 0 0 1 2 2v9a4 4 0 1 1-4 0V5a2 2 0 0 1 2-2z"/></svg>Climate</a><a href="/docs"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 18a2 2 0 0 1 2-2h10"/></svg>Docs</a>
     </nav>
     <span class="sp"></span>
     <span class="live"><span class="dot"></span><span class="clock" id="clock">--:--</span> · Local</span>
@@ -573,9 +587,9 @@ houseGrid.addEventListener("click", async (e)=>{
     background:rgba(14,16,20,.9);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
     border-top:1px solid rgba(255,255,255,.08);padding:6px 6px calc(env(safe-area-inset-bottom,0) + 6px)}
   .oh-tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;
-    color:#8b93a7;font-size:10.5px;font-weight:600;padding:6px 2px;border-radius:12px}
+    color:#9a93b8;font-size:10.5px;font-weight:600;padding:6px 2px;border-radius:12px}
   .oh-tabbar a .ic{font-size:21px;line-height:1;opacity:.75}
-  .oh-tabbar a.active{color:#3ddc97}
+  .oh-tabbar a.active{color:#f5c977}
   .oh-tabbar a.active .ic{opacity:1}
   .oh-tabbar a:active{background:rgba(255,255,255,.06)}
   @media(max-width:720px){.oh-tabbar{display:flex}}

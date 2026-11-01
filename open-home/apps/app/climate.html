@@ -5,38 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>openhome · climate</title>
 <link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
-<meta name="theme-color" content="#0e1014" />
+<meta name="theme-color" content="#0b0a12" />
 <style>
-  :root{--bg:#0e1014;--panel:#171a21;--panel2:#1e222b;--line:#272c37;--text:#e7ebf3;--muted:#8b93a7;--accent:#3ddc97;--accent-dim:#1f7a56;--heat:#ff8a4c;--cool:#4c9bff;--danger:#ef5350;--radius:14px}
+  :root{--bg:#0b0a12;--panel:#181527;--panel2:#1b1730;--line:#2a2540;--text:#ece9f5;--muted:#9a93b8;--accent:#f5c977;--accent-dim:#b78a2e;--heat:#ff8a4c;--cool:#4c9bff;--danger:#ef5350;--radius:14px}
   *{box-sizing:border-box}
   html,body{overflow-x:hidden;max-width:100%}
   body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-  header.top{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:calc(env(safe-area-inset-top,0px) + 14px) 22px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141821,var(--bg))}
+  header.top{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:calc(env(safe-area-inset-top,0px) + 14px) 22px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#13111d,var(--bg))}
   .brand a{color:var(--text);text-decoration:none;display:flex;align-items:center;gap:10px;font-weight:700}
   nav{display:flex;gap:4px;flex-wrap:wrap}
   nav a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid transparent}
   nav a:hover{color:var(--text);background:var(--panel2);border-color:var(--line)}
-  nav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  nav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.08)}
   main{padding:22px;max-width:640px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:18px;padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
   main>*{min-width:0}
   h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
   .row{display:flex;align-items:center;gap:12px}.between{justify-content:space-between}.muted{color:var(--muted)}.small{font-size:12px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
-  .badge{font-size:11px;color:var(--accent);background:rgba(61,220,151,.1);border:1px solid var(--accent-dim);padding:1px 7px;border-radius:999px;white-space:nowrap}
-  .badge.esp{color:#3ddc97}.badge.matter{color:#c39bff;background:rgba(195,155,255,.1);border-color:#453a5e}
-  .badge.off{color:#8a94a6;background:rgba(138,148,166,.12);border-color:#333}.badge.live{color:#0b0f14;background:var(--accent);border-color:var(--accent);font-weight:700}.badge.warn{color:#e6b800;background:rgba(230,184,0,.12);border-color:#5a4a00}
+  .badge{font-size:11px;color:var(--accent);background:rgba(245,201,119,.1);border:1px solid var(--accent-dim);padding:1px 7px;border-radius:999px;white-space:nowrap}
+  .badge.esp{color:#f5c977}.badge.matter{color:#c39bff;background:rgba(195,155,255,.1);border-color:#453a5e}
+  .badge.off{color:#9a93b8;background:rgba(138,148,166,.12);border-color:#333}.badge.live{color:#0a0912;background:var(--accent);border-color:var(--accent);font-weight:700}.badge.warn{color:#e6b800;background:rgba(230,184,0,.12);border-color:#5a4a00}
   button{font:inherit;cursor:pointer;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 13px}
   button:hover{border-color:var(--accent-dim)}
-  button.primary{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
+  button.primary{background:var(--accent);color:#140f22;border-color:var(--accent);font-weight:700}
   button.small{padding:5px 10px;font-size:13px;border-radius:8px}
   select{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:6px 8px}
-  .hero{background:linear-gradient(135deg,#241b16,#141821);border:1px solid #4a3320}
+  .hero{background:linear-gradient(135deg,#241b16,#13111d);border:1px solid #4a3320}
   .note{font-size:13px;color:var(--muted)}
   input[type=text]{font:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:11px 13px;width:100%}
   /* thermostat switcher */
   .tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
   .ttab{padding:8px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);white-space:nowrap;cursor:pointer;font-size:13px;font-weight:600}
-  .ttab.on{color:var(--text);border-color:var(--accent-dim);background:rgba(61,220,151,.08)}
+  .ttab.on{color:var(--text);border-color:var(--accent-dim);background:rgba(245,201,119,.08)}
   /* dial */
   .dialwrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px}
   #dial{width:300px;max-width:88vw;height:auto;touch-action:none;user-select:none}
@@ -47,7 +47,7 @@
   .modes{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
   .mode{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;padding:9px 8px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:12px;color:var(--muted)}
   .mode .ic{font-size:19px}
-  .mode.on{color:var(--text);border-color:var(--accent-dim);background:rgba(61,220,151,.1)}
+  .mode.on{color:var(--text);border-color:var(--accent-dim);background:rgba(245,201,119,.1)}
   .mode.on.heat{border-color:var(--heat);background:rgba(255,138,76,.12);color:#ffd0b0}
   .mode.on.cool{border-color:var(--cool);background:rgba(76,155,255,.12);color:#bcd8ff}
   .meta{display:flex;gap:18px;justify-content:center;margin-top:12px;color:var(--muted);font-size:13px}
@@ -61,13 +61,13 @@
   .wiz .foot{padding:14px 20px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);max-width:520px;margin:0 auto;width:100%;display:flex;gap:10px}.wiz .foot button{flex:1}
   .wiz h1{font-size:22px;margin:0 0 6px}.wiz p.sub{color:var(--muted);margin:0 0 20px}
   .wizcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:18px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);margin-bottom:12px;font-size:16px;color:var(--text);cursor:pointer}
-  .wizcard:hover{border-color:var(--accent-dim);background:#232833}.wizcard .ic{font-size:26px;width:34px;text-align:center}.wizcard .cap{font-size:12px;color:var(--muted);font-weight:400}
+  .wizcard:hover{border-color:var(--accent-dim);background:#2a2540}.wizcard .ic{font-size:26px;width:34px;text-align:center}.wizcard .cap{font-size:12px;color:var(--muted);font-weight:400}
   .devrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);margin-bottom:10px;cursor:pointer}
   .radar{width:130px;height:130px;margin:26px auto;position:relative}.radar .ring{position:absolute;inset:0;border:2px solid var(--accent);border-radius:50%;opacity:0;animation:radar 1.9s ease-out infinite}.radar .ring:nth-child(2){animation-delay:.63s}.radar .ring:nth-child(3){animation-delay:1.26s}.radar .core{position:absolute;inset:42%;background:var(--accent);border-radius:50%;box-shadow:0 0 18px var(--accent)}
   @keyframes radar{0%{transform:scale(.25);opacity:.85}100%{transform:scale(1);opacity:0}}
   .spinner{width:44px;height:44px;border-radius:50%;border:4px solid var(--panel2);border-top-color:var(--accent);margin:28px auto;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}.chip{padding:10px 15px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:15px}.chip.on{background:var(--accent);color:#08130d;border-color:var(--accent);font-weight:700}
-  .check{width:80px;height:80px;border-radius:50%;background:var(--accent);color:#08130d;display:flex;align-items:center;justify-content:center;font-size:42px;margin:14px auto 18px;animation:pop .32s ease}@keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}.chip{padding:10px 15px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:15px}.chip.on{background:var(--accent);color:#140f22;border-color:var(--accent);font-weight:700}
+  .check{width:80px;height:80px;border-radius:50%;background:var(--accent);color:#140f22;display:flex;align-items:center;justify-content:center;font-size:42px;margin:14px auto 18px;animation:pop .32s ease}@keyframes pop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
   .center{text-align:center}
   @media(max-width:640px){
     header.top{padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 8px;gap:8px 12px}
@@ -93,12 +93,26 @@
     body{padding-bottom:calc(env(safe-area-inset-bottom,0) + 70px)}
   }
 </style>
+<style id="oh-lumen">
+:root{--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --gold:#f5c977;--purple:#a855f7;--purple2:#7c3aed;--pink:#ec4899;--glow:rgba(168,85,247,.22)}
+body{font-family:ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+h1,h2,.greeting h1,.home b,.brand b,.sb-name{font-family:var(--serif);letter-spacing:.2px;font-weight:600}
+.greeting h1{background:linear-gradient(180deg,#fff,#d9cbf0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+/* gold→purple accents + soft glow on highlighted chrome */
+.appnav a.active,.tabs button.on,.chip.on,.badge.on{box-shadow:0 0 0 1px rgba(245,201,119,.18),0 6px 24px var(--glow)}
+.core.listening,.badge.on{box-shadow:0 0 22px rgba(245,201,119,.25)}
+/* nav icons */
+.appnav a .i,.tabs button .i{width:16px;height:16px;vertical-align:-3px;margin-right:6px;stroke-width:1.9}
+.i{width:18px;height:18px}
+.pillglow{box-shadow:0 8px 30px var(--glow)}
+</style>
 </head>
 <body>
   <header class="top">
     <div class="brand"><a href="/"><img src="/assets/brand/logo.svg" alt="openhome" height="24"/></a></div>
     <nav>
-      <a href="/">Home</a><a href="/control">Control</a><a href="/music">Music</a><a href="/lights">Lights</a><a href="/speakers">Speakers</a><a href="/climate" class="active">Climate</a><a href="/docs">Docs</a>
+      <a href="/"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</a><a href="/control"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2"/></svg>Control</a><a href="/music"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="18" r="2.4"/><circle cx="18" cy="16" r="2.4"/><path d="M9.4 18V6l11-2v10"/></svg>Music</a><a href="/lights"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5"/><path d="M10 21h4"/><path d="M8 11a4 4 0 1 1 8 0c0 2-2 3-2 5h-4c0-2-2-3-2-5z"/></svg>Lights</a><a href="/speakers"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><circle cx="12" cy="14" r="3"/><circle cx="12" cy="7" r="1"/></svg>Speakers</a><a href="/climate" class="active"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a2 2 0 0 1 2 2v9a4 4 0 1 1-4 0V5a2 2 0 0 1 2-2z"/></svg>Climate</a><a href="/docs"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 18a2 2 0 0 1 2-2h10"/></svg>Docs</a>
     </nav>
     <div style="flex:1"></div>
     <span class="small muted" id="counts"></span>
@@ -173,11 +187,11 @@ function renderPanel(){
         <g>${ticks()}</g>
         <path d="${arc(R,A0,A0+SWEEP)}" fill="none" stroke="#20252f" stroke-width="14" stroke-linecap="round"/>
         <path d="${arc(R,A0,Math.max(A0+0.1,tgtDeg))}" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="round"/>
-        <circle cx="${cx2.toFixed(1)}" cy="${cy2.toFixed(1)}" r="4" fill="#e7ebf3" opacity=".8"/>
+        <circle cx="${cx2.toFixed(1)}" cy="${cy2.toFixed(1)}" r="4" fill="#ece9f5" opacity=".8"/>
         <circle id="handle" cx="${hx.toFixed(1)}" cy="${hy.toFixed(1)}" r="13" fill="#fff" stroke="${col}" stroke-width="3"/>
-        <text x="150" y="140" text-anchor="middle" font-size="58" font-weight="700" fill="#e7ebf3">${Math.round(t.targetF)}°</text>
+        <text x="150" y="140" text-anchor="middle" font-size="58" font-weight="700" fill="#ece9f5">${Math.round(t.targetF)}°</text>
         <text x="150" y="172" text-anchor="middle" font-size="14" fill="${actCol}" font-weight="600">${actLabel}</text>
-        <text x="150" y="196" text-anchor="middle" font-size="13" fill="#8b93a7">now ${Math.round(t.currentF)}°${t.humidity!=null?` · ${Math.round(t.humidity)}%`:''}</text>
+        <text x="150" y="196" text-anchor="middle" font-size="13" fill="#9a93b8">now ${Math.round(t.currentF)}°${t.humidity!=null?` · ${Math.round(t.humidity)}%`:''}</text>
       </svg>
       <div class="adjust">
         <div class="rnd" onclick="bump(-1)">−</div>

@@ -3,16 +3,20 @@
  * (apps/app/*.html :root variables) so the native app reads as the same product.
  */
 export const colors = {
-  bg: "#0e1014",
-  bgElev: "#141821",
-  panel: "#171a21",
-  panelAlt: "#0f1216",
-  line: "#272c37",
-  text: "#e7ebf3",
-  muted: "#8b93a7",
-  accent: "#3ddc97",
-  accentDim: "#1f7a56",
-  accentWash: "rgba(61,220,151,0.10)",
+  // Lumen-inspired cosmic palette (deep purple-black, gold + purple accents).
+  bg: "#0b0a12",
+  bgElev: "#13111d",
+  panel: "#181527",
+  panelAlt: "#0e0b1a",
+  line: "#2a2540",
+  text: "#ece9f5",
+  muted: "#9a93b8",
+  accent: "#f5c977",
+  accentDim: "#b78a2e",
+  accentWash: "rgba(245,201,119,0.10)",
+  purple: "#a855f7",
+  purple2: "#7c3aed",
+  pink: "#ec4899",
   danger: "#ff6b6b",
   warn: "#f5b544",
 };
