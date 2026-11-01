@@ -22,8 +22,13 @@ function activeContributors(): SearchContributor[] {
 function metadataProvider(): MetadataProvider {
   return tmdbMetadata.ready() ? tmdbMetadata : sampleMetadata;
 }
-function availabilityProvider(): AvailabilityProvider {
-  // Watchmode gives title-level deep links (best); TMDB gives service lists; sample is offline.
+// Cheap availability for search-result lists (TMDB is generous; Watchmode's free
+// tier is ~1k/mo so we don't hit it 20× per search).
+function searchAvailability(): AvailabilityProvider {
+  return tmdbAvailability.ready() ? tmdbAvailability : sampleAvailability;
+}
+// Richest availability for a *selected* title (detail/route) — Watchmode first.
+function detailAvailability(): AvailabilityProvider {
   if (watchmodeAvailability.ready()) return watchmodeAvailability;
   if (tmdbAvailability.ready()) return tmdbAvailability;
   return sampleAvailability;
@@ -32,8 +37,9 @@ function availabilityProvider(): AvailabilityProvider {
 export function providerStatus() {
   return {
     metadata: metadataProvider().id,
-    availability: availabilityProvider().id,
-    deepLinks: watchmodeAvailability.ready() ? "title-level (watchmode)" : "service-level",
+    searchAvailability: searchAvailability().id,
+    detailAvailability: detailAvailability().id,
+    deepLinks: watchmodeAvailability.ready() ? "title-level when offered (watchmode)" : "service-level",
     contributors: activeContributors().map((c) => c.id),
     live: tmdbMetadata.ready(),
   };
@@ -52,9 +58,10 @@ function mergeSources(a: Source[], b: Source[]): Source[] {
   return out;
 }
 
-async function enrich(title: Title, region: string): Promise<Title> {
+async function enrich(title: Title, region: string, deep = false): Promise<Title> {
   try {
-    const extra = await availabilityProvider().sourcesFor(title, region);
+    const provider = deep ? detailAvailability() : searchAvailability();
+    const extra = await provider.sourcesFor(title, region);
     return { ...title, sources: mergeSources(title.sources ?? [], extra) };
   } catch {
     return title;
@@ -103,13 +110,13 @@ export async function search(q: SearchQuery): Promise<Title[]> {
 
 export async function detail(id: string, region = "US"): Promise<Title | null> {
   const cached = titleCache.get(id);
-  if (cached) return cached;
   const [provider, type, providerId] = id.split(":") as [string, MediaType, string];
-  // Contributor titles have no detail endpoint; they live only in the cache.
-  if (provider !== "tmdb" && provider !== "sample") return null;
-  const t = await metadataProvider().detail(providerId, type);
-  if (!t) return null;
-  return enrich(t, region);
+  // Contributor titles (YouTube/Plex/Jellyfin) carry their own sources; cache-only.
+  if (provider !== "tmdb" && provider !== "sample") return cached ?? null;
+  const base = cached ?? (await metadataProvider().detail(providerId, type));
+  if (!base) return null;
+  // Deep enrichment (Watchmode) only now, for the one selected title.
+  return enrich(base, region, true);
 }
 
 export async function trending(type?: MediaType, region = "US"): Promise<Title[]> {
