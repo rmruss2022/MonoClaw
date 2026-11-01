@@ -33,6 +33,9 @@ import * as devEmulator from "./devEmulator.ts";
 import * as auth from "./auth.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
+// The account/identity service. The hub proxies email+password sign-in to it so
+// home.bedrock.casa is the ONE site — the cloud stays an invisible backend.
+const CLOUD_URL = process.env.OPEN_HOME_CLOUD_URL || "https://openhome-cloud-production.up.railway.app";
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
 // Dev mode gates in-app test tooling (e.g. the emulated "test thermostat" button).
 // Off by default; enable with OPEN_HOME_DEV=1.
@@ -167,6 +170,28 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.setHeader("Set-Cookie", auth.clearCookieHeader());
       res.setHeader("Location", "/login");
       res.end();
+      return;
+    }
+    // Account sign-in (email+password) — proxied to the cloud identity service so
+    // this one site handles it. On success we store the home grant as oh_auth.
+    if (url === "/account-login" && req.method === "POST") {
+      let email = "", password = "";
+      try { const p = JSON.parse((await readBody(req)) || "{}"); email = String(p.email ?? ""); password = String(p.password ?? ""); } catch {}
+      try {
+        const lr = await fetch(`${CLOUD_URL}/api/login`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const lj: any = await lr.json().catch(() => ({}));
+        if (!lj.ok || !lj.token) { json(res, { ok: false, error: "bad_login" }, 401); return; }
+        const hr = await fetch(`${CLOUD_URL}/api/home`, { headers: { Authorization: `Bearer ${lj.token}` } });
+        const hj: any = await hr.json().catch(() => ({}));
+        if (!hj.ok || !hj.homeToken) { json(res, { ok: false, error: "no_home" }, 400); return; }
+        res.setHeader("Set-Cookie", auth.setCookieHeader(hj.homeToken));
+        json(res, { ok: true });
+      } catch {
+        json(res, { ok: false, error: "cloud_unreachable" }, 502);
+      }
       return;
     }
     // Single sign-on hand-off from the openhome-cloud control-plane. The cloud

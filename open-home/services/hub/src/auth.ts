@@ -173,16 +173,44 @@ export function loginPage(msg = ""): string {
 </style></head>
 <body>
   <canvas class="stars"></canvas>
-  <form class="card" method="POST" action="/login">
+  <div class="card">
     <div class="brand"><span class="dot"></span>openhome</div>
-    <p class="sub">This home is private. Enter the passphrase to continue.</p>
-    <label for="password">Passphrase</label>
-    <input id="password" name="password" type="password" autocomplete="current-password" autofocus required/>
-    <button type="submit">Unlock</button>
-    ${err}
-    <div class="foot">Your home. Your keys.</div>
-  </form>
-  <script>(function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
+    <p class="sub">Sign in to your home.</p>
+
+    <div id="account">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" autocapitalize="none" autofocus/>
+      <label for="password" style="margin-top:12px">Password</label>
+      <input id="password" type="password" autocomplete="current-password"/>
+      <button type="button" onclick="signIn()">Sign in</button>
+      <div class="err" id="err">${msg ? msg.replace(/</g, "&lt;") : ""}</div>
+      <div class="foot"><a href="#" id="toPass" style="color:var(--muted)">Use home passphrase instead</a></div>
+    </div>
+
+    <form id="passphrase" method="POST" action="/login" style="display:none">
+      <label for="pp">Passphrase</label>
+      <input id="pp" name="password" type="password" autocomplete="current-password"/>
+      <button type="submit">Unlock</button>
+      <div class="foot"><a href="#" id="toAcct" style="color:var(--muted)">Use account sign-in</a></div>
+    </form>
+
+    <div class="foot" style="margin-top:14px">Your home. Your keys.</div>
+  </div>
+  <script>
+  async function signIn(){
+    var e=document.getElementById('email').value.trim(), p=document.getElementById('password').value, err=document.getElementById('err');
+    err.textContent='';
+    try{
+      var r=await fetch('/account-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:e,password:p})});
+      var j=await r.json();
+      if(j.ok){location.href='/';return;}
+      err.textContent=j.error==='bad_login'?'Wrong email or password.':j.error==='no_home'?'No home linked to this account yet.':j.error==='cloud_unreachable'?'Sign-in service unreachable — try the home passphrase.':'Could not sign in.';
+    }catch(_){err.textContent='Could not reach the server.';}
+  }
+  document.getElementById('password').addEventListener('keydown',function(ev){if(ev.key==='Enter')signIn();});
+  document.getElementById('toPass').onclick=function(e){e.preventDefault();document.getElementById('account').style.display='none';document.getElementById('passphrase').style.display='block';document.getElementById('pp').focus();};
+  document.getElementById('toAcct').onclick=function(e){e.preventDefault();document.getElementById('passphrase').style.display='none';document.getElementById('account').style.display='block';};
+  (function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
   function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
   var st=Array.from({length:60},function(){return{x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.2+.2,a:Math.random()*6};});
   (function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<st.length;i++){var s=st[i];s.a+=0.015;var o=.22+.33*Math.sin(s.a);x.fillStyle='rgba(220,210,255,'+o+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();})();</script>
