@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "openhome",
+    "slug": "openhome",
+    "owner": "tigertroll14",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "openhome",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0e1014",
+    "splash": {
+      "backgroundColor": "#0e1014",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ai.openhome.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "ai.openhome.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0e1014"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "1f6443af-bed9-44d2-ac3c-a838dc4133c3"
+      }
+    }
+  }
+}

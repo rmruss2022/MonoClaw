@@ -30,6 +30,7 @@ import * as hub from "./hub.ts";
 import * as climate from "./climate.ts";
 import * as localClimate from "./localClimate.ts";
 import * as devEmulator from "./devEmulator.ts";
+import * as auth from "./auth.ts";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
@@ -112,6 +113,93 @@ function json(res: import("node:http").ServerResponse, body: unknown, code = 200
 
 const handler = async (req: import("node:http").IncomingMessage, res: import("node:http").ServerResponse) => {
   const url = (req.url ?? "/").split("?")[0];
+
+  // --- Access gate ---------------------------------------------------------
+  // When a passphrase is configured the hub is private: every route except the
+  // login flow and /health requires a valid signed session cookie. Disabled
+  // automatically when OPEN_HOME_PASSWORD is unset (fresh local dev).
+  if (auth.enabled()) {
+    // Optional network allowlist (CF-Connecting-IP) — a belt-and-suspenders
+    // layer on top of the passphrase. No-op unless OPEN_HOME_ALLOW_IPS is set.
+    if (auth.ipBlocked(req)) {
+      res.statusCode = 403;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.end("Forbidden — this home only accepts connections from approved networks.");
+      return;
+    }
+    if (url === "/login") {
+      if (req.method === "POST") {
+        const body = await readBody(req);
+        const pw = new URLSearchParams(body).get("password") ?? "";
+        // Native/API clients ask for JSON and get the session token in the body
+        // (they replay it as the oh_auth cookie); browsers get the usual redirect.
+        const wantsJson = (req.headers.accept ?? "").includes("application/json");
+        const ok = auth.checkPassword(pw);
+        if (ok) {
+          const token = auth.makeToken();
+          res.setHeader("Set-Cookie", auth.setCookieHeader(token));
+          if (wantsJson) {
+            json(res, { ok: true, token });
+          } else {
+            res.statusCode = 302;
+            res.setHeader("Location", "/");
+            res.end();
+          }
+        } else if (wantsJson) {
+          json(res, { ok: false, error: "bad_password" }, 401);
+        } else {
+          res.statusCode = 401;
+          res.setHeader("Content-Type", "text/html; charset=utf-8");
+          res.setHeader("Cache-Control", "no-store");
+          res.end(auth.loginPage("Wrong passphrase. Try again."));
+        }
+        return;
+      }
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(auth.loginPage());
+      return;
+    }
+    if (url === "/logout") {
+      res.statusCode = 302;
+      res.setHeader("Set-Cookie", auth.clearCookieHeader());
+      res.setHeader("Location", "/login");
+      res.end();
+      return;
+    }
+    // Single sign-on hand-off from the openhome-cloud control-plane. The cloud
+    // app signs the user in, then hands them here with a valid home token; we
+    // store it as the session cookie and drop them into the house — no passphrase.
+    if (url === "/sso") {
+      let token = "";
+      if (req.method === "POST") {
+        token = new URLSearchParams(await readBody(req)).get("token") ?? "";
+      } else {
+        token = new URL(req.url ?? "/", "http://x").searchParams.get("token") ?? "";
+      }
+      res.statusCode = 302;
+      if (auth.validHomeToken(token)) {
+        res.setHeader("Set-Cookie", auth.setCookieHeader(token));
+        res.setHeader("Location", "/");
+      } else {
+        res.setHeader("Location", "/login");
+      }
+      res.end();
+      return;
+    }
+    if (url !== "/health" && !auth.cookieAuthed(req)) {
+      const accept = req.headers.accept ?? "";
+      if (accept.includes("text/html")) {
+        res.statusCode = 302;
+        res.setHeader("Location", "/login");
+        res.end();
+      } else {
+        json(res, { error: "unauthorized", login: "/login" }, 401);
+      }
+      return;
+    }
+  }
 
   // Home = the control surface (same-origin UI)
   if (url === "/") {

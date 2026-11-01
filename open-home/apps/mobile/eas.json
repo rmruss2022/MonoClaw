@@ -1,0 +1,34 @@
+{
+  "cli": {
+    "version": ">= 27.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "credentialsSource": "local"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "/root/.lumen-asc-api-key.p8",
+        "ascApiKeyId": "4M5SWS426L",
+        "ascApiKeyIssuerId": "182c0a6f-d589-4013-a89b-ec1c62ab8097",
+        "appleTeamId": "CKYAQ94KAH"
+      }
+    }
+  }
+}
