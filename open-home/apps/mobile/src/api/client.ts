@@ -50,6 +50,11 @@ export function hasSession(): boolean {
   return !!cpSession;
 }
 
+/** The home grant, reused by the TV content-router client (same Bearer token). */
+export function getHomeToken(): string | null {
+  return homeToken;
+}
+
 export async function setControlPlane(url: string): Promise<void> {
   controlPlane = url.replace(/\/+$/, "");
   await AsyncStorage.setItem(CP_URL_KEY, controlPlane);

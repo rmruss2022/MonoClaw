@@ -10,6 +10,7 @@ import HomeScreen from "@/screens/HomeScreen";
 import LightsScreen from "@/screens/LightsScreen";
 import ClimateScreen from "@/screens/ClimateScreen";
 import SpeakersScreen from "@/screens/SpeakersScreen";
+import TvScreen from "@/screens/TvScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
 
 const Tab = createBottomTabNavigator();
@@ -31,6 +32,7 @@ const ICONS: Record<string, string> = {
   Lights: "☀",
   Climate: "❄",
   Speakers: "♪",
+  TV: "▶",
   Settings: "⚙",
 };
 
@@ -88,6 +90,7 @@ export default function RootNavigator() {
           <Tab.Screen name="Lights" component={LightsScreen} />
           <Tab.Screen name="Climate" component={ClimateScreen} />
           <Tab.Screen name="Speakers" component={SpeakersScreen} />
+          <Tab.Screen name="TV" component={TvScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />
         </Tab.Navigator>
       ) : (

@@ -1,0 +1,12 @@
+{
+  "name": "openhome-content-router",
+  "version": "0.1.0",
+  "private": true,
+  "description": "openhome TV content-router — universal search, availability, and stick routing.",
+  "type": "module",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "dev": "node --watch --experimental-strip-types src/index.ts"
+  }
+}
