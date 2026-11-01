@@ -28,9 +28,7 @@
         "backgroundColor": "#0e1014"
       }
     },
-    "web": {
-      "bundler": "metro"
-    },
+    "platforms": ["ios", "android"],
     "extra": {
       "eas": {
         "projectId": "1f6443af-bed9-44d2-ac3c-a838dc4133c3"
