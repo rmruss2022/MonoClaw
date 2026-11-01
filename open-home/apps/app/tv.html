@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>TV · openhome</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg"/>
+<meta name="theme-color" content="#0b0a12"/>
+<style>
+  :root{--bg:#0b0a12;--bg2:#13111d;--panel:#181527;--line:#2a2540;--text:#ece9f5;--muted:#9a93b8;
+    --accent:#f5c977;--accent-dim:#b78a2e;--purple:#a855f7;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{height:100%;background:var(--bg)}
+  body{margin:0;min-height:100%;background:radial-gradient(1200px 900px at 50% -5%,#140f22,var(--bg));color:var(--text);
+    font:15px/1.5 ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;padding:0 0 60px}
+  .stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+  .topbar{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0) + 16px) 20px 12px}
+  .home{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text)}
+  .home img{height:22px}.home b{font-size:18px;font-family:var(--serif);font-weight:600}
+  .sp{flex:1}
+  .appnav{display:flex;gap:4px;flex-wrap:wrap}
+  .appnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid transparent;display:inline-flex;align-items:center;gap:5px}
+  .appnav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.08)}
+  .appnav a .i{width:15px;height:15px}
+  @media(max-width:720px){.appnav{display:none}}
+  .wrap{max-width:620px;margin:0 auto;padding:10px 18px}
+  h1{font-family:var(--serif);font-weight:600;font-size:28px;margin:6px 0 16px;letter-spacing:.2px}
+  .i{width:18px;height:18px}
+  input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0b0a12;color:var(--text);font-size:16px;outline:none;margin-bottom:10px}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,201,119,.15)}
+  .btn{background:linear-gradient(180deg,#f7d58c,var(--accent));color:#2a1e05;font-weight:800;border:0;border-radius:12px;padding:12px 18px;font-size:15px;cursor:pointer;box-shadow:0 10px 30px rgba(245,201,119,.2)}
+  .card{background:rgba(24,21,39,.8);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+  .muted{color:var(--muted);font-size:13px}
+  .sticks{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;background:var(--panel)}
+  .chip.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.1)}
+  .row{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
+  .row img{width:46px;height:68px;border-radius:8px;object-fit:cover;background:#0e0b1a;border:1px solid var(--line)}
+  .row .nm{font-weight:600}.row .mt{font-size:12px;color:var(--muted)}
+  .cast{margin-left:auto;background:rgba(245,201,119,.1);border:1px solid var(--accent-dim);color:var(--accent);font-weight:800;border-radius:999px;padding:8px 16px;cursor:pointer}
+  .err{color:#ff6b6b;font-size:13px;min-height:16px;margin-top:6px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--accent-dim);border-radius:999px;padding:12px 18px;font-weight:700;opacity:0;transition:.2s;z-index:20}
+  .toast.show{opacity:1}
+  a.link{color:var(--accent);text-decoration:none;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+  <canvas class="stars"></canvas>
+  <div class="topbar">
+    <a class="home" href="/"><img src="/assets/brand/mark.svg" alt=""/><b>openhome</b></a>
+    <div class="sp"></div>
+    <nav class="appnav">
+      <a href="/">Home</a><a href="/control">Control</a><a href="/music">Music</a><a href="/lights">Lights</a><a href="/speakers">Speakers</a><a href="/climate">Climate</a><a href="/tv" class="active">TV</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <h1>TV</h1>
+
+    <div class="card" id="login">
+      <div class="muted" style="margin-top:0;margin-bottom:10px">Sign in with your openhome account to search & cast.</div>
+      <input id="email" type="email" placeholder="you@email.com" autocapitalize="none" autocomplete="username"/>
+      <input id="pw" type="password" placeholder="password" autocomplete="current-password"/>
+      <button class="btn" onclick="signin()">Sign in</button>
+      <div class="err" id="lerr"></div>
+    </div>
+
+    <div id="app" style="display:none">
+      <div class="card">
+        <div class="muted" style="margin-bottom:8px">Cast to <a class="link" style="float:right" onclick="signout()">Sign out</a></div>
+        <div class="sticks" id="sticks"></div>
+        <div class="muted" id="nostick" style="display:none">No TV paired yet. Open <b>openhome-tv-production.up.railway.app/mock</b> in a tab — it pairs automatically (code 000000). Then refresh.</div>
+      </div>
+      <input id="q" placeholder="Search movies, shows…" onkeydown="if(event.key==='Enter')doSearch()"/>
+      <div id="results"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+const ROUTER="https://openhome-tv-production.up.railway.app";
+let TOKEN=localStorage.getItem('oh_tv_token')||null, STICK=null;
+const $=id=>document.getElementById(id);
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+async function signin(){
+  $('lerr').textContent='';
+  const r=await fetch(ROUTER+'/remote/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:$('email').value.trim(),password:$('pw').value})}).then(r=>r.json()).catch(()=>({ok:false}));
+  if(!r.ok){$('lerr').textContent=r.error==='bad_login'?'Wrong email or password.':r.error==='no_home'?'No home paired to this account.':'Couldn\\'t sign in.';return;}
+  TOKEN=r.homeToken; localStorage.setItem('oh_tv_token',TOKEN); enter();
+}
+function signout(){localStorage.removeItem('oh_tv_token');TOKEN=null;location.reload();}
+function enter(){$('login').style.display='none';$('app').style.display='block';loadSticks();doSearch();}
+async function loadSticks(){
+  const d=await fetch(ROUTER+'/sticks',{headers:{Authorization:'Bearer '+TOKEN}}).then(r=>r.json()).catch(()=>null);
+  if(!d){ // token invalid/expired -> back to login
+    localStorage.removeItem('oh_tv_token');TOKEN=null;$('app').style.display='none';$('login').style.display='block';return;}
+  const list=d.sticks||[];
+  if(!list.length){$('nostick').style.display='block';$('sticks').innerHTML='';return;}
+  $('nostick').style.display='none';
+  STICK=STICK||(list.find(s=>s.online)||list[0]).id;
+  $('sticks').innerHTML=list.map(s=>`<span class="chip ${s.id===STICK?'on':''}" onclick="pick('${s.id}')">${s.online?'● ':'○ '}${esc(s.name)}</span>`).join('');
+}
+function pick(id){STICK=id;loadSticks();}
+async function doSearch(){
+  const q=$('q').value.trim();
+  const d=await fetch(ROUTER+'/'+(q?'search?q='+encodeURIComponent(q):'trending'),{headers:{Authorization:'Bearer '+TOKEN}}).then(r=>r.json()).catch(()=>({results:[]}));
+  $('results').innerHTML=(d.results||[]).map(t=>`<div class="row">
+    <img src="${t.poster||''}" onerror="this.style.visibility='hidden'"/>
+    <div><div class="nm">${esc(t.name)}</div><div class="mt">${t.year||''} · ${(t.sources||[]).map(s=>s.serviceName).slice(0,3).join(', ')||'—'}</div></div>
+    <button class="cast" onclick='cast(${JSON.stringify(t.id)},${JSON.stringify(t.name)})'>Cast</button></div>`).join('');
+}
+async function cast(id,name){
+  if(!STICK){toast('Pair a TV first');loadSticks();return;}
+  const r=await fetch(ROUTER+'/route',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},
+    body:JSON.stringify({titleId:id,stickId:STICK})}).then(r=>r.json()).catch(()=>({ok:false}));
+  toast(r.ok?('▶ '+name+' → '+(r.castTo||'TV')):(r.reason||'Couldn\\'t cast'));
+  loadSticks();
+}
+// starfield
+(function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
+function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+var st=Array.from({length:60},function(){return{x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.2+.2,a:Math.random()*6};});
+(function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<st.length;i++){var s=st[i];s.a+=0.015;var o=.22+.33*Math.sin(s.a);x.fillStyle='rgba(220,210,255,'+o+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();})();
+if(TOKEN)enter();
+</script>
+</body></html>

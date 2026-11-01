@@ -44,6 +44,7 @@ const SPEAKERS = new URL("../../../apps/app/speakers.html", import.meta.url);
 const LIGHTS = new URL("../../../apps/app/lights.html", import.meta.url);
 const SETUP = new URL("../../../apps/app/setup.html", import.meta.url);
 const CLIMATE = new URL("../../../apps/app/climate.html", import.meta.url);
+const TV = new URL("../../../apps/app/tv.html", import.meta.url);
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
@@ -347,6 +348,18 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.end(html);
     } catch {
       json(res, { error: "climate_not_found" }, 500);
+    }
+    return;
+  }
+  if (url === "/tv" || url === "/tv.html") {
+    try {
+      const html = await readFile(TV, "utf8");
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+    } catch {
+      json(res, { error: "tv_not_found" }, 500);
     }
     return;
   }
