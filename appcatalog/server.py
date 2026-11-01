@@ -23,10 +23,15 @@ LIVE_HUB = [
     ("Travelog",           "🧳", HUB + "/travelog", "Travel journal with an AI companion — place/history briefings, reflective journaling, and AI photo collages.", "hub"),
 ]
 LIVE_OTHER = [
-    ("openhome",   "🏠", "https://pi.tail9d821f.ts.net/", "Smart-home hub — lights, music, climate, voice agent. Runs on the Pi (needs Pi online + Tailscale).", "pi"),
+    ("openhome",   "🏠", "https://home.bedrock.casa/", "Smart-home hub — lights, music, climate, voice agent. Runs on the Pi (login-gated).", "pi"),
     ("Daylight",   "⚡", "https://web-production-970f8.up.railway.app/", "Energy-management dashboard — Django + React + Postgres on Railway.", "cloud"),
 ]
+# Claw apps — permanent public URLs on bedrock.casa
+CLAW_APPS = [
+    ("Daily Reports & News", "📰", "https://reports.bedrock.casa/", "Daily NYC news digests + archive, with inline mp3 voice notes.", "claw"),
+]
 BUILT = [
+    ("Nightbloom",           "🌙", "Tinnitus relief — CBT/ACT lessons + a research-grade sound engine (fractal/notched, walk-around open-ear enrichment) and a bioluminescent progress garden. React Native; on TestFlight."),
     ("Coupe",                "🐔", "Chicken-coop themed dating app with HTN Elo rating. (workspace/coupe)"),
     ("Favorly",              "🤝", "Microfavors + Helping Hands app — MVP backend built."),
     ("Dropstick",            "🎵", "P2P music sharing for DJs — swap tracks/crates device-to-device over local Wi-Fi, no internet. Go + SQLite."),
@@ -56,8 +61,10 @@ def built_row(name, emoji, desc):
 def render():
     live = "\n".join(card(*c) for c in LIVE_HUB)
     other = "\n".join(card(*c) for c in LIVE_OTHER)
+    claw = "\n".join(card(*c) for c in CLAW_APPS)
     built = "\n".join(built_row(*b) for b in BUILT)
-    return PAGE.replace("__LIVE__", live).replace("__OTHER__", other).replace("__BUILT__", built)
+    return (PAGE.replace("__LIVE__", live).replace("__OTHER__", other)
+                .replace("__CLAW__", claw).replace("__BUILT__", built))
 
 PAGE = r'''<!DOCTYPE html>
 <html lang="en">
@@ -87,6 +94,7 @@ PAGE = r'''<!DOCTYPE html>
   .badge{font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:2px 7px;color:var(--accent);border:1px solid #1f6f3f;background:#0f2a1a}
   .badge.pi{color:#e0b43a;border-color:#5a4a1a;background:#2a230f}
   .badge.cloud{color:var(--accent2);border-color:#24425a;background:#0d2233}
+  .badge.claw{color:#c084fc;border-color:#4a2a6a;background:#1e1230}
   .built{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
   .brow{display:flex;gap:11px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
   .brow .nm{font-size:14px}
@@ -104,6 +112,9 @@ PAGE = r'''<!DOCTYPE html>
 
   <h2>Live · elsewhere</h2>
   <div class="grid">__OTHER__</div>
+
+  <h2>Claw Apps</h2>
+  <div class="grid">__CLAW__</div>
 
   <h2>Built · not currently hosted</h2>
   <div class="built">__BUILT__</div>
