@@ -27,7 +27,8 @@
         "ascApiKeyPath": "/root/.lumen-asc-api-key.p8",
         "ascApiKeyId": "4M5SWS426L",
         "ascApiKeyIssuerId": "182c0a6f-d589-4013-a89b-ec1c62ab8097",
-        "appleTeamId": "CKYAQ94KAH"
+        "appleTeamId": "CKYAQ94KAH",
+        "ascAppId": "6829373864"
       }
     }
   }
