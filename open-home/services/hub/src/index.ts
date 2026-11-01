@@ -36,6 +36,9 @@ const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 // The account/identity service. The hub proxies email+password sign-in to it so
 // home.bedrock.casa is the ONE site — the cloud stays an invisible backend.
 const CLOUD_URL = process.env.OPEN_HOME_CLOUD_URL || "https://openhome-cloud-production.up.railway.app";
+// The TV content-router. The hub proxies the web TV tab to it with the user's
+// existing session (oh_auth), so the TV tab needs no second login.
+const TV_ROUTER_URL = process.env.OPEN_HOME_TV_URL || "https://openhome-tv-production.up.railway.app";
 const HTTPS_PORT = Number(process.env.OPEN_HOME_HTTPS_PORT ?? 4443);
 // Dev mode gates in-app test tooling (e.g. the emulated "test thermostat" button).
 // Off by default; enable with OPEN_HOME_DEV=1.
@@ -373,6 +376,29 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.end(html);
     } catch {
       json(res, { error: "climate_not_found" }, 500);
+    }
+    return;
+  }
+  // TV tab proxy: forward /tv/api/* to the content-router with the user's session
+  // grant (oh_auth) as the Bearer token — no second login on the TV tab.
+  if (url.startsWith("/tv/api/")) {
+    const fullPath = (req.url ?? "/").slice("/tv/api".length); // keeps the query string
+    const token = auth.parseCookies(req.headers.cookie)[auth.cookieName()] ?? "";
+    const method = req.method ?? "GET";
+    const body = method === "POST" ? await readBody(req) : undefined;
+    try {
+      const r = await fetch(`${TV_ROUTER_URL}${fullPath}`, {
+        method,
+        headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body,
+      });
+      const text = await r.text();
+      res.statusCode = r.status;
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(text);
+    } catch {
+      json(res, { error: "tv_router_unreachable" }, 502);
     }
     return;
   }
