@@ -5,7 +5,7 @@
 import { getHomeToken } from "@/api/client";
 
 // Point at the deployed content-router (configurable later in Settings).
-export const DEFAULT_ROUTER = "https://tv.bedrock.casa";
+export const DEFAULT_ROUTER = "https://openhome-tv-production.up.railway.app";
 
 export interface TvSource { service: string; serviceName: string; offer: string; price?: number; quality?: string }
 export interface TvTitle {

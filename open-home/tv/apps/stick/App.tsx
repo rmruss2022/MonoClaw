@@ -19,7 +19,7 @@ import EventSource from "react-native-sse";
 import { RouterClient, type Title, type LaunchCommand } from "./src/router";
 
 // Point at your deployed content-router.
-const ROUTER_URL = "https://tv.bedrock.casa";
+const ROUTER_URL = "https://openhome-tv-production.up.railway.app";
 // Streaming apps whose Android packages are installed on this stick. In P3 this
 // is auto-detected via a native module; for now it's declared.
 const INSTALLED = ["netflix", "prime", "hbomax", "youtube", "disney", "spotify"];
