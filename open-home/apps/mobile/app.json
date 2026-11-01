@@ -28,11 +28,15 @@
         "backgroundColor": "#0e1014"
       }
     },
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "extra": {
       "eas": {
         "projectId": "1f6443af-bed9-44d2-ac3c-a838dc4133c3"
       }
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }
