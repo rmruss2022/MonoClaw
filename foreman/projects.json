@@ -11,7 +11,7 @@
     { "slug": "croppa", "name": "Croppa", "color": "#14b8a6", "repoDir": "/root/MonoClaw/croppa", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
     { "slug": "inkling", "name": "Inkling", "color": "#8b5cf6", "repoDir": "/root/MonoClaw/inkling", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
     { "slug": "lumen", "name": "Lumen", "color": "#eab308", "repoDir": "/root/MonoClaw/lumen", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "foreman", "name": "Foreman", "color": "#0ea5e9", "repoDir": "/root/MonoClaw/foreman", "doctorCmd": null, "deployCmd": null },
+    { "slug": "foreman", "name": "Foreman", "color": "#0ea5e9", "repoDir": "/root/MonoClaw/foreman", "doctorCmd": "python3 -m py_compile doctor.py job.py", "deployCmd": null },
     { "slug": "MonoClaw", "name": "MonoClaw", "color": "#64748b", "repoDir": "/root/MonoClaw", "doctorCmd": null, "deployCmd": null }
   ]
 }
