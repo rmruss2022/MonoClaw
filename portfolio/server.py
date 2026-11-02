@@ -405,64 +405,71 @@ PAGE = r'''<!DOCTYPE html>
   .todo-foot{margin-top:14px;display:flex;justify-content:flex-end}
   .todo-clear{border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer}
   .todo-clear:hover{color:#ec4899}
-  /* Foreman — live subagent mission control (per-project kanban) */
-  .foreman{position:relative;border-radius:20px;padding:22px;max-width:1120px;
-    box-shadow:0 1px 2px rgba(20,23,30,.04),0 18px 44px -14px rgba(37,99,235,.22);
-    background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#2563eb,#06b6d4,#22d3ee) border-box;border:1.5px solid transparent}
-  .fm-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px}
-  .fm-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
-    background:linear-gradient(135deg,#2563eb,#06b6d4);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .fm-title{margin:3px 0 0;font-size:21px}
-  .fm-stats{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;margin-top:4px}
-  .fm-stats b{font-weight:800;color:var(--ink)}
-  .fm-empty{color:var(--muted);font-size:14px;padding:10px 2px}
+  /* Foreman — live subagent mission control. Calm, startup-grade surface. */
+  .foreman{position:relative;background:var(--card);border:1px solid #e8ecf2;border-radius:18px;
+    padding:28px;max-width:1120px;box-shadow:var(--shadow)}
+  .fm-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:20px;flex-wrap:wrap}
+  .fm-live{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .fm-live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:fmpulse 1.8s infinite}
+  .fm-title{margin:10px 0 0;font-size:20px;font-weight:600;letter-spacing:-.015em;color:var(--ink)}
+  .fm-stats{display:flex;align-items:flex-start;gap:22px;flex-wrap:wrap}
+  .fm-metric{display:flex;flex-direction:column;gap:3px;line-height:1}
+  .fm-metric b{font-size:19px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .fm-metric span{font-size:9.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+  .fm-metric.fail b{color:#dc2626}
+  .fm-empty{color:var(--muted);font-size:14px;line-height:1.55;padding:16px 2px}
   /* board: a full-width vertical list of job rows, grouped by project (no horizontal scroll) */
-  .fm-board{display:flex;flex-direction:column;gap:16px}
-  .fm-group{background:#f7faff;border:1px solid #eaf0fb;border-left:4px solid var(--accent,#94a3b8);
-    border-radius:14px;padding:12px 14px}
-  .fm-col-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-  .fm-chip{width:10px;height:10px;border-radius:50%;background:var(--accent,#94a3b8);flex:0 0 auto;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#94a3b8) 18%,transparent)}
-  .fm-col-name{font-weight:800;font-size:14px;letter-spacing:.01em}
-  .fm-col-count{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid #e7edf7;border-radius:999px;padding:2px 8px}
-  .fm-col-body{display:flex;flex-direction:column;gap:8px}
+  .fm-board{display:flex;flex-direction:column;gap:28px}
+  .fm-group{padding:0}
+  .fm-col-head{display:flex;align-items:center;gap:9px;padding-bottom:11px;margin-bottom:14px;border-bottom:1px solid #eef1f6}
+  .fm-chip{width:8px;height:8px;border-radius:50%;background:var(--accent,#94a3b8);flex:0 0 auto}
+  .fm-col-name{font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .fm-col-count{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);background:#f3f5f9;border-radius:999px;padding:3px 10px;font-variant-numeric:tabular-nums}
+  .fm-col-body{display:flex;flex-direction:column;gap:10px}
   /* each subagent = one full-width row */
-  .fm-job{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;border-radius:12px;background:#fff;border:1px solid #edf1f8;cursor:pointer;transition:border-color .12s,box-shadow .12s,transform .12s}
-  .fm-job:hover{border-color:#d9e2f3;box-shadow:0 6px 18px -10px rgba(37,99,235,.35);transform:translateY(-1px)}
-  .fm-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px}
-  .fm-dot.running{background:#2563eb;animation:fmpulse 1.4s infinite}
+  .fm-job{display:flex;align-items:flex-start;gap:13px;padding:15px 16px;border-radius:12px;background:var(--card);border:1px solid #e8ecf2;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+  .fm-job:hover{border-color:#dbe1ea;box-shadow:0 4px 16px -8px rgba(20,23,30,.16);transform:translateY(-1px)}
+  .fm-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;margin-top:6px}
+  .fm-dot.running{background:var(--accent);animation:fmpulse 1.6s infinite}
   .fm-dot.queued{background:#f59e0b}.fm-dot.done{background:#10b981}.fm-dot.failed{background:#ef4444}
-  @keyframes fmpulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.45)}70%{box-shadow:0 0 0 7px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+  @keyframes fmpulse{0%{box-shadow:0 0 0 0 rgba(79,70,229,.4)}70%{box-shadow:0 0 0 6px rgba(79,70,229,0)}100%{box-shadow:0 0 0 0 rgba(79,70,229,0)}}
   .fm-main{min-width:0;flex:1}
-  .fm-row1{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-  .fm-badge{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
-  .fm-badge.running{background:#e8efff;color:#2563eb}.fm-badge.queued{background:#fef3e2;color:#b45309}
-  .fm-badge.done{background:#e6f7ef;color:#047857}.fm-badge.failed{background:#fdeaea;color:#b91c1c}
-  .fm-elapsed{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .fm-chev{color:#c3ccda;font-size:17px;font-weight:700;line-height:1;margin-left:2px;transition:color .12s,transform .12s}
-  .fm-job:hover .fm-chev{color:#2563eb;transform:translateX(2px)}
+  .fm-row1{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .fm-badge{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:6px;line-height:1}
+  .fm-badge.running{background:#eef0fd;color:#4338ca}.fm-badge.queued{background:#fdf4e7;color:#b45309}
+  .fm-badge.done{background:#eaf6ef;color:#047857}.fm-badge.failed{background:#fdecec;color:#b91c1c}
+  .fm-elapsed{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .fm-chev{color:#c7cedb;font-size:16px;line-height:1;margin-left:4px;transition:color .15s,transform .15s}
+  .fm-job:hover .fm-chev{color:var(--muted);transform:translateX(2px)}
   /* the full prompt, always visible and wrapping — no clamp, no side-scroll */
-  .fm-task{margin:5px 0 0;font-size:13px;color:#2b3340;line-height:1.5;word-break:break-word;white-space:pre-wrap}
-  .fm-result{margin:7px 0 0;font-size:11.5px;color:var(--muted);line-height:1.45;word-break:break-word;
+  .fm-task{margin:8px 0 0;font-size:14px;color:var(--ink);line-height:1.5;word-break:break-word;white-space:pre-wrap}
+  .fm-result{margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.5;word-break:break-word;
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-  .fm-doc{margin:7px 0 0;font-size:10.5px;font-weight:700}
-  .fm-doc.ok{color:#047857}.fm-doc.bad{color:#b91c1c}.fm-doc.pending{color:var(--muted)}
+  .fm-doc{margin:9px 0 0;display:inline-block;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+  .fm-doc.ok{background:#eaf6ef;color:#047857}.fm-doc.bad{background:#fdecec;color:#b91c1c}.fm-doc.pending{background:#f0f2f6;color:#64748b}
   /* job detail modal */
-  .fm-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .fm-modal-backdrop{position:fixed;inset:0;background:rgba(20,23,30,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
   .fm-modal-backdrop[hidden]{display:none}
-  .fm-modal{background:#fff;border-radius:18px;max-width:660px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 30px 80px -20px rgba(15,23,42,.45);border-top:4px solid var(--accent,#2563eb)}
-  .fm-m-head{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid #eef2f8;position:sticky;top:0;background:#fff;z-index:1}
-  .fm-m-proj{font-weight:800;font-size:16px}
-  .fm-m-x{margin-left:auto;border:none;background:#f1f5f9;color:#475569;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;flex:0 0 auto}
-  .fm-m-x:hover{background:#e2e8f0}
-  .fm-m-meta{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;padding:15px 18px;border-bottom:1px solid #eef2f8}
-  .fm-m-kv{display:flex;flex-direction:column;gap:1px;min-width:0}
-  .fm-m-kv span{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-  .fm-m-kv b{font-size:13px;font-weight:600;color:var(--ink);word-break:break-word}
-  .fm-m-section{padding:14px 18px}
-  .fm-m-section h4{margin:0 0 6px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px}
-  .fm-m-section pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.5;color:#2b3340;background:#f7faff;border:1px solid #eaf0fb;border-radius:10px;padding:11px 13px}
-  .fm-m-doc{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px}
-  .fm-m-doc.ok{background:#e6f7ef;color:#047857}.fm-m-doc.bad{background:#fdeaea;color:#b91c1c}.fm-m-doc.pending{background:#eef2f8;color:#64748b}
+  .fm-modal{background:var(--card);border-radius:16px;max-width:660px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 24px 70px -20px rgba(20,23,30,.4);border:1px solid #e8ecf2;border-top:3px solid var(--accent,#4f46e5)}
+  .fm-m-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #eef1f6;position:sticky;top:0;background:var(--card);z-index:1}
+  .fm-m-proj{font-weight:700;font-size:15px;letter-spacing:-.01em;color:var(--ink)}
+  .fm-m-x{margin-left:auto;border:none;background:#f3f5f9;color:#64748b;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:13px;flex:0 0 auto;transition:background .15s}
+  .fm-m-x:hover{background:#e7ebf1}
+  .fm-m-meta{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;padding:18px 20px;border-bottom:1px solid #eef1f6}
+  .fm-m-kv{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .fm-m-kv span{font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+  .fm-m-kv b{font-size:13px;font-weight:600;color:var(--ink);word-break:break-word;font-variant-numeric:tabular-nums}
+  .fm-m-section{padding:16px 20px}
+  .fm-m-section h4{margin:0 0 8px;font-size:9px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .fm-m-section pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.55;color:#2b3340;background:#f7f8fb;border:1px solid #eceff4;border-radius:10px;padding:13px 15px}
+  .fm-m-doc{font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:6px}
+  .fm-m-doc.ok{background:#eaf6ef;color:#047857}.fm-m-doc.bad{background:#fdecec;color:#b91c1c}.fm-m-doc.pending{background:#f0f2f6;color:#64748b}
+  @media (max-width:560px){
+    .foreman{padding:20px 16px}
+    .fm-stats{gap:16px}
+    .fm-metric b{font-size:17px}
+    .fm-m-meta{grid-template-columns:1fr}
+  }
 </style>
 </head>
 <body>
@@ -513,10 +520,10 @@ PAGE = r'''<!DOCTYPE html>
   <div class="foreman">
     <div class="fm-head">
       <div>
-        <div class="fm-eyebrow">Foreman · live</div>
+        <div class="fm-live"><span class="fm-live-dot"></span>Foreman · Live</div>
         <h2 class="fm-title">Subagents at work</h2>
       </div>
-      <span class="fm-stats" id="fmStats"></span>
+      <div class="fm-stats" id="fmStats"></div>
     </div>
     <div id="fmBoard" class="fm-board"></div>
   </div>
@@ -595,7 +602,8 @@ PAGE = r'''<!DOCTYPE html>
   function draw(d){
     var jobs=d.jobs||[],s=d.stats||{};
     byId={};jobs.forEach(function(j){byId[j.id]=j;});
-    statsEl.innerHTML='<b>'+(s.running||0)+'</b> running · '+(s.queued||0)+' queued · '+(s.done||0)+' done'+((s.failed||0)?' · <b style="color:#ef4444">'+s.failed+' failed</b>':'');
+    function metric(n,lbl,fail){return '<div class="fm-metric'+(fail?' fail':'')+'"><b>'+(n||0)+'</b><span>'+lbl+'</span></div>';}
+    statsEl.innerHTML=metric(s.running,'running')+metric(s.queued,'queued')+metric(s.done,'done')+((s.failed||0)?metric(s.failed,'failed',1):'');
     if(!jobs.length){boardEl.innerHTML='<div class="fm-empty">No subagents yet — send a task in Telegram and watch them light up here.</div>';}
     else{
       var groups={},colors={};
