@@ -31,7 +31,7 @@ CLAW_APPS = [
     ("Daily Reports & News", "📰", "https://reports.bedrock.casa/", "Daily NYC news digests + archive, with inline mp3 voice notes.", "claw"),
 ]
 BUILT = [
-    ("Nightbloom",           "🌙", "Tinnitus relief — CBT/ACT lessons + a research-grade sound engine (fractal/notched, walk-around open-ear enrichment) and a bioluminescent progress garden. React Native; on TestFlight."),
+    ("Recilia",              "🌙", "Tinnitus relief — CBT/ACT lessons + a research-grade sound engine (fractal/notched, walk-around open-ear enrichment), a painted progress garden, and Vera the journey companion. React Native; on TestFlight."),
     ("Coupe",                "🐔", "Chicken-coop themed dating app with HTN Elo rating. (workspace/coupe)"),
     ("Favorly",              "🤝", "Microfavors + Helping Hands app — MVP backend built."),
     ("Dropstick",            "🎵", "P2P music sharing for DJs — swap tracks/crates device-to-device over local Wi-Fi, no internet. Go + SQLite."),
