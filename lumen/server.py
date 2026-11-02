@@ -1,0 +1,6461 @@
+#!/usr/bin/env python3
+"""
+Lumen — light up the world, one breath at a time.
+
+A gamified meditation app. Every session you complete adds a point of light to a
+living world map, earns you Light (XP), builds your streak, and moves you up the
+weekly leagues (Ember -> Supernova). See everyone who meditated today on the map,
+climb the leaderboards, journal your practice, and unlock achievements.
+
+Zero third-party deps — stdlib only (http.server + sqlite3), reboot-safe + light.
+Storage lives in ./data (sqlite). Mount under the command hub with LUMEN_BASE=/lumen.
+Soundscapes are synthesized client-side (Web Audio) so there are no audio assets.
+"""
+import os, json, re, sqlite3, hashlib, hmac, secrets, time, math, random, threading, base64
+import urllib.request, urllib.error
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from datetime import datetime, timezone, date, timedelta
+
+PORT = int(os.environ.get("PORT") or os.environ.get("LUMEN_PORT", "18834"))  # Railway sets $PORT
+HOST = os.environ.get("LUMEN_HOST", "127.0.0.1")  # set 0.0.0.0 in Docker/Railway
+BASE = (os.environ.get("LUMEN_BASE", "").rstrip("/"))  # e.g. "/lumen" or ""
+HERE = os.path.dirname(os.path.abspath(__file__))
+# owner email(s) with access to /admin (comma-separated). Default: Matthew.
+OWNER_EMAILS = {e.strip().lower() for e in
+                (os.environ.get("LUMEN_OWNER_EMAILS", "m@m.com")).split(",") if e.strip()}
+DATA = os.environ.get("LUMEN_DATA") or os.path.join(HERE, "data")  # point at a mounted volume in prod
+DB = os.path.join(DATA, "lumen.db")
+SPOT_DIR = os.path.join(DATA, "spots")  # user photos of where they meditated
+os.makedirs(DATA, exist_ok=True)
+os.makedirs(SPOT_DIR, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# storage
+# ---------------------------------------------------------------------------
+
+_dblock = threading.Lock()
+
+def db():
+    c = sqlite3.connect(DB)
+    c.row_factory = sqlite3.Row
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA busy_timeout=4000")
+    return c
+
+def init_db():
+    c = db()
+    c.executescript("""
+    CREATE TABLE IF NOT EXISTS users(
+      id INTEGER PRIMARY KEY,
+      email TEXT UNIQUE, name TEXT, salt TEXT, hash TEXT,
+      light INTEGER DEFAULT 0,            -- lifetime Light (XP)
+      streak INTEGER DEFAULT 0,
+      best_streak INTEGER DEFAULT 0,
+      last_day TEXT,                      -- UTC date of last completed session
+      total_minutes INTEGER DEFAULT 0,
+      total_sessions INTEGER DEFAULT 0,
+      lat REAL, lon REAL, city TEXT,      -- coarse home location
+      is_bot INTEGER DEFAULT 0,
+      created TEXT);
+    CREATE TABLE IF NOT EXISTS sessions(
+      id INTEGER PRIMARY KEY, user_id INTEGER,
+      minutes INTEGER, soundscape TEXT, light INTEGER,
+      lat REAL, lon REAL, city TEXT, mood TEXT, note TEXT,
+      started TEXT, ended TEXT, day TEXT, week TEXT);
+    CREATE TABLE IF NOT EXISTS journal(
+      id INTEGER PRIMARY KEY, user_id INTEGER,
+      prompt TEXT, text TEXT, mood TEXT, shared INTEGER DEFAULT 0,
+      session_id INTEGER, created TEXT);
+    CREATE TABLE IF NOT EXISTS achievements(
+      id INTEGER PRIMARY KEY, user_id INTEGER, code TEXT, created TEXT,
+      UNIQUE(user_id, code));
+    CREATE TABLE IF NOT EXISTS items(
+      id INTEGER PRIMARY KEY, user_id INTEGER, code TEXT, created TEXT,
+      UNIQUE(user_id, code));
+    CREATE TABLE IF NOT EXISTS mkt_state(
+      key TEXT PRIMARY KEY, status TEXT DEFAULT 'todo', note TEXT, updated TEXT);
+    CREATE TABLE IF NOT EXISTS mkt_subtasks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, parent TEXT, text TEXT,
+      status TEXT DEFAULT 'todo', pos INTEGER DEFAULT 0, created TEXT);
+    CREATE TABLE IF NOT EXISTS push_tokens(
+      id INTEGER PRIMARY KEY, user_id INTEGER, token TEXT UNIQUE,
+      platform TEXT, created TEXT, updated TEXT);
+    CREATE TABLE IF NOT EXISTS notif_prefs(
+      user_id INTEGER PRIMARY KEY, enabled INTEGER DEFAULT 1,
+      quiet_start INTEGER DEFAULT 21, quiet_end INTEGER DEFAULT 8,
+      tz_offset_min INTEGER DEFAULT 0, cats TEXT, sto INTEGER DEFAULT 1,
+      pref_hour INTEGER, updated TEXT);
+    CREATE TABLE IF NOT EXISTS notif_log(
+      id INTEGER PRIMARY KEY, user_id INTEGER, category TEXT, title TEXT,
+      body TEXT, dedupe_key TEXT, status TEXT DEFAULT 'queued',
+      created TEXT, sent TEXT, opened TEXT);
+    CREATE INDEX IF NOT EXISTS ix_notiflog_user ON notif_log(user_id, dedupe_key);
+    CREATE INDEX IF NOT EXISTS ix_notiflog_status ON notif_log(status);
+    CREATE TABLE IF NOT EXISTS mod_reports(
+      id INTEGER PRIMARY KEY, entry_id INTEGER, reporter_id INTEGER, created TEXT,
+      UNIQUE(entry_id, reporter_id));
+    CREATE TABLE IF NOT EXISTS mod_blocks(
+      blocker_id INTEGER, blocked_id INTEGER, created TEXT,
+      UNIQUE(blocker_id, blocked_id));
+    CREATE TABLE IF NOT EXISTS companions(
+      id INTEGER PRIMARY KEY, user_id INTEGER, code TEXT,
+      fed INTEGER DEFAULT 0, created TEXT,
+      UNIQUE(user_id, code));
+    CREATE TABLE IF NOT EXISTS user_notes(
+      id INTEGER PRIMARY KEY, user_id INTEGER, note TEXT, created TEXT);
+    CREATE INDEX IF NOT EXISTS ix_sess_user ON sessions(user_id);
+    CREATE INDEX IF NOT EXISTS ix_sess_day ON sessions(day);
+    CREATE INDEX IF NOT EXISTS ix_sess_week ON sessions(week);
+    CREATE INDEX IF NOT EXISTS ix_jour_user ON journal(user_id);
+    """)
+    cols = [r[1] for r in c.execute("PRAGMA table_info(users)").fetchall()]
+    for col, ddl in (("equipped", "equipped TEXT"), ("motes", "motes INTEGER DEFAULT 0"),
+                     ("companion", "companion TEXT"), ("lifeos", "lifeos TEXT"),
+                     ("lo_prompts", "lo_prompts TEXT"), ("lo_prompts_day", "lo_prompts_day TEXT"),
+                     ("chal_streak", "chal_streak INTEGER DEFAULT 0"),
+                     ("chal_best", "chal_best INTEGER DEFAULT 0"),
+                     ("chal_last_day", "chal_last_day TEXT"),
+                     ("sun_sign", "sun_sign TEXT"),
+                     ("birth_date", "birth_date TEXT"),
+                     ("birth_time", "birth_time TEXT"),
+                     ("birth_place", "birth_place TEXT"),
+                     ("birth_tz", "birth_tz INTEGER"),
+                     ("horo", "horo TEXT"),
+                     ("horo_day", "horo_day TEXT")):
+        if col not in cols:
+            c.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
+    # Daily "Morning Pilgrimage" challenge: sit in the morning, at a new place, with a photo.
+    c.execute("""CREATE TABLE IF NOT EXISTS challenges(
+      user_id INTEGER, day TEXT,
+      morning INTEGER DEFAULT 0, new_place INTEGER DEFAULT 0, photo INTEGER DEFAULT 0,
+      done INTEGER DEFAULT 0, place TEXT, bonus INTEGER DEFAULT 0, created TEXT,
+      PRIMARY KEY(user_id, day))""")
+    # daily horoscope, generated once per sign per day and shared across users
+    c.execute("""CREATE TABLE IF NOT EXISTS horoscopes(
+      sign TEXT, day TEXT, text TEXT, theme TEXT, soundscape TEXT, created TEXT,
+      PRIMARY KEY(sign, day))""")
+    scols = [r[1] for r in c.execute("PRAGMA table_info(sessions)").fetchall()]
+    if "lesson" not in scols:
+        c.execute("ALTER TABLE sessions ADD COLUMN lesson TEXT")
+    # spot photos: a picture of where you sat, optionally shared to the community
+    if "photo" not in scols:
+        c.execute("ALTER TABLE sessions ADD COLUMN photo TEXT")
+    if "photo_share" not in scols:
+        c.execute("ALTER TABLE sessions ADD COLUMN photo_share INTEGER DEFAULT 0")
+    # stable ~1km place key from the RAW (pre-fuzz) coords, so revisiting the same
+    # real spot resolves to the same place for the pilgrimage passport
+    if "pk" not in scols:
+        c.execute("ALTER TABLE sessions ADD COLUMN pk TEXT")
+    npcols = [r[1] for r in c.execute("PRAGMA table_info(notif_prefs)").fetchall()]
+    if "pref_hour" not in npcols:
+        c.execute("ALTER TABLE notif_prefs ADD COLUMN pref_hour INTEGER")
+    # Pre-check marketing steps that are already true (app is LIVE on the App Store +
+    # the marketing site is live). INSERT OR IGNORE so any later owner toggle wins.
+    for _k in ("apple_aso#0", "apple_aso#1", "apple_aso#2", "apple_aso#3",
+               "website#0", "website#3", "o_apple_aso#0", "o_apple_aso#2"):
+        c.execute("INSERT OR IGNORE INTO mkt_state(key,status,note,updated) VALUES(?,?,?,?)",
+                  (_k, "done", "auto: already live", now_iso()))
+    c.commit(); c.close()
+
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+def today_str():
+    return datetime.now(timezone.utc).date().isoformat()
+
+def week_str(d=None):
+    d = d or datetime.now(timezone.utc).date()
+    iso = d.isocalendar()
+    return f"{iso[0]}-W{iso[1]:02d}"
+
+# ---------------------------------------------------------------------------
+# auth (rolodex pattern: pbkdf2 + in-memory token sessions + cookie)
+# ---------------------------------------------------------------------------
+
+SESSIONS = {}  # token -> (email, expires_epoch)
+SESSION_TTL = 60 * 60 * 24 * 30
+
+def _hash_pw(pw, salt):
+    return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
+
+def new_session(email):
+    tok = secrets.token_urlsafe(32)
+    SESSIONS[tok] = (email, time.time() + SESSION_TTL)
+    return tok
+
+def session_email(tok):
+    v = SESSIONS.get(tok)
+    if not v:
+        return None
+    email, exp = v
+    if time.time() > exp:
+        SESSIONS.pop(tok, None)
+        return None
+    return email
+
+# ---------------------------------------------------------------------------
+# game engine
+# ---------------------------------------------------------------------------
+
+LEAGUES = [
+    ("Ember",     0,    "#b45309"),
+    ("Spark",     50,   "#d97706"),
+    ("Glow",      150,  "#eab308"),
+    ("Flare",     350,  "#f97316"),
+    ("Beacon",    700,  "#a855f7"),
+    ("Nova",      1200, "#8b5cf6"),
+    ("Supernova", 2000, "#ec4899"),
+]
+
+def league_for(weekly_light):
+    cur = LEAGUES[0]
+    nxt = None
+    for i, lg in enumerate(LEAGUES):
+        if weekly_light >= lg[1]:
+            cur = lg
+            nxt = LEAGUES[i + 1] if i + 1 < len(LEAGUES) else None
+    return {
+        "name": cur[0], "color": cur[2], "at": cur[1],
+        "next": (nxt[0] if nxt else None),
+        "next_at": (nxt[1] if nxt else None),
+    }
+
+def level_for(light):
+    """Return (level, light_into_level, light_needed_for_next)."""
+    lvl = 1
+    need = 100
+    remaining = light
+    while remaining >= need:
+        remaining -= need
+        lvl += 1
+        need = int(need * 1.35)
+    return lvl, remaining, need
+
+def streak_multiplier(streak):
+    return min(1.0 + 0.08 * max(0, streak - 1), 2.5)
+
+def time_bonus(dt):
+    h = dt.hour
+    if 22 <= h or h < 4:   # night owl
+        return 1.2, "night"
+    if 4 <= h < 7:         # dawn patrol
+        return 1.2, "dawn"
+    return 1.0, ""
+
+def compute_light(minutes, streak, dt):
+    mult = streak_multiplier(streak)
+    tb, _ = time_bonus(dt)
+    return max(1, round(minutes * 10 * mult * tb))
+
+# --- Atlas: a photo passport of the places you meditate -------------
+# Gamified around COLLECTING SPOTS: travel somewhere new, keep a photo of where
+# you sat, and share it with the community. Two hooks:
+#   * a PHOTO STREAK  — consecutive days you keep a photo of your spot
+#   * a PLACES PASSPORT — the distinct spots you've photographed (travel reward)
+PILG_NEW_PLACE = 60        # Light the first time each day you sit at a brand-new place
+PILG_PHOTO = 25            # Light for keeping a photo of a place you've sat before
+PILG_MILESTONES = [3, 5, 10, 25, 50, 100]   # places-collected milestones
+
+def place_key(lat, lon):
+    """A coarse ~1km coord cell used to tell meditation spots apart."""
+    if lat is None or lon is None:
+        return None
+    try:
+        return "%.2f,%.2f" % (round(float(lat), 2), round(float(lon), 2))
+    except Exception:
+        return None
+
+def distinct_places(c, uid):
+    """Size of this user's passport: distinct ~1km spots they've photographed.
+    Uses the stable `pk` (pre-fuzz) and falls back to fuzzed coords for legacy rows."""
+    pks = set()
+    for r in c.execute("SELECT pk,lat,lon FROM sessions WHERE user_id=? AND photo IS NOT NULL", (uid,)):
+        k = r["pk"] or place_key(r["lat"], r["lon"])
+        if k:
+            pks.add(k)
+    return len(pks)
+
+def eval_pilgrimage(c, u, local_day, pk, has_photo):
+    """Fold a just-completed session into the photo pilgrimage. Advances the photo
+    streak the first time a spot photo is kept today, and rewards brand-new places
+    to push travel. `pk` is the stable place key for this session (pre-fuzz).
+    Returns (progress, newly_today, bonus, chal_fields).
+    (Reuses the `challenges` table: new_place/photo sticky per day; `done` = photo kept today.)"""
+    row = c.execute("SELECT * FROM challenges WHERE user_id=? AND day=?", (u["id"], local_day)).fetchone()
+    already_photo = (row["photo"] if row else 0)
+    new_place = 0
+    if pk:
+        prior = set()
+        for r in c.execute("SELECT pk,lat,lon FROM sessions WHERE user_id=? AND day<?", (u["id"], today_str())):
+            k = r["pk"] or place_key(r["lat"], r["lon"])
+            if k:
+                prior.add(k)
+        new_place = 0 if pk in prior else 1
+    if row and row["new_place"]:
+        new_place = 1   # sticky across the local day
+    photo = 1 if (has_photo or already_photo) else 0
+    first_photo_today = 1 if (has_photo and not already_photo) else 0
+    if first_photo_today:
+        bonus = PILG_NEW_PLACE if new_place else PILG_PHOTO
+    else:
+        bonus = (row["bonus"] if row else 0)
+    c.execute("""INSERT INTO challenges(user_id,day,morning,new_place,photo,done,place,bonus,created)
+                 VALUES(?,?,?,?,?,?,?,?,?)
+                 ON CONFLICT(user_id,day) DO UPDATE SET
+                   new_place=excluded.new_place,photo=excluded.photo,
+                   done=excluded.done,place=COALESCE(excluded.place,challenges.place),bonus=excluded.bonus""",
+              (u["id"], local_day, 0, new_place, photo, photo, pk, bonus, now_iso()))
+    chal = {}
+    if first_photo_today:
+        last = u["chal_last_day"]; streak = u["chal_streak"] or 0
+        yday = (datetime.strptime(local_day, "%Y-%m-%d").date() - timedelta(days=1)).isoformat()
+        if last == local_day:   pass
+        elif last == yday:      streak += 1
+        else:                   streak = 1
+        chal = {"chal_streak": streak, "chal_best": max(u["chal_best"] or 0, streak),
+                "chal_last_day": local_day}
+    prog = {"new_place": bool(new_place), "photo": bool(photo), "done": bool(photo)}
+    return prog, bool(first_photo_today), bonus, chal
+
+# --- Vedic (Jyotish) daily reading -------------------------------------------
+# Grounded in classical Jyotish, not Western sun-sign astrology: the SIDEREAL
+# zodiac (Lahiri ayanamsa), the 12 rashis with their planetary lords, and — at
+# the heart of it — the Moon's NAKSHATRA of the day (the 27 lunar mansions, each
+# with its classical deity, ruling graha and shakti/power). Significations follow
+# the canon: Brihat Parashara Hora Shastra, Varahamihira's Brihat Jataka, and the
+# nakshatra attributes preserved in the Taittiriya Brahmana.
+
+# rashi: key, glyph, english, sanskrit, graha-lord, element (tattva), nature
+ZODIAC = [
+ ("aries","♈","Aries","Mesha","Mars","fire","initiating, courageous, pioneering"),
+ ("taurus","♉","Taurus","Vrishabha","Venus","earth","steady, sensual, enduring"),
+ ("gemini","♊","Gemini","Mithuna","Mercury","air","curious, communicative, dual"),
+ ("cancer","♋","Cancer","Karka","Moon","water","nurturing, feeling, protective"),
+ ("leo","♌","Leo","Simha","Sun","fire","radiant, noble, self-expressive"),
+ ("virgo","♍","Virgo","Kanya","Mercury","earth","discerning, careful, of service"),
+ ("libra","♎","Libra","Tula","Venus","air","harmonizing, relational, fair"),
+ ("scorpio","♏","Scorpio","Vrishchika","Mars","water","intense, probing, transformative"),
+ ("sagittarius","♐","Sagittarius","Dhanu","Jupiter","fire","seeking, philosophical, free"),
+ ("capricorn","♑","Capricorn","Makara","Saturn","earth","disciplined, patient, enduring"),
+ ("aquarius","♒","Aquarius","Kumbha","Saturn","air","detached, humanitarian, visionary"),
+ ("pisces","♓","Pisces","Meena","Jupiter","water","devotional, imaginative, surrendering"),
+]
+ZODIAC_BY_KEY = {z[0]: z for z in ZODIAC}
+# sidereal (Lahiri) sun ingress — (month, cutoff-day, prev-rashi, this-rashi)
+_SIGN_RANGES = [
+ (1,14,"sagittarius","capricorn"),(2,13,"capricorn","aquarius"),(3,15,"aquarius","pisces"),
+ (4,14,"pisces","aries"),(5,15,"aries","taurus"),(6,15,"taurus","gemini"),
+ (7,16,"gemini","cancer"),(8,17,"cancer","leo"),(9,17,"leo","virgo"),
+ (10,17,"virgo","libra"),(11,16,"libra","scorpio"),(12,16,"scorpio","sagittarius"),
+]
+def zodiac_sign(month, day):
+    cut = _SIGN_RANGES[month-1]
+    return cut[2] if day < cut[1] else cut[3]
+
+def sign_from_birthdate(s):
+    try:
+        p = [int(x) for x in str(s).split("-")[:3]]
+        return zodiac_sign(p[1], p[2])
+    except Exception:
+        return None
+
+# 27 nakshatras: name, ruling graha (Vimshottari lord), deity, symbol, shakti/theme
+NAKSHATRAS = [
+ ("Ashwini","Ketu","the Ashwini Kumaras (divine healers)","a horse's head","swift healing and fresh beginnings"),
+ ("Bharani","Venus","Yama (lord of dharma and death)","the yoni","bearing what must be borne; patient transformation"),
+ ("Krittika","Sun","Agni (fire)","a flame or blade","burning away the impure; sharp, honest clarity"),
+ ("Rohini","Moon","Brahma / Prajapati","an ox-cart","growth, nourishment and quiet flourishing"),
+ ("Mrigashira","Mars","Soma","a deer's head","the gentle search; seeking without grasping"),
+ ("Ardra","Rahu","Rudra (the storm)","a teardrop","the storm that clears; release through feeling"),
+ ("Punarvasu","Jupiter","Aditi (the boundless)","a quiver of arrows","return and renewal; coming safely home"),
+ ("Pushya","Saturn","Brihaspati","a lotus and cow's udder","nourishment and devotion; steady flourishing"),
+ ("Ashlesha","Mercury","the Nagas (serpents)","a coiled serpent","penetrating insight; the awakening coil"),
+ ("Magha","Ketu","the Pitris (ancestors)","a royal throne","honoring your roots and inherited strength"),
+ ("Purva Phalguni","Venus","Bhaga (delight)","the front legs of a bed","rest, pleasure and creative ease"),
+ ("Uttara Phalguni","Sun","Aryaman (the patron)","the back legs of a bed","steady union and generous support"),
+ ("Hasta","Moon","Savitar (the skillful Sun)","an open hand","the skill of the hands; making things real"),
+ ("Chitra","Mars","Tvashtar / Vishvakarma","a bright jewel","radiant craft; beauty taking form"),
+ ("Swati","Rahu","Vayu (the wind)","a young sprout in the wind","independence and self-sufficient movement"),
+ ("Vishakha","Jupiter","Indra-Agni","a triumphal archway","focused purpose ripening toward a goal"),
+ ("Anuradha","Saturn","Mitra (friendship)","a lotus","devotion, friendship and cooperation"),
+ ("Jyeshtha","Mercury","Indra (the chief)","an umbrella or earring","courage and protective, seasoned power"),
+ ("Mula","Ketu","Nirriti (dissolution)","a tuft of tied roots","getting to the root; return to essence"),
+ ("Purva Ashadha","Venus","Apas (the waters)","a winnowing fan","invincibility and purification"),
+ ("Uttara Ashadha","Sun","the Vishvedevas","an elephant's tusk","lasting victory and unshakable purpose"),
+ ("Shravana","Moon","Vishnu","an ear and three footprints","deep listening and learning"),
+ ("Dhanishtha","Mars","the eight Vasus","a drum","rhythm, abundance and inner music"),
+ ("Shatabhisha","Rahu","Varuna (cosmic waters)","an empty circle of a hundred healers","healing, solitude and the hidden"),
+ ("Purva Bhadrapada","Jupiter","Aja Ekapada","the front of a funeral cot","fiery aspiration; intensity for the heights"),
+ ("Uttara Bhadrapada","Saturn","Ahir Budhnya (the deep serpent)","the back of a funeral cot","deep stillness; the calm of the depths"),
+ ("Revati","Mercury","Pushan (the nourisher)","a fish","safe passage and nourishing completion"),
+]
+
+def _jd(y, m, d, hour=12.0):
+    if m <= 2:
+        y -= 1; m += 12
+    a = y // 100; b = 2 - a + a // 4
+    return int(365.25*(y+4716)) + int(30.6001*(m+1)) + d + b - 1524.5 + hour/24.0
+
+def _ayanamsa(jd):
+    # Lahiri: ~23.853 deg at J2000, precessing ~50.2388"/yr (≈24.2 deg in 2026)
+    return 23.853 + (jd - 2451545.0)/365.25 * (50.2388/3600.0)
+
+def _moon_longitude(jd):
+    # Moon's apparent ecliptic longitude via the main periodic terms of the Meeus
+    # lunar theory (ch. 47, public domain) — ~arc-minute accuracy, pure Python, no deps.
+    T = (jd - 2451545.0) / 36525.0; r = math.radians
+    Lp = 218.3164477 + 481267.88123421*T - 0.0015786*T*T + T*T*T/538841.0 - T*T*T*T/65194000.0
+    D  = 297.8501921 + 445267.1114034*T - 0.0018819*T*T + T*T*T/545868.0 - T*T*T*T/113065000.0
+    M  = 357.5291092 + 35999.0502909*T - 0.0001536*T*T + T*T*T/24490000.0
+    Mp = 134.9633964 + 477198.8675055*T + 0.0087414*T*T + T*T*T/69699.0 - T*T*T*T/14712000.0
+    F  = 93.2720950 + 483202.0175233*T - 0.0036539*T*T - T*T*T/3526000.0 + T*T*T*T/863310000.0
+    E = 1.0 - 0.002516*T - 0.0000074*T*T
+    # (coeff in 1e-6 deg, D, M, Mp, F) — leading Sigma-l terms
+    terms = [
+        (6288774,0,0,1,0),(1274027,2,0,-1,0),(658314,2,0,0,0),(213618,0,0,2,0),
+        (-185116,0,1,0,0),(-114332,0,0,0,2),(58793,2,0,-2,0),(57066,2,-1,-1,0),
+        (53322,2,0,1,0),(45758,2,-1,0,0),(-40923,0,1,-1,0),(-34720,1,0,0,0),
+        (-30383,0,1,1,0),(15327,2,0,0,-2),(-12528,0,0,1,2),(10980,0,0,1,-2),
+        (10675,4,0,-1,0),(10034,0,0,3,0),(8548,4,0,-2,0),(-7888,2,1,-1,0),
+        (-6766,2,1,0,0),(-5163,1,0,-1,0),(4987,1,1,0,0),(4036,2,-1,1,0),
+        (3994,2,0,2,0),(3861,4,0,0,0),(3665,2,0,-3,0),(-2689,0,1,-2,0),
+        (-2602,2,0,-1,2),(2390,2,-1,-2,0),(-2348,1,0,1,0),(2236,2,-2,0,0),
+        (-2120,0,1,2,0),(-2069,0,2,0,0),(2048,2,-2,-1,0),(-1773,2,0,1,-2),
+        (-1595,2,0,0,2),(1215,4,-1,-1,0),(-1110,0,0,2,2),(-892,3,0,-1,0),
+    ]
+    s = 0.0
+    for c, dd, mm, mp, ff in terms:
+        arg = r(dd*D + mm*M + mp*Mp + ff*F)
+        e = E**abs(mm)
+        s += c * e * math.sin(arg)
+    return (Lp + s/1000000.0) % 360.0
+
+def moon_nakshatra(day_str):
+    """Return (index, nakshatra-tuple, pada 1-4) for the Moon's position on a day."""
+    try:
+        y, m, d = [int(x) for x in str(day_str).split("-")[:3]]
+    except Exception:
+        y, m, d = 2000, 1, 1
+    jd = _jd(y, m, d, 12.0)
+    sid = (_moon_longitude(jd) - _ayanamsa(jd)) % 360.0
+    span = 360.0/27.0
+    idx = int(sid // span) % 27
+    pada = int((sid % span) // (span/4.0)) + 1
+    return idx, NAKSHATRAS[idx], pada
+
+# Vimshottari dasha: nakshatra-lord order and their period lengths (total 120 yrs)
+VIMSHOTTARI = [("Ketu",7),("Venus",20),("Sun",6),("Moon",10),("Mars",7),
+               ("Rahu",18),("Jupiter",16),("Saturn",19),("Mercury",17)]
+
+def _natal_moon_sid(birth_date, birth_time, tz_min):
+    """Sidereal ecliptic longitude of the Moon at birth, and the birth JD. tz_min is
+    minutes east of UTC. Returns (sid_lon_deg, jd) or None."""
+    try:
+        y, m, d = [int(x) for x in str(birth_date).split("-")[:3]]
+        hh, mm = 12, 0
+        if birth_time:
+            parts = str(birth_time).split(":"); hh = int(parts[0]); mm = int(parts[1]) if len(parts) > 1 else 0
+        hour_ut = hh + mm/60.0 - (tz_min or 0)/60.0
+        jd = _jd(y, m, d, hour_ut)
+        return (_moon_longitude(jd) - _ayanamsa(jd)) % 360.0, jd
+    except Exception:
+        return None
+
+def natal_profile(u):
+    """Janma (birth) nakshatra + current Vimshottari Maha/Antar dasha from the natal
+    Moon. Needs birth_date (+ ideally birth_time/tz). Returns dict or None."""
+    nm = _natal_moon_sid(u["birth_date"], u["birth_time"], u["birth_tz"]) if u["birth_date"] else None
+    if not nm:
+        return None
+    sid, birth_jd = nm
+    span = 360.0/27.0
+    idx = int(sid // span) % 27
+    frac = (sid % span) / span            # fraction traversed through the janma nakshatra
+    start = idx % 9                       # starting dasha lord = lord of janma nakshatra
+    bal_years = (1.0 - frac) * VIMSHOTTARI[start][1]   # balance of the first mahadasha
+    today_jd = _jd(*[int(x) for x in today_str().split("-")], hour=12.0)
+    elapsed = max(0.0, (today_jd - birth_jd) / 365.2425)
+    # walk mahadashas
+    i = start; remain = bal_years
+    while elapsed > remain:
+        elapsed -= remain; i = (i + 1) % 9; remain = float(VIMSHOTTARI[i][1])
+    maha_lord, maha_years = VIMSHOTTARI[i]
+    # how far we are into the current mahadasha (years): its length minus what's left
+    pos_in_maha = maha_years - (remain - elapsed)
+    # antardasha: sub-periods start from the maha lord, each = maha_years*sub_years/120
+    j = i; acc = 0.0; antar_lord = maha_lord
+    for k in range(9):
+        jj = (i + k) % 9
+        sub = maha_years * VIMSHOTTARI[jj][1] / 120.0
+        if pos_in_maha < acc + sub:
+            antar_lord = VIMSHOTTARI[jj][0]; break
+        acc += sub
+    return {"janma_idx": idx, "janma": NAKSHATRAS[idx][0], "janma_deity": NAKSHATRAS[idx][2],
+            "janma_shakti": NAKSHATRAS[idx][4], "maha": maha_lord, "antar": antar_lord,
+            "precise": bool(u["birth_time"])}
+
+HORO_SOUNDS = ("rain","forest","ocean","space","silence")
+HORO_MINS = (5, 10, 20, 30)
+
+def _horo_fallback(sign, day):
+    z = ZODIAC_BY_KEY.get(sign)
+    _, nak, _ = moon_nakshatra(day)
+    text = ("The Moon travels through %s today — its shakti is %s. As %s, ruled by %s, let that be "
+            "your practice: one unhurried breath, attention resting where it falls, nothing forced."
+            ) % (nak[0], nak[4], (z[3] if z else "a seeker"), (z[4] if z else "the heavens"))
+    return {"text": text, "theme": nak[0], "soundscape": HORO_SOUNDS[len(nak[0]) % len(HORO_SOUNDS)],
+            "minutes": 10, "nakshatra": nak[0], "deity": nak[2], "nak_theme": nak[4], "pada": 1}
+
+def personal_horoscope(c, u, day):
+    """Vedic daily reading grounded in the user's rashi (sidereal) and the Moon's
+    nakshatra of the day, woven with their recent practice. Cached per user per local day."""
+    # prefer a sidereal rashi computed from the birthday; else a chosen sign
+    sign = sign_from_birthdate(u["birth_date"]) if u["birth_date"] else (u["sun_sign"] or "").lower()
+    if sign not in ZODIAC_BY_KEY:
+        return None
+    if u["sun_sign"] != sign:   # self-heal: migrate tropical/stale signs to the sidereal rashi
+        try:
+            c.execute("UPDATE users SET sun_sign=? WHERE id=?", (sign, u["id"])); c.commit()
+        except Exception:
+            pass
+    if u["horo_day"] == day and u["horo"]:
+        try:
+            return json.loads(u["horo"])
+        except Exception:
+            pass
+    z = ZODIAC_BY_KEY[sign]
+    _, nak, pada = moon_nakshatra(day)
+    natal = natal_profile(u)
+    recent = c.execute("SELECT mood,soundscape FROM sessions WHERE user_id=? ORDER BY ended DESC LIMIT 1",
+                       (u["id"],)).fetchone()
+    ctx = []
+    if (u["streak"] or 0): ctx.append("current streak %d day(s)" % (u["streak"] or 0))
+    if recent and recent["mood"]: ctx.append("last felt '%s'" % recent["mood"])
+    if recent and recent["soundscape"]: ctx.append("last soundscape '%s'" % recent["soundscape"])
+    try:
+        lo = json.loads(u["lifeos"]) if u["lifeos"] else None
+        if isinstance(lo, dict) and lo.get("focus"):
+            f = lo["focus"]; ctx.append("life focus: %s" % (", ".join(f) if isinstance(f, list) else str(f)))
+    except Exception:
+        pass
+    ctx_s = "; ".join(ctx) if ctx else "a new practitioner"
+    natal_s = ""
+    if natal:
+        natal_s = (" Their natal (janma) nakshatra is %s, deity %s, shakti '%s'; they are currently in "
+                   "the Vimshottari Mahadasha of %s with Antardasha of %s — let this birth-star and dasha "
+                   "lord quietly colour the reading.") % (
+                   natal["janma"], natal["janma_deity"], natal["janma_shakti"], natal["maha"], natal["antar"])
+    prompt = (
+        "You are a gentle, learned voice of Vedic astrology (Jyotish) inside Lumen, a meditation app. "
+        "Write today's short reading for someone whose rashi (Moon/sidereal sign) is %s (%s), ruled by "
+        "the graha %s, of a %s, %s nature. Ground it in REAL Jyotish for today: the Moon transits the "
+        "nakshatra %s (pada %d), whose presiding deity is %s, whose symbol is %s, and whose shakti "
+        "(power) is %s.%s Weave these together with the person's recent practice (%s) into a calm, "
+        "meditative reflection that is true to Vedic understanding — not a generic fortune. Name the "
+        "transiting nakshatra. 2 to 3 sentences, present tense, warm, no emojis; no predictions about "
+        "money, health, or romance, and no deterministic or fatalistic claims — frame everything as an "
+        "invitation to awareness, breath and dharma. Then recommend today's sit: one soundscape from "
+        "exactly rain, forest, ocean, space, silence, and one duration from exactly 5, 10, 20, 30 "
+        'minutes. Return JSON {"text":"...","theme":"the nakshatra name",'
+        '"soundscape":"one of the five","minutes":10}.'
+    ) % (z[3], z[2], z[4], z[5], z[6], nak[0], pada, nak[2], nak[3], nak[4], natal_s, ctx_s)
+    r = gemini_json(prompt)
+    if not isinstance(r, dict) or not r.get("text"):
+        r = _horo_fallback(sign, day)
+    snd = (r.get("soundscape") or "silence").lower()
+    if snd not in HORO_SOUNDS: snd = "silence"
+    try:
+        mins = int(r.get("minutes") or 10)
+    except Exception:
+        mins = 10
+    if mins not in HORO_MINS: mins = min(HORO_MINS, key=lambda m: abs(m - mins))
+    out = {"text": str(r.get("text"))[:700], "theme": str(r.get("theme") or nak[0])[:40],
+           "soundscape": snd, "minutes": mins,
+           "nakshatra": nak[0], "deity": nak[2], "nak_theme": nak[4], "pada": pada}
+    if natal:
+        out["janma"] = natal["janma"]; out["maha"] = natal["maha"]; out["antar"] = natal["antar"]
+    try:
+        c.execute("UPDATE users SET horo=?, horo_day=? WHERE id=?", (json.dumps(out), day, u["id"]))
+        c.commit()
+    except Exception:
+        pass
+    return out
+
+ACHIEVEMENTS = [
+    ("first_light",  "First Light",   "Complete your first session",            "🔆"),
+    ("marathoner",   "Marathoner",    "Finish a single session of 30+ min",     "🏃"),
+    ("week_warrior", "Week Warrior",  "Reach a 7-day streak",                    "🔥"),
+    ("constellation","Constellation", "Reach a 30-day streak",                   "✨"),
+    ("moon_child",   "Moon Child",    "Meditate between 10pm and 4am",           "🌙"),
+    ("dawn_patrol",  "Dawn Patrol",   "Meditate between 4am and 7am",            "🌅"),
+    ("globetrotter", "Globetrotter",  "Meditate from 3+ different places",       "🌍"),
+    ("centurion",    "Centurion",     "Accumulate 100 total minutes",            "💯"),
+    ("deep_diver",   "Deep Diver",    "Earn 500 lifetime Light",                 "🌊"),
+    ("luminary",     "Luminary",      "Earn 2000 lifetime Light",                "💫"),
+    ("scribe",       "Scribe",        "Write 5 journal letters",                 "📜"),
+    ("chronicler",   "Chronicler",    "Write 30 journal letters",                "📖"),
+    ("pilgrim",      "Pilgrim",       "Complete a guided lesson",                "🪷"),
+]
+ACH_BY_CODE = {a[0]: a for a in ACHIEVEMENTS}
+
+def award_journal_ach(c, u):
+    """Unlock journaling achievements based on how many entries the user has written."""
+    jc = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=?", (u["id"],)).fetchone()["n"]
+    have = {r["code"] for r in c.execute("SELECT code FROM achievements WHERE user_id=?", (u["id"],))}
+    new = []
+    for code, th in (("scribe", 5), ("chronicler", 30)):
+        if jc >= th and code not in have:
+            c.execute("INSERT OR IGNORE INTO achievements(user_id,code,created) VALUES(?,?,?)",
+                      (u["id"], code, now_iso()))
+            new.append(code)
+    return new
+
+def check_achievements(c, u, minutes, dt):
+    """Unlock any newly-earned achievements for user row u. Returns list of codes."""
+    have = {r["code"] for r in c.execute("SELECT code FROM achievements WHERE user_id=?", (u["id"],))}
+    new = []
+    def unlock(code):
+        if code not in have:
+            c.execute("INSERT OR IGNORE INTO achievements(user_id,code,created) VALUES(?,?,?)",
+                      (u["id"], code, now_iso()))
+            new.append(code)
+    unlock("first_light")
+    if minutes >= 30:
+        unlock("marathoner")
+    if u["streak"] >= 7:
+        unlock("week_warrior")
+    if u["streak"] >= 30:
+        unlock("constellation")
+    if 22 <= dt.hour or dt.hour < 4:
+        unlock("moon_child")
+    if 4 <= dt.hour < 7:
+        unlock("dawn_patrol")
+    places = c.execute("SELECT COUNT(DISTINCT city) n FROM sessions WHERE user_id=? AND city IS NOT NULL", (u["id"],)).fetchone()["n"]
+    if places >= 3:
+        unlock("globetrotter")
+    if u["total_minutes"] >= 100:
+        unlock("centurion")
+    if u["light"] >= 500:
+        unlock("deep_diver")
+    if u["light"] >= 2000:
+        unlock("luminary")
+    jc = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=?", (u["id"],)).fetchone()["n"]
+    if jc >= 5:
+        unlock("scribe")
+    if jc >= 30:
+        unlock("chronicler")
+    return new
+
+# ---------------------------------------------------------------------------
+# collectible meditation items (real-world objects you unlock by practicing)
+# ---------------------------------------------------------------------------
+
+# code, name, rarity(0-3), icon, flavor, (cond_type, cond_value), unlock_text
+ITEMS = [
+    ("zafu",    "Lotus Cushion", 0, "cushion", "Where every sit begins.",        ("level", 1),     "Yours from your first breath"),
+    ("incense", "Incense",       0, "incense", "A thread of smoke to follow.",    ("sessions", 5),  "Complete 5 sessions"),
+    ("candle",  "Candle",        0, "candle",  "A small, steady flame.",          ("minutes", 30),  "Meditate 30 total minutes"),
+    ("mala",    "Mala Beads",    1, "mala",    "108 beads, one breath each.",     ("streak", 7),    "Reach a 7-day streak"),
+    ("bowl",    "Singing Bowl",  1, "bowl",    "A tone that lingers.",            ("level", 5),     "Reach level 5"),
+    ("bell",    "Temple Bell",   1, "bell",    "Begin and end in sound.",         ("league", "Glow"),"Reach the Glow league"),
+    ("crystal", "Amethyst",      2, "crystal", "Still, clear, and ancient.",      ("light", 500),   "Earn 500 lifetime Light"),
+    ("flags",   "Prayer Flags",  2, "flags",   "Wishes carried on the wind.",     ("places", 3),    "Meditate from 3 places"),
+    ("enso",    "Ensō",          3, "enso",    "One unbroken circle.",            ("streak", 30),   "Reach a 30-day streak"),
+    ("bonsai",  "Bonsai",        3, "bonsai",  "Patience, shaped over years.",    ("light", 2000),  "Earn 2000 lifetime Light"),
+    # shop-only specialty items (obtained in the Shop, shown here once owned)
+    ("chimes",  "Tingsha Chimes",   1, "chimes",  "Two notes to open the silence.",  ("shop", 0), "Available in the Shop"),
+    ("sand",    "Zen Sand Garden",  2, "sand",    "Rake the ripples; find the still.",("shop", 0), "Available in the Shop"),
+    ("lantern", "Founder's Lantern",3, "lantern", "A light for the earliest to arrive.",("shop", 0), "Founder — in the Shop"),
+]
+ITEM_BY_CODE = {it[0]: it for it in ITEMS}
+LEAGUE_ORDER = [l[0] for l in LEAGUES]
+
+def item_eligible(c, u, cond):
+    t, v = cond
+    light = u["light"] or 0
+    if t == "level":    return level_for(light)[0] >= v
+    if t == "sessions": return (u["total_sessions"] or 0) >= v
+    if t == "minutes":  return (u["total_minutes"] or 0) >= v
+    if t == "streak":   return max(u["streak"] or 0, u["best_streak"] or 0) >= v
+    if t == "light":    return light >= v
+    if t == "places":
+        return c.execute("SELECT COUNT(DISTINCT city) n FROM sessions WHERE user_id=? AND city IS NOT NULL",
+                         (u["id"],)).fetchone()["n"] >= v
+    if t == "league":
+        wl = c.execute("SELECT COALESCE(SUM(light),0) s FROM sessions WHERE user_id=? AND week=?",
+                       (u["id"], week_str())).fetchone()["s"]
+        return LEAGUE_ORDER.index(league_for(wl)["name"]) >= LEAGUE_ORDER.index(v)
+    return False
+
+def collection_for(c, u):
+    owned = {r["code"] for r in c.execute("SELECT code FROM items WHERE user_id=?", (u["id"],))}
+    out = []
+    for code, name, rar, icon, flavor, cond, utext in ITEMS:
+        out.append({"code": code, "name": name, "rarity": rar, "flavor": flavor,
+                    "unlock": utext, "owned": code in owned,
+                    "eligible": (code in owned) or item_eligible(c, u, cond)})
+    return out
+
+# ---- living companions you raise with Motes -------------------------------
+
+# code, name, icon, element, adopt_cost(motes), flavor
+COMPANIONS = [
+    ("moth",  "Lumen Moth",  "c_moth",  "Light",  0,    "Drawn to every flame you light."),
+    ("fox",   "Ember Fox",   "c_fox",   "Fire",   400,  "Warm, curious, never still for long."),
+    ("koi",   "Tide Koi",    "c_koi",   "Water",  400,  "Swims the current of your breath."),
+    ("owl",   "Dawn Owl",    "c_owl",   "Air",    900,  "Keeps watch through the quiet hours."),
+    ("deer",  "Grove Deer",  "c_deer",  "Earth",  900,  "Steps softly through the inner forest."),
+    ("whale", "Star Whale",  "c_whale", "Cosmos", 1800, "Carries your stillness across the deep."),
+]
+COMP_BY_CODE = {x[0]: x for x in COMPANIONS}
+# cumulative Motes fed -> stage
+COMP_STAGES = [(0, "Spark"), (300, "Glimmer"), (900, "Radiant"), (2000, "Celestial")]
+
+def comp_stage(fed):
+    idx = 0
+    for i, (at, _) in enumerate(COMP_STAGES):
+        if fed >= at:
+            idx = i
+    name = COMP_STAGES[idx][1]
+    nxt = COMP_STAGES[idx + 1] if idx + 1 < len(COMP_STAGES) else None
+    return {"index": idx, "name": name, "at": COMP_STAGES[idx][0],
+            "next": (nxt[1] if nxt else None), "next_at": (nxt[0] if nxt else None),
+            "max": nxt is None}
+
+def companions_for(c, u):
+    owned = {r["code"]: r["fed"] for r in c.execute("SELECT code,fed FROM companions WHERE user_id=?", (u["id"],))}
+    out = []
+    for code, name, icon, element, cost, flavor in COMPANIONS:
+        o = code in owned
+        out.append({"code": code, "name": name, "element": element, "cost": cost,
+                    "flavor": flavor, "owned": o, "fed": owned.get(code, 0),
+                    "stage": comp_stage(owned.get(code, 0)) if o else None})
+    return out
+
+# ---- shop: specialty gear in Motes, some gated by membership tenure --------
+
+# code, name, icon, rarity, price(motes), (gate_type, gate_val) | None, flavor
+SHOP = [
+    ("chimes",  "Tingsha Chimes",    "chimes",  1, 600,  None,         "Two notes to open and close the silence."),
+    ("sand",    "Zen Sand Garden",   "sand",    2, 1000, None,         "Rake the ripples; find the still point."),
+    ("lantern", "Founder's Lantern", "lantern", 3, 0,    ("days", 14), "A light kept for the earliest to arrive."),
+]
+SHOP_BY_CODE = {x[0]: x for x in SHOP}
+SHOP_ICON = {x[0]: x[2] for x in SHOP}
+
+# ---- Artifacts: real physical pieces + their digital travel companion -------
+# code, name, icon, origin, material, flavor, price_usd, edition, rarity(0-3), source
+ARTIFACTS = [
+    ("drachma",  "Owl Drachma",       "coin",    "Athens · c. 440 BCE", "Hand-struck silver",
+     "An original tetradrachm, worn smooth by twenty-four centuries of hands.", 240, "Ancient original", 3,
+     "Vetted antiquities dealer · provenance papers & certificate included"),
+    ("skyiron",  "Sky-Iron Amulet",   "pendant", "Himalaya · thokcha",  "Meteoric iron",
+     "Forged from metal that fell from the stars, carried by mountain monks.", 380, "Edition of 50", 3,
+     "Hand-forged by a verified Himalayan smith — paid fairly for their craft"),
+    ("rudraksha","Rudraksha Mala",    "mala",    "Nepal",               "108 sacred seeds",
+     "One bead for each breath of the old counting — strung by hand.", 120, "Edition of 300", 1,
+     "Strung by a verified artisan co-op in Nepal — paid fairly"),
+    ("jade",     "Nephrite Worry Stone","stone", "River jade",          "Tumbled nephrite",
+     "A cool, smooth hollow shaped over years to fit a single thumb.", 65, "Edition of 500", 0,
+     "Shaped by a verified lapidary artist — paid fairly"),
+    ("amberbead","Baltic Amber",      "amber",   "Baltic coast",        "Fossil tree resin",
+     "Sunlight caught in ancient resin — roughly forty million years old.", 95, "Edition of 200", 2,
+     "Certified-genuine from a trusted Baltic amber house"),
+    ("tingbowl", "Hand-Hammered Bowl","bowl",    "Himalaya",            "Seven-metal alloy",
+     "A single tone that outlives the hand that strikes it.", 290, "Edition of 100", 2,
+     "Hand-hammered by a verified maker — paid fairly for their work"),
+]
+ART_BY_CODE = {x[0]: x for x in ARTIFACTS}
+
+def artifacts_for(c, u):
+    owned = {r["code"] for r in c.execute("SELECT code FROM items WHERE user_id=?", (u["id"],))}
+    out = []
+    for code, name, icon, origin, material, flavor, price, edition, rar, source in ARTIFACTS:
+        imgfile = os.path.join(HERE, "art", code + ".png")
+        out.append({"code": code, "name": name, "origin": origin, "material": material,
+                    "flavor": flavor, "price": price, "edition": edition, "rarity": rar,
+                    "source": source, "owned": code in owned,
+                    "img": ("art/" + code + ".png?v=3") if os.path.isfile(imgfile) else None})
+    return out
+
+def member_days(u):
+    try:
+        return (datetime.now(timezone.utc) - datetime.fromisoformat(u["created"])).days
+    except Exception:
+        return 0
+
+def shop_for(c, u):
+    owned = {r["code"] for r in c.execute("SELECT code FROM items WHERE user_id=?", (u["id"],))}
+    days = member_days(u)
+    out = []
+    for code, name, icon, rar, price, gate, flavor in SHOP:
+        locked = False; gate_text = None
+        if gate and gate[0] == "days":
+            locked = days < gate[1]
+            gate_text = (f"{gate[1]-days} days of membership to go" if locked else f"Founder · member {gate[1]}+ days")
+        out.append({"code": code, "name": name, "rarity": rar, "price": price, "flavor": flavor,
+                    "owned": code in owned, "locked": locked, "gate": gate_text})
+    return out
+
+# ---------------------------------------------------------------------------
+# daily reflection prompt (deterministic by day so everyone shares one)
+# ---------------------------------------------------------------------------
+
+PROMPTS = [
+    "What are you carrying today that isn't yours to hold?",
+    "Where did you feel most alive this week?",
+    "What would you do today if you weren't afraid?",
+    "What is one thing you can let go of right now?",
+    "Who deserves your gratitude today?",
+    "What does your body need that your mind keeps ignoring?",
+    "What story are you telling yourself that may not be true?",
+    "When did you last feel truly at peace?",
+    "What small thing brought you joy recently?",
+    "What are you avoiding, and why?",
+    "What would 'enough' look like for you today?",
+    "What are you ready to begin?",
+    "Where in your life are you rushing when you could be present?",
+    "What would you say to yourself as a child?",
+]
+
+def prompt_for_today():
+    doy = datetime.now(timezone.utc).timetuple().tm_yday
+    return PROMPTS[doy % len(PROMPTS)]
+
+# ---- Life OS: pillars, focuses, and AI-generated daily prompts -------------
+
+# Life OS pillars mirror Ora Health's pillar taxonomy
+PILLARS = ["Family", "Hobbies", "Career", "Health", "Relationships", "Inner Growth"]
+
+def _gemini_key():
+    k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if k:
+        return k
+    try:
+        with open("/root/.openclaw/.env") as f:
+            for line in f:
+                line = line.strip()
+                for name in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+                    if line.startswith(name + "="):
+                        v = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if v:
+                            return v
+    except OSError:
+        pass
+    return ""
+
+GEMINI_KEY = _gemini_key()
+
+# ---------------------------------------------------------------------------
+# ElevenLabs narration (server-side; key never reaches the client). Audio is
+# cached on disk (the /data volume) keyed by voice+model+text, so repeated
+# meditation lines are generated once and reused — keeping credit use low.
+# ---------------------------------------------------------------------------
+ELEVEN_KEY = os.environ.get("ELEVENLABS_API_KEY")
+ELEVEN_VOICE = os.environ.get("ELEVEN_VOICE", "SAz9YHcvj6GT2YYXdXww")  # "River" — calm, neutral
+ELEVEN_MODEL = os.environ.get("ELEVEN_MODEL", "eleven_turbo_v2_5")
+ELEVEN_SPEED = float(os.environ.get("ELEVEN_SPEED", "0.88"))  # <1.0 = slower, calmer pace
+TTS_DIR = os.path.join(DATA, "tts")
+
+def eleven_tts(text):
+    if not ELEVEN_KEY:
+        return None
+    text = (text or "").strip()[:900]
+    if not text:
+        return None
+    key = hashlib.sha1(("%s|%s|%.2f|%s" % (ELEVEN_VOICE, ELEVEN_MODEL, ELEVEN_SPEED, text)).encode("utf-8")).hexdigest()
+    path = os.path.join(TTS_DIR, key + ".mp3")
+    try:
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return f.read()
+    except OSError:
+        pass
+    body = json.dumps({
+        "text": text, "model_id": ELEVEN_MODEL,
+        "voice_settings": {"stability": 0.55, "similarity_boost": 0.75, "style": 0.0, "use_speaker_boost": True, "speed": ELEVEN_SPEED},
+    }).encode("utf-8")
+    url = "https://api.elevenlabs.io/v1/text-to-speech/%s?output_format=mp3_44100_128" % ELEVEN_VOICE
+    req = urllib.request.Request(url, data=body, headers={
+        "xi-api-key": ELEVEN_KEY, "Content-Type": "application/json", "Accept": "audio/mpeg"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            audio = r.read()
+    except Exception:
+        return None
+    if not audio:
+        return None
+    try:
+        os.makedirs(TTS_DIR, exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(audio)
+    except OSError:
+        pass
+    return audio
+
+def gemini_json(prompt, timeout=20):
+    if not GEMINI_KEY:
+        return None
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+           "gemini-flash-latest:generateContent?key=" + GEMINI_KEY)
+    body = {"contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"response_mime_type": "application/json",
+                                 "thinkingConfig": {"thinkingBudget": 0},
+                                 "maxOutputTokens": 500, "temperature": 0.8}}
+    try:
+        req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.loads(r.read().decode("utf-8", "replace"))
+        parts = data["candidates"][0]["content"]["parts"]
+        txt = "".join(p["text"] for p in parts if isinstance(p, dict) and "text" in p)
+        return json.loads(txt)
+    except Exception:
+        return None
+
+def gemini_transcribe(img_b64, mime, timeout=40):
+    """OCR/transcribe handwriting or text in a photo via Gemini vision."""
+    if not GEMINI_KEY:
+        return None
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+           "gemini-flash-latest:generateContent?key=" + GEMINI_KEY)
+    prompt = ("Transcribe all handwritten or printed text in this image exactly as written, "
+              "preserving line breaks and paragraphs. Do not add commentary or corrections. "
+              'Return JSON {"text":"..."}. If there is no legible text, return {"text":""}.')
+    body = {"contents": [{"parts": [
+                {"text": prompt},
+                {"inline_data": {"mime_type": mime, "data": img_b64}}]}],
+            "generationConfig": {"response_mime_type": "application/json",
+                                 "thinkingConfig": {"thinkingBudget": 0},
+                                 "maxOutputTokens": 2048, "temperature": 0.2}}
+    try:
+        req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.loads(r.read().decode("utf-8", "replace"))
+        parts = data["candidates"][0]["content"]["parts"]
+        txt = "".join(p["text"] for p in parts if isinstance(p, dict) and "text" in p)
+        return (json.loads(txt).get("text") or "").strip()
+    except Exception:
+        return None
+
+# ---- the Keeper: conversational agent with tools --------------------------
+
+CHAT_SYSTEM = (
+    "You are the Keeper — a warm, grounded meditation and journaling companion inside Lumen, "
+    "an app where people meditate, light up a world map, build a mandala of achievements, "
+    "and write reflective journal 'letters'. Speak gently, briefly, and human — your replies are "
+    "often read aloud, so keep them short (1-3 sentences) and plain, no markdown, no emojis. "
+    "You can act for the user through tools: write a journal entry (write_journal), look up their "
+    "stats (get_stats), read or change their Life OS pillars and daily focus (get_lifeos, "
+    "set_lifeos_pillar, set_focus), remember things about them (remember), and recall recent "
+    "entries (get_recent_journal). When the user asks you to save/write/update something, use the "
+    "tool and then confirm warmly what you did. Never invent stats — call get_stats. Life OS pillars "
+    "are exactly: Family, Hobbies, Career, Health, Relationships, Inner Growth. Directions are N, E, S, W. "
+    "If the user is just venting or reflecting, listen and reflect back; offer to write it down. "
+    "About Lumen, if asked: Meditate runs timed sessions with live soundscapes; the Map glows with "
+    "everyone who meditated and can replay your journey around the world; the Mandala is a single sacred object "
+    "whose colored facets light up as you earn achievements (sitting, streaks, visiting places, journaling); "
+    "Artifacts are real, meaningful objects you can acquire; the Journal holds your reflective letters; "
+    "and Life OS is your compass of life pillars and daily focus."
+)
+
+CHAT_TOOLS = [{"function_declarations": [
+    {"name": "get_stats", "description": "Get the user's meditation stats (level, light, streak, sessions, minutes, places, league).",
+     "parameters": {"type": "object", "properties": {}}},
+    {"name": "get_lifeos", "description": "Get the user's Life OS: base, the four cardinal pillars, and daily focus pillars.",
+     "parameters": {"type": "object", "properties": {}}},
+    {"name": "get_recent_journal", "description": "Get the text of the user's most recent journal letters.",
+     "parameters": {"type": "object", "properties": {"limit": {"type": "integer", "description": "How many entries (default 3, max 8)."}}}},
+    {"name": "write_journal", "description": "Save a new journal letter for the user. Use their own words when possible.",
+     "parameters": {"type": "object", "properties": {
+         "text": {"type": "string", "description": "The journal entry body."},
+         "prompt": {"type": "string", "description": "Optional prompt/title this reflects on."},
+         "share": {"type": "boolean", "description": "Share it to the community feed (default false)."}},
+         "required": ["text"]}},
+    {"name": "set_lifeos_pillar", "description": "Assign (or clear) a Life OS pillar at a cardinal direction.",
+     "parameters": {"type": "object", "properties": {
+         "direction": {"type": "string", "enum": ["N", "E", "S", "W"]},
+         "pillar": {"type": "string", "description": "One of: Family, Hobbies, Career, Health, Relationships, Inner Growth. Empty string to clear."}},
+         "required": ["direction", "pillar"]}},
+    {"name": "set_focus", "description": "Set the user's one or two daily focus pillars (must be pillars already on their compass).",
+     "parameters": {"type": "object", "properties": {
+         "pillars": {"type": "array", "items": {"type": "string"}, "description": "Up to two pillar names."}},
+         "required": ["pillars"]}},
+    {"name": "remember", "description": "Record a short, durable fact or summary about the user for future conversations.",
+     "parameters": {"type": "object", "properties": {"note": {"type": "string"}}, "required": ["note"]}},
+]}]
+
+def chat_tool_exec(c, u, name, args):
+    args = args or {}
+    u = c.execute("SELECT * FROM users WHERE id=?", (u["id"],)).fetchone()  # refresh
+    if name == "get_stats":
+        return profile_dict(c, u)
+    if name == "get_lifeos":
+        return lifeos_get(u)
+    if name == "get_recent_journal":
+        lim = max(1, min(8, int(args.get("limit") or 3)))
+        rows = c.execute("SELECT text,created FROM journal WHERE user_id=? ORDER BY id DESC LIMIT ?", (u["id"], lim)).fetchall()
+        return {"entries": [{"text": r["text"], "date": r["created"][:10]} for r in rows]}
+    if name == "write_journal":
+        text = (args.get("text") or "").strip()
+        if not text:
+            return {"ok": False, "error": "empty"}
+        c.execute("INSERT INTO journal(user_id,prompt,text,mood,shared,created) VALUES(?,?,?,?,?,?)",
+                  (u["id"], (args.get("prompt") or "")[:300], text[:4000], "",
+                   1 if args.get("share") else 0, now_iso()))
+        award_journal_ach(c, u); c.commit()
+        return {"ok": True, "count": c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=?", (u["id"],)).fetchone()["n"]}
+    if name == "set_lifeos_pillar":
+        d = (args.get("direction") or "").upper()
+        pil = (args.get("pillar") or "").strip()
+        if d not in ("N", "E", "S", "W"):
+            return {"ok": False, "error": "bad direction"}
+        if pil and pil not in PILLARS:
+            return {"ok": False, "error": "unknown pillar"}
+        lo = lifeos_get(u)
+        for k in ("N", "E", "S", "W"):
+            if lo["pillars"].get(k) == pil and k != d:
+                lo["pillars"][k] = None
+        lo["pillars"][d] = pil or None
+        lo["focus"] = [f for f in lo.get("focus", []) if f in [v for v in lo["pillars"].values() if v]]
+        c.execute("UPDATE users SET lifeos=?, lo_prompts=NULL, lo_prompts_day=NULL WHERE id=?",
+                  (json.dumps({"base": lo["base"], "pillars": lo["pillars"], "focus": lo["focus"]}), u["id"])); c.commit()
+        return {"ok": True, "pillars": lo["pillars"]}
+    if name == "set_focus":
+        lo = lifeos_get(u)
+        chosen = [v for v in lo["pillars"].values() if v]
+        focus = [f for f in (args.get("pillars") or []) if f in chosen][:2]
+        c.execute("UPDATE users SET lifeos=?, lo_prompts=NULL, lo_prompts_day=NULL WHERE id=?",
+                  (json.dumps({"base": lo["base"], "pillars": lo["pillars"], "focus": focus}), u["id"])); c.commit()
+        return {"ok": True, "focus": focus}
+    if name == "remember":
+        note = (args.get("note") or "").strip()
+        if note:
+            c.execute("INSERT INTO user_notes(user_id,note,created) VALUES(?,?,?)", (u["id"], note[:500], now_iso())); c.commit()
+        return {"ok": True}
+    return {"error": "unknown tool"}
+
+def gemini_chat(contents, timeout=30):
+    if not GEMINI_KEY:
+        return None
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+           "gemini-flash-latest:generateContent?key=" + GEMINI_KEY)
+    body = {"systemInstruction": {"parts": [{"text": CHAT_SYSTEM}]},
+            "contents": contents, "tools": CHAT_TOOLS,
+            "generationConfig": {"temperature": 0.7, "thinkingConfig": {"thinkingBudget": 0},
+                                 "maxOutputTokens": 800}}
+    try:
+        req = urllib.request.Request(url, data=json.dumps(body).encode(),
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.loads(r.read().decode("utf-8", "replace"))
+        return data["candidates"][0]["content"].get("parts", [])
+    except Exception:
+        return None
+
+def lifeos_get(u):
+    try:
+        lo = json.loads(u["lifeos"]) if u["lifeos"] else {}
+    except Exception:
+        lo = {}
+    lo.setdefault("base", (u["city"] or "My base"))
+    lo.setdefault("pillars", {})     # {N,E,S,W: pillar}
+    lo.setdefault("focus", [])       # up to 2 pillar names
+    lo["configured"] = bool(lo.get("pillars")) and len([v for v in lo["pillars"].values() if v]) >= 1
+    return lo
+
+def daily_prompts(c, u):
+    """Three AI daily prompts (focus / reflection / gratitude), cached per UTC day."""
+    today = today_str()
+    if u["lo_prompts_day"] == today and u["lo_prompts"]:
+        try:
+            return json.loads(u["lo_prompts"])
+        except Exception:
+            pass
+    lo = lifeos_get(u)
+    focus = [f for f in lo.get("focus", []) if f] or \
+            [v for v in lo.get("pillars", {}).values() if v][:2]
+    out = None
+    if focus:
+        pr = (
+            "You are a gentle meditation journaling guide. A person's chosen life focuses are: "
+            + ", ".join(focus) + ". "
+            "Return ONE single JSON object (NOT an array) with exactly three string keys: "
+            '"focus", "reflection", "gratitude". '
+            "The \"focus\" value is a journaling prompt inviting reflection specifically on "
+            + focus[0] + ". The \"reflection\" value is a calm daily self-check-in prompt. "
+            "The \"gratitude\" value is a prompt inviting them to notice something to be grateful for. "
+            "Each value is one warm second-person question under 18 words. No emojis."
+        )
+        g = gemini_json(pr)
+        if isinstance(g, list) and g:
+            g = g[0]
+        if isinstance(g, dict) and all(isinstance(g.get(k), str) and g.get(k).strip()
+                                       for k in ("focus", "reflection", "gratitude")):
+            out = {"focus": g["focus"].strip(), "reflection": g["reflection"].strip(),
+                   "gratitude": g["gratitude"].strip(), "ai": True}
+    if out:
+        # only cache a real AI result — never cache the fallback, so it keeps retrying
+        c.execute("UPDATE users SET lo_prompts=?, lo_prompts_day=? WHERE id=?",
+                  (json.dumps(out), today, u["id"]))
+        c.commit()
+        return out
+    f0 = focus[0] if focus else "what matters most"
+    return {"focus": f"Where did {f0.lower()} ask for your attention today?",
+            "reflection": prompt_for_today(),
+            "gratitude": "What is one small thing you can be grateful for right now?", "ai": False}
+
+# ---------------------------------------------------------------------------
+# synthetic community seed (so the map + leagues feel alive on day one)
+# ---------------------------------------------------------------------------
+
+SEED_CITIES = [
+    ("Tokyo", 35.68, 139.69), ("Seoul", 37.57, 126.98), ("Mumbai", 19.08, 72.88),
+    ("Bangkok", 13.76, 100.50), ("Bali", -8.65, 115.22), ("Sydney", -33.87, 151.21),
+    ("Auckland", -36.85, 174.76), ("Cape Town", -33.92, 18.42), ("Nairobi", -1.29, 36.82),
+    ("Dubai", 25.20, 55.27), ("Istanbul", 41.01, 28.98), ("Cairo", 30.04, 31.24),
+    ("Berlin", 52.52, 13.40), ("Paris", 48.86, 2.35), ("London", 51.51, -0.13),
+    ("Lisbon", 38.72, -9.14), ("Reykjavik", 64.15, -21.94), ("Stockholm", 59.33, 18.07),
+    ("New York", 40.71, -74.01), ("Toronto", 43.65, -79.38), ("Mexico City", 19.43, -99.13),
+    ("Los Angeles", 34.05, -118.24), ("Austin", 30.27, -97.74), ("Boulder", 40.01, -105.27),
+    ("Vancouver", 49.28, -123.12), ("São Paulo", -23.55, -46.63), ("Buenos Aires", -34.60, -58.38),
+    ("Lima", -12.05, -77.04), ("Bogotá", 4.71, -74.07), ("Honolulu", 21.31, -157.86),
+]
+SEED_NAMES = ["Aria","Kai","Nadia","Leo","Mei","Omar","Sofia","Ravi","Luna","Theo","Ines","Yuki",
+    "Mateo","Zara","Finn","Priya","Noah","Ada","Hugo","Elif","Rin","Diego","Maya","Jonas",
+    "Amara","Sage","Noor","Felix","Iris","Tomas","Chloe","Bodhi","Esme","Arlo","Nova","River",
+    "Wren","Ezra","Juno","Milo","Dara","Ocean","Indira","Soren","Yara","Cassian","Lila","Oden"]
+SOUNDSCAPES = ["rain", "forest", "ocean", "space", "silence"]
+
+# Extra well-known cities used only for labelling real coordinates (not seeded as practitioners).
+LABEL_CITIES = SEED_CITIES + [
+    ("Jersey City", 40.73, -74.07), ("Brooklyn", 40.68, -73.94), ("Philadelphia", 39.95, -75.17),
+    ("Boston", 42.36, -71.06), ("Washington", 38.91, -77.04), ("Chicago", 41.88, -87.63),
+    ("San Francisco", 37.77, -122.42), ("Seattle", 47.61, -122.33), ("Denver", 39.74, -104.99),
+    ("Miami", 25.76, -80.19), ("Atlanta", 33.75, -84.39), ("Montreal", 45.50, -73.57),
+    ("Madrid", 40.42, -3.70), ("Rome", 41.90, 12.50), ("Amsterdam", 52.37, 4.90),
+    ("Dublin", 53.35, -6.26), ("Singapore", 1.35, 103.82), ("Hong Kong", 22.32, 114.17),
+    ("Delhi", 28.61, 77.21), ("Barcelona", 41.39, 2.17),
+]
+
+def nearest_city(lat, lon):
+    """Approximate reverse-geocode: closest known city to coarse coords. Keeps us dep-free/offline
+    and consistent with the app's fuzzed-location privacy model. None if nothing is reasonably close."""
+    try:
+        lat = float(lat); lon = float(lon)
+    except Exception:
+        return None
+    best = None; bestd = None
+    for name, clat, clon in LABEL_CITIES:
+        d = (lat - clat) ** 2 + (lon - clon) ** 2
+        if bestd is None or d < bestd:
+            bestd = d; best = name
+    # cap ~ 2.5deg (~275km) so remote coords don't get a misleading nearby-city tag
+    return best if bestd is not None and bestd <= 6.25 else None
+
+def _fuzz(v, amt=0.04):
+    return round(v + random.uniform(-amt, amt), 4)
+
+def save_spot_photo(sid, dataurl):
+    """Decode a data-URL JPEG/PNG for a session's spot photo, write it to the
+    spots dir, and return the relative URL path (or None on failure)."""
+    try:
+        img = dataurl or ""
+        if img.startswith("data:"):
+            head, _, b64 = img.partition(",")
+            ext = "png" if "png" in head.lower() else "jpg"
+            img = b64
+        else:
+            ext = "jpg"
+        if not img:
+            return None
+        raw = base64.b64decode(img, validate=False)
+        if not raw or len(raw) > 6 * 1024 * 1024:  # cap ~6MB decoded
+            return None
+        fn = "%d.%s" % (int(sid), ext)
+        with open(os.path.join(SPOT_DIR, fn), "wb") as f:
+            f.write(raw)
+        return "spot/" + fn
+    except Exception as e:
+        print("save_spot_photo error:", e)
+        return None
+
+def seed_world():
+    c = db()
+    n = c.execute("SELECT COUNT(*) n FROM users WHERE is_bot=1").fetchone()["n"]
+    if n > 0:
+        c.close(); return
+    rnd = random.Random(42)
+    nm = rnd.sample(SEED_NAMES, min(46, len(SEED_NAMES)))
+    today = datetime.now(timezone.utc)
+    for i, name in enumerate(nm):
+        city, lat, lon = rnd.choice(SEED_CITIES)
+        light = 0
+        total_min = 0
+        total_sess = 0
+        max_min = 0
+        has_night = False
+        has_dawn = False
+        uid = c.execute(
+            "INSERT INTO users(name,is_bot,lat,lon,city,created) VALUES(?,?,?,?,?,?)",
+            (name, 1, _fuzz(lat), _fuzz(lon), city, now_iso())).lastrowid
+        # generate a trailing history so lifetime + weekly stats look organic
+        days_active = rnd.randint(3, 40)
+        streak = rnd.randint(0, 25)
+        today_date = today.date()
+        for d in range(days_active):
+            # ~70% chance of a session today so the live map/leaderboards look alive,
+            # tapering for older days.
+            p = 0.70 if d == 0 else 0.45
+            if rnd.random() > p:
+                continue
+            day_d = today_date - timedelta(days=d)
+            # a real clock time within that day (not "now minus hours", which would
+            # otherwise push today's sessions into yesterday near UTC midnight)
+            dt = datetime(day_d.year, day_d.month, day_d.day,
+                          rnd.randint(5, 22), rnd.randint(0, 59), tzinfo=timezone.utc)
+            mins = rnd.choice([5, 5, 10, 10, 10, 20, 30])
+            ss = rnd.choice(SOUNDSCAPES)
+            lg = compute_light(mins, rnd.randint(1, 12), dt)
+            lat2, lon2 = _fuzz(lat), _fuzz(lon)
+            c.execute("""INSERT INTO sessions(user_id,minutes,soundscape,light,lat,lon,city,mood,note,started,ended,day,week)
+                         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      (uid, mins, ss, lg, lat2, lon2, city, rnd.choice(["calm","energized","unclear",""]), "",
+                       dt.isoformat(), dt.isoformat(), dt.date().isoformat(), week_str(dt.date())))
+            light += lg; total_min += mins; total_sess += 1
+            if mins >= 30: max_min = 30
+            if 22 <= dt.hour or dt.hour < 4: has_night = True
+            if 4 <= dt.hour < 7: has_dawn = True
+        best = max(streak, rnd.randint(0, 30))
+        c.execute("UPDATE users SET light=?,streak=?,best_streak=?,total_minutes=?,total_sessions=? WHERE id=?",
+                  (light, streak, best, total_min, total_sess, uid))
+        # award achievements from the bot's final stats so the "% have this" rarity
+        # stat and leaderboards look believable
+        earned = []
+        if total_sess > 0: earned.append("first_light")
+        if max_min >= 30: earned.append("marathoner")
+        if best >= 7: earned.append("week_warrior")
+        if best >= 30: earned.append("constellation")
+        if has_night: earned.append("moon_child")
+        if has_dawn: earned.append("dawn_patrol")
+        if total_min >= 100: earned.append("centurion")
+        if light >= 500: earned.append("deep_diver")
+        if light >= 2000: earned.append("luminary")
+        for code in earned:
+            c.execute("INSERT OR IGNORE INTO achievements(user_id,code,created) VALUES(?,?,?)", (uid, code, now_iso()))
+    c.commit(); c.close()
+
+# ---------------------------------------------------------------------------
+# data access helpers
+# ---------------------------------------------------------------------------
+
+def user_by_email(c, email):
+    return c.execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+
+def profile_dict(c, u):
+    lvl, into, need = level_for(u["light"])
+    wl = c.execute("SELECT COALESCE(SUM(light),0) s FROM sessions WHERE user_id=? AND week=?",
+                   (u["id"], week_str())).fetchone()["s"]
+    lg = league_for(wl)
+    ach = [r["code"] for r in c.execute("SELECT code FROM achievements WHERE user_id=?", (u["id"],))]
+    lessons = {}
+    for r in c.execute("""SELECT lesson, COUNT(*) n, MAX(ended) last FROM sessions
+                          WHERE user_id=? AND lesson IS NOT NULL AND lesson!='' GROUP BY lesson""", (u["id"],)):
+        lessons[r["lesson"]] = {"count": r["n"], "last": r["last"]}
+    return {
+        "lessons": lessons,
+        "name": u["name"], "email": u["email"],
+        "light": u["light"], "level": lvl, "level_into": into, "level_need": need,
+        "streak": u["streak"], "best_streak": u["best_streak"],
+        "total_minutes": u["total_minutes"], "total_sessions": u["total_sessions"],
+        "weekly_light": wl, "league": lg,
+        "lat": u["lat"], "lon": u["lon"], "city": u["city"],
+        "birth_date": u["birth_date"], "birth_time": u["birth_time"],
+        "birth_place": u["birth_place"], "sun_sign": u["sun_sign"],
+        "achievements": ach,
+        "equipped": u["equipped"],
+        "companion": u["companion"],
+        "motes": u["motes"] or 0,
+        "items_owned": c.execute("SELECT COUNT(*) n FROM items WHERE user_id=?", (u["id"],)).fetchone()["n"],
+    }
+
+# ---------------------------------------------------------------------------
+# http
+# ---------------------------------------------------------------------------
+
+PAGE = r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0b0a12">
+<meta name="description" content="Lumen — a gamified meditation app. Light up a living world map with every sit, earn Light, build streaks, and walk guided voice journeys.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lumen">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Lumen — light up the world, one breath at a time</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{
+  --bg:#0b0a12; --bg2:#13111d; --panel:#181527cc; --line:#2a2540;
+  --text:#ece9f5; --muted:#9a93b8; --gold:#f5c977; --purple:#a855f7;
+  --purple2:#7c3aed; --pink:#ec4899; --good:#6ee7b7;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 700px at 70% -10%, #1b1430 0%, transparent 60%),
+    radial-gradient(900px 600px at 10% 110%, #231436 0%, transparent 55%),
+    var(--bg);
+  color:var(--text); font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+  overscroll-behavior:none;
+}
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5}
+#app{position:relative;z-index:1;max-width:620px;margin:0 auto;min-height:100%;
+  padding:calc(env(safe-area-inset-top) + 8px) 16px calc(96px + env(safe-area-inset-bottom)) 16px}
+h1,h2,h3{font-weight:700;letter-spacing:-.02em}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 2px 8px}
+.brand .mark{font-size:26px;filter:drop-shadow(0 0 10px var(--gold))}
+.brand b{font-size:20px}
+.brand small{color:var(--muted);font-weight:500;margin-left:auto;font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;backdrop-filter:blur(8px);margin:12px 0}
+.muted{color:var(--muted)}
+.btn{appearance:none;border:0;border-radius:14px;padding:14px 18px;font-size:16px;font-weight:700;
+  background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;cursor:pointer;width:100%;
+  box-shadow:0 6px 24px -8px var(--purple)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);box-shadow:none}
+.btn.gold{background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;box-shadow:0 6px 24px -8px var(--gold)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+input,textarea,select{width:100%;background:#0f0d18;border:1px solid var(--line);border-radius:12px;
+  color:var(--text);padding:12px 14px;font-size:16px;font-family:inherit}
+/* custom checkboxes */
+input[type=checkbox]{-webkit-appearance:none;appearance:none;width:22px;height:22px;flex:none;padding:0;
+  border:1.6px solid var(--line);border-radius:7px;background:#0f0d18;cursor:pointer;position:relative;
+  vertical-align:middle;transition:background .15s,border-color .15s,box-shadow .15s}
+input[type=checkbox]:hover{border-color:#4b3a6e}
+input[type=checkbox]:checked{background:linear-gradient(135deg,var(--purple),var(--purple2));border-color:var(--purple);box-shadow:0 0 10px -2px var(--purple)}
+input[type=checkbox]:checked::after{content:"";position:absolute;left:7px;top:3px;width:5px;height:10px;
+  border:solid #fff;border-width:0 2.2px 2.2px 0;border-radius:1px;transform:rotate(43deg)}
+input[type=checkbox]:active{transform:scale(.92)}
+label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
+.err{color:#fda4af;font-size:13px;min-height:18px;margin-top:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#201a33;border:1px solid var(--line);font-size:12px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.chip{border:1px solid var(--line);background:#13101f;border-radius:14px;padding:12px;text-align:center;cursor:pointer;font-weight:600;transition:transform .14s ease,border-color .18s ease,box-shadow .18s ease}
+.chip:active{transform:scale(.97)}
+.chip.sel{border-color:var(--purple);background:linear-gradient(135deg,#241a3e,#1a1430);box-shadow:0 0 0 1px var(--purple) inset}
+.chip .big{font-size:20px}
+/* branded section headers (Duration / Soundscape) */
+.sec-head{display:flex;align-items:center;gap:9px;margin:2px 0 12px}
+.sec-head h3{margin:0;font-size:16px;font-weight:700}
+.sec-ic{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(135deg,#2a2047,#191430);border:1px solid #ffffff14;color:var(--gold)}
+.sec-ic.snd{color:var(--purple)}
+.sec-ic .i{width:17px;height:17px;filter:drop-shadow(0 0 5px currentColor)}
+/* done-up duration chips */
+.dur-chip{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:12px 4px;position:relative;overflow:hidden}
+.dur-chip .big{font-size:23px;font-weight:800;line-height:1;color:var(--text)}
+.dur-chip .chip-unit{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-top:3px}
+.dur-chip .chip-sub{font-size:11px;color:var(--muted);font-weight:600;margin-top:5px}
+.dur-chip.sel{border-color:var(--gold);background:linear-gradient(135deg,#2b2112,#1b150b);box-shadow:0 0 0 1px var(--gold) inset,0 7px 22px -12px var(--gold)}
+.dur-chip.sel .big{color:var(--gold)}
+.dur-chip.sel .chip-sub{color:#f3d8a0}
+.snd-chip{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px}
+.stat{text-align:center}.stat .n{font-size:26px;font-weight:800}.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.bar{height:9px;border-radius:999px;background:#241d3a;overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink))}
+.home-hero{display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.home-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:radial-gradient(120% 80% at 88% -25%,color-mix(in srgb,var(--lc) 30%,transparent),transparent 60%)}
+.hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
+.hh-league{display:flex;align-items:center;gap:11px}
+.hh-badge{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--lc) 34%,transparent),transparent 72%);
+  filter:drop-shadow(0 0 11px color-mix(in srgb,var(--lc) 55%,transparent))}
+.hh-badge .i{width:25px;height:25px}
+.hh-lg-name{font-weight:800;font-size:15px}
+.hh-streak{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);flex:none}
+.hh-streak b{color:var(--text);font-size:18px;margin-left:1px}.hh-streak .i{width:19px;height:19px}
+.hh-stats{display:flex;gap:8px;position:relative;z-index:1}
+.hh-stat{flex:1;background:#ffffff08;border:1px solid #ffffff10;border-radius:12px;padding:9px 6px;text-align:center}
+.hh-stat span{display:block;font-weight:800;font-size:16px}
+.hh-stat label{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.hh-bar{position:relative;z-index:1}
+.hh-live{position:relative;z-index:1;display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);
+  border-top:1px solid #ffffff10;margin-top:2px;padding-top:12px}
+.hh-live b{color:var(--text)}
+.live-dot{width:9px;height:9px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px var(--purple);flex:none}
+/* bottom nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;
+  background:linear-gradient(0deg,#0b0a12 60%,transparent);padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+nav .inner{display:flex;gap:4px;background:#14111f;border:1px solid var(--line);border-radius:20px;padding:5px;max-width:560px;width:100%}
+nav button{flex:1;min-width:0;background:transparent;border:0;color:var(--muted);font-size:10px;font-weight:600;padding:7px 1px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav .inner{gap:2px}
+nav button .ic{font-size:19px}
+nav button.on{color:var(--text);background:#211a37}
+/* meditate / breathing */
+.orb-wrap{position:relative;height:300px;display:grid;place-items:center;margin:8px 0}
+.orb{width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle at 50% 40%, #f7d99a, #c084fc 55%, #6d28d9 100%);
+  box-shadow:0 0 70px 10px #a855f788, 0 0 140px 30px #7c3aed44;
+  display:grid;place-items:center;animation:breathe 10s ease-in-out infinite}
+.orb .t{font-size:34px;font-weight:800;color:#1a0b2e;text-shadow:0 1px 0 #ffffff55}
+@keyframes breathe{0%,100%{transform:scale(.72)}45%,55%{transform:scale(1.08)}}
+.ring{position:absolute;width:260px;height:260px;border-radius:50%;border:1px solid #a855f755;animation:breathe 10s ease-in-out infinite}
+.breath-label{position:absolute;bottom:6px;color:var(--muted);font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+.lesson-teach.lead{font-style:italic;color:#d9cff2}
+.lesson-teach.resting{color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-family:inherit;opacity:.85;transition:opacity .6s}
+/* map */
+#map{height:56vh;min-height:360px;border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+.leaflet-container{background:#0a0912}
+/* custom glowing map markers */
+.mkr-wrap{background:none!important;border:none!important}
+.mkr{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,#241a3e,#140f24);border:1.6px solid var(--c);color:var(--c);
+  box-shadow:0 0 8px var(--c),0 0 16px -3px var(--c);transition:transform .15s}
+.mkr:hover{transform:scale(1.15);z-index:999}
+.mkr .mkri{width:15px;height:15px;filter:drop-shadow(0 0 3px var(--c))}
+.mkr.me{animation:mkrpulse 2.2s ease-in-out infinite}
+.mkr.me .mkri{width:18px;height:18px}
+@keyframes mkrpulse{0%,100%{box-shadow:0 0 8px var(--c),0 0 14px -4px var(--c)}50%{box-shadow:0 0 16px var(--c),0 0 30px var(--c)}}
+.dotleg{width:13px;height:13px;border-radius:50%;background:radial-gradient(circle,#241a3e,#140f24);border:1.5px solid var(--c);box-shadow:0 0 7px var(--c);display:inline-block}
+/* journey timelapse */
+.jny-play{position:absolute;z-index:1000;left:50%;bottom:14px;transform:translateX(-50%);display:inline-flex;align-items:center;gap:7px;
+  background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;border:0;border-radius:999px;padding:11px 18px;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 6px 22px -6px #000}
+.jny-play .i{width:16px;height:16px}
+.jny-ov{position:absolute;z-index:1000;left:12px;top:12px;min-width:148px;background:#12101eef;border:1px solid var(--line);border-radius:14px;padding:10px 12px;opacity:0;transform:translateY(-6px);transition:.25s;pointer-events:none;backdrop-filter:blur(4px)}
+.jny-ov.show{opacity:1;transform:none}
+.jny-count{font-size:22px;font-weight:800;color:var(--gold);line-height:1}
+.jny-count span{font-size:13px;color:var(--muted);font-weight:600}
+.jny-meta{margin-top:4px;display:flex;flex-direction:column}
+.jny-meta b{font-size:14px}.jny-meta span{font-size:11px;color:var(--muted)}
+.jny-bar{height:5px;border-radius:5px;background:#241d3a;margin-top:7px;overflow:hidden}
+.jny-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));transition:width .4s}
+.jny-done{font-size:13px;color:var(--gold);display:flex;align-items:center;gap:6px;font-weight:700}
+.jny-drop{animation:jnydrop .5s cubic-bezier(.2,1.3,.3,1)}
+@keyframes jnydrop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.3)}100%{transform:scale(1);opacity:1}}
+.leaflet-pane path.jny-path{filter:drop-shadow(0 0 4px #f5c977aa)}
+.leaflet-pane path.jny-seg{opacity:0;transition:opacity .9s ease;filter:drop-shadow(0 0 4px #f5c977aa)}
+/* journey finale */
+.jny-finale{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:24px;overflow:auto;
+  background:radial-gradient(1100px 760px at 50% 38%, rgba(18,13,34,.30), rgba(7,6,14,.74) 76%);
+  -webkit-backdrop-filter:blur(1.5px) brightness(.85);backdrop-filter:blur(1.5px) brightness(.85);
+  opacity:0;transition:opacity .6s}
+.jny-finale.show{opacity:1}
+.finale-card{max-width:400px;width:100%;text-align:center;position:relative;z-index:2;padding:26px 20px 22px;border-radius:26px;
+  background:radial-gradient(120% 90% at 50% 0%, rgba(40,28,66,.66), rgba(12,9,22,.74));
+  border:1px solid #ffffff1a;box-shadow:0 24px 70px -22px #000, 0 0 0 1px #ffffff08 inset;
+  -webkit-backdrop-filter:blur(9px) saturate(1.1);backdrop-filter:blur(9px) saturate(1.1);
+  transform:translateY(18px) scale(.97);opacity:0;transition:transform .6s cubic-bezier(.2,.9,.25,1.12),opacity .55s}
+.jny-finale.show .finale-card{transform:none;opacity:1}
+.finale-mark{color:var(--gold);display:flex;justify-content:center;filter:drop-shadow(0 0 26px var(--gold));animation:markpulse 4s ease-in-out infinite}
+.finale-mark .i{width:56px;height:56px}
+.finale-sub{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.2em;margin-top:12px}
+.finale-h{font-size:34px;font-weight:800;letter-spacing:-.02em;margin:6px 0 6px;line-height:1.12;
+  background:linear-gradient(120deg,#ffe9b8,#f5c977 40%,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}
+.finale-poem{color:#cbbfe6;font-family:var(--serif);font-style:italic;font-size:15px;margin:2px 16px 18px;line-height:1.5}
+.finale-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.fstat{background:#160f26;border:1px solid var(--line);border-radius:16px;padding:14px 4px}
+.fsn{font-size:27px;font-weight:800;color:var(--gold);line-height:1}
+.fsl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:6px;line-height:1.2}
+.finale-lines{text-align:left;display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.fline{display:flex;align-items:center;gap:12px;background:#120e20;border:1px solid var(--line);border-radius:14px;padding:11px 13px}
+.fli{display:flex}.fli .i{width:20px;height:20px}
+.fline>div{display:flex;flex-direction:column}
+.fline b{font-size:14px}.fline>div span{font-size:12px;color:var(--muted)}
+.fspk{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.fspark{position:absolute;bottom:-12px;width:4px;height:4px;border-radius:50%;background:#f5c977;box-shadow:0 0 8px #f5c977;opacity:0;animation:frise linear infinite}
+@keyframes frise{0%{transform:translateY(0) scale(.5);opacity:0}12%{opacity:1}100%{transform:translateY(-108vh) scale(1);opacity:0}}
+/* journal sealed celebration */
+.seal-finale{background:radial-gradient(1000px 720px at 50% 18%,#221839,#0a0912 78%)!important;
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.seal-stamp{display:flex;justify-content:center;color:var(--gold);margin-bottom:4px}
+.seal-stamp .i{width:68px;height:68px;filter:drop-shadow(0 0 22px #f5c977cc);animation:stampin .6s cubic-bezier(.2,1.5,.3,1) both}
+@keyframes stampin{0%{transform:scale(2.6) rotate(-14deg);opacity:0}55%{transform:scale(.88) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+/* dark popups */
+.leaflet-popup-content-wrapper{background:#181527;color:var(--text);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px -10px #000}
+.leaflet-popup-tip{background:#181527;border:1px solid var(--line)}
+.leaflet-popup-content{margin:11px 14px;font-family:inherit}
+.pop-h{display:flex;align-items:center;gap:7px;font-size:15px}
+.pop-ic .i{width:17px;height:17px;filter:drop-shadow(0 0 4px currentColor)}
+.pop-you{font-size:10px;background:#3a2d14;color:var(--gold);padding:1px 7px;border-radius:999px;font-weight:700}
+.pop-b{margin-top:4px;font-size:13px;color:#cbb5e8}
+.pop-m{margin-top:2px;font-size:11px;color:var(--muted)}
+.pop-img{display:block;width:210px;max-width:60vw;height:120px;object-fit:cover;border-radius:10px;margin:-2px 0 8px;border:1px solid var(--line)}
+/* photo markers on the map */
+.mkr-photo{width:100%;height:100%;border-radius:50%;overflow:hidden;border:2px solid var(--c);
+  box-shadow:0 0 8px var(--c),0 0 16px -4px var(--c);background:#140f24;transition:transform .15s}
+.mkr-photo:hover{transform:scale(1.18);z-index:999}
+.mkr-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.mkr-photo.me{animation:mkrpulse 2.2s ease-in-out infinite}
+/* map Photos / Icons toggle */
+.map-view{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.map-vbtn{display:inline-flex;align-items:center;gap:6px;background:#160f26;border:1px solid var(--line);color:var(--muted);
+  border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.map-vbtn .i{width:15px;height:15px}
+.map-vbtn.on{border-color:var(--gold);color:var(--gold);background:#1e1630}
+/* spot-photo capture in session complete */
+.spot-cap{margin:4px 0 2px}
+.spot-add{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:#160f26;border:1px dashed var(--line);
+  color:var(--muted);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.spot-add .i{width:18px;height:18px}
+/* location "holder" preview — an aerial thumbnail of where they sat */
+.spot-hold{position:relative;margin-bottom:10px;border-radius:12px;overflow:hidden;border:1px solid var(--line);
+  background:#0f0b1c linear-gradient(135deg,#161030,#0d0a18)}
+.spot-hold img{display:block;width:100%;height:150px;object-fit:cover;opacity:0;transition:opacity .5s ease}
+.spot-hold img.on{opacity:.92}
+.spot-hold .pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);color:var(--gold);
+  filter:drop-shadow(0 2px 6px #000) drop-shadow(0 0 7px var(--gold))}
+.spot-hold .pin .i{width:30px;height:30px}
+.spot-hold .spot-glow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:38px;height:38px;z-index:2}
+.spot-hold .cap{position:absolute;left:0;right:0;bottom:0;padding:16px 12px 8px;font-size:12px;color:#f3ead6;
+  display:flex;align-items:center;gap:5px;background:linear-gradient(transparent,#000000cc)}
+.spot-hold .cap .i{width:14px;height:14px}
+.spot-hold.load::after{content:"";position:absolute;inset:0;background:
+  linear-gradient(90deg,transparent,#ffffff14,transparent) 0/40% 100% no-repeat;animation:shimmer 1.3s infinite}
+@keyframes shimmer{to{background-position:200% 0}}
+.spot-prev{position:relative}
+.spot-prev img{display:block;width:100%;max-height:220px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.spot-lbl{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.spot-lbl .i{width:14px;height:14px}
+/* daily Morning Atlas challenge card */
+.chal-card{position:relative;overflow:hidden}
+.chal-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chal-title{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+.chal-title .i{width:18px;height:18px;color:var(--gold)}
+.chal-streak{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--gold)}
+.chal-streak .i{width:16px;height:16px}
+.chal-blurb{color:var(--muted);font-size:12.5px;margin:6px 0 13px;line-height:1.45}
+.chal-items{display:flex;flex-direction:column;gap:10px}
+.chal-item{display:flex;align-items:center;gap:11px;font-size:14px}
+.chal-box{width:22px;height:22px;flex:none;border-radius:7px;border:1.5px solid var(--line);display:grid;place-items:center;color:transparent;transition:.25s}
+.chal-box .i{width:14px;height:14px}
+.chal-item.on .chal-box{background:linear-gradient(135deg,var(--gold),var(--pink));border-color:transparent;color:#1a1326}
+.chal-lbl{color:var(--muted)}
+.chal-item.on .chal-lbl{color:var(--text)}
+.chal-done-banner{margin-top:13px;display:flex;align-items:center;gap:7px;justify-content:center;font-size:13px;font-weight:600;color:var(--gold);background:#1e1630;border:1px solid var(--gold);border-radius:12px;padding:9px}
+.chal-done-banner .i{width:15px;height:15px}
+.chal-bonus{font-size:11.5px;color:var(--muted);margin-top:12px;text-align:center;line-height:1.4}
+.chal-bonus .i{width:13px;height:13px;vertical-align:-2px}
+/* notification settings */
+.nrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.nrow .nl{font-size:14px}
+.nsel{background:#1a1330;border:1px solid var(--line);color:var(--text);border-radius:9px;padding:6px 8px;font-size:13px;font-family:inherit}
+.switch{position:relative;display:inline-block;width:46px;height:27px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch .sl{position:absolute;inset:0;background:#2a2442;border-radius:999px;transition:.2s;cursor:pointer}
+.switch .sl:before{content:"";position:absolute;width:21px;height:21px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked+.sl{background:linear-gradient(135deg,var(--gold),var(--pink))}
+.switch input:checked+.sl:before{transform:translateX(19px)}
+.chal-streak-u{font-size:11px;color:var(--muted);margin-left:2px}
+/* atlas: photo passport */
+.pilg-stats{display:flex;gap:10px;margin:12px 0 2px}
+.pilg-stat{flex:1;background:#1a1330;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.pilg-stat b{display:block;font-size:22px;font-weight:800;color:var(--gold);line-height:1.1}
+.pilg-stat label{font-size:11px;color:var(--muted)}
+.pilg-strip{display:flex;gap:7px;align-items:center;margin:11px 0 2px;overflow-x:auto;cursor:pointer;-webkit-overflow-scrolling:touch}
+.pilg-strip.empty{background:#1a1330;border:1px dashed var(--line);border-radius:12px;padding:10px 12px;gap:11px}
+.pilg-thumb{flex:none;width:52px;height:52px;border-radius:12px;background:#231a3c center/cover no-repeat;border:1px solid var(--line)}
+.pilg-thumb.ph{display:grid;place-items:center;color:var(--gold)}
+.pilg-thumb.ph .i{width:22px;height:22px}
+.pilg-thumb.more{display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--gold);background:#231a3c}
+.pilg-ms{margin-top:12px}
+.pilg-ms .bar{height:6px;border-radius:4px;background:#241b3b;overflow:hidden}
+.pilg-ms .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink))}
+.pilg-comm{margin-top:13px;display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:var(--gold);cursor:pointer;border-top:1px solid var(--line);padding-top:12px}
+.pilg-comm .i{width:15px;height:15px}
+/* daily horoscope card */
+.horo-card{position:relative;overflow:hidden;background:#140f26 radial-gradient(130% 95% at 100% 0,#271b44 0,transparent 55%)}
+.horo-head{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.horo-glyph{font-size:30px;line-height:1;color:var(--gold);filter:drop-shadow(0 0 10px var(--gold));min-width:34px;text-align:center}
+.horo-glyph .i{width:28px;height:28px}
+.horo-title{font-weight:700;font-size:15px}
+.horo-text{font-family:var(--serif);font-size:15.5px;line-height:1.7;color:#e7e0f5}
+.horo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.horo-sit,.horo-listen{width:auto;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;margin:0}
+.horo-sit .i,.horo-listen .i{width:16px;height:16px}
+.horo-signs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.horo-sign{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;background:#1a1330;border:1px solid var(--line);border-radius:12px;color:var(--text);cursor:pointer;font-family:inherit;transition:.15s}
+.horo-sign:hover,.horo-sign:active{border-color:var(--gold);background:#221839}
+.hs-glyph{font-size:22px;color:var(--gold)}
+.hs-nm{font-size:12px;color:var(--text)}
+.hs-sub{font-size:10px;color:var(--muted)}
+.horo-foot{margin-top:12px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;opacity:.8}
+.horo-foot .i{width:13px;height:13px}
+.spot-x{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:5px;background:#000000b3;color:#fff;
+  border:0;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.spot-x .i{width:13px;height:13px}
+.spot-shot{margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.spot-shot img{width:100%;max-width:260px;max-height:200px;object-fit:cover;border-radius:14px;border:1px solid var(--line)}
+/* spot posts in the community feed */
+.spot-post{padding:0;overflow:hidden}
+.spot-img{display:block;width:100%;max-height:260px;object-fit:cover;border-bottom:1px solid var(--line)}
+.spot-meta{padding:12px 14px}
+.spot-where{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-top:4px}
+.spot-where .i{width:14px;height:14px}
+.toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:50;background:#1c1630;border:1px solid var(--purple);
+  padding:12px 16px;border-radius:14px;box-shadow:0 10px 40px -10px #000;max-width:92%;text-align:center;font-weight:600}
+.hidden{display:none!important}
+.center{text-align:center}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.lb-row .rk{min-width:34px;display:flex;align-items:center;justify-content:center;gap:1px;color:var(--muted);font-weight:800;text-align:center}
+.lb-row .rk.g{color:var(--gold)}
+.lb-row .rk .medal{width:20px;height:20px}
+.lb-row .nm{flex:1;font-weight:600}.lb-row .vl{font-weight:800;color:var(--gold)}
+.lb-row.you{background:#1c1636;border-radius:12px;border-bottom-color:transparent}
+.league-hero{position:relative;overflow:hidden}
+.league-badge{margin:2px auto 8px;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--lc) 34%,transparent),transparent 70%);
+  filter:drop-shadow(0 0 16px color-mix(in srgb,var(--lc) 60%,transparent))}
+.league-badge .i{width:34px;height:34px}
+.ach{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin:8px 0}
+.ach .e{color:var(--muted);opacity:.5;display:flex}
+.ach .e .i{width:26px;height:26px}
+.ach.on .e{color:var(--gold);opacity:1}
+.ach.on{border-color:#4b3a6e;background:#160f26}
+.seg{display:flex;background:#13101f;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:8px;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px}
+.seg button.on{background:#271f42;color:var(--text)}
+.feed-item{border-left:2px solid var(--purple);padding:4px 0 4px 12px;margin:12px 0}
+.feed-item .who{font-size:12px;color:var(--muted)}
+a{color:var(--purple)}
+/* ---- journal: a letter to yourself ---- */
+.letter{position:relative;border-radius:20px;padding:22px 20px 18px;overflow:hidden;
+  background:linear-gradient(175deg,#1c1830,#17132690 70%,#141022);
+  border:1px solid #2e2747;box-shadow:0 18px 50px -24px #000, 0 0 0 1px #ffffff05 inset}
+.letter:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:radial-gradient(130% 70% at 50% -10%, #c084fc22, transparent 55%)}
+.letter-head{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;
+  font-family:var(--serif);font-style:italic;color:var(--muted);font-size:14px;margin-bottom:4px}
+.letter-seal .i{width:18px;height:18px;color:var(--gold);filter:drop-shadow(0 0 6px #f5c97799)}
+.letter-prompt{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;margin:10px 0 12px;
+  padding-bottom:14px;border-bottom:1px solid #ffffff10}
+.lp-q{font-family:var(--serif);font-style:italic;font-size:18px;line-height:1.45;color:#e9e3f7}
+.lp-shuffle{align-self:flex-start;background:transparent;border:0;color:var(--purple);font-size:12px;font-weight:600;
+  cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:0}
+.lp-shuffle .i{width:13px;height:13px}
+.letter-body{width:100%;background:transparent;border:0;outline:0;resize:none;color:#efe9f8;
+  font-family:var(--serif);font-size:17px;line-height:1.8;padding:2px;min-height:150px;
+  background-image:linear-gradient(transparent 1.78em,#ffffff0d 1.8em);background-size:100% 1.8em;background-attachment:local}
+.letter-body::placeholder{color:#6f6790;font-style:italic}
+.letter-interim{position:relative;z-index:1;color:var(--purple);font-family:var(--serif);font-style:italic;font-size:15px;min-height:10px;margin-top:4px}
+.letter-foot{display:flex;align-items:center;gap:12px;margin-top:14px;position:relative;z-index:1}
+.letter-share{flex:1;display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:var(--muted)}
+.letter-share input{margin:0}
+.mic{position:relative;width:48px;height:48px;flex:none;border-radius:50%;border:1px solid var(--line);
+  background:#1b1530;color:var(--purple);display:grid;place-items:center;cursor:pointer;transition:.2s}
+.mic .i{width:22px;height:22px;position:relative;z-index:2}
+.mic:active{transform:scale(.94)}
+.mic-ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--purple);opacity:0}
+.mic.live{background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;border-color:transparent;box-shadow:0 0 18px -2px var(--purple)}
+.mic.live .mic-ring{opacity:1;animation:micpulse 1.4s ease-out infinite}
+@keyframes micpulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+.mic-hint{position:relative;z-index:1;color:var(--purple);font-size:12px;font-style:italic;min-height:14px;margin-top:9px;text-align:center}
+.letter-seal-btn{position:relative;z-index:1;margin:16px auto 2px;width:auto;padding:13px 28px;display:flex;align-items:center;justify-content:center;gap:9px}
+.letter-seal-btn .seal-ic{width:22px;height:22px}
+.letter.mini{padding:16px 18px;margin-top:12px}
+.letter-tag{display:inline-flex;align-items:center;gap:5px;font-style:normal;font-size:11px;color:var(--muted)}
+.letter-tag .i{width:13px;height:13px}
+.mini-q{font-family:var(--serif);font-style:italic;color:#c9bfe6;font-size:15px;margin:8px 0 8px}
+.mini-body{font-family:var(--serif);font-size:15.5px;line-height:1.7;color:#e3ddf1;white-space:pre-wrap}
+.mini-mood{font-family:var(--serif);font-style:italic;color:var(--muted);font-size:13px;margin-top:8px;text-align:right}
+.mini-mod{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.mini-modbtn{display:inline-flex;align-items:center;gap:4px;background:transparent;border:1px solid var(--line);
+  color:var(--muted);border-radius:999px;padding:4px 11px;font-size:11.5px;cursor:pointer}
+.mini-modbtn:hover{color:var(--text);border-color:var(--muted)}.mini-modbtn .i{width:12px;height:12px}
+/* life os + speaker */
+.lo-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#1a1330;border:1px solid #3a2d5e;color:var(--purple);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.lo-btn .i{width:14px;height:14px}
+.lp-speak{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:2px;display:inline-flex}
+.lp-speak.on{color:var(--gold)}
+.lp-speak .i{width:18px;height:18px}
+.compass2{position:relative;width:min(330px,88vw);margin:10px auto 16px}
+.compass2:before{content:"";display:block;padding-top:100%}
+.crays{position:absolute;inset:0;width:100%;height:100%}
+.crays .cray{stroke:#2e2747;stroke-width:1.6;stroke-linecap:round;transition:stroke .3s,filter .3s}
+.crays .cray.set{stroke:#6a5630;filter:drop-shadow(0 0 3px #f5c97755)}
+.cnode{position:absolute;width:33%;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;z-index:2}
+.cN{top:0;left:50%;transform:translateX(-50%)}
+.cS{bottom:0;left:50%;transform:translateX(-50%)}
+.cW{left:0;top:50%;transform:translateY(-50%)}
+.cE{right:0;top:50%;transform:translateY(-50%)}
+.cbadge{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;transition:.2s;
+  background:radial-gradient(circle at 50% 38%,#1f1838,#120e22);border:1.5px solid #2e2747;color:var(--muted)}
+.cnode:active .cbadge{transform:scale(.93)}
+.cnode.set .cbadge{border-color:var(--gold);color:var(--gold);box-shadow:0 0 16px -5px var(--gold)}
+.cnode.focus .cbadge{box-shadow:0 0 20px -3px var(--gold),0 0 0 2px #f5c97740;animation:cfoc 3s ease-in-out infinite}
+@keyframes cfoc{0%,100%{box-shadow:0 0 14px -5px var(--gold),0 0 0 2px #f5c97733}50%{box-shadow:0 0 24px -3px var(--gold),0 0 0 2px #f5c97766}}
+.cbadge .pico{width:30px;height:30px}
+.cnode.set .cbadge .pico{filter:drop-shadow(0 0 5px #f5c97799)}
+.cadd{font-size:26px;color:var(--purple);font-weight:300;line-height:1}
+.clabel{font-size:11px;font-weight:600;text-align:center;max-width:92px;line-height:1.2;color:var(--muted)}
+.cnode.set .clabel{color:var(--text)}
+.cnode.focus .clabel{color:var(--gold)}
+.cbase2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86px;height:86px;border-radius:50%;z-index:3;
+  background:radial-gradient(circle at 50% 38%,#3a2b5e,#160f28);border:1.6px solid var(--gold);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 0 28px -6px #f5c97777;padding:6px}
+.cbase2 input{background:transparent;border:0;text-align:center;color:var(--gold);font-weight:800;font-size:14px;width:74px;padding:0}
+.cbase2 input:focus{outline:none}
+.cbase2 span{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:3px}
+.lo-focus{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line);background:#13101f;color:var(--text);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.fchip.on{border-color:var(--gold);color:var(--gold);background:#1c1608}
+.fchip .i{width:14px;height:14px}
+.lo-pick{display:flex;flex-wrap:wrap;gap:8px}
+.pchip{border:1px solid var(--line);background:#13101f;color:var(--text);border-radius:12px;padding:9px 13px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pchip .i{width:15px;height:15px;color:var(--pc,var(--purple))}
+.pchip.on{border-color:var(--purple);background:#1e1636;color:#e9d5ff}
+.pchip.on .i{color:#c9a6ff}
+.pchip.used{opacity:.45}
+.lo-prompt{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#13101f;margin:9px 0;cursor:pointer;transition:border-color .15s}
+.lo-prompt:active{transform:scale(.99)}
+.lo-prompt:hover{border-color:#3a2d5e}
+.lo-pico{width:34px;height:34px;flex:none;border-radius:10px;background:#0f0d18;display:grid;place-items:center}
+.lo-pico .i{width:19px;height:19px}
+.lo-write{flex:none;background:#1a1330;border:1px solid #3a2d5e;color:var(--purple);border-radius:10px;width:38px;height:38px;display:grid;place-items:center;cursor:pointer}
+.lo-write .i{width:17px;height:17px}
+.lo-lesson{position:relative;z-index:2;text-align:left;background:#120e20cc;border:1px solid var(--line);border-left:3px solid var(--c);border-radius:12px;padding:12px 14px;margin:12px 4px 2px}
+.lo-lesson-h{display:flex;align-items:center;gap:6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--c);font-weight:700}
+.lo-lesson-h .i{width:13px;height:13px}
+.lo-lesson-b{font-family:var(--serif);font-size:14.5px;line-height:1.55;color:#e8e2f2;margin-top:6px}
+/* the Keeper chat */
+.chatbox{height:58vh;min-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:6px 2px 2px}
+.chat-input{display:flex;align-items:center;gap:9px;margin-top:12px}
+.chat-input input{flex:1;width:auto;border-radius:999px;padding:12px 16px}
+.csend{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 16px -6px var(--purple)}
+.csend:active{transform:scale(.94)}
+.csend .i{width:20px;height:20px}
+.msg{display:flex;gap:9px;max-width:88%}
+.msg.u{align-self:flex-end;flex-direction:row-reverse}
+.msg-ic{flex:none;width:28px;height:28px;border-radius:50%;background:#1a1330;border:1px solid var(--line);display:grid;place-items:center;color:var(--gold)}
+.msg-ic .i{width:16px;height:16px;filter:drop-shadow(0 0 5px #f5c97777)}
+.bub{padding:11px 14px;border-radius:16px;font-size:15px;line-height:1.5}
+.msg.k .bub{background:#17132a;border:1px solid var(--line);border-top-left-radius:5px;color:#ece9f5}
+.msg.u .bub{background:linear-gradient(135deg,#2a1f52,#3a2d6e);border-top-right-radius:5px;color:#fff}
+.bub.typing{display:flex;gap:4px;align-items:center}
+.bub.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:tdot 1.2s infinite}
+.bub.typing i:nth-child(2){animation-delay:.2s}.bub.typing i:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+/* achievement collectible card */
+.ach-ov{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:24px;
+  background:rgba(6,5,12,.72);backdrop-filter:blur(6px);opacity:0;transition:opacity .22s}
+.ach-ov.show{opacity:1}
+.ach-card{position:relative;width:min(320px,86vw);border-radius:24px;padding:30px 24px 22px;text-align:center;overflow:hidden;
+  background:
+    radial-gradient(120% 80% at 50% -10%, var(--glow,transparent), transparent 60%),
+    linear-gradient(170deg,var(--tint,#1d1733),#140f24 62%,#0e0a1b);
+  border:1.5px solid var(--rc);box-shadow:0 0 0 1px #ffffff08 inset,0 24px 70px -20px #000,0 0 44px -12px var(--rc);
+  transform:translateY(16px) scale(.94);opacity:0;transition:transform .35s cubic-bezier(.2,.9,.25,1.2),opacity .3s}
+.ach-ov.show .ach-card{transform:translateY(0) scale(1);opacity:1}
+.ach-card.locked{filter:saturate(.45) brightness(.9)}
+.ach-foil{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.42;
+  background:linear-gradient(115deg,transparent 34%,var(--rc) 50%,transparent 66%);
+  background-size:280% 280%;animation:foil 3.6s linear infinite}
+@keyframes foil{0%{background-position:160% 0}100%{background-position:-60% 0}}
+/* per-rarity foil + shine */
+.ach-card.rar-0 .ach-foil{opacity:.3;background:linear-gradient(115deg,transparent 36%,#c9cde0 50%,transparent 64%);background-size:280% 280%}
+.ach-card.rar-1 .ach-foil{opacity:.5;background:linear-gradient(115deg,transparent 32%,#5fb0fa 48%,#bfe0ff 52%,transparent 68%);background-size:280% 280%}
+.ach-card.rar-2 .ach-foil{opacity:.55;background:linear-gradient(115deg,transparent 30%,#a855f7 45%,#e9a8ff 51%,#ec4899 57%,transparent 72%);background-size:280% 280%}
+.ach-card.rar-3{box-shadow:0 0 0 1px #ffffff12 inset,0 24px 80px -18px #000,0 0 60px -10px var(--rc)}
+.ach-card.rar-3 .ach-foil{opacity:.7;background:linear-gradient(115deg,transparent 22%,#a855f7 40%,#f5c977 50%,#ec4899 60%,#f5c977 70%,transparent 82%);background-size:260% 260%;animation-duration:2.8s}
+.ach-x{position:absolute;top:12px;right:12px;z-index:3;background:#ffffff12;border:0;color:var(--muted);
+  width:30px;height:30px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.ach-x .i{width:16px;height:16px}
+.ach-rare{position:relative;z-index:2;display:inline-block;font-size:11px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;border:1px solid;border-radius:999px;padding:3px 12px;margin-bottom:16px}
+.ach-badge{position:relative;z-index:2;height:128px;display:grid;place-items:center;margin-bottom:6px}
+.ach-ring{position:absolute;width:118px;height:118px;border-radius:50%;
+  background:radial-gradient(circle,var(--rc) 0%,transparent 62%);opacity:.28;animation:ringpulse 2.6s ease-in-out infinite}
+@keyframes ringpulse{0%,100%{transform:scale(.9);opacity:.22}50%{transform:scale(1.08);opacity:.4}}
+.ach-ic .achbig{width:82px;height:82px;filter:drop-shadow(0 0 14px var(--rc))}
+.ach-card.locked .ach-ic .achbig{filter:none;color:var(--muted);opacity:.7}
+.ach-title{position:relative;z-index:2;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.ach-desc{position:relative;z-index:2;color:var(--muted);font-size:14px;margin:6px 12px 16px}
+.ach-meta{position:relative;z-index:2;display:flex;flex-direction:column;gap:7px;align-items:center}
+.ach-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+  background:#ffffff0a;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.ach-chip .i{width:14px;height:14px}
+.rtag{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--c);
+  border:1px solid var(--c);border-radius:999px;padding:2px 9px;align-self:center;opacity:.9}
+/* collection */
+.coll-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.coll{position:relative;border:1px solid var(--line);border-radius:16px;padding:14px 8px 10px;text-align:center;cursor:pointer;background:#13101f;transition:transform .16s,box-shadow .3s;overflow:hidden}
+.coll:active{transform:scale(.95)}
+.coll-ic{height:46px;display:grid;place-items:center;color:var(--muted)}
+.coll-ic .i{width:38px;height:38px}
+.coll-nm{font-size:12px;font-weight:600;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coll-st{font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-top:3px;color:var(--muted)}
+.coll.owned{border-color:var(--rc);box-shadow:0 0 16px -8px var(--rc)}
+.coll.owned .coll-ic{color:var(--rc)}
+.coll.owned .coll-ic .i{filter:drop-shadow(0 0 6px var(--rc))}
+.coll.owned .coll-st{color:var(--rc)}
+.coll.claim{border-color:var(--gold);animation:claimglow 2.2s ease-in-out infinite}
+.coll.claim .coll-ic{color:var(--gold)}
+.coll.claim .coll-ic .i{filter:drop-shadow(0 0 7px var(--gold))}
+.coll.claim .coll-st{color:var(--gold);font-weight:800}
+.coll.locked{opacity:.55}
+@keyframes claimglow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 18px -5px var(--gold)}}
+.companion{display:inline-flex;align-items:center;gap:7px;margin-top:10px;font-size:12px;color:var(--muted)}
+.companion .i{width:16px;height:16px;color:var(--gold);filter:drop-shadow(0 0 5px #f5c97799)}
+/* guided lessons */
+.lesson-card{display:flex;gap:0;align-items:stretch;border:1px solid var(--line);border-radius:18px;overflow:hidden;
+  background:linear-gradient(135deg,#15111f,#120e1c);cursor:pointer;transition:border-color .15s,transform .12s;margin-bottom:10px}
+.lesson-card:active{transform:scale(.99)}
+.lesson-card:hover{border-color:var(--a)}
+.lesson-img{position:relative;overflow:hidden;width:98px;flex:none;display:grid;place-items:center;border-right:1px solid var(--line);
+  background:radial-gradient(circle at 50% 30%,#4a3410,#2a1c46 60%,#140e26)}
+/* modern Hindu-cultural mandala motif behind the glyph */
+.lesson-img:before,.deity-emblem:before{content:"";position:absolute;inset:0;z-index:0;opacity:.5;background-position:center;background-repeat:no-repeat;background-size:116%;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23f5c977' stroke-width='0.9'%3E%3Ccircle cx='50' cy='50' r='43'/%3E%3Ccircle cx='50' cy='50' r='31'/%3E%3Ccircle cx='50' cy='50' r='19'/%3E%3Cline x1='68' y1='50' x2='92' y2='50'/%3E%3Cline x1='50' y1='68' x2='50' y2='92'/%3E%3Cline x1='32' y1='50' x2='8' y2='50'/%3E%3Cline x1='50' y1='32' x2='50' y2='8'/%3E%3Cline x1='62.7' y1='62.7' x2='79.7' y2='79.7'/%3E%3Cline x1='37.3' y1='62.7' x2='20.3' y2='79.7'/%3E%3Cline x1='37.3' y1='37.3' x2='20.3' y2='20.3'/%3E%3Cline x1='62.7' y1='37.3' x2='79.7' y2='20.3'/%3E%3Ccircle cx='59' cy='50' r='7'/%3E%3Ccircle cx='54.5' cy='57.8' r='7'/%3E%3Ccircle cx='45.5' cy='57.8' r='7'/%3E%3Ccircle cx='41' cy='50' r='7'/%3E%3Ccircle cx='45.5' cy='42.2' r='7'/%3E%3Ccircle cx='54.5' cy='42.2' r='7'/%3E%3C/g%3E%3Cg fill='%23f5c977'%3E%3Ccircle cx='92' cy='50' r='1.8'/%3E%3Ccircle cx='86.4' cy='71' r='1.8'/%3E%3Ccircle cx='71' cy='86.4' r='1.8'/%3E%3Ccircle cx='50' cy='92' r='1.8'/%3E%3Ccircle cx='29' cy='86.4' r='1.8'/%3E%3Ccircle cx='13.6' cy='71' r='1.8'/%3E%3Ccircle cx='8' cy='50' r='1.8'/%3E%3Ccircle cx='13.6' cy='29' r='1.8'/%3E%3Ccircle cx='29' cy='13.6' r='1.8'/%3E%3Ccircle cx='50' cy='8' r='1.8'/%3E%3Ccircle cx='71' cy='13.6' r='1.8'/%3E%3Ccircle cx='86.4' cy='29' r='1.8'/%3E%3C/g%3E%3C/svg%3E")}
+.lesson-img img{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:cover}
+.lesson-imic{position:relative;z-index:1;color:var(--gold);filter:drop-shadow(0 0 10px #f5c97766)}.lesson-imic .i{width:30px;height:30px}
+.lesson-meta{padding:12px 13px;min-width:0}
+.lesson-name{font-weight:700;font-size:15px}
+.lesson-sub{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
+.lesson-blurb{font-family:var(--serif);font-size:13px;color:#cbbfe6;line-height:1.5;margin-top:7px}
+.lesson-go{display:inline-flex;align-items:center;gap:6px;color:var(--a);font-size:12px;font-weight:700;margin-top:9px}
+.lesson-go .i{width:13px;height:13px}
+.lesson-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lesson-all{color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.lesson-done{display:inline-flex;align-items:center;gap:6px;color:#6ee7b7;font-size:11.5px;font-weight:700;margin-top:9px}
+.lesson-done .i{width:13px;height:13px}
+.lesson-card.done{border-color:#2e6b52}
+.lesson-card.resume{border-color:var(--a)}
+.lesson-resume-bar{height:5px;border-radius:999px;background:#241d3a;overflow:hidden;margin:9px 0 3px}
+.lesson-resume-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--a),var(--gold))}
+/* --- reworked vertical journey cards (deity centered, title + description below) --- */
+.jcard{flex-direction:column;align-items:stretch;gap:0;padding:0}
+.rec-feature .lesson-card{border-color:var(--gold);box-shadow:0 8px 28px rgba(245,201,119,.14)}
+.rec-feature .jcard-art{height:172px}
+/* onboarding */
+.onb-top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 0}
+.onb-brand{display:flex;align-items:center;gap:7px;font-weight:800;color:var(--gold)}
+.onb-brand .i{width:22px;height:22px}
+.onb-signin{color:var(--muted,#9a93b8);font-size:14px;text-decoration:none;cursor:pointer}
+.onb-body{min-height:52vh;display:flex;flex-direction:column;justify-content:center}
+.onb-hero{text-align:center;padding:12px 6px}
+.onb-photo{width:100%;max-width:330px;margin:0 auto 4px;border-radius:22px;overflow:hidden;aspect-ratio:4/3;background:rgba(255,255,255,.04);box-shadow:0 16px 44px rgba(0,0,0,.5),inset 0 0 0 1px rgba(245,201,119,.12)}
+.onb-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.onb-hero.has-photo .onb-ic{display:none}
+.onb-hero.has-photo .onb-h{margin-top:16px}
+.onb-ic .i{width:84px;height:84px;color:var(--gold);filter:drop-shadow(0 0 26px rgba(245,201,119,.5))}
+.onb-h{font-size:28px;line-height:1.15;margin:18px 10px 10px}
+.onb-h.sm{font-size:22px;margin:6px 2px 6px;text-align:left}
+.onb-qic{text-align:left;margin:0 2px 2px}
+.onb-qic .i{width:40px;height:40px;color:var(--gold);filter:drop-shadow(0 0 16px rgba(245,201,119,.45))}
+.onb-p{color:var(--muted,#b4acd0);font-size:16px;line-height:1.55;margin:0 14px}
+.onb-p.sm{font-size:14px;margin:0 2px 14px;text-align:left}
+.onb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.onb-grid.two{grid-template-columns:1fr 1fr}
+.onb-chip{display:flex;align-items:center;gap:10px;justify-content:flex-start;background:var(--panel,#161326);
+  border:1px solid var(--line);border-radius:14px;padding:16px 14px;color:var(--text,#ece9f5);font-size:15px;
+  font-weight:600;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+.onb-chip.wide{grid-column:1/-1;justify-content:center}
+.onb-chip .i{width:20px;height:20px}
+.onb-chip.sel{border-color:var(--gold);background:rgba(245,201,119,.10)}
+.onb-chip.sel .i{color:var(--gold)}
+.onb-foot{position:sticky;bottom:0;padding:14px 0 calc(10px + env(safe-area-inset-bottom));
+  background:linear-gradient(0deg,var(--bg) 72%,transparent)}
+.onb-dots{display:flex;gap:7px;justify-content:center;margin-bottom:14px}
+.onb-dots span{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.onb-dots span.on{background:var(--gold);width:20px;border-radius:4px}
+.onb-nav{display:flex;gap:10px;align-items:center}
+.onb-nav .btn{flex:1}
+.onb-nav .btn[disabled]{opacity:.4;pointer-events:none}
+.jcard-art{position:relative;height:148px;display:grid;place-items:center;overflow:hidden;border-bottom:1px solid var(--line);
+  background:radial-gradient(circle at 50% 32%,#4a3410,#2a1c46 60%,#140e26)}
+.deity-emblem{position:relative;width:104px;height:104px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
+  border:2px solid #ffffff22;box-shadow:0 10px 30px -12px #000,0 0 0 6px #ffffff08}
+.deity-emblem .deity-glyph{position:relative;z-index:1;color:var(--gold);filter:drop-shadow(0 0 10px #f5c97766)}
+.deity-emblem .deity-glyph .i{width:40px;height:40px}
+.deity-emblem img{position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:cover}
+.deity-emblem.lg{width:150px;height:150px}
+.deity-emblem.lg .deity-glyph .i{width:58px;height:58px}
+.jcard-badge{position:absolute;top:10px;right:10px;z-index:3;background:var(--a);color:#15101f;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:999px}
+.jcard-body{padding:14px 15px 15px}
+.jcard-title{font-weight:800;font-size:16px}.jcard-title span{color:var(--muted);font-weight:600}
+.jcard-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
+.jcard-desc{font-family:var(--serif);font-size:13.5px;color:#cbbfe6;line-height:1.55;margin-top:9px}
+/* --- journey detail / preview screen --- */
+.jdetail{text-align:center}
+.jd-art{display:flex;justify-content:center;margin:4px 0 14px}
+.jd-title{margin:0;font-size:26px}
+.jd-subtitle{font-family:var(--serif);font-style:italic;color:#cbbfe6;font-size:16px;margin-top:2px}
+.jd-chips{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin:14px 0 4px}
+.jd-chips span{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);background:#ffffff08;border:1px solid #ffffff12;border-radius:999px;padding:5px 10px}
+.jd-chips .i{width:13px;height:13px}
+.jd-desc{font-family:var(--serif);font-size:15px;line-height:1.6;color:#e2dcf2;text-align:left;margin:14px 2px 16px}
+.jd-head{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 2px 8px}
+.jd-steps{text-align:left;margin:0 0 4px;padding-left:20px}
+.jd-steps li{font-size:14px;color:#d9cff2;margin:5px 0;font-family:var(--serif)}
+.jd-prompt{display:flex;gap:8px;text-align:left;background:#ffffff07;border:1px solid #ffffff12;border-radius:12px;padding:11px 12px;margin:14px 0 2px;font-family:var(--serif);font-style:italic;font-size:14px;color:#cbbfe6}
+.jd-sound{margin-top:16px}
+.jd-sound-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,#9a93b8);text-align:center;margin-bottom:9px}
+.jd-prompt .i{flex:none;margin-top:2px;width:15px;height:15px}
+.lesson-card.done .lesson-img{filter:saturate(1.05)}
+.lesson-seal{position:absolute;z-index:2;top:6px;left:6px;width:22px;height:22px;border-radius:50%;background:#0f2a20cc;border:1px solid #6ee7b7;display:grid;place-items:center;color:#6ee7b7}
+.lesson-seal .i{width:12px;height:12px}
+.lesson-card.soon{cursor:default;opacity:.62}
+.lesson-card.soon:hover{border-color:var(--line)}
+.lesson-card.soon .lesson-imic{color:var(--muted)}
+.soon-tag{color:var(--muted)!important}
+.trk-head{margin:20px 2px 10px;padding-left:11px;border-left:3px solid var(--a)}
+.trk-name{font-weight:800;font-size:16px;color:#f1ecff}
+.trk-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+.lesson-bg{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center 30%;opacity:.26;filter:blur(2px) saturate(1.15);pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 120% 85% at center 38%,#000 42%,transparent 82%);mask-image:radial-gradient(ellipse 120% 85% at center 38%,#000 42%,transparent 82%)}
+.lesson-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,#0b0a12cc 72%,#0b0a12)}
+.lesson-top{margin:6px 2px 2px;position:relative;z-index:1;text-align:center}
+.lesson-ttl{font-size:19px;font-weight:800;letter-spacing:.2px}
+.lesson-ttl .muted{font-weight:600}
+.lesson-step{font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:.08em}
+.lesson-teach{font-family:var(--serif);font-size:16px;line-height:1.6;color:#e8e2f2;text-align:center;padding:4px 12px;max-width:540px;margin:4px auto 0;min-height:92px}
+.lesson-foot{display:flex;align-items:center;gap:12px;margin-top:12px}
+.companion .cph{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid #4a3d6e;box-shadow:0 0 8px #f5c97755}
+.motebal{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--gold);
+  background:#1a1330;border:1px solid #3a2d5e;border-radius:999px;padding:4px 11px}
+.motebal .i{width:14px;height:14px}
+/* companions */
+.comp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.comp{position:relative;border:1px solid var(--line);border-radius:16px;padding:16px 8px 10px;text-align:center;cursor:pointer;background:#13101f;overflow:hidden;transition:transform .16s}
+.comp:active{transform:scale(.95)}
+.comp.owned{border-color:var(--el);box-shadow:0 0 16px -8px var(--el)}
+.comp.eq{box-shadow:0 0 18px -6px var(--el)}
+.comp-eqtag{position:absolute;top:0;left:0;right:0;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--el);color:#120d1e;font-weight:800;padding:2px}
+.comp-ic{height:50px;display:grid;place-items:center;color:var(--el);margin-top:4px}
+.comp-ic .i{width:40px;height:40px;transition:filter .3s,transform .3s}
+.comp.owned .comp-ic .i{filter:drop-shadow(0 0 5px var(--el))}
+.comp-ic.s1 .i{filter:drop-shadow(0 0 7px var(--el));transform:scale(1.05)}
+.comp-ic.s2 .i{filter:drop-shadow(0 0 10px var(--el));transform:scale(1.12)}
+.comp-ic.s3 .i{filter:drop-shadow(0 0 14px var(--el)) drop-shadow(0 0 22px var(--el));transform:scale(1.18)}
+.comp.locked{opacity:.78}
+.comp.locked .comp-ic{color:var(--muted)}
+.comp-nm{font-size:12px;font-weight:600;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.comp-st{font-size:11px;margin-top:3px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:3px}
+.comp.owned .comp-st{color:var(--el)}
+.ach-ic.s3 .achbig{filter:drop-shadow(0 0 16px currentColor) drop-shadow(0 0 28px currentColor)}
+.ach-ic.s2 .achbig{filter:drop-shadow(0 0 14px currentColor)}
+/* shop */
+.shop-row{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:16px;background:#13101f;margin:10px 0}
+.shop-row.owned{opacity:.75}
+.shop-row.locked{opacity:.7}
+.shop-ic{width:46px;height:46px;flex:none;border-radius:12px;background:#0f0d18;display:grid;place-items:center;border:1px solid var(--rc)}
+.shop-ic .i{width:26px;height:26px}
+.shop-nm{font-weight:700;display:flex;align-items:center;gap:7px}
+.shop-buy{flex:none}
+/* artifacts */
+.art-row{display:flex;align-items:center;gap:13px;padding:13px;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(135deg,#15111f,#120e1c);margin:10px 0;cursor:pointer;transition:border-color .15s,transform .12s}
+.art-row:active{transform:scale(.99)}
+.art-row:hover{border-color:#3a3550}
+.art-row.owned{border-color:var(--rc);box-shadow:0 0 16px -9px var(--rc)}
+.art-ic{position:relative;overflow:hidden;width:52px;height:52px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 38%,#241a3a,#100c1c);border:1px solid var(--rc);box-shadow:0 0 14px -7px var(--rc)}
+.art-ic .i{width:28px;height:28px}
+.art-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.art-cimg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:114px;height:114px;object-fit:cover;
+  border-radius:20px;box-shadow:0 0 28px -6px var(--rc),0 0 0 1px #ffffff14}
+.art-nm{font-weight:700;font-size:15px}
+.art-origin{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+.art-sub{font-size:12.5px;color:#cbbfe6;margin-top:3px}.art-sub b{color:var(--gold)}
+.art-act{flex:none}
+.art-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.art-pill .i{width:12px;height:12px}
+/* altar scene */
+.altar-stage{position:relative;margin:8px 0 2px;border-radius:18px;overflow:hidden;border:1px solid var(--line);
+  background:radial-gradient(120% 95% at 50% 22%,#1a1530,#0c0a16)}
+.altar-svg{display:block;width:100%;height:auto}
+.altar-stage.complete{box-shadow:inset 0 0 50px -12px #f5c97755,0 0 34px -14px var(--gold);border-color:#5a4826}
+.apiece{transition:opacity .18s}
+.apiece:active{opacity:.6}
+/* icons */
+.i{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.2em;flex:none;transition:transform .2s ease,filter .2s ease}
+.i.g{color:var(--gold)}.i.p{color:var(--purple)}.i.pink{color:var(--pink)}.i.flame{color:#fb923c}
+/* gradient-filled variants (stroke + fill follow the gradient) */
+.i.grad-gold{stroke:url(#gGold)}.i.grad-gold [fill="currentColor"]{fill:url(#gGold)}
+.i.grad-aur{stroke:url(#gAur)}.i.grad-aur [fill="currentColor"]{fill:url(#gAur)}
+.i.grad-pur{stroke:url(#gPur)}.i.grad-pur [fill="currentColor"]{fill:url(#gPur)}
+.i.grad-flame{stroke:url(#gFlame)}.i.grad-flame [fill="currentColor"]{fill:url(#gFlame)}
+.i.grad-blue{stroke:url(#gBlue)}.i.grad-blue [fill="currentColor"]{fill:url(#gBlue)}
+.i.grad-slate{stroke:url(#gSlate)}.i.grad-slate [fill="currentColor"]{fill:url(#gSlate)}
+/* glow */
+.i.glow{filter:drop-shadow(0 0 4px currentColor)}
+.i.glow2{filter:drop-shadow(0 0 7px currentColor) drop-shadow(0 0 14px currentColor)}
+.i.mark{width:27px;height:27px;color:var(--gold);stroke:url(#gGold);filter:drop-shadow(0 0 7px #f5c977cc);animation:markpulse 4s ease-in-out infinite}
+.i.mark circle{fill:url(#gGold)}
+.i.nav{width:22px;height:22px}
+.i.lg{width:46px;height:46px;filter:drop-shadow(0 0 16px currentColor)}
+@keyframes markpulse{0%,100%{filter:drop-shadow(0 0 5px #f5c97799)}50%{filter:drop-shadow(0 0 12px #f5c977ee)}}
+.brand .mark{display:inline-flex}
+.chip .big .i{width:26px;height:26px;color:#cbb5e8;transition:transform .2s ease,filter .2s ease}
+.chip.sel .big .i{color:#f0e6ff;filter:drop-shadow(0 0 7px var(--purple));transform:scale(1.12)}
+.lb-row .rk .i{width:18px;height:18px}
+.lb-row .rk .medal{width:20px;height:20px;filter:drop-shadow(0 0 5px currentColor)}
+.pill .i{width:15px;height:15px;filter:drop-shadow(0 0 4px currentColor)}
+nav button .ic .i{width:22px;height:22px}
+nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple));transform:translateY(-1px) scale(1.1)}
+.ach .e .i{filter:none}
+.ach.on .e .i{filter:drop-shadow(0 0 6px var(--gold))}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gGold" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24"><stop offset="0" stop-color="#ffe9b8"/><stop offset="1" stop-color="#e0953a"/></linearGradient>
+  <linearGradient id="gAur" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24"><stop offset="0" stop-color="#f7d99a"/><stop offset=".5" stop-color="#c084fc"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+  <linearGradient id="gPur" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24"><stop offset="0" stop-color="#d8b4fe"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+  <linearGradient id="gFlame" gradientUnits="userSpaceOnUse" x1="12" y1="24" x2="12" y2="0"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#fde047"/></linearGradient>
+  <linearGradient id="gBlue" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24"><stop offset="0" stop-color="#bfe0ff"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
+  <linearGradient id="gSlate" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24"><stop offset="0" stop-color="#e2e8f0"/><stop offset="1" stop-color="#94a3b8"/></linearGradient>
+</defs></svg>
+<canvas class="stars"></canvas>
+<div id="app"></div>
+<nav class="hidden" id="nav"><div class="inner">
+  <button data-tab="meditate" class="on"><span class="ic"></span>Meditate</button>
+  <button data-tab="lessons"><span class="ic"></span>Journeys</button>
+  <button data-tab="map"><span class="ic"></span>Map</button>
+  <button data-tab="leagues"><span class="ic"></span>Leagues</button>
+  <button data-tab="journal"><span class="ic"></span>Journal</button>
+  <button data-tab="collect"><span class="ic"></span>Collect</button>
+  <button data-tab="profile"><span class="ic"></span>You</button>
+</div></nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const el=(h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
+async function api(path,method='GET',body){
+  const o={method,headers:{}};
+  if(body){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body);}
+  const r=await fetch('api/'+path,o);
+  let j={};try{j=await r.json();}catch(e){}
+  if(!r.ok) throw (j.error||'Something went wrong');
+  return j;
+}
+function toast(html,ms=2600){const t=el(`<div class="toast">${html}</div>`);document.body.appendChild(t);setTimeout(()=>t.remove(),ms);}
+const fmt=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':''+n;
+
+/* ---- inline SVG icon set (no asset files; currentColor-driven) ---- */
+const SVGP={
+  lumen:'<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/><g><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.6" y1="5.6" x2="7.3" y2="7.3"/><line x1="16.7" y1="16.7" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="16.7" y2="7.3"/><line x1="7.3" y1="16.7" x2="5.6" y2="18.4"/></g>',
+  meditate:'<circle cx="12" cy="5.4" r="2.6" fill="currentColor" stroke="none"/><path d="M12 9c-2 0-3.3 1.4-3.8 3.2C6.5 12.5 5 13.8 5 15.5 5 16.3 5.6 17 6.5 17h11c.9 0 1.5-.7 1.5-1.5 0-1.7-1.5-3-3.2-3.3C15.3 10.4 14 9 12 9Z" fill="currentColor" stroke="none"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18"/>',
+  trophy:'<path d="M8 4h8v4.5a4 4 0 0 1-8 0V4Z"/><path d="M8 5.2H5a2 2 0 0 0 0 4h1.2M16 5.2h3a2 2 0 0 1 0 4h-1.2"/><path d="M12 12.5V16M9.2 20h5.6M10 20c0-1.4 .9-2 2-2s2 .6 2 2"/>',
+  book:'<path d="M5 4.5h10.5a2 2 0 0 1 2 2V20H7a2 2 0 0 1-2-2V4.5Z"/><path d="M17.5 17H7a2 2 0 0 0-2 2"/><path d="M8.5 8.5h6M8.5 11.5h5"/>',
+  spark:'<path d="M12 3c.7 5 3 7.3 8 8-5 .7-7.3 3-8 8-.7-5-3-7.3-8-8 5-.7 7.3-3 8-8Z" fill="currentColor" stroke="none"/>',
+  flame:'<path d="M12 3c3 3 5 5.5 5 9a5 5 0 0 1-10 0c0-1.9.7-3.1 1.9-4.3C9 9.2 9.6 10 10.1 10.6 10.6 8 11 5.5 12 3Z" fill="currentColor" stroke="none"/>',
+  live:'<circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="7" opacity=".55"/>',
+  rain:'<path d="M7.2 14.5a4.3 4.3 0 0 1-.4-8.6 5.8 5.8 0 0 1 11.1 1.4A3.4 3.4 0 0 1 17 14.5"/><line x1="8.5" y1="17.5" x2="7.5" y2="20"/><line x1="12" y1="17.5" x2="11" y2="21"/><line x1="15.5" y1="17.5" x2="14.5" y2="20"/>',
+  forest:'<path d="M12 3 7 11h3l-3 5h10l-3-5h3L12 3Z" fill="currentColor" stroke="none"/><line x1="12" y1="16" x2="12" y2="21"/>',
+  ocean:'<path d="M3 9c2 0 2.2-2 4.5-2S10 9 12 9s2.2-2 4.5-2S19 9 21 9"/><path d="M3 14c2 0 2.2-2 4.5-2S10 14 12 14s2.2-2 4.5-2S19 14 21 14"/><path d="M3 19c2 0 2.2-2 4.5-2S10 19 12 19s2.2-2 4.5-2S19 19 21 19"/>',
+  space:'<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/>',
+  silence:'<circle cx="12" cy="12" r="8.5" opacity=".5"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>',
+  calm:'<path d="M3 12c2 0 2.4-3 4.5-3S10 12 12 12s2.4-3 4.5-3S19 12 21 12"/><path d="M3 17c2 0 2.4-3 4.5-3S10 17 12 17s2.4-3 4.5-3S19 17 21 17"/>',
+  bolt:'<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="currentColor" stroke="none"/>',
+  fog:'<path d="M4 8c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/><path d="M5 12c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/><path d="M4 16c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z" fill="currentColor" stroke="none"/>',
+  sunrise:'<line x1="3" y1="19" x2="21" y2="19"/><path d="M7.5 19a4.5 4.5 0 0 1 9 0"/><line x1="12" y1="4" x2="12" y2="8"/><line x1="4.8" y1="10.8" x2="6.2" y2="12.2"/><line x1="19.2" y1="10.8" x2="17.8" y2="12.2"/>',
+  flag:'<line x1="6" y1="3" x2="6" y2="21"/><path d="M6 4h11l-2 3 2 3H6Z" fill="currentColor" stroke="none"/>',
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>',
+  pin:'<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>',
+  up:'<line x1="12" y1="19" x2="12" y2="6"/><path d="M6 11l6-6 6 6"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 6.5"/>',
+  clock:'<circle cx="12" cy="12.5" r="8"/><path d="M12 8v4.5l3.2 1.9"/><path d="M9 2.8h6"/><path d="M12 2.8v1.7"/>',
+  seal:'<circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="6.1" stroke-dasharray="0.4 2" opacity=".75"/><path d="M12 15.7c-2.6 0-4.6-1.6-4.6-3.2 1.2 0 2 .3 2.6.8C9.4 11.5 10.4 9.9 12 8.5c1.6 1.4 2.6 3 2 4.8.6-.5 1.4-.8 2.6-.8 0 1.6-2 3.2-4.6 3.2Z" fill="currentColor" stroke="none"/>',
+  glow:'<circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="5.8" opacity=".85"/><circle cx="12" cy="12" r="8.6" opacity=".45"/>',
+  flare:'<circle cx="12" cy="12" r="2.7" fill="currentColor" stroke="none"/><path d="M12 2.4v4.3M12 17.3v4.3M3.5 7.2l3.7 2.1M16.8 14.7l3.7 2.1M20.5 7.2l-3.7 2.1M7.2 14.7l-3.7 2.1"/>',
+  beacon:'<circle cx="12" cy="5" r="2.3" fill="currentColor" stroke="none"/><path d="M12 7.6 6 20h12L12 7.6Z" opacity=".5"/><path d="M9 15h6"/>',
+  nova:'<path d="M12 2l1.9 5.6L19 4.8l-2.4 5.3L22 12l-5.4 1.9L19 19.2l-5.3-2.4L12 22l-1.9-5.2L4.8 19l2.4-5.3L2 12l5.2-1.9L4.8 4.8l5.3 2.4L12 2Z" fill="currentColor" stroke="none"/>',
+  star:'<path d="M12 3l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6 6.7 19.3l1.1-5.9L3.4 9.3l6-.8L12 3Z" fill="currentColor" stroke="none"/>',
+  lotus:'<path d="M12 20c-4.2 0-7.5-2.6-7.5-5.2 2 0 3.2.5 4.2 1.3C8 13 9.6 10.2 12 7.5c2.4 2.7 4 5.5 3.3 8.6 1-.8 2.2-1.3 4.2-1.3C19.5 17.4 16.2 20 12 20Z" fill="currentColor" stroke="none"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/>',
+  close:'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+  play:'<path d="M7 4.5 19 12 7 19.5V4.5Z" fill="currentColor" stroke="none"/>',
+  stop:'<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
+  sound:'<path d="M4 9.5v5h3.5L12 18V6L7.5 9.5H4Z" fill="currentColor" stroke="none"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+  mute:'<path d="M4 9.5v5h3.5L12 18V6L7.5 9.5H4Z" fill="currentColor" stroke="none"/><line x1="16" y1="9.5" x2="21" y2="14.5"/><line x1="21" y1="9.5" x2="16" y2="14.5"/>',
+  compass:'<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4 13.2 13l-4.8 2.6L10.8 11l4.8-2.6Z" fill="currentColor" stroke="none"/>',
+  chat:'<path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v7.5a1.5 1.5 0 0 1-1.5 1.5H9.5L5 20v-4H4a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 4 5.5Z"/><circle cx="8.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11" r="1" fill="currentColor" stroke="none"/>',
+  send:'<path d="M4 11.8 20 4l-7.2 16-2.6-6.2L4 11.8Z" fill="currentColor" stroke="none"/><path d="M10.2 13.8 20 4"/>',
+  // life-os pillar icons
+  p_rel:'<path d="M8 13.3S3.6 10.8 3.6 7.6A2.6 2.6 0 0 1 8 5.8 2.6 2.6 0 0 1 12.4 7.6C12.4 10.8 8 13.3 8 13.3Z" fill="currentColor" stroke="none"/><path d="M15 18.3s-4.4-2.5-4.4-5.7A2.6 2.6 0 0 1 15 10.8a2.6 2.6 0 0 1 4.4 1.8c0 3.2-4.4 5.7-4.4 5.7Z" fill="currentColor" stroke="none"/>',
+  p_home:'<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 10.2V19h13v-8.8"/><rect x="10" y="13.5" width="4" height="5.5" rx="0.6"/>',
+  p_career:'<rect x="3" y="7.5" width="18" height="11.5" rx="2.2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><line x1="3" y1="13" x2="21" y2="13"/><rect x="10.3" y="11.4" width="3.4" height="3.2" rx="0.7" fill="currentColor" stroke="none"/>',
+  p_music:'<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="16" r="2.5" fill="currentColor" stroke="none"/>',
+  p_fit:'<rect x="2.3" y="9.5" width="2.3" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="5.4" y="7.4" width="2.3" height="9.2" rx="1" fill="currentColor" stroke="none"/><rect x="16.3" y="7.4" width="2.3" height="9.2" rx="1" fill="currentColor" stroke="none"/><rect x="19.4" y="9.5" width="2.3" height="5" rx="1" fill="currentColor" stroke="none"/><line x1="7.7" y1="12" x2="16.3" y2="12"/>',
+  p_health:'<path d="M12 20S4 15 4 9.2A4 4 0 0 1 12 6.6 4 4 0 0 1 20 9.2C20 15 12 20 12 20Z"/><path d="M5 12h3l1.5-3 2.5 5.5L14 11h5"/>',
+  p_growth:'<path d="M12 20.5v-7"/><path d="M12 14c0-3-2.3-5.2-5.3-5.2C6.4 11.8 8.6 14 12 14Z" fill="currentColor" stroke="none"/><path d="M12 12c0-3.2 2.4-5.6 5.6-5.6C17.9 9.6 15.5 12 12 12Z" fill="currentColor" stroke="none"/>',
+  p_coin:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M14.4 9.3c-.5-.8-1.4-1.2-2.4-1.2-1.4 0-2.5.8-2.5 2s1.1 1.8 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.4-2.5-1.2"/>',
+  p_palette:'<path d="M12 3C6.8 3 3 6.8 3 11.5S6.8 20 12 20c1.1 0 1.8-.9 1.8-2 0-1.4 1-2.1 2.4-2.1 2.7 0 4.8-2 4.8-4.9C21 6.6 17 3 12 3Z"/><circle cx="7.6" cy="10.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="7.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.8" r="1.1" fill="currentColor" stroke="none"/>',
+  p_people:'<circle cx="12" cy="7" r="2.6"/><circle cx="5.3" cy="9.5" r="2.1"/><circle cx="18.7" cy="9.5" r="2.1"/><path d="M7.4 18.5c0-2.5 2-4.5 4.6-4.5s4.6 2 4.6 4.5"/><path d="M2.4 17.4c0-1.9 1.3-3.5 3.1-3.6M21.6 17.4c0-1.9-1.3-3.5-3.1-3.6"/>',
+  p_mtn:'<path d="M2.4 19 9 7l3.8 6.8L15.2 10 21.6 19Z" fill="currentColor" stroke="none"/><path d="M7.6 11.6 9 9.2l1.3 2.3"/>',
+  mic:'<rect x="9" y="2.5" width="6" height="11" rx="3" fill="currentColor" stroke="none"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/>',
+  camera:'<path d="M3 8.5a2 2 0 0 1 2-2h2l1.2-1.8h7.6L19 6.5h0a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="12" cy="13" r="3.4"/>',
+  // collectible meditation items
+  cushion:'<path d="M12 8c4.4 0 8 1.8 8 4s-3.6 4-8 4-8-1.8-8-4 3.6-4 8-4Z" fill="currentColor" stroke="none"/><path d="M4 12v2c0 2.2 3.6 4 8 4s8-1.8 8-4v-2"/>',
+  incense:'<path d="M12 2.6c-1.1 1.3.9 2.2 0 3.6"/><circle cx="12" cy="7" r="1" fill="currentColor" stroke="none"/><line x1="12" y1="8" x2="12" y2="18.5"/><path d="M8 18.5h8l-1 2.4H9Z" fill="currentColor" stroke="none"/>',
+  candle:'<path d="M12 3.4c1.4 1.5 2.3 2.7 2.3 4.1a2.3 2.3 0 0 1-4.6 0c0-1.4.9-2.6 2.3-4.1Z" fill="currentColor" stroke="none"/><rect x="8.5" y="10" width="7" height="10.5" rx="1.4"/><line x1="12" y1="8" x2="12" y2="10"/>',
+  mala:'<circle cx="12" cy="10" r="6" stroke-dasharray="1.4 2.4"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/><path d="M12 17.4v3.6M10.6 21h2.8"/>',
+  bowl:'<path d="M4.5 11h15l-1.8 5.2a3 3 0 0 1-2.8 2H9.1a3 3 0 0 1-2.8-2L4.5 11Z" fill="currentColor" stroke="none"/><line x1="3.5" y1="11" x2="20.5" y2="11"/><line x1="19" y1="5.5" x2="21" y2="7.5"/>',
+  bell:'<path d="M12 4a6 6 0 0 1 6 6v5H6v-5a6 6 0 0 1 6-6Z"/><path d="M4.5 15h15"/><line x1="12" y1="4" x2="12" y2="2.4"/><circle cx="12" cy="18" r="1.4" fill="currentColor" stroke="none"/>',
+  crystal:'<path d="M12 2.5 5 9l7 12.5L19 9l-7-6.5Z"/><path d="M5 9h14M8.5 9 12 2.5 15.5 9M8.5 9 12 21.5 15.5 9"/>',
+  flags:'<path d="M3 5c6 2.6 12 2.6 18 0"/><path d="M6 5.8v4l2.6-.9ZM11 6.1v4l2.6-.9ZM16 5.9v4l2.6-.9Z" fill="currentColor" stroke="none"/>',
+  enso:'<path d="M16.6 5.4A8 8 0 1 0 19 13.4" stroke-width="2.5"/>',
+  bonsai:'<path d="M7.5 17.5h9l-1 3.5h-7Z" fill="currentColor" stroke="none"/><path d="M12 17.5v-5M12 14c-2.5 0-4-1.2-4-3M12 12.5c2.5 0 4.5-1 4.5-3"/><circle cx="7.5" cy="8.5" r="2.4"/><circle cx="16.5" cy="8.5" r="2.8"/><circle cx="12" cy="6.3" r="2.6"/>',
+  // companions
+  c_moth:'<path d="M12 7.5c-1.3-2.4-5.5-3-7.3-1S4 12 6.2 12.6c-2 .6-2.3 3.4-.8 4.4s4.4-.2 6.6-2.5M12 7.5c1.3-2.4 5.5-3 7.3-1S20 12 17.8 12.6c2 .6 2.3 3.4.8 4.4s-4.4-.2-6.6-2.5" fill="currentColor" stroke="none"/><line x1="12" y1="7.5" x2="12" y2="15"/><path d="M12 7.5 10 4.5M12 7.5 14 4.5"/>',
+  c_fox:'<path d="M5 5c-.6 4 .9 8.2 7 11 6.1-2.8 7.6-7 7-11-2 .5-3.4 1.5-4.2 3.1C20 6.9 19 6.6 18 6.6M5 5c2 .5 3.4 1.5 4.2 3.1C4 6.9 5 6.6 6 6.6" fill="currentColor" stroke="none"/><path d="M9.3 11.2h0M14.7 11.2h0"/>',
+  c_koi:'<path d="M2.5 12c3-5 9.5-6 13.5-4 1.6.8 3.2 2.1 4.2 4-1 1.9-2.6 3.2-4.2 4-4 2-10.5 1-13.5-4Z" fill="currentColor" stroke="none"/><path d="M20.2 12 23 8.8v6.4L20.2 12Z" fill="currentColor" stroke="none"/><path d="M7.5 9.5c1 1 1 4 0 5"/>',
+  c_owl:'<path d="M6.5 5.5C8 4 10 4 11.5 5.3M17.5 5.5C16 4 14 4 12.5 5.3"/><path d="M6 11.5a6 6 0 0 0 12 0c0-3.2-2.6-6-6-6s-6 2.8-6 6Z"/><circle cx="9.6" cy="11" r="1.7"/><circle cx="14.4" cy="11" r="1.7"/><path d="M12 12.6v2.2"/><path d="M9.2 18.2 12 17l2.8 1.2"/>',
+  c_deer:'<path d="M12 8.5c-2.1 0-3.6 1.6-3.6 4 0 2.6 1.6 5.2 3.6 6.2 2-1 3.6-3.6 3.6-6.2 0-2.4-1.5-4-3.6-4Z" fill="currentColor" stroke="none"/><path d="M8.5 8C8 6.5 8 5 9 3.6 9.4 5 10.2 5.4 11 6M15.5 8c.5-1.5.5-3-.5-4.4C14.6 5 13.8 5.4 13 6M7.2 5.2 6 3.6M16.8 5.2 18 3.6"/>',
+  c_whale:'<path d="M2.5 13.5c0-3.2 3.2-5.3 7.3-5.3s7.3 2.1 7.3 5.3c0 2.1-1.6 3.7-4.2 4.2H6.7c-2.6-.5-4.2-2.1-4.2-4.2Z" fill="currentColor" stroke="none"/><path d="M17 13c1.6-.6 3.2-.6 4.8 0-1 1.3-1 2.6 0 3.9-1.6.3-3.2 0-4.8-1.1" fill="currentColor" stroke="none"/><path d="M8.5 7.5C8 5.8 8.8 4.6 9.6 3.6"/>',
+  // shop
+  chimes:'<path d="M7.5 5.5c2 1.4 7 1.4 9 0"/><line x1="7.5" y1="5.5" x2="7.5" y2="9.3"/><line x1="16.5" y1="5.5" x2="16.5" y2="9.3"/><ellipse cx="7.5" cy="10.5" rx="4.5" ry="1.7" fill="currentColor" stroke="none"/><ellipse cx="16.5" cy="10.5" rx="4.5" ry="1.7" fill="currentColor" stroke="none"/>',
+  sand:'<rect x="3" y="7" width="18" height="10" rx="2.2"/><path d="M5.5 10.5c2-1 4 1 6 0s3.5-1 5.5 0M5.5 13.5c2-1 4 1 6 0s3.5-1 5.5 0"/><circle cx="16.5" cy="11.8" r="1.3" fill="currentColor" stroke="none"/>',
+  lantern:'<path d="M9.5 3.2h5M12 3.2v2"/><rect x="7" y="5.2" width="10" height="12.6" rx="2.6"/><path d="M7 8.4h10M7 14.6h10"/><path d="M10 17.8v2M14 17.8v2"/><circle cx="12" cy="11.5" r="2" fill="currentColor" stroke="none"/>',
+  coin:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.6"/><path d="M12 9.2c-1.3 0-2 .8-2 1.6 0 2 4 1 4 3 0 .9-.8 1.6-2 1.6M12 8.3v1M12 15.4v.9"/>',
+  pendant:'<circle cx="12" cy="3.7" r="1.5"/><line x1="12" y1="5.2" x2="12" y2="6.7"/><path d="M12 6.7c-3 0-5.2 2.7-5.2 5.8S9 18.5 12 18.5s5.2-2.9 5.2-6S15 6.7 12 6.7Z" fill="currentColor" stroke="none"/><path d="M9.2 11.4h5.6" opacity="0.45"/>',
+  stone:'<ellipse cx="12" cy="12" rx="8.6" ry="6.2" fill="currentColor" stroke="none"/><ellipse cx="12" cy="11.6" rx="3.3" ry="2.4" fill="#120e22"/>',
+  amber:'<path d="M12 3.4c-3 3.9-4.9 6.3-4.9 9.1A4.9 4.9 0 0 0 16.9 12.5c0-2.8-1.9-5.2-4.9-9.1Z" fill="currentColor" stroke="none"/><circle cx="10.8" cy="13" r="1.1" fill="#120e22"/>',
+};
+const ITEM_ICON={zafu:'cushion',incense:'incense',candle:'candle',mala:'mala',bowl:'bowl',bell:'bell',crystal:'crystal',flags:'flags',enso:'enso',bonsai:'bonsai',chimes:'chimes',sand:'sand',lantern:'lantern',drachma:'coin',skyiron:'pendant',rudraksha:'mala',jade:'stone',amberbead:'amber',tingbowl:'bowl'};
+const ITEM_NAME={zafu:'Lotus Cushion',incense:'Incense',candle:'Candle',mala:'Mala Beads',bowl:'Singing Bowl',bell:'Temple Bell',crystal:'Amethyst',flags:'Prayer Flags',enso:'Ensō',bonsai:'Bonsai',chimes:'Tingsha Chimes',sand:'Zen Sand Garden',lantern:'Founder\'s Lantern',drachma:'Owl Drachma',skyiron:'Sky-Iron Amulet',rudraksha:'Rudraksha Mala',jade:'Nephrite Worry Stone',amberbead:'Baltic Amber',tingbowl:'Hand-Hammered Bowl'};
+const ART_ICON={drachma:'coin',skyiron:'pendant',rudraksha:'mala',jade:'stone',amberbead:'amber',tingbowl:'bowl'};
+const ART_IMG={drachma:'art/drachma.png?v=4',skyiron:'art/skyiron.png?v=4',rudraksha:'art/rudraksha.png?v=4',jade:'art/jade.png?v=4',amberbead:'art/amberbead.png?v=4',tingbowl:'art/tingbowl.png?v=4'};
+const COMP_ICON={moth:'c_moth',fox:'c_fox',koi:'c_koi',owl:'c_owl',deer:'c_deer',whale:'c_whale'};
+const COMP_NAME={moth:'Lumen Moth',fox:'Ember Fox',koi:'Tide Koi',owl:'Dawn Owl',deer:'Grove Deer',whale:'Star Whale'};
+const RARITY=[['Common','#9aa3b8','#232233','rgba(154,163,184,.20)'],['Rare','#5fb0fa','#13233e','rgba(95,176,250,.26)'],['Epic','#c084fc','#271640','rgba(192,132,252,.28)'],['Legendary','#f5c977','#33260f','rgba(245,201,119,.32)']];
+const ACH_RARITY={first_light:0,centurion:0,marathoner:1,moon_child:1,dawn_patrol:1,week_warrior:2,globetrotter:2,deep_diver:2,constellation:3,luminary:3,scribe:1,chronicler:2,pilgrim:2};
+function rarityOf(code){return ACH_RARITY[code]!=null?ACH_RARITY[code]:0;}
+function ic(name,cls){return `<svg class="i ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SVGP[name]||''}</svg>`;}
+const ACH_ICON={first_light:'lumen',marathoner:'flag',week_warrior:'flame',constellation:'spark',moon_child:'moon',dawn_patrol:'sunrise',globetrotter:'globe',centurion:'target',deep_diver:'ocean',luminary:'spark',scribe:'book',chronicler:'book',pilgrim:'lotus'};
+// each facet is coloured by the kind of act it represents
+const ACH_CAT_COLOR={
+  first_light:'#f5c977', marathoner:'#5fd3c2', centurion:'#5fd3c2',
+  deep_diver:'#5fb0fa', luminary:'#c084fc',
+  week_warrior:'#fb923c', constellation:'#ec4899',
+  moon_child:'#818cf8', dawn_patrol:'#fbbf24',
+  globetrotter:'#34d399', scribe:'#f472b6', chronicler:'#f9a8d4', pilgrim:'#f59e0b'};
+const catColor=(code)=>ACH_CAT_COLOR[code]||'#f5c977';
+
+/* starfield */
+(function(){const c=$('.stars'),x=c.getContext('2d');function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+  const st=[...Array(90)].map(()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.3+.2,a:Math.random()}));
+  (function loop(){x.clearRect(0,0,c.width,c.height);for(const s of st){s.a+=0.02;const o=.3+.3*Math.sin(s.a);x.fillStyle=`rgba(220,210,255,${o})`;x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();
+})();
+
+/* ---- Web Audio soundscapes (no asset files) ---- */
+const Sound=(function(){
+  let ac=null,nodes=[],master=null;
+  function ctx(){if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();}return ac;}
+  function noiseBuf(a){const b=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+  function stopAll(){nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}});nodes=[];}
+  function start(kind){
+    const a=ctx();if(a.state==='suspended')a.resume();
+    stopAll();
+    master=a.createGain();master.gain.value=0;master.connect(a.destination);
+    master.gain.linearRampToValueAtTime(0.5,a.currentTime+2);
+    nodes.push(master);
+    if(kind==='silence')return;
+    if(kind==='rain'||kind==='ocean'){
+      const src=a.createBufferSource();src.buffer=noiseBuf(a);src.loop=true;
+      const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=kind==='rain'?1600:500;
+      const g=a.createGain();g.gain.value=kind==='rain'?0.5:0.6;
+      if(kind==='ocean'){const lfo=a.createOscillator();lfo.frequency.value=0.12;const lg=a.createGain();lg.gain.value=0.35;lfo.connect(lg);lg.connect(g.gain);lfo.start();nodes.push(lfo);}
+      src.connect(lp);lp.connect(g);g.connect(master);src.start();nodes.push(src,lp,g);
+    }
+    if(kind==='forest'){
+      const src=a.createBufferSource();src.buffer=noiseBuf(a);src.loop=true;
+      const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900;bp.Q.value=0.6;
+      const g=a.createGain();g.gain.value=0.18;src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src,bp,g);
+      // occasional bird chirps
+      const timer=setInterval(()=>{if(!ac)return;const o=a.createOscillator();o.type='sine';const f=1400+Math.random()*1600;o.frequency.setValueAtTime(f,a.currentTime);o.frequency.linearRampToValueAtTime(f*1.3,a.currentTime+0.08);const bg=a.createGain();bg.gain.value=0.0;bg.gain.linearRampToValueAtTime(0.12,a.currentTime+0.02);bg.gain.linearRampToValueAtTime(0,a.currentTime+0.18);o.connect(bg);bg.connect(master);o.start();o.stop(a.currentTime+0.2);},1400+Math.random()*1500);
+      nodes.push({stop:()=>clearInterval(timer),disconnect:()=>{}});
+    }
+    if(kind==='space'){
+      [110,110.4,164.8,220].forEach((f,i)=>{const o=a.createOscillator();o.type='sine';o.frequency.value=f;const g=a.createGain();g.gain.value=0.0;g.gain.linearRampToValueAtTime(0.12,a.currentTime+3);
+        const lfo=a.createOscillator();lfo.frequency.value=0.05+i*0.02;const lg=a.createGain();lg.gain.value=0.05;lfo.connect(lg);lg.connect(g.gain);lfo.start();
+        o.connect(g);g.connect(master);o.start();nodes.push(o,g,lfo);});
+    }
+  }
+  function bell(){const a=ctx();if(a.state==='suspended')a.resume();const o=a.createOscillator();o.type='sine';o.frequency.value=528;const g=a.createGain();g.gain.value=0.0;g.gain.linearRampToValueAtTime(0.5,a.currentTime+0.01);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+3.5);const o2=a.createOscillator();o2.type='sine';o2.frequency.value=1056;const g2=a.createGain();g2.gain.value=0;g2.gain.linearRampToValueAtTime(0.18,a.currentTime+0.01);g2.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+2.5);o.connect(g);o2.connect(g2);g.connect(a.destination);g2.connect(a.destination);o.start();o2.start();o.stop(a.currentTime+3.6);o2.stop(a.currentTime+2.6);}
+  function stop(){if(master){try{master.gain.linearRampToValueAtTime(0,ac.currentTime+1.2);}catch(e){}}setTimeout(stopAll,1300);}
+  // Play a narration clip THROUGH the same context as the soundscape so iOS keeps one
+  // audio session (fixes the music cutting out) and duck the music under the voice.
+  let curVoice=null;
+  function duck(v,t){if(master){try{master.gain.cancelScheduledValues(ac.currentTime);master.gain.setValueAtTime(master.gain.value,ac.currentTime);master.gain.linearRampToValueAtTime(v,ac.currentTime+t);}catch(e){}}}
+  function say(arrayBuf,onend,onfail){
+    const a=ctx();if(a.state==='suspended')a.resume();
+    let done=false;const fin=(f)=>{if(done)return;done=true;duck(0.5,0.7);(f?onfail:onend)&&(f?onfail:onend)();};
+    try{
+      a.decodeAudioData(arrayBuf.slice(0)).then(buf=>{
+        try{duck(0.14,0.3);const src=a.createBufferSource();src.buffer=buf;const g=a.createGain();g.gain.value=1.0;
+          src.connect(g);g.connect(a.destination);src.onended=()=>fin(false);curVoice=src;src.start();}
+        catch(e){fin(true);}
+      }).catch(()=>fin(true));
+    }catch(e){fin(true);}
+    return {stop:()=>{try{curVoice&&curVoice.stop();}catch(e){}curVoice=null;duck(0.5,0.4);}};
+  }
+  return {start,stop,bell,say};
+})();
+
+/* ---- app state ---- */
+let ME=null, TAB='meditate', map=null, mapLayer=null, MARKERS=null, JPATH=null, journeyTok=0;
+let geoFix=null;  // last known device location {lat,lon,t}
+function getGeo(opts){return new Promise(res=>{
+  if(!navigator.geolocation)return res(null);
+  navigator.geolocation.getCurrentPosition(
+    p=>{geoFix={lat:p.coords.latitude,lon:p.coords.longitude,t:Date.now()};res(geoFix);},
+    ()=>res(null),
+    opts||{enableHighAccuracy:true,timeout:15000,maximumAge:120000});});}
+const SOUNDS=[['rain','rain','Rain'],['forest','forest','Forest'],['ocean','ocean','Ocean'],['space','space','Deep Space'],['silence','silence','Silence']];
+const DUR_LABEL={5:'Quick',10:'Daily',20:'Deep',30:'Long'};
+let pick={minutes:10,sound:'rain'};
+
+async function boot(){
+  try{const r=await api('me');if(r.authed){ME=r.profile;}}catch(e){}
+  if(!ME){
+    let done=false;try{done=localStorage.getItem('lumen_onb_done')==='1';}catch(e){}
+    if(done){renderAuth();}else{renderOnboarding();}
+    return;
+  }
+  $('#nav').classList.remove('hidden');
+  bindNav();
+  go('meditate');
+}
+const NAV_ICON={meditate:'meditate',lessons:'lotus',map:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
+const LEAGUE_ICON={Ember:'flame',Spark:'spark',Glow:'glow',Flare:'flare',Beacon:'beacon',Nova:'star',Supernova:'nova'};
+const leagueIcon=(name,cls)=>ic(LEAGUE_ICON[name]||'trophy',cls||'');
+function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>go(b.dataset.tab);const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
+function go(tab){TAB=tab;document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
+  if(window.speechSynthesis)speechSynthesis.cancel();try{stopNarration();}catch(e){}try{Sound.stop();}catch(e){}
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  ({meditate:renderMeditate,map:renderMap,leagues:renderLeagues,journal:renderJournal,collect:renderCollection,profile:renderProfile,lessons:renderLessons}[tab])();}
+
+/* ---- auth ---- */
+function renderAuth(){
+  $('#nav').classList.add('hidden');
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <div class="center" style="margin:26px 0 10px">
+    <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${ic('lumen','lg grad-gold')}</div>
+    <h1 style="margin:14px 0 4px">Light up the world</h1>
+    <p class="muted" style="margin:0 28px">Meditate, earn Light, and watch the planet glow with everyone practicing today.</p>
+  </div>
+  <div class="card">
+    <label>Email</label><input id="em" type="email" autocomplete="email" placeholder="you@example.com">
+    <label>Password</label><input id="pw" type="password" autocomplete="current-password" placeholder="at least 6 characters">
+    <div id="nameWrap" class="hidden"><label>Display name (shown on the map & leagues)</label><input id="nm" placeholder="e.g. Matthew">
+      <label>Birthday <span class="muted" style="font-weight:400">(for your daily reading)</span></label><input id="bd" type="date"></div>
+    <div class="err" id="er"></div>
+    <button class="btn" id="go">Sign in</button>
+    <button class="btn ghost" id="sw" style="margin-top:9px">Create an account</button>
+  </div>`;
+  let mode='login';
+  $('#sw').onclick=()=>{mode=mode==='login'?'signup':'login';
+    $('#nameWrap').classList.toggle('hidden',mode!=='signup');
+    $('#go').textContent=mode==='login'?'Sign in':'Create account & begin';
+    $('#sw').textContent=mode==='login'?'Create an account':'I already have an account';};
+  $('#go').onclick=async()=>{const er=$('#er');er.textContent='';
+    const email=$('#em').value.trim(),password=$('#pw').value;
+    if(!email||!password){er.textContent='Enter your email and password.';return;}
+    try{if(mode==='signup'){await api('signup','POST',{email,password,name:$('#nm').value,birth_date:($('#bd')&&$('#bd').value)||''});}else{await api('login','POST',{email,password});}
+      const r=await api('me');ME=r.profile;$('#nav').classList.remove('hidden');bindNav();go('meditate');
+    }catch(e){er.textContent=e;}};
+}
+
+/* ---- onboarding (value slides → personalization → account) ---- */
+let onb={step:0,intents:[],timeHour:null,level:null};
+const ONB_SLIDES=[
+  {icn:'globe',img:'onb1.jpg',h:"Show up with a vibrant community",p:"Thousands are meditating right now, glowing across a living world map. You sit alongside a real, worldwide community — and their momentum keeps you coming back."},
+  {icn:'pin',img:'onb2.jpg',h:"Explore the world, one meditation at a time",p:"Discover the beautiful places people meditate across the globe, claim your own spots on the map, and earn bonus Light every time you sit somewhere new."},
+  {icn:'sunrise',img:'onb3.jpg',h:"Inspire, and be inspired",p:"Wake up to a community that shows up with you — cheer others on, share your own places, and draw daily inspiration from people chasing the same stillness."},
+  {icn:'book',img:'onb4.jpg',h:"Learn from real, deep traditions",p:"Narrated journeys teach genuine technique — breathwork, meditation and sacred knowledge drawn from living spiritual traditions, not watered-down soundbites."},
+  {icn:'glow',img:'onb5.jpg',h:"Collect Light as you grow",p:"Earn Light for every sit, with bonuses for meditating in new places, finishing new lessons, and contributing to your community. Your practice, made visible."},
+  {icn:'nova',img:'onb6.jpg',h:"Your Vedic reading, every day",p:"Each morning brings a horoscope written for you — drawn from ancient Jyotish teachings and your own rāśi and nakshatra — a calm, personal invitation to begin."},
+  {icn:'lotus',img:'onb7.jpg',h:"Watch your mandala bloom",p:"A single sacred mandala grows with you — each milestone revealing one more facet, until it becomes a beautiful record of the journey only you have walked."},
+  {icn:'star',img:'onb8.jpg',h:"Earn badges for the inner path",p:"Every new level awards a unique emblem — merit badges for the soul — a growing collection of honors that mark how far your practice has carried you."},
+];
+const ONB_INTENTS=[['calm','Calm my mind','lotus'],['sleep','Sleep better','glow'],['focus','Focus & clarity','compass'],['habit','Build a habit','flame'],['spirit','Spiritual growth','nova'],['self','Understand myself','crystal']];
+const ONB_TIMES=[['Morning',8,'sunrise'],['Afternoon',13,'compass'],['Evening',19,'glow'],['Before sleep',21,'moon']];
+const ONB_LEVELS=[['New to it','new','spark'],['I dabble','some','glow'],['Seasoned','pro','nova']];
+const NSL=ONB_SLIDES.length;                        // value slides are steps 0..NSL-1
+const Q_INTENT=NSL, Q_TIME=NSL+1, Q_LEVEL=NSL+2, ONB_LAST=NSL+3;  // ONB_LAST = signup step
+const ONB_QIC={[Q_INTENT]:'compass',[Q_TIME]:'clock',[Q_LEVEL]:'lotus'};  // header icon per question step
+
+function onbDots(){let h='<div class="onb-dots">';for(let i=0;i<=ONB_LAST;i++)h+=`<span class="${i===onb.step?'on':''}"></span>`;return h+'</div>';}
+function onbSlideFit(){ // soft gate: value slides free, intents need >=1, practice-time needed, level free
+  if(onb.step===Q_INTENT)return onb.intents.length>0;
+  if(onb.step===Q_TIME)return onb.timeHour!==null;
+  return true;
+}
+async function renderOnboarding(){
+  $('#nav').classList.add('hidden');
+  const s=onb.step;
+  let body='';
+  if(s<NSL){
+    const sl=ONB_SLIDES[s];
+    body=`<div class="onb-hero">
+      ${sl.img?`<div class="onb-photo"><img src="art/${sl.img}" alt="" onload="this.closest('.onb-hero').classList.add('has-photo')" onerror="const w=this.closest('.onb-photo');if(w)w.remove();"></div>`:''}
+      <div class="onb-ic">${ic(sl.icn,'lg grad-gold')}</div>
+      <h1 class="onb-h">${sl.h}</h1><p class="onb-p">${sl.p}</p></div>`;
+  }else if(s===Q_INTENT){
+    body=`<div class="onb-qic">${ic(ONB_QIC[Q_INTENT],'g')}</div><h1 class="onb-h sm">What brings you to Lumen?</h1><p class="onb-p sm">Pick any that feel true — we'll shape your practice around them.</p>
+      <div class="onb-grid">${ONB_INTENTS.map(([k,label,icn])=>`<button class="onb-chip ${onb.intents.includes(k)?'sel':''}" data-k="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+  }else if(s===Q_TIME){
+    body=`<div class="onb-qic">${ic(ONB_QIC[Q_TIME],'g')}</div><h1 class="onb-h sm">When do you like to practice?</h1><p class="onb-p sm">We'll send a gentle nudge around then — never during your quiet hours.</p>
+      <div class="onb-grid two">${ONB_TIMES.map(([label,hr,icn])=>`<button class="onb-chip ${onb.timeHour===hr?'sel':''}" data-h="${hr}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+  }else if(s===Q_LEVEL){
+    body=`<div class="onb-qic">${ic(ONB_QIC[Q_LEVEL],'g')}</div><h1 class="onb-h sm">How familiar is this for you?</h1><p class="onb-p sm">No wrong answer — it just helps us meet you where you are.</p>
+      <div class="onb-grid">${ONB_LEVELS.map(([label,k,icn])=>`<button class="onb-chip wide ${onb.level===k?'sel':''}" data-l="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+  }else{
+    let live=0;try{live=(await api('presence')).now;}catch(e){}
+    body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-ic">${ic('lumen','lg grad-gold')}</div>
+      <h1 class="onb-h">Save your light</h1>
+      <p class="onb-p">${live>0?`<b>${live}</b> meditating right now. `:''}Create your account to start a streak, keep your journal, and claim your place on the map.</p></div>
+      <div class="card" style="margin-top:4px">
+        <label>Email</label><input id="em" type="email" autocomplete="email" placeholder="you@example.com">
+        <label>Password</label><input id="pw" type="password" autocomplete="new-password" placeholder="at least 6 characters">
+        <label>Display name <span class="muted" style="font-weight:400">(shown on the map)</span></label><input id="nm" placeholder="e.g. Matthew">
+        <label>Birthday <span class="muted" style="font-weight:400">(powers your daily Vedic reading)</span></label><input id="bd" type="date">
+        <label>Birth time &amp; place <span class="muted" style="font-weight:400">(optional — unlocks your birth star &amp; daśā)</span></label>
+        <div style="display:flex;gap:8px"><input id="bt" type="time" style="flex:0 0 42%"><input id="bp" placeholder="City of birth" style="flex:1"></div>
+        <p class="muted" style="font-size:11px;margin:8px 0 0">Private to you — used only to compute your reading, never shown on the map or shared. You can add or change it later in your profile.</p>
+        <div class="err" id="er"></div>
+        <button class="btn gold" id="create">Create account &amp; begin</button>
+      </div>`;
+  }
+  $('#app').innerHTML=`
+    <div class="onb-top"><span class="onb-brand">${ic('lumen','mark')} Lumen</span>
+      ${s<NSL?'<a class="onb-signin" id="toSignin">Sign in</a>':''}</div>
+    <div class="onb-body">${body}</div>
+    <div class="onb-foot">
+      ${onbDots()}
+      <div class="onb-nav">
+        ${s>0&&s<=ONB_LAST?'<button class="btn ghost" id="onbBack" style="flex:0 0 auto;width:auto;padding:12px 18px">Back</button>':''}
+        ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s>=Q_INTENT?'Continue':'Next'}</button>`:''}
+        ${(s>=Q_INTENT&&s<ONB_LAST&&onb.step!==Q_TIME)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
+      </div>
+    </div>`;
+  const si=$('#toSignin');if(si)si.onclick=()=>{try{localStorage.setItem('lumen_onb_done','1');}catch(e){}renderAuth();};
+  const bk=$('#onbBack');if(bk)bk.onclick=()=>{onb.step=Math.max(0,onb.step-1);renderOnboarding();};
+  const nx=$('#onbNext');if(nx)nx.onclick=()=>{if(!onbSlideFit())return;onb.step++;renderOnboarding();};
+  const sk=$('#onbSkip');if(sk)sk.onclick=()=>{onb.step++;renderOnboarding();};
+  document.querySelectorAll('.onb-chip[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;
+    onb.intents.includes(k)?onb.intents=onb.intents.filter(x=>x!==k):onb.intents.push(k);renderOnboarding();});
+  document.querySelectorAll('.onb-chip[data-h]').forEach(b=>b.onclick=()=>{onb.timeHour=+b.dataset.h;renderOnboarding();});
+  document.querySelectorAll('.onb-chip[data-l]').forEach(b=>b.onclick=()=>{onb.level=b.dataset.l;renderOnboarding();});
+  const cr=$('#create');if(cr)cr.onclick=onbCreate;
+}
+async function onbCreate(){
+  const er=$('#er');er.textContent='';
+  const email=$('#em').value.trim(),password=$('#pw').value,name=$('#nm').value.trim();
+  const birth_date=($('#bd')&&$('#bd').value)||'';
+  const birth_time=($('#bt')&&$('#bt').value)||'';
+  const birth_place=($('#bp')&&$('#bp').value.trim())||'';
+  const birth_tz=-new Date().getTimezoneOffset();
+  if(!email||!password){er.textContent='Enter your email and password.';return;}
+  if(password.length<6){er.textContent='Password needs at least 6 characters.';return;}
+  const btn=$('#create');btn.disabled=true;btn.textContent='Creating…';
+  try{
+    await api('signup','POST',{email,password,name,birth_date,birth_time,birth_place,birth_tz});
+    try{localStorage.setItem('lumen_intent',JSON.stringify(onb.intents));
+        localStorage.setItem('lumen_onb_done','1');}catch(e){}
+    try{const tz=-new Date().getTimezoneOffset();
+        await api('notif/prefs','POST',{tz_offset_min:tz,pref_hour:onb.timeHour,sto:true});}catch(e){}
+    const r=await api('me');ME=r.profile;
+    $('#nav').classList.remove('hidden');bindNav();go('meditate');
+  }catch(e){btn.disabled=false;btn.textContent='Create account & begin';er.textContent=e;}
+}
+
+/* ---- meditate ---- */
+function challengeCardHTML(ch){
+  if(!ch||!ch.title||ch.places===undefined)return '';
+  const streak=ch.streak>0?`<span class="chal-streak">${ic('flame','flame grad-flame glow')}<b>${ch.streak}</b><span class="chal-streak-u">day photo streak</span></span>`:'';
+  const thumbs=(ch.thumbs&&ch.thumbs.length)
+    ? `<div class="pilg-strip" onclick="go('map')">${ch.thumbs.map(t=>`<span class="pilg-thumb" style="background-image:url('${esc(t.photo)}')" title="${esc(t.city||'')}"></span>`).join('')}${ch.places>ch.thumbs.length?`<span class="pilg-thumb more">+${ch.places-ch.thumbs.length}</span>`:''}</div>`
+    : `<div class="pilg-strip empty" onclick="go('map')"><span class="pilg-thumb ph">${ic('camera')}</span><span class="muted" style="font-size:12px;line-height:1.35">Sit somewhere, snap your spot — begin your passport</span></div>`;
+  const status = ch.photo_today
+    ? `<div class="chal-done-banner">${ic('spark','g')} Spot kept today${ch.new_today?' · new place discovered':''}${ch.streak>0?` · ${ch.streak}-day streak`:''}</div>`
+    : `<div class="chal-bonus">${ic('camera','g')} Keep a photo of today's spot to ${ch.streak>0?`hold your ${ch.streak}-day streak`:'start your streak'} — <b>+${ch.new_bonus}</b> Light for a new place, <b>+${ch.photo_bonus}</b> for a familiar one.</div>`;
+  const milestone = ch.next_milestone
+    ? `<div class="pilg-ms"><div class="bar"><i style="width:${Math.min(100,Math.round(100*ch.places/ch.next_milestone))}%"></i></div><div class="muted" style="font-size:11px;margin-top:4px">${ch.next_milestone-ch.places} more place${(ch.next_milestone-ch.places)===1?'':'s'} to your ${ch.next_milestone}-spot badge</div></div>`
+    : '';
+  return `<div class="card chal-card">
+    <div class="chal-head"><span class="chal-title">${ic('globe')} ${esc(ch.title)}</span>${streak}</div>
+    <div class="pilg-stats"><div class="pilg-stat"><b>${ch.places}</b><label>place${ch.places===1?'':'s'} collected</label></div><div class="pilg-stat"><b>${ch.best||ch.streak||0}</b><label>best streak</label></div></div>
+    <div class="chal-blurb">${esc(ch.blurb)}</div>
+    ${thumbs}
+    ${status}
+    ${milestone}
+    <div class="pilg-comm" onclick="go('map')">${ic('globe','g')} ${ch.shared_today>0?`<b>${ch.shared_today}</b> spot${ch.shared_today===1?'':'s'} shared to the map today — see where the world is sitting`:'See where the world is meditating'} &rarr;</div>
+  </div>`;
+}
+function horoscopeCardHTML(h){
+  if(!h)return '';
+  if(h.need_sign){
+    return `<div class="card horo-card">
+      <div class="horo-head"><span class="horo-glyph">${ic('nova','g glow')}</span><div><div class="horo-title">Today's sky</div><div class="muted" style="font-size:12px">Choose your rāśi (Moon sign) for a Vedic daily reading</div></div></div>
+      <div class="horo-signs">${h.signs.map(s=>`<button class="horo-sign" data-sign="${esc(s.key)}"><span class="hs-glyph">${s.glyph}</span><span class="hs-nm">${esc(s.sanskrit||s.name)}</span><span class="hs-sub">${esc(s.name)}</span></button>`).join('')}</div>
+    </div>`;
+  }
+  const SS={rain:'Rain',forest:'Forest',ocean:'Ocean',space:'Deep Space',silence:'Silence'};
+  const mins=h.minutes||10;
+  return `<div class="card horo-card">
+    <div class="horo-head"><span class="horo-glyph">${h.glyph}</span><div><div class="horo-title">${esc(h.sanskrit||h.name)} <span class="muted" style="font-weight:400;font-size:13px">${esc(h.name)}</span></div>${h.nakshatra?`<div class="muted" style="font-size:12px;margin-top:1px">${ic('moon','p')} Moon in ${esc(h.nakshatra)}${h.pada?' · pada '+h.pada:''} · ${esc(h.deity||'')}</div>`:''}</div></div>
+    <div class="horo-text">${esc(h.text)}</div>
+    <div class="horo-actions">
+      <button class="btn ghost horo-sit" data-snd="${esc(h.soundscape)}" data-min="${mins}">${ic(h.soundscape||'silence')} Sit with this · ${mins} min ${SS[h.soundscape]||esc(h.soundscape)}</button>
+      <button class="btn ghost horo-listen" title="Hear it aloud">${ic('sound')} Listen</button>
+    </div>
+    ${h.janma?`<div class="horo-foot">${ic('lotus','g')} Birth star ${esc(h.janma)} · daśā ${esc(h.maha)}–${esc(h.antar)}</div>`
+             :`<div class="horo-foot horo-addnatal" style="cursor:pointer">${ic('nova','g')} Add your birth time for your birth star &amp; daśā</div>`}
+  </div>`;
+}
+async function addNatal(){
+  const t=prompt('Birth time (HH:MM, 24h) — optional but unlocks your birth star & daśā:','');
+  if(t===null)return;
+  const place=prompt('City of birth (optional):','')||'';
+  try{await api('natal','POST',{birth_time:(t||'').trim(),birth_place:place.trim(),birth_tz:-new Date().getTimezoneOffset()});
+    toast('Birth details saved '+ic('spark','g'));renderMeditate();}
+  catch(e){toast(e);}
+}
+async function playHoroscope(btn,text){
+  if(!text)return; const orig=btn.dataset.orig||btn.innerHTML; btn.dataset.orig=orig;
+  btn.disabled=true; btn.innerHTML=ic('sound')+' Loading…';
+  const done=()=>{btn.disabled=false;btn.innerHTML=orig;};
+  try{
+    const r=await fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    if(!r.ok)throw 0;
+    const a=new Audio(URL.createObjectURL(await r.blob()));
+    btn.disabled=false; btn.innerHTML=ic('sound')+' Playing…';
+    a.onended=done; a.onerror=()=>speakLocal(btn,text,orig,done); a.play();
+  }catch(e){ speakLocal(btn,text,orig,done); }
+}
+// On-device voice fallback (Web Speech API) when the server TTS (ElevenLabs) isn't available.
+function speakLocal(btn,text,orig,done){
+  if(!('speechSynthesis'in window)||!window.SpeechSynthesisUtterance){done&&done();toast('Voice unavailable right now');return;}
+  try{
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.rate=0.9; u.pitch=1.0;
+    const vs=speechSynthesis.getVoices()||[];
+    const pref=vs.find(v=>/^en/i.test(v.lang)&&/(samantha|serena|libby|aria|jenny|sonia|female|google uk english female)/i.test(v.name))
+             ||vs.find(v=>/^en(-|_)?(GB|US)/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang));
+    if(pref)u.voice=pref;
+    if(btn){btn.disabled=false;btn.innerHTML=ic('sound')+' Playing…';}
+    u.onend=()=>{done&&done();}; u.onerror=()=>{done&&done();};
+    speechSynthesis.speak(u);
+  }catch(e){done&&done();toast('Voice unavailable right now');}
+}
+async function renderMeditate(){
+  let pres={now:0,today_sessions:0};try{pres=await api('presence');}catch(e){}
+  let dp=null;try{dp=(await api('lifeos/prompts')).prompts;}catch(e){}
+  let chal=null;try{chal=await api('challenge?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
+  let horo=null;try{horo=await api('horoscope?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
+  const durs=[5,10,20,30];
+  const PICK=todaysPick();
+  const REST=recommendedLessons().filter(l=>!PICK||l.code!==PICK.code);
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <div class="card home-hero" style="--lc:${ME.league.color}">
+    <div class="hh-top">
+      <div class="hh-league"><span class="hh-badge" style="color:${ME.league.color}">${leagueIcon(ME.league.name)}</span>
+        <div><div class="hh-lg-name" style="color:${ME.league.color}">${ME.league.name} league</div>
+        <div class="muted" style="font-size:12px">Lv ${ME.level} · ${fmt(ME.light)} light</div></div></div>
+      <div class="hh-streak">${ic('flame','flame grad-flame glow')}<b>${ME.streak}</b><span>day${ME.streak===1?'':'s'}</span></div>
+    </div>
+    <div class="hh-stats">
+      <div class="hh-stat"><span>${fmt(ME.weekly_light)}</span><label>light this week</label></div>
+      <div class="hh-stat"><span>${fmt(ME.motes)}</span><label>motes</label></div>
+      <div class="hh-stat"><span>${ME.total_sessions}</span><label>sessions</label></div>
+    </div>
+    ${ME.league.next?`<div class="bar hh-bar"><i style="width:${Math.min(100,Math.round(100*(ME.weekly_light-ME.league.at)/((ME.league.next_at-ME.league.at)||1)))}%;background:${ME.league.color}"></i></div>
+      <div class="muted" style="font-size:12px;margin-top:5px">${fmt(Math.max(0,ME.league.next_at-ME.weekly_light))} light to <b style="color:var(--text)">${leagueIcon(ME.league.next,'g')} ${ME.league.next}</b></div>`
+      :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
+    <div class="hh-live"><span class="live-dot"></span> <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
+  </div>
+  ${challengeCardHTML(chal)}
+  ${horoscopeCardHTML(horo)}
+  ${PICK?`<div class="lesson-head" style="margin:18px 2px 8px"><div><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Today's pick</div><div class="muted" style="font-size:12px;margin-top:2px">${todGreeting()}</div></div>
+    <button class="btn ghost horo-listen pick-listen" title="Hear today's pick aloud">${ic('sound')} Listen</button></div>
+  <div class="rec-feature">${lessonCardHTML(PICK)}</div>`:''}
+  <div class="card">
+    <div class="sec-head"><span class="sec-ic">${ic('clock')}</span><h3>Duration</h3></div>
+    <div class="grid4" id="durs">${durs.map(d=>`<div class="chip dur-chip ${d===pick.minutes?'sel':''}" data-d="${d}"><div class="big">${d}</div><div class="chip-unit">min</div><div class="chip-sub">${DUR_LABEL[d]||''}</div></div>`).join('')}</div>
+    <div class="sec-head" style="margin-top:18px"><span class="sec-ic snd">${ic('sound')}</span><h3>Soundscape</h3></div>
+    <div class="grid3" id="snds">${SOUNDS.map(s=>`<div class="chip snd-chip ${s[0]===pick.sound?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
+    <button class="btn gold" id="start" style="margin-top:18px">Begin session &rarr;</button>
+    <p class="muted center" style="font-size:12px;margin:10px 0 0">${ic('flame','flame grad-flame glow')} ${ME.streak}-day streak · ${ME.league.name} league</p>
+    ${ME.equipped&&ITEM_NAME[ME.equipped]?`<div class="center"><span class="companion">${ART_IMG[ME.equipped]?`<img src="${ART_IMG[ME.equipped]}" class="cph" alt="" onerror="this.remove()">`:ic(ITEM_ICON[ME.equipped])} meditating with your ${ITEM_NAME[ME.equipped]}</span></div>`:(ME.companion&&COMP_NAME[ME.companion]?`<div class="center"><span class="companion">${ic(COMP_ICON[ME.companion])} ${COMP_NAME[ME.companion]} is sitting with you</span></div>`:'')}
+  </div>
+  ${dp?`<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;margin:18px 2px 4px">Today's Light ${dp.ai?'· AI':''}</div>
+  <div id="homeprompts">${[['focus','Your focus','compass'],['reflection','Daily reflection','lotus'],['gratitude','Gratitude','spark']].map(([k,label,icn])=>`<div class="lo-prompt" data-p="${esc(dp[k])}" title="Write about this in your journal"><div class="lo-pico">${ic(icn,'g')}</div><div style="flex:1"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">${label}</div><div style="font-family:var(--serif);font-size:15px;margin-top:2px">${esc(dp[k])}</div></div><span class="lo-write">${ic('book')}</span></div>`).join('')}</div>`:''}
+  <div class="lesson-head" style="margin:22px 2px 8px"><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">More journeys</div><a class="lesson-all" id="allles">See all ${LESSONS.length} &rarr;</a></div>
+  ${REST.slice(0,4).map(l=>lessonCardHTML(l)).join('')}`;
+  $('#durs').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.minutes=+c.dataset.d;renderMeditate();});
+  $('#snds').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s;renderMeditate();});
+  $('#start').onclick=startSession;
+  document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
+  {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
+   const hl=document.querySelector('.horo-listen:not(.pick-listen)');if(hl&&horo&&horo.text)hl.onclick=()=>playHoroscope(hl,horo.text);
+   const pl=document.querySelector('.pick-listen');if(pl&&PICK)pl.onclick=()=>playHoroscope(pl,pickInvite(PICK));
+   const hn=document.querySelector('.horo-addnatal');if(hn)hn.onclick=addNatal;}
+  document.querySelectorAll('#homeprompts .lo-prompt').forEach(row=>row.onclick=()=>{jPrompt=row.dataset.p;go('journal');});
+  document.querySelectorAll('.lesson-card').forEach(c=>c.onclick=()=>{lessonFrom='meditate';lessonDetail(c.dataset.l);});
+  const al=$('#allles');if(al)al.onclick=()=>go('lessons');
+}
+
+/* ---- guided journeys library ---- */
+async function renderLessons(){
+  try{const r=await api('me');ME=r.profile;}catch(e){}
+  const totalMin=LESSONS.reduce((s,l)=>s+lessonMins(l),0);
+  const doneCount=LESSONS.filter(l=>lessonProg(l.code)).length;
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Guided Journeys</b></div>
+  <button class="btn ghost" id="lesback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
+  <div class="card" style="padding:14px">
+    <div style="font-family:var(--serif);font-size:16px;line-height:1.5">A growing library of narrated, meditative lessons — each researched, spoken aloud, and woven into Lumen so every sit still earns Light, streaks, and achievements.</div>
+    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-size:12px" class="muted">
+      <span>${ic('lotus','g')} ${LESSONS.length} lessons</span>
+      <span>${ic('check','g')} ${doneCount} completed</span>
+      <span>${ic('target','g')} ~${totalMin} min total</span>
+    </div>
+  </div>
+  ${TRACKS.map(t=>{
+    const ls=LESSONS.filter(l=>l.track===t.key);
+    if(!ls.length&&!(ROADMAP[t.key]||[]).length)return '';
+    return `<div class="trk-head" style="--a:${t.accent}"><div class="trk-name">${esc(t.name)}</div><div class="trk-sub">${esc(t.sub)}</div></div>
+      ${ls.map(l=>lessonCardHTML(l)).join('')}
+      ${(ROADMAP[t.key]||[]).map(r=>`<div class="lesson-card soon" style="--a:${t.accent}">
+        <div class="lesson-img"><span class="lesson-imic">${ic('lock')}</span></div>
+        <div class="lesson-meta"><div class="lesson-name">${esc(r.title)}</div>
+        <div class="lesson-sub">${esc(r.sub)}</div>
+        <div class="lesson-go soon-tag">${ic('lock')} Coming soon</div></div></div>`).join('')}`;
+  }).join('')}
+  <p class="muted center" style="font-size:12px;margin:16px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
+  $('#lesback').onclick=()=>go('meditate');
+  document.querySelectorAll('.lesson-card:not(.soon)').forEach(c=>c.onclick=()=>{lessonFrom='lessons';lessonDetail(c.dataset.l);});
+}
+
+let timerInt=null;
+async function startSession(){
+  try{await api('session/start','POST',{});}catch(e){}
+  getGeo();  // capture location now (user gesture) so it's ready by the time the sit ends
+  Sound.bell();Sound.start(pick.sound);
+  const total=pick.minutes*60;let left=total;let ended=false;
+  $('#nav').classList.add('hidden');
+  $('#app').innerHTML=`
+  <div class="orb-wrap">
+    <div class="ring"></div>
+    <div class="orb"><div class="t" id="clock">${mm(left)}</div></div>
+    <div class="breath-label" id="bl">breathe in</div>
+  </div>
+  <div class="center muted" style="margin-top:-10px">${SOUNDS.find(s=>s[0]===pick.sound)[2]} · ${pick.minutes} min</div>
+  <div style="padding:0 24px;margin-top:22px"><button class="btn ghost" id="end">End session</button></div>`;
+  const bl=$('#bl');let phase=0;
+  const breath=setInterval(()=>{phase=(phase+1)%2;bl.textContent=phase?'breathe out':'breathe in';},5000);
+  timerInt=setInterval(()=>{left--;$('#clock')&&($('#clock').textContent=mm(left));if(left<=0){finish(true);}},1000);
+  function stopTimers(){clearInterval(timerInt);clearInterval(breath);}
+  async function finish(complete){
+    if(ended)return;ended=true;stopTimers();Sound.stop();if(complete)Sound.bell();
+    const done=complete?pick.minutes:Math.max(1,Math.round((total-left)/60));
+    completeFlow(done);
+  }
+  $('#end').onclick=()=>finish(false);
+  window._finishEarly=finish;
+}
+const mm=(s)=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+function completeFlow(minutes){
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Session complete</b></div>
+  <div class="card center"><div style="color:var(--gold)">${ic('lotus','lg grad-gold')}</div>
+    <h2 style="margin:8px 0 2px">${minutes} minutes</h2>
+    <p class="muted" style="margin:0">How do you feel?</p>
+    <div class="grid3" id="mood" style="margin-top:12px">
+      ${[['calm','calm','calm'],['energized','bolt','energized'],['unclear','fog','unclear']].map(m=>`<div class="chip" data-m="${m[0]}"><div class="big">${ic(m[1])}</div>${m[2]}</div>`).join('')}
+    </div>
+    <label style="text-align:left">A note for your journal (optional)</label>
+    <textarea id="note" rows="3" placeholder="What came up?"></textarea>
+    <div class="spot-cap">
+      <div id="spothold" class="spot-hold" style="display:none"></div>
+      <input type="file" id="spotfile" accept="image/*" capture="environment" style="display:none">
+      <button class="spot-add" id="spotadd" type="button">${ic('camera')} Add a photo of your spot</button>
+      <div id="spotprev" class="spot-prev"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:9px;text-align:left"><input type="checkbox" id="share"> Share your spot & note to the community</label>
+    <div id="locnote" class="muted" style="font-size:12px;margin-top:8px"></div>
+    <button class="btn gold" id="save" style="margin-top:14px">Collect your Light ${ic('spark')}</button>
+  </div>`;
+  let mood='';
+  let spotPhoto=null;
+  // "holder" map: a keyless Esri dark-gray basemap thumbnail of where they sat —
+  // same map style as the Map tab, with a glowing marker (below). Local preview only, never uploaded.
+  let holderKey='';
+  const holderUrl=(lat,lon)=>{
+    const aspect=640/360, latH=0.02, lonH=latH*aspect/Math.max(.2,Math.cos(lat*Math.PI/180));
+    const bbox=[lon-lonH,lat-latH,lon+lonH,lat+latH].map(n=>n.toFixed(5)).join(',');
+    return 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/export'
+      +'?bbox='+bbox+'&bboxSR=4326&imageSR=3857&size=640,360&format=png&transparent=false&f=image';
+  };
+  const renderHolder=()=>{
+    const h=$('#spothold');if(!h)return;
+    if(!coords){h.style.display='none';return;}   // keep it alongside any photo they add
+    const key=coords.lat.toFixed(3)+','+coords.lon.toFixed(3);
+    h.style.display='';
+    if(key===holderKey&&h.querySelector('img'))return;   // already showing this spot
+    holderKey=key;
+    h.classList.add('load');
+    h.innerHTML=`<img alt="your meditation spot"><span class="spot-glow"><span class="mkr me" style="--c:#f5c977">${ic(pick&&pick.sound?pick.sound:'silence','mkri')}</span></span><span class="cap">${ic('pin')} Where you meditated</span>`;
+    const img=h.querySelector('img');
+    img.onload=()=>{img.classList.add('on');h.classList.remove('load');};
+    img.onerror=()=>{h.classList.remove('load');h.style.display='none';holderKey='';};
+    img.src=holderUrl(coords.lat,coords.lon);
+  };
+  $('#spotadd').onclick=()=>$('#spotfile').click();
+  $('#spotfile').onchange=async(e)=>{
+    const f=e.target.files&&e.target.files[0];if(!f)return;
+    const add=$('#spotadd');if(add)add.textContent='Processing photo…';
+    try{spotPhoto=await downscaleImage(f,1280,0.82);
+      $('#spotprev').innerHTML=`<div class="spot-lbl">${ic('camera','g')} Your photo</div><img src="${spotPhoto}" alt="your spot"><button type="button" class="spot-x" id="spotx">${ic('close')||'✕'} Remove</button>`;
+      if(add){add.style.display='none';}
+      renderHolder();   // keep the location holder visible above your photo
+      const x=$('#spotx');if(x)x.onclick=()=>{spotPhoto=null;$('#spotprev').innerHTML='';if(add){add.style.display='';add.innerHTML=ic('camera')+' Add a photo of your spot';}$('#spotfile').value='';renderHolder();};
+    }catch(err){toast(err);if(add){add.innerHTML=ic('camera')+' Add a photo of your spot';}}
+  };
+  $('#mood').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{mood=c.dataset.m;$('#mood').querySelectorAll('.chip').forEach(x=>x.classList.toggle('sel',x===c));});
+  // prefer the fix captured when the sit began; refresh in the background
+  let coords=(geoFix&&Date.now()-geoFix.t<3600000)?{lat:geoFix.lat,lon:geoFix.lon}:null;
+  const setNote=()=>{const n=$('#locnote');if(!n)return;
+    n.innerHTML=coords?ic('pin')+' Your light will appear where you sat.'
+      :(ME.lat?ic('pin')+' Using your saved location — enable location for a precise pin.'
+             :'Location is off — enable it for this site to light up the map.');};
+  setNote();renderHolder();
+  getGeo().then(g=>{if(g){coords={lat:g.lat,lon:g.lon};}setNote();renderHolder();});
+  $('#save').onclick=async()=>{
+    const btn=$('#save');if(btn){btn.disabled=true;btn.textContent='Collecting…';}
+    try{
+      if(!coords){const g=await getGeo({enableHighAccuracy:true,timeout:7000,maximumAge:120000});if(g)coords={lat:g.lat,lon:g.lon};}
+      const share=$('#share').checked;
+      const body={minutes,soundscape:pick.sound,mood,note:$('#note').value,share,tz_offset_min:-new Date().getTimezoneOffset()};
+      if(spotPhoto){body.photo=spotPhoto;body.photo_share=share;}
+      if(coords){body.lat=coords.lat;body.lon=coords.lon;}
+      const res=await api('session/complete','POST',body);
+      // best-effort profile refresh — must NOT block showing the reward if it blips
+      try{const r=await api('me');if(r&&r.profile)ME=r.profile;}catch(_e){}
+      showRewards(res);
+    }catch(e){
+      if(btn){btn.disabled=false;btn.innerHTML='Collect your Light '+ic('spark');}
+      toast(typeof e==='string'?e:'Could not collect your Light — check your connection and try again.');
+    }
+  };
+}
+
+function showRewards(res){
+  $('#nav').classList.remove('hidden');bindNav();
+  const ach=(res.new_achievements||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'star')} ${a.title}</div>`).join(' ');
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <div class="card center">
+    <div style="color:var(--gold);filter:drop-shadow(0 0 20px var(--gold))">${ic('spark','lg grad-aur')}</div>
+    <div style="font-size:34px;font-weight:800;color:var(--gold)">+${res.light_earned} Light</div>
+    <div class="muted" style="font-size:13px;margin-top:2px">${ic('spark','g')} +${res.motes_earned||res.light_earned} Motes collected</div>
+    ${res.time_bonus?`<div class="pill" style="margin-top:6px">${res.time_bonus==='night'?ic('moon','p glow')+' night owl +20%':ic('sunrise','g glow')+' dawn +20%'}</div>`:''}
+    ${res.multiplier>1?`<div class="pill" style="margin-top:6px">${ic('flame','flame grad-flame glow')} ${res.streak}-day streak ×${res.multiplier}</div>`:`<div class="muted" style="margin-top:8px">${ic('flame','flame grad-flame glow')} ${res.streak}-day streak</div>`}
+    ${res.challenge&&res.challenge.newly_done?`<div class="chal-done-banner" style="margin-top:14px">${res.challenge.new_place?ic('pin','g')+' New place added to your passport':ic('camera','g')+' Spot kept'} · +${res.challenge.bonus} Light${res.challenge.streak>1?` · ${res.challenge.streak}-day photo streak`:''}${res.challenge.places?` · ${res.challenge.places} place${res.challenge.places===1?'':'s'} collected`:''}</div>`:''}
+    ${res.photo?`<div class="spot-shot">${ic('pin','g')} <span class="muted" style="font-size:12px">Your spot</span><img src="${esc(res.photo)}" alt="your spot"></div>`:''}
+    ${res.leveled_up?`<h2 style="margin:14px 0 0;color:var(--pink)">Level ${res.level} reached!</h2>`:''}
+    ${ach?`<div style="margin-top:14px"><div class="muted" style="font-size:12px">Achievement unlocked</div><div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ach}</div></div>`:''}
+    ${lessonReflect?`<div class="reflect-note" style="margin-top:16px"><div class="muted" style="font-size:12px;margin-bottom:7px">Carry the lesson forward</div><button class="btn ghost" id="reflect" style="text-align:left;line-height:1.4">${ic('book')} “${esc(lessonReflect)}”</button></div>`:''}
+    <button class="btn" id="done" style="margin-top:18px">Done</button>
+    <button class="btn ghost" id="seemap" style="margin-top:9px">See your light on the map ${ic('globe')}</button>
+  </div>`;
+  const rf=lessonReflect;lessonReflect=null;
+  const rb=$('#reflect');if(rb)rb.onclick=()=>{jPrompt=rf;go('journal');};
+  $('#done').onclick=()=>go('meditate');
+  $('#seemap').onclick=()=>go('map');
+}
+
+/* ---- guided lessons ---- */
+function lessonProg(code){return (ME&&ME.lessons&&ME.lessons[code])||null;}
+// Recommendation order: resume-in-progress first, then fresh (never done), then completed.
+function recommendedLessons(){
+  const seen=new Set(), out=[];
+  const push=l=>{if(l&&!seen.has(l.code)){seen.add(l.code);out.push(l);}};
+  LESSONS.filter(l=>lessonResumeSi(l)>0).forEach(push);   // continue where you left off
+  LESSONS.filter(l=>!lessonProg(l.code)).forEach(push);   // new to you
+  LESSONS.forEach(push);                                  // everything else (completed)
+  return out;
+}
+function todBucket(){const h=new Date().getHours();return h<5?'night':h<11?'morning':h<17?'midday':h<21?'evening':'night';}
+function todGreeting(){return {morning:'A calm start to your morning',midday:'A midday reset',
+  evening:'An evening wind-down',night:'Something gentle for the night'}[todBucket()];}
+// Today's pick: scored by time-of-day fit, then rotated daily so it's stable for the day but changes.
+function todaysPick(){
+  const b=todBucket();
+  const KW={morning:['intention','focus','clarity','energy','breath','wake','begin','start','steadiness','pranayama','awaken','light'],
+    midday:['focus','reset','balance','calm','clarity','breath','steady','center'],
+    evening:['gratitude','reflection','release','preserve','wind','calm','rest','ease','compassion','heart'],
+    night:['sleep','rest','stillness','let go','release','calm','ocean','rain','night','surrender','dissolve']}[b];
+  const SND={morning:['forest','silence'],midday:['forest','silence','space'],
+    evening:['ocean','rain'],night:['ocean','rain','space']}[b];
+  const text=l=>[l.title,l.subtitle,l.focus,l.technique,l.blurb,l.series].filter(Boolean).join(' ').toLowerCase();
+  let intents=[];try{intents=JSON.parse(localStorage.getItem('lumen_intent')||'[]');}catch(e){}
+  const IKW={calm:['calm','ease','settle','breath','still'],sleep:['sleep','rest','night','ocean','rain','surrender'],
+    focus:['focus','clarity','concentration','steady','center'],habit:['steadiness','return','daily','practice','discipline'],
+    spirit:['devotion','sacred','divine','soul','spirit','deity'],self:['shadow','reflection','self','inner','archetype','understand']};
+  const IK=[].concat(...intents.map(i=>IKW[i]||[]));
+  const score=l=>{let s=0;const t=text(l);KW.forEach(k=>{if(t.indexOf(k)!==-1)s+=2;});
+    IK.forEach(k=>{if(t.indexOf(k)!==-1)s+=1;});
+    if(SND.indexOf(l.soundscape)!==-1)s+=2; if(!lessonProg(l.code))s+=1; return s;};
+  const ranked=LESSONS.map(l=>({l,s:score(l)})).sort((a,b)=>b.s-a.s||a.l.code.localeCompare(b.l.code));
+  const best=ranked[0].s, top=ranked.filter(x=>x.s===best).map(x=>x.l);
+  const day=Math.floor((Date.now()-new Date().getTimezoneOffset()*60000)/86400000);
+  return top[day%top.length];
+}
+// A short, warm spoken invitation for the day's pick (played via ElevenLabs TTS).
+function pickInvite(l){
+  const snd={rain:'rain',forest:'the forest',ocean:'the ocean',space:'cosmic space',silence:'silence'}[l.soundscape]||l.soundscape;
+  const sndPhrase=l.soundscape==='silence'?'in silence':('with '+snd);
+  const mins=lessonMins(l);
+  let s=todGreeting()+'. Today’s pick is '+l.title+(l.subtitle?', '+l.subtitle:'')+'.';
+  if(l.blurb)s+=' '+String(l.blurb).replace(/\s+/g,' ').trim();
+  s+=' Take about '+mins+' minutes '+sndPhrase+', and let yourself simply arrive.';
+  return s;
+}
+/* resume: where the user paused inside a journey (segment index), kept on-device */
+function jnyKey(code){return 'lumen_jny_'+code;}
+function jnyProg(code){try{const v=localStorage.getItem(jnyKey(code));return v==null?null:parseInt(v,10);}catch(e){return null;}}
+function jnySave(code,si){try{localStorage.setItem(jnyKey(code),String(si));}catch(e){}}
+function jnyClear(code){try{localStorage.removeItem(jnyKey(code));}catch(e){}}
+function lessonResumeSi(l){const rs=jnyProg(l.code);return (rs!=null&&rs>0&&rs<l.segments.length)?rs:0;}
+const SERIES_ART={Vishnu:'art/lesson_vishnu.png?v=2',Shiva:'art/lesson_shiva.png?v=2',Lakshmi:'art/lesson_lakshmi.png?v=2',Breath:'art/lesson_breath.png?v=2'};
+function deityEmblem(l,cls){const art=SERIES_ART[l.series]||l.img;
+  return `<div class="deity-emblem ${cls||''}"><span class="deity-glyph">${ic('lotus','grad-gold')}</span>${art?`<img src="${art}" alt="" onerror="this.remove()">`:''}</div>`;}
+let lessonFrom='lessons';
+let lessonSoundPick=null;  // background soundscape chosen in the journey detail modal
+function lessonCardHTML(l){
+  const pr=lessonProg(l.code);
+  const done=pr&&pr.count>0;
+  const nSeg=l.segments.length;
+  const rs=lessonResumeSi(l);
+  const doneline=done?`<div class="lesson-done">${ic('check')} Completed · ${pr.count}×</div>`:'';
+  const cta=rs>0
+    ? `<div class="lesson-go">${ic('play')} Continue · step ${rs+1} of ${nSeg}</div>`
+    : `<div class="lesson-go">${ic('play')} ${done?'Practice again':'Begin · earns Light'}</div>`;
+  return `<div class="lesson-card jcard${done?' done':''}${rs>0?' resume':''}" data-l="${l.code}" style="--a:${l.accent}">
+    <div class="jcard-art">${deityEmblem(l)}${done?`<span class="lesson-seal">${ic('check')}</span>`:''}${rs>0?`<span class="jcard-badge">Resume</span>`:''}</div>
+    <div class="jcard-body">
+      <div class="jcard-title">${esc(l.title)} <span>· ${esc(l.subtitle)}</span></div>
+      <div class="jcard-sub">${esc(l.tradition)} · ${lessonMins(l)} min · ${nSeg} steps</div>
+      <div class="jcard-desc">${esc(l.blurb)}</div>
+      ${rs>0?`<div class="lesson-resume-bar"><i style="width:${Math.round(100*rs/nSeg)}%"></i></div>`:''}
+      ${doneline}
+      ${cta}
+    </div></div>`;
+}
+// Detail / preview screen shown before a journey begins
+function lessonDetail(code){
+  const l=LESSONS.find(x=>x.code===code); if(!l)return;
+  if(window.speechSynthesis)speechSynthesis.cancel();try{Sound.stop();}catch(e){}
+  const nSeg=l.segments.length, rs=lessonResumeSi(l), pr=lessonProg(l.code), done=pr&&pr.count>0;
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journey</b></div>
+  <button class="btn ghost" id="dback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
+  <div class="card jdetail" style="--a:${l.accent}">
+    <div class="jd-art">${deityEmblem(l,'lg')}</div>
+    <h1 class="jd-title" style="color:${l.accent}">${esc(l.title)}</h1>
+    <div class="jd-subtitle">${esc(l.subtitle)}</div>
+    <div class="jd-chips">
+      <span>${ic('lotus','g')} ${esc(l.tradition)}</span>
+      <span>${ic('clock','g')} ${lessonMins(l)} min</span>
+      <span>${ic('target','g')} ${nSeg} steps</span>
+      ${l.technique?`<span>${ic('spark','g')} ${esc(l.technique)}</span>`:''}
+    </div>
+    <p class="jd-desc">${esc(l.blurb)}</p>
+    <div class="jd-head">What you'll move through</div>
+    <ol class="jd-steps">${l.segments.map(s=>`<li>${esc(s.title)}</li>`).join('')}</ol>
+    ${l.prompt?`<div class="jd-prompt">${ic('book','g')}<span>Afterward, you'll reflect: &ldquo;${esc(l.prompt)}&rdquo;</span></div>`:''}
+    ${done?`<div class="lesson-done" style="justify-content:center;margin-top:12px">${ic('check')} Completed ${pr.count}×${pr.last?' · last '+ago(pr.last):''}</div>`:''}
+    <button class="btn gold" id="dbegin" style="margin-top:14px">${ic('play')} ${rs>0?('Continue · step '+(rs+1)+' of '+nSeg):(done?'Practice again':'Begin journey')}</button>
+    <div class="jd-sound">
+      <div class="jd-sound-lbl">Background sound</div>
+      <div class="grid3" id="lsnds">${SOUNDS.map(s=>`<div class="chip snd-chip ${s[0]===l.soundscape?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
+    </div>
+    <p class="muted center" style="font-size:12px;margin-top:12px">Earns Light · builds your streak</p>
+  </div>`;
+  lessonSoundPick=l.soundscape;
+  $('#dback').onclick=()=>go(lessonFrom);
+  $('#dbegin').onclick=()=>lessonPlay(l, rs);
+  document.querySelectorAll('#lsnds .snd-chip').forEach(c=>c.onclick=()=>{lessonSoundPick=c.dataset.s;
+    document.querySelectorAll('#lsnds .snd-chip').forEach(x=>x.classList.toggle('sel',x.dataset.s===lessonSoundPick));});
+}
+const LESSONS=[{
+  code:'vishnu', title:'Vishnu · I', subtitle:'The Preserver',
+  track:'devotion', level:'Core', focus:'Sustenance · steadiness', part:1, series:'Vishnu',
+  technique:'Settling · sattva',
+  tradition:'Hindu · the Preserver', img:'', soundscape:'ocean', accent:'#5fa8ff',
+  prompt:'What in your life are you being asked to preserve — and what small practice, returned to daily, would truly sustain it?',
+  blurb:'Part 1 of the Vishnu course. Meet the Preserver — the quiet force of sustenance between creation and dissolution — and learn what preservation really means: not a single act, but the practice of returning.',
+  segments:[
+    {title:'The Preserver', cue:'Breathe naturally. Let the body settle.', secs:130,
+     teach:"Come and take the seat of Vishnu, the Preserver — the one who holds the whole world in balance, not by force but by steady presence. In the great trinity he stands between Brahma, who creates, and Shiva, who dissolves; his is the quiet, unglamorous middle — keeping, tending, sustaining. His quality is sattva: clarity, harmony, an even keel. So let the body grow still, and begin to notice the breath that has kept you alive all this time — quietly, faithfully, asking nothing of you. That breath is already his work in you."},
+    {title:'What preservation means', cue:'Let the breath stay slow and even.', secs:200,
+     teach:"We prize creation and we fear destruction, but we rarely honor the third thing — preservation, the daily sustaining that quietly holds a life together. Vishnu's name comes from a root meaning to pervade: he is said to dwell within all things, the thread of continuity running through every change. He keeps rta and dharma — the deep order, the way that holds a world together. And consider: almost nothing good is won in a single act. A marriage, a craft, a healing, a faith — none is created once, but tended, returned to, sustained. Sustenance is a practice, and practice is only returning. Let that settle as the breath moves."},
+    {title:'Rest in what sustains you', cue:'Let the breath breathe itself.', secs:120,
+     teach:"For these last breaths, simply rest in the quiet fact of being sustained — the heartbeat you never started, the breath that keeps arriving unasked. You do not have to hold your life together by force in this moment; something steadier already does. Let that be enough for now. And when you return, we will meet the forms Vishnu takes when the balance is lost."},
+  ]
+},{
+  code:'vishnu_avatars', title:'Vishnu · II', subtitle:'The Ten Avatars',
+  track:'devotion', level:'Core', focus:'Renewal · showing up', part:2, series:'Vishnu',
+  technique:'Contemplation',
+  tradition:'Hindu · the Preserver', img:'', soundscape:'ocean', accent:'#5fa8ff',
+  prompt:'Where are you being asked to show up again, patiently, to restore balance?',
+  blurb:'Part 2 of the Vishnu course. Walk through the dashavatara — his ten descents — and their meaning: the divine returns, age after age, to restore balance. Then bring that pattern home to your own life.',
+  segments:[
+    {title:'The ten descents', cue:'Rest easy. Simply listen.', secs:220,
+     teach:"When balance is truly lost, Vishnu does not watch from afar — he descends, taking form. These are the avatars, the dashavatara, his ten descents. Matsya the fish carries the seeds of life safely through the flood. Kurma the turtle bears a mountain on his back while the ocean is churned. Varaha the boar lifts the drowned earth from the deep. Narasimha, man and lion, protects the faithful when nothing else can. Vamana the small one reclaims the worlds in three vast steps. Then Rama, who embodies dharma, and Krishna, who speaks the Gita; and Kalki, still to come. Ten forms for ten needs — the divine meeting the moment in whatever shape it asks for."},
+    {title:'Age after age', cue:'Let the breath carry the thought, then release it.', secs:160,
+     teach:"The Bhagavad Gita says it plainly, in Krishna's own voice: whenever righteousness fades and disorder rises, I come into being, age after age. Hear what that tells us about sustenance — it is not standing still, fixed and unchanging. It is returning, in whatever form the moment needs. What lasts, lasts because it is renewed, again and again. Let that settle on the breath: to preserve is not to grip, but to keep coming back."},
+    {title:'Your own descent', cue:'Let one honest picture arise.', secs:170,
+     teach:"Now bring it home. Where in your life is balance quietly slipping — and where are you being asked, not for one heroic act, but simply to show up again, in ordinary form, to tend what matters? You do not need to be a hero. You need only to descend, patiently, back into your own life. Picture yourself returning there — to the practice, the person, the work — once more. That willingness to return is your avatar."},
+  ]
+},{
+  code:'vishnu_breath', title:'Vishnu · III', subtitle:'The Ocean Breath',
+  track:'devotion', level:'Core', focus:'Pranayama · steadiness', part:3, series:'Vishnu',
+  technique:'Dirga · Ujjayi · Sama Vritti',
+  tradition:'Hindu · the Preserver', img:'', soundscape:'ocean', accent:'#5fa8ff',
+  prompt:'Which of the three breaths steadied you most — and when this week could you use it on purpose?',
+  blurb:'Part 3 of the Vishnu course — the techniques. Learn and practice the three pranayamas of the Preserver: the full three-part breath, the ocean breath, and the square breath.',
+  segments:[
+    {title:'The three-part breath · Dirga', cue:'Inhale — belly, then ribs, then chest. Exhale slowly.', secs:200,
+     teach:"The first of Vishnu's breaths. He reclines on Ananta, the serpent of infinity, upon the shoreless ocean of milk — and you can let your own breath become that ocean. This is Dirga, the complete three-part breath. Breathing in, fill first the belly, then let the ribs widen, then the chest rise — a slow tide coming in. Breathing out, release in the same order, unhurried, until you are gently empty. Nothing forced here; only a tide allowed to rise and fall. This is what sustaining feels like in the body."},
+    {title:'The ocean breath · Ujjayi', cue:'Soften the throat; let each breath whisper like the sea.', secs:190,
+     teach:"The second breath is Ujjayi, the ocean breath. Narrow the back of the throat just slightly, as if to fog a mirror with the mouth closed, until the breath hushes like waves drawing back over sand. That soft sound gives the mind a single thread to follow, and the gentle resistance lengthens and steadies each breath. It is said to echo the shankha, Vishnu's conch — the first sound, from which all worlds arose. So ride the quiet roar of your own breathing, and let it hold you the way the ocean holds the sleeping god."},
+    {title:'The square breath · Sama Vritti', cue:'In four · hold four · out four · hold four.', secs:190,
+     teach:"The third breath is Sama Vritti, the square breath. In for four, hold for four, out for four, hold for four — each side the same length, calm and even. This is preservation made physical: balance kept, moment to moment, nothing rushed. And here is the whole secret of change, hidden in one simple practice — each time the mind slips from the count, you notice, and come back. That returning, repeated without a trace of judgment, is exactly how a life is sustained, and slowly made new. In, hold, out, hold. Come home to the square."},
+  ]
+},{
+  code:'vishnu_emblems', title:'Vishnu · IV', subtitle:'Emblems & the Name',
+  track:'devotion', level:'Core', focus:'Spiritual undertones · mantra', part:4, series:'Vishnu',
+  technique:'Mantra japa',
+  tradition:'Hindu · the Preserver', img:'', soundscape:'ocean', accent:'#5fa8ff',
+  prompt:'Which do you most need right now — a call that wakes you, clear seeing, steady strength, or an unstained heart?',
+  blurb:'Part 4 of the Vishnu course — the spiritual undertones. Sit with the four emblems he holds and the ancient name Om Namo Narayanaya, used for ages as a way of coming home.',
+  segments:[
+    {title:'The four emblems', cue:'Breathe into each: sound · clarity · strength · purity.', secs:210,
+     teach:"In his four hands Vishnu holds four emblems — and each one is a power already alive in you. The conch, Panchajanya: the first sound, Om, the call that wakes you. The discus, the Sudarshana chakra: the clear mind that cuts cleanly through illusion and spinning distraction. The mace, Kaumodaki: the unshakable strength that steadies you, the power of knowing. And the lotus, Padma: awareness itself, blooming pure though it rises straight from the mud. To sustain anything worthwhile you need all four — a call that wakes you, a mind that sees, the strength to stay, and a heart that stays unstained. With each breath, let one of them quietly wake."},
+    {title:'The name · Om Namo Narayanaya', cue:'Silently, or hum softly: Om Namo Narayanaya.', secs:210,
+     teach:"There is a name older than memory: Om Namo Narayanaya — I bow to Narayana, the infinite that rests upon the waters and within all beings. This is the ashtakshara, the eight-syllabled mantra, repeated across ages as a way of coming home. Let it move with the breath now. Hear it inwardly, or hum it low in the chest, like the conch still sounding beneath the sea. A mantra asks for nothing; it is only a handrail for the mind. Each time attention wanders, the name is simply there, waiting, and gathers you gently back."},
+    {title:'Rest in the name', cue:'Let the words dissolve into quiet.', secs:120,
+     teach:"Now let even the words dissolve, and simply rest. The call, the clear mind, the strength, the unstained heart — and the name beneath them all — need no effort now. Sit in the still center they rise from, and let it hold you, the way the sea holds the sleeping god."},
+  ]
+},{
+  code:'vishnu_reflect', title:'Vishnu · V', subtitle:'Reflect & Give Thanks',
+  track:'devotion', level:'Core', focus:'Reflection · gratitude', part:5, series:'Vishnu',
+  technique:'Reflection · gratitude',
+  tradition:'Hindu · the Preserver', img:'', soundscape:'ocean', accent:'#5fa8ff',
+  prompt:'What is already being sustained in your life that you can give thanks for?',
+  blurb:'Part 5, the close of the Vishnu course. Turn everything inward — what in your own life is yours to sustain — rest in stillness, and finish with a review and a gratitude reflection.',
+  segments:[
+    {title:'What are you sustaining?', cue:'Let one honest answer rise on its own.', secs:200,
+     teach:"Turn everything we have gathered inward. Without straining for it, let a question settle: what in my life am I being asked to preserve? Perhaps a relationship, your health, a craft, a quiet faith in yourself — something that was never made in a single day, and cannot be kept in one either. And then, gently: what have I let slip that is mine to restore? Like Vishnu, you are not asked for one grand act, but for a descent — showing up again, in ordinary form, to tend what matters. Picture the one small practice, returned to daily, that would truly sustain it. Let it rest in you like a seed."},
+    {title:'The lotus from the navel', cue:'Rest. Let the breath breathe itself.', secs:150,
+     teach:"Now let the question go. From Vishnu's navel, the old stories say, rises a single lotus, and upon it a whole new world is born. So let your effort soften completely, and rest in that quiet center from which everything in you arises — thoughts, breath, the very wish to be well. There is nothing to sustain by force now. Only be, for a few breaths: vast, and blue, and still as the sleeping ocean before a new world opens."},
+    {title:'Review & gratitude', cue:'Gently deepen the breath; let gratitude arise.', secs:180,
+     teach:"Let us gather the whole journey. We took the seat of Vishnu the Preserver, and saw that sustenance is a practice of returning. We walked his avatars — the divine descending again and again to restore the balance. We learned three breaths: the three-part Dirga, the ocean Ujjayi, the square Sama Vritti. We held his four emblems — sound, clarity, strength, purity — and his name. Now, before you rise, offer a little gratitude: for the breath that kept you without being asked, for this time you gave yourself, and for one thing in your life that is already being sustained — name it quietly. Carry the Preserver's calm with you. Real change takes root not in grand gestures, but in what you return to tomorrow, and the day after. Rest here a moment, in that gratitude."},
+  ]
+},{
+  code:'shiva', title:'Shiva · I', subtitle:'The Still Mountain',
+  track:'devotion', level:'Core', focus:'Stillness', part:1, series:'Shiva',
+  technique:'Kaya Sthairyam',
+  tradition:'Hindu · the Transformer', img:'', soundscape:'space', accent:'#9d7bff',
+  prompt:'Where in your life are you being asked to simply be still, and stop forcing?',
+  blurb:'Part 1 of the Shiva course. Meet Shiva the Transformer — the great yogi of Mount Kailash — and take the posture of absolute stillness from which all letting-go begins.',
+  segments:[
+    {title:'The Mountain', cue:'Sit like a mountain. Let the body become still.', secs:150,
+     teach:"Shiva is the great yogi, seated unmoving on Mount Kailash. He is Mahadeva — the one who transforms the world by letting the old dissolve. Where Vishnu preserves, Shiva clears the ground for what comes next. Begin where he begins: with Kaya Sthairyam, the yoga of stillness. Settle the body and quietly resolve not to move. Let every small fidget grow quiet. Stillness here is not rigidity — it is a mountain's ease. From this seat, nothing needs to be done."},
+    {title:'What transformation means', cue:'Let the breath stay slow and even.', secs:170,
+     teach:"We tend to fear Shiva's side of life — the ending, the destroyer. But look closely: nothing new can grow in ground that is already full. The old leaf must fall; night must come before dawn. Shiva's destruction is not cruelty — it is clearing, the grace that makes room. To transform is not to add, but to let what is finished dissolve. For these minutes you have nowhere to get to and nothing to hold. Rest in the mountain's stillness, and let that be enough."},
+    {title:'Rest in stillness', cue:'Let the body be a mountain; breath moving through it.', secs:120,
+     teach:"Let the breath move on its own, and keep the body still as stone. Notice how much of your ordinary effort is just holding — bracing, managing, keeping it all together. For now, set that down. A mountain does not hold itself up; it simply rests on the earth. Let yourself be held the same way."},
+  ]
+},{
+  code:'shiva_dance', title:'Shiva · II', subtitle:'The Dance of Dissolution',
+  track:'devotion', level:'Core', focus:'The still center', part:2, series:'Shiva',
+  technique:'Witnessing',
+  tradition:'Hindu · the Transformer', img:'', soundscape:'space', accent:'#9d7bff',
+  prompt:'What keeps spinning in your mind — and can you rest as the still point it turns around?',
+  blurb:'Part 2 of the Shiva course. The cosmic dance of Nataraja — creation and dissolution in one rhythm — and the still center at its heart, the part of you that only watches.',
+  segments:[
+    {title:'Nataraja · the cosmic dance', cue:'Everything moves. Simply watch.', secs:180,
+     teach:"As Nataraja, the Lord of the Dance, Shiva dances the universe into being and out again — creation and dissolution in one endless rhythm. In his hands: a drum that beats the pulse of creation, and a flame that dissolves it. He dances in a ring of fire, one foot raised in freedom, the other resting on the demon of forgetfulness. The dance never stops. Breath rising and falling, thoughts coming and going, worlds turning — all of it is the dance."},
+    {title:'The still point', cue:'Rest your attention on the unmoving center.', secs:180,
+     teach:"Yet at the very center of that whirling dance is a point of perfect stillness. The dancer turns, but the axis does not. Thoughts may move, the breath may rise and fall, the whole world may spin — rest your attention on the still center that watches it all. You are not the dance; you are the quiet ground it turns around. Each time you are swept back into the spinning, gently return to the one who is simply watching."},
+    {title:'Nilakantha · holding what is hard', cue:'Breathe steadily; let difficulty be held, not fought.', secs:160,
+     teach:"When the gods churned the ocean, a world-ending poison rose up before the nectar. Shiva drank it to save all beings, holding it in his throat, which turned blue — and so he is Nilakantha, the blue-throated one, who can hold what is hard without being consumed by it. You have this capacity too. A difficulty need not be swallowed or spat out; it can simply be held, steadily, until its charge settles. Breathe, and let whatever is hard today be held in the throat of your attention — neither fought nor fled."},
+  ]
+},{
+  code:'shiva_breath', title:'Shiva · III', subtitle:'The Releasing Breath',
+  track:'devotion', level:'Core', focus:'Letting go', part:3, series:'Shiva',
+  technique:'Long exhale · Bhramari',
+  tradition:'Hindu · the Transformer', img:'', soundscape:'space', accent:'#9d7bff',
+  prompt:'What are you ready to set down with the out-breath — and not pick back up?',
+  blurb:'Part 3 of the Shiva course — the techniques. The long releasing exhale and the humming Bhramari breath: its own instruments of letting go.',
+  segments:[
+    {title:'The long exhale', cue:'Inhale 4 · exhale long and slow, 6 to 8.', secs:200,
+     teach:"Shiva's gift is release, and the body has a built-in instrument for it: the long exhale. Breathe in for a count of four, and let the out-breath run six, seven, eight — slow, soft, and complete. An exhale longer than the inhale tells the nervous system it is safe to let go; it calms you the way dusk settles a landscape. With each out-breath, set one thing down. A worry. A grip. A version of yourself you no longer need to carry. Let the out-breath do what it was made to do."},
+    {title:'Bhramari · the humming breath', cue:'Breathe in; on the exhale, hum low like a bee.', secs:190,
+     teach:"Now add sound. Breathe in, and on the exhale hum low and soft, like a bee — this is Bhramari, the humming breath. Feel the vibration fill the throat and skull, smoothing the edges of thought. The hum gives the restless mind something simple to rest on, and lets the charge of difficulty dissolve into sound. A few rounds: a full inhale, then a long, low hum out. Let the humming soften everything it touches."},
+    {title:'The quiet after', cue:'Stop the hum. Rest in the silence it leaves.', secs:120,
+     teach:"Let the humming stop, and rest in the silence it leaves behind — a silence that feels somehow fuller than before. This is the space that releasing opens. You do not have to fill it. Just breathe naturally, and let the body enjoy how much lighter it is to hold nothing at all."},
+  ]
+},{
+  code:'shiva_name', title:'Shiva · IV', subtitle:'The Third Eye & the Name',
+  track:'devotion', level:'Core', focus:'Clear seeing · mantra', part:4, series:'Shiva',
+  technique:'Ajna focus · Om Namah Shivaya',
+  tradition:'Hindu · the Transformer', img:'', soundscape:'space', accent:'#9d7bff',
+  prompt:'What old story about yourself are you ready to see clearly — and let burn away?',
+  blurb:'Part 4 of the Shiva course — the spiritual undertones. The third eye of clear seeing, the sacred ash of what passes, and the great five-syllable mantra Om Namah Shivaya.',
+  segments:[
+    {title:'The third eye', cue:'Rest attention gently between the brows.', secs:180,
+     teach:"On Shiva's brow is a third eye — not for looking outward, but for seeing clearly. When it opens, it burns illusion to ash. Rest your attention lightly at the point between the eyebrows, the ajna center. No strain, no effort to see anything — just a soft inward gaze. Let the clear seeing of this place rest on one illusion you have carried about yourself: some old story, some quiet verdict, that was never quite true. Don't argue with it. Simply see it clearly, in the light — and that seeing alone begins to loosen its hold."},
+    {title:'Ash and renewal', cue:'Let a thought arise, and let it dissolve.', secs:160,
+     teach:"Shiva covers his body with vibhuti, sacred ash — a reminder that all forms pass, and that what burns away leaves something pure behind. Watch the next thought that arises. Don't fight it; simply let it dissolve, the way smoke thins into open sky. Nothing is truly lost. What falls away only makes room. This is destruction as grace: the clearing that lets the new begin."},
+    {title:'Om Namah Shivaya', cue:'Silently repeat the five syllables.', secs:180,
+     teach:"The great mantra of Shiva has five syllables: Om Namah Shivaya — I bow to the auspicious Self within. Let it turn slowly with the breath, each syllable a stone dropped into a still pool. When the mind wanders off, the mantra simply waits, and gently gathers it back. Let the sound, and the silence between the sounds, hold you."},
+  ]
+},{
+  code:'shiva_reflect', title:'Shiva · V', subtitle:'Reflect & Give Thanks',
+  track:'devotion', level:'Core', focus:'Reflection · gratitude', part:5, series:'Shiva',
+  technique:'Reflection · gratitude',
+  tradition:'Hindu · the Transformer', img:'', soundscape:'space', accent:'#9d7bff',
+  prompt:'What are you ready to let dissolve — and what new space might open once you do?',
+  blurb:'Part 5, the close of the Shiva course. Turn it inward — what you are ready to release — rest in the spaciousness it opens, and finish with a review and gratitude.',
+  segments:[
+    {title:'What are you ready to release?', cue:'Let one honest answer rise.', secs:190,
+     teach:"Turn everything inward. Without forcing, let a question settle: what am I ready to let dissolve? A grudge, a fear, an old identity, a way of holding yourself too tightly — something finished, that you have been carrying out of habit. You do not have to banish it by force. Simply name it, and loosen your grip, the way you release a long exhale. And notice: what new space might open once it is gone? Let yourself glimpse that opening."},
+    {title:'The spaciousness of letting go', cue:'Rest in the open space.', secs:150,
+     teach:"Rest now in the spaciousness that releasing opens. Thoughts may still come, but there is more room around them. True change is not only building; it is also this — releasing, again and again, what no longer serves. You do not become new by adding more. You become new by what you are willing to let fall away. Rest in that clear, ashed-clean quiet."},
+    {title:'Review & gratitude', cue:'Gently deepen the breath; let gratitude arise.', secs:170,
+     teach:"Let us gather the journey. We took the mountain's stillness, and found the still point at the center of the dance. We learned to hold what is hard, like Nilakantha, and to release with the long exhale and the humming breath. We rested in the third eye's clear seeing, watched a thought dissolve like ash, and turned the mantra Om Namah Shivaya. Now offer gratitude — for the capacity to let go, for the space it opens, and for one thing you are ready to release with thanks rather than struggle. Name it quietly, and let it go."},
+  ]
+},{
+  code:'lakshmi', title:'Lakshmi · I', subtitle:'The Lotus',
+  track:'devotion', level:'Core', focus:'Receiving', part:1, series:'Lakshmi',
+  technique:'Opening the posture',
+  tradition:'Hindu · the Giver of Grace', img:'', soundscape:'forest', accent:'#f5a9d0',
+  prompt:'What would it feel like to simply receive today, without earning it first?',
+  blurb:'Part 1 of the Lakshmi course. Meet Lakshmi, goddess of abundance and grace — consort of Vishnu — and take the open, receptive posture of the lotus from which all her gifts flow.',
+  segments:[
+    {title:'Seated on the lotus', cue:'Soften the face. Let the posture open.', secs:150,
+     teach:"Lakshmi is always seated upon a lotus — the flower that rises out of muddy water and blooms unstained. It means that fortune and grace can grow from any ground, and that you are already whole beneath whatever has muddied the surface. She is the goddess of Shri: abundance, beauty, and grace — not wealth hoarded, but prosperity that flows. Let your shoulders drop, your jaw soften, your palms rest open on your knees. Begin simply, by being willing to receive."},
+    {title:'Abundance that flows', cue:'Let the breath arrive and leave freely.', secs:160,
+     teach:"In her images, gold coins stream endlessly from Lakshmi's open palm — abundance that flows precisely because it is never clutched. A closed fist can hold nothing new; only the open hand both gives and receives. This is her teaching: true abundance is not a pile to defend, but a current to stay in. Let each breath arrive and depart freely, held onto nothing. Nothing needs gripping here."},
+    {title:'Willing to receive', cue:'Breathe in, and simply let it land.', secs:120,
+     teach:"Many of us are far better at giving than receiving. For these breaths, simply let yourself be given to. Breathe in as if drawing in warm, soft light, and let it settle in the chest. You do not have to earn this breath, this moment, this ease. It is already given. Let it land."},
+  ]
+},{
+  code:'lakshmi_forms', title:'Lakshmi · II', subtitle:'The Eight Forms',
+  track:'devotion', level:'Core', focus:'True wealth', part:2, series:'Lakshmi',
+  technique:'Contemplation',
+  tradition:'Hindu · the Giver of Grace', img:'', soundscape:'forest', accent:'#f5a9d0',
+  prompt:'Where are you richer than you usually admit?',
+  blurb:'Part 2 of the Lakshmi course. Ashta Lakshmi — her eight forms — reveal that abundance is far more than money. A contemplation of the many kinds of wealth you already hold.',
+  segments:[
+    {title:'Ashta Lakshmi · the eight forms', cue:'Rest easy. Simply listen.', secs:190,
+     teach:"Lakshmi is honored in eight forms — Ashta Lakshmi — because abundance is far more than money. There is the wealth of health, and of knowledge; of courage, and of nourishment; the wealth of family and friendship; victory over hardship; and the wealth of the spirit. Money is only one coin among many. Most of us are quietly rich in forms we never stop to count."},
+    {title:'What you already hold', cue:'Let your attention rest on what is already here.', secs:180,
+     teach:"Let your attention move, without rushing, over the forms of wealth you already carry. The body that works, more or less, to carry you through a day. The people who would answer if you called. Something you know how to do well. A hardship you have already survived. Where are you richer than you usually admit? Don't manufacture gratitude — just look honestly, and let yourself feel genuinely well-resourced."},
+    {title:'Enough', cue:'Breathe, and rest in sufficiency.', secs:140,
+     teach:"Beneath the wish for more there is often a quiet fear of not-enough. For these breaths, try on the opposite: that right now, in this moment, there is enough — enough air, enough time, enough of you. Abundance begins the instant the grasping stops. Rest in that sufficiency, and breathe."},
+  ]
+},{
+  code:'lakshmi_breath', title:'Lakshmi · III', subtitle:'The Open Hand',
+  track:'devotion', level:'Core', focus:'Coherent breath', part:3, series:'Lakshmi',
+  technique:'Heart-centered breathing',
+  tradition:'Hindu · the Giver of Grace', img:'', soundscape:'forest', accent:'#f5a9d0',
+  prompt:'What does your heart feel like when it stops bracing?',
+  blurb:'Part 3 of the Lakshmi course — the technique. Coherent heart-centered breathing, which brings the rhythm of the heart into balance.',
+  segments:[
+    {title:'Hand on the heart', cue:'Hand on heart. Breathe in 5 · out 5, smooth and even.', secs:200,
+     teach:"Rest a hand over your heart, and breathe at an easy, even pace — in for a slow five, out for a slow five. At this gentle rhythm, something in the body comes into tune: heart and lungs and the pulse of the blood fall into one rhythm, like a current finding its level — a physical echo of Lakshmi's flowing grace. Let each breath be smooth and round, with no hard edge between in and out. And feel the warmth gathering under your hand."},
+    {title:'The breath that gives and receives', cue:'Receive on the in-breath; offer on the out-breath.', secs:170,
+     teach:"Let the breath itself become the open hand. On each in-breath, receive — draw in warmth, ease, enough. On each out-breath, offer — let something soften and flow outward. In, received; out, given. Neither half is clutched. This is the whole lesson of Lakshmi carried in a single breath: abundance is a current you stay in, not a thing you keep."},
+  ]
+},{
+  code:'lakshmi_flow', title:'Lakshmi · IV', subtitle:'Gratitude & the Flow',
+  track:'devotion', level:'Core', focus:'Gratitude · generosity', part:4, series:'Lakshmi',
+  technique:'Gratitude · Metta',
+  tradition:'Hindu · the Giver of Grace', img:'', soundscape:'forest', accent:'#f5a9d0',
+  prompt:'Who in your life could you let your abundance flow toward?',
+  blurb:'Part 4 of the Lakshmi course — the heart of the practice. Gratitude for what is already here, and generosity that lets abundance move outward as grace.',
+  segments:[
+    {title:'What is already here', cue:'Name silently what you are grateful for.', secs:180,
+     teach:"True abundance begins not with more, but with noticing what is already given. The breath, arriving without being asked. The body, carrying you. This quiet moment, yours. Let gratitude move through you in specifics — name three things, small and real. Gratitude is simply how the mind learns to see the abundance that was there all along."},
+    {title:'The flow · wishing plenty outward', cue:'On each exhale, wish abundance to another.', secs:180,
+     teach:"Abundance that only gathers becomes stagnant; abundance that moves becomes grace. As you breathe out, send a wish of plenty outward: May you have enough. May you be well. May you flourish. Begin with someone you love, then someone you barely know, then, if you can, someone you find difficult. Generosity is not loss — it is the open hand through which more can always flow."},
+    {title:'Shri · the quiet radiance', cue:'Let yourself receive. Breathe in warmth.', secs:150,
+     teach:"Lakshmi is called Shri: auspiciousness, radiance, the quiet glow of the blessed. Having given, now let yourself receive in turn. Breathe in as if drawing warm gold light into the chest; let it fill and settle. You are allowed to receive goodness, not only to hand it out. Let it land, and let yourself glow a little."},
+  ]
+},{
+  code:'lakshmi_reflect', title:'Lakshmi · V', subtitle:'Reflect & Give Thanks',
+  track:'devotion', level:'Core', focus:'Reflection · gratitude', part:5, series:'Lakshmi',
+  technique:'Reflection · gratitude',
+  tradition:'Hindu · the Giver of Grace', img:'', soundscape:'forest', accent:'#f5a9d0',
+  prompt:'What is already abundant in your life that you often overlook — and who might you let it flow toward?',
+  blurb:'Part 5, the close of the Lakshmi course. Turn it inward — the abundance you overlook and where it might flow — then rest and finish with a review and gratitude.',
+  segments:[
+    {title:'What you overlook', cue:'Let one honest answer rise.', secs:190,
+     teach:"Turn it inward. Without reaching, let a question settle: what is already abundant in my life that I usually overlook? And then: who might I let it flow toward — a person, a cause, a small daily generosity? Picture the open hand, giving and receiving in the same motion. You do not become abundant by getting more. You become abundant the moment you notice what is here, and let it move."},
+    {title:'Rest in fullness', cue:'Breathe, and rest in the open hand.', secs:150,
+     teach:"Rest now with two things held lightly: a grateful eye that notices what is already here, and an open hand that lets good flow both in and out. Practiced daily, this quietly changes a life — not by adding more, but by revealing how much was always given. Breathe, and rest in that fullness."},
+    {title:'Review & gratitude', cue:'Gently deepen the breath; let gratitude arise.', secs:170,
+     teach:"Let us gather the journey. We took the lotus seat and the willingness to receive. We counted the eight forms of wealth already ours, and breathed the coherent breath of the open heart. We gave plenty away, and let ourselves receive in turn. Now, before you rise, offer thanks — for the abundance you so easily overlook, for the people through whom it flows, and for one specific gift in your life, named quietly and received fully. Let gratitude be the last thing you hold."},
+  ]
+},{
+  code:'breath', title:'Breath · I', subtitle:'Arrive & Notice',
+  track:'foundations', level:'Beginner', focus:'Interoception', part:1, series:'Breath',
+  technique:'Natural breath',
+  tradition:'Secular · science-based', img:'', soundscape:'rain', accent:'#5fd0c8',
+  prompt:'What did your natural breath feel like before you changed anything?',
+  blurb:'Part 1 of the Breath course. No belief required — just the science of how breath steers the nervous system. Begin by learning to feel your own breath, the skill everything else is built on.',
+  segments:[
+    {title:'The one lever you can reach', cue:'Breathe naturally. Just notice.', secs:150,
+     teach:"Of everything the body does on its own — the heartbeat, the tide of the blood — the breath is the one you can take by the hand. That is a quiet kind of power, and it has been with you the whole time. For now, change nothing. Let the breath come as it comes, and simply feel it. Does it rise in the chest, or down in the belly? Is it quick, or slow — smooth, or a little ragged? You are not fixing anything here. You are only arriving, and letting yourself be felt from the inside."},
+    {title:'Interoception · feeling from within', cue:'Follow one full breath, in and out.', secs:150,
+     teach:"This feeling from within — the old teachers had a word for it, interoception — is the ground everything else grows from. It is not learned once; it deepens each time you turn toward it. So follow a single breath the whole way home, from the first faint stir of the in-breath to the last of the out. When it is gone, meet the next one. You are not steering yet. You are only learning the texture of what is already happening — and strange as it sounds, that quiet attention is already settling you."},
+  ]
+},{
+  code:'breath_sigh', title:'Breath · II', subtitle:'The Physiological Sigh',
+  track:'foundations', level:'Beginner', focus:'Fast reset', part:2, series:'Breath',
+  technique:'Physiological sigh',
+  tradition:'Secular · science-based', img:'', soundscape:'rain', accent:'#5fd0c8',
+  prompt:'When this week could a double-inhale sigh help you reset on the spot?',
+  blurb:'Part 2 of the Breath course. The fastest real-time tool for calming down — the physiological sigh — and the simple physiology behind why it works.',
+  segments:[
+    {title:'The double inhale', cue:'Double inhale through the nose · long exhale through the mouth.', secs:180,
+     teach:"When the body is running hot and you need it to settle now, there is a breath for this — one you have taken in your sleep and after crying, your whole life, without ever being taught. Breathe in through the nose… then sip a little more air on top, filling the lungs to the brim… and let it go, long and slow, through the mouth. Let the out-breath be longer than you think you need. Try a few, unhurried: two breaths drawn in, one long breath poured out."},
+    {title:'Why it works', cue:'Keep sighing gently; feel the body downshift.', secs:160,
+     teach:"Here is the quiet reason it works. Through a long day the smallest chambers of the lungs sag closed; that second sip of air opens them again, and the long exhale reaches down and slows the heart itself. This is the body's own reset — no one had to teach it to you, you simply knew. The only gift is this: now you can choose it. A few sighs before the hard moment, and the whole system steps down off its toes."},
+  ]
+},{
+  code:'breath_vagus', title:'Breath · III', subtitle:'The Long Exhale',
+  track:'foundations', level:'Beginner', focus:'Vagal tone', part:3, series:'Breath',
+  technique:'Long exhale · Coherent',
+  tradition:'Secular · science-based', img:'', soundscape:'rain', accent:'#5fd0c8',
+  prompt:'Does a longer out-breath than in-breath change how you feel?',
+  blurb:'Part 3 of the Breath course. Why the exhale calms — the vagus nerve — and coherent breathing, the resonant rhythm that balances the whole system.',
+  segments:[
+    {title:'Why the exhale calms', cue:'Inhale 4 · exhale 6.', secs:180,
+     teach:"Rest a hand somewhere on the body and feel this: breathe in, and the heart quickens a little; breathe out, and it eases. That easing has a name — the vagus nerve, the long quiet cable of your rest. So the out-breath is a brake you can press on purpose. Breathe in for four… and out for six. You are not only relaxing. With every slow exhale you are tending the very nerve that carries you home to calm."},
+    {title:'Coherent breathing', cue:'In 5.5 · out 5.5. Smooth, round, even.', secs:200,
+     teach:"Now let the two halves even out. Around five and a half breaths a minute — a slow count of five or six in, the same out — something lovely happens: heart, lungs, and blood fall into one rhythm, like instruments tuning to a single note. There is a word for it, resonance, and the body answers with its deepest ease and resilience. Let the breath grow round and seamless, no edge between in and out. This is the pace to come home to whenever the ground feels unsteady."},
+  ]
+},{
+  code:'breath_box', title:'Breath · IV', subtitle:'Box Breathing',
+  track:'foundations', level:'Beginner', focus:'Focus', part:4, series:'Breath',
+  technique:'Box breath',
+  tradition:'Secular · science-based', img:'', soundscape:'rain', accent:'#5fd0c8',
+  prompt:'Where would steady focus serve you better than relaxation?',
+  blurb:'Part 4 of the Breath course. Box breathing — for steadiness and sharp focus rather than sleepiness — and the held pauses that quietly train the body.',
+  segments:[
+    {title:'Squaring the breath', cue:'In 4 · hold 4 · out 4 · hold 4.', secs:190,
+     teach:"Some moments do not call for softening — they call for steadiness, a clear and level mind. For those, draw the breath as a square. In for four… hold for four… out for four… hold for four. Soldiers and surgeons lean on this before the pressure lands, and now so can you. Let every side of the square be the same unhurried length. In. Hold. Out. Hold. And feel how steady the body becomes beneath you."},
+    {title:'The gift of the pause', cue:'Rest in the held pauses, without strain.', secs:150,
+     teach:"Those held pauses are not empty time. Gently, over many days, they teach the body to hold a little more stillness, until your ordinary breathing turns slower and calmer on its own. Keep the holds easy — never strained, never a struggle. And notice the quiet inside them: no breath coming, none going, just a wakeful hush. That hush is yours — always a breath away, any time you square the breath."},
+  ]
+},{
+  code:'breath_carry', title:'Breath · V', subtitle:'Integrate & Carry',
+  track:'foundations', level:'Beginner', focus:'Integration', part:5, series:'Breath',
+  technique:'Natural breath · choosing',
+  tradition:'Secular · science-based', img:'', soundscape:'rain', accent:'#5fd0c8',
+  prompt:'Which one breath will you keep for this week, and when will you use it?',
+  blurb:'Part 5, the close of the Breath course. Feel the contrast of a settled nervous system, then choose one tool to carry into your days.',
+  segments:[
+    {title:'Rest and notice', cue:'Let the breath go completely natural again.', secs:150,
+     teach:"Now let the breath off its leash entirely. Nothing to count, nothing to shape — let it do as it pleases, and only watch. And feel the body against how it felt a few minutes ago. Slower, perhaps. Warmer. More here. Stay with that a moment, because this is the whole teaching: you did that. No app, no device, nothing bought or downloaded — only air, and your own attention. These tools never leave you. They wait for the moment you remember them."},
+    {title:'Carry one tool', cue:'Choose one breath to keep for this week.', secs:140,
+     teach:"So you carry four things out of here. The sigh, for stress that lands all at once. The long exhale, to unwind. The even, resonant breath, for balance. The square breath, for focus. You do not need them all — a practice is only one good tool, returned to and returned to. Choose the one that served you most today, and promise it a place this week: at a red light, before the hard conversation, in the dark before sleep. Let that small vow settle, and carry it with you."},
+  ]
+}];
+// --- curriculum: tracks group the lessons; roadmap shows the program is growing ---
+const TRACKS=[
+  {key:'foundations', name:'Foundations', sub:'The practice itself — start here. Universal, secular, science-grounded.', accent:'#5fd0c8'},
+  {key:'devotion', name:'Deities & Devotion', sub:'Contemplative journeys through the great figures of the Hindu tradition — myth as a mirror for the mind.', accent:'#f5c977'},
+];
+const ROADMAP={
+  foundations:[{title:'The Body Scan', sub:'Somatic awareness, head to toe'},{title:'Loving-Kindness (Metta)', sub:'Warmth for self and others'},{title:'Noting the Mind', sub:'Labeling thought and feeling'}],
+  devotion:[{title:'Ganesha', sub:'Removing inner obstacles'},{title:'Saraswati', sub:'Clarity, learning, and flow'},{title:'Durga', sub:'Courage and protective strength'}],
+};
+const lessonMins=(l)=>Math.max(1,Math.round(l.segments.reduce((s,x)=>s+x.secs,0)/60));
+let lsSpeak=true;let lessonReflect=null;
+/* The Lumen Method — every guided journey is delivered the same way:
+   a calm lead-in, then for each segment the teaching is spoken one line at a time
+   with reflective silences between lines and a longer guided stillness to close the
+   segment, a soft bell at each threshold, and a signature return. Pacing adapts to
+   each segment's length so there is always room to think, breathe, and rest. */
+async function lessonPlay(lesson, startSi){
+  try{await api('session/start','POST',{});}catch(e){}
+  getGeo();
+  lsSpeak=true;
+  const nSeg=lesson.segments.length;
+  startSi=Math.max(0,Math.min(parseInt(startSi||0,10)||0,nSeg-1));
+  // --- build the paced timeline ---
+  const steps=[];
+  steps.push({kind:'seg', si:0, open:true});
+  steps.push({kind:'say', si:0, lead:true, text:"Welcome. This is Lumen. Find a comfortable seat, let the body grow still, and when you're ready, let your eyes gently close."});
+  steps.push({kind:'silence', si:0, dur:6, label:'Settling in', rest:true});
+  steps.push({kind:'say', si:0, lead:true, text:"I'll stay beside you — speaking when it helps, and falling quiet so you can simply be. There is nowhere to be, and nothing to do, but here."});
+  steps.push({kind:'silence', si:0, dur:5, label:'…', rest:true});
+  lesson.segments.forEach((seg,si)=>{
+    steps.push({kind:'seg', si});
+    const sents=splitSents(seg.teach).map(s=>s.trim()).filter(Boolean);
+    const speechEst=sents.reduce((a,s)=>a+estSay(s),0);
+    const slack=Math.max((seg.secs||90)-speechEst, sents.length*2.5+6);
+    const gap=Math.min(7,Math.max(2.5,(slack*0.4)/Math.max(1,sents.length)));
+    const rest=Math.min(46,Math.max(7, seg.rest!=null?seg.rest:slack*0.6));
+    sents.forEach((s,k)=>{
+      const last=k===sents.length-1;
+      steps.push({kind:'say', si, text:s});
+      steps.push({kind:'silence', si, dur:last?rest:gap, cue:seg.cue, rest:last,
+        label:last?(seg.restLabel||'Rest here · stay with the breath'):''});
+    });
+  });
+  steps.push({kind:'seg', si:nSeg-1, close:true});
+  steps.push({kind:'say', si:nSeg-1, lead:true, text:"Our time here is complete. Carry a little of this light with you into whatever comes next. When you're ready, take a slower, deeper breath, feel the weight of the body, and gently open your eyes."});
+  steps.push({kind:'silence', si:nSeg-1, dur:5, label:'…', rest:true});
+  const totalEst=Math.max(30, steps.reduce((a,st)=>a+(st.kind==='say'?estSay(st.text)+0.4:(st.kind==='silence'?st.dur:1)),0));
+  const stEst=(st)=>st.kind==='say'?estSay(st.text)+0.4:(st.kind==='silence'?st.dur:1);
+  let elapsed=0, ended=false, idx=0, stepTimer=null;
+  // resume: jump to the segment where the user left off, with a short welcome-back
+  if(startSi>0){
+    const at=steps.findIndex(st=>st.kind==='seg'&&st.si===startSi&&!st.open&&!st.close);
+    if(at>0){
+      elapsed=Math.round(steps.slice(0,at).reduce((a,st)=>a+stEst(st),0));
+      steps.splice(at,0,{kind:'say',si:startSi,lead:true,text:"Welcome back. This is Lumen — let's take up the thread just where you left it."},
+                        {kind:'silence',si:startSi,dur:3,label:'Settling back in',rest:true});
+      idx=at;
+    }
+  }
+  $('#nav').classList.add('hidden');
+  $('#app').innerHTML=`
+  <div class="lesson-bg" style="background-image:url(${SERIES_ART[lesson.series]||lesson.img||''})"></div>
+  <div class="lesson-top">
+    <div class="lesson-ttl"><span style="color:${lesson.accent}">${esc(lesson.title)}</span> · <span class="muted">${esc(lesson.subtitle)}</span></div>
+    <div class="lesson-step muted" id="lstep"></div>
+    <div class="jny-bar" style="margin-top:7px"><i id="lprog" style="width:0%"></i></div>
+  </div>
+  <div class="orb-wrap" style="height:220px"><div class="ring"></div><div class="orb" id="lorb"><div class="t" style="font-size:19px">◦</div></div><div class="breath-label" id="lcue"></div></div>
+  <div class="lesson-teach" id="lteach"></div>
+  <div class="lesson-foot">
+    <button class="mic on" id="lmute" title="Narration">${ic('sound')}</button>
+    <div class="muted" id="lrem" style="flex:1;text-align:center;font-size:13px"></div>
+    <button class="btn ghost" id="lend" style="width:auto;padding:11px 18px">End</button>
+  </div>`;
+  try{Sound.start(lessonSoundPick||lesson.soundscape);}catch(e){}
+  const tick=setInterval(()=>{if(ended)return;elapsed=Math.min(totalEst,elapsed+1);
+    const p=$('#lprog');if(p)p.style.width=Math.round(100*elapsed/totalEst)+'%';
+    const rem=Math.max(0,Math.round(totalEst-elapsed));const r=$('#lrem');if(r)r.textContent=`${Math.floor(rem/60)}:${String(rem%60).padStart(2,'0')} left`;},1000);
+  function setHeader(si){const seg=lesson.segments[si]||lesson.segments[0];const s=$('#lstep');if(s)s.textContent=`Step ${si+1} of ${nSeg} · ${seg.title}`;}
+  function showLine(text,lead){const tt=$('#lteach');if(tt){tt.textContent=text;tt.classList.toggle('lead',!!lead);tt.classList.remove('resting');}
+    const o=$('#lorb');if(o)o.classList.remove('breathe');}
+  function showSilence(cue,label,rest){const lc=$('#lcue');if(lc&&cue)lc.textContent=cue;
+    const tt=$('#lteach');if(tt&&(rest||label)){tt.textContent=label||'';tt.classList.add('resting');tt.classList.remove('lead');}
+    const o=$('#lorb');if(o)o.classList.add('breathe');}
+  function clearStep(){if(stepTimer){clearTimeout(stepTimer);stepTimer=null;}stopNarration();}
+  function nextSayText(){for(let j=idx;j<steps.length;j++){if(steps[j].kind==='say')return steps[j].text;}return null;}
+  function runStep(){
+    if(ended)return;
+    if(idx>=steps.length){finish(true);return;}
+    const st=steps[idx++];
+    if(st.kind==='seg'){setHeader(st.si);const seg=lesson.segments[st.si];const lc=$('#lcue');if(lc)lc.textContent=seg.cue||'';
+      if(!st.close)jnySave(lesson.code, st.si);  // remember our place for Continue
+      if(!st.open){try{Sound.bell();}catch(e){}}
+      stepTimer=setTimeout(runStep, st.open?700:1300);return;}
+    if(st.kind==='say'){showLine(st.text, st.lead);
+      if(lsSpeak){let adv=false;const go=()=>{if(adv||ended)return;adv=true;stepTimer=setTimeout(runStep,300);};
+        narrate(st.text, go);
+        ttsPrefetch(nextSayText());  // warm the next line so playback stays seamless
+        setTimeout(go, estSay(st.text)*2200+9000);  // generous safety net (audio may run longer than estimate)
+      } else {stepTimer=setTimeout(runStep, estSay(st.text)*1000);}
+      return;}
+    if(st.kind==='silence'){showSilence(st.cue, st.label, st.rest);
+      stepTimer=setTimeout(runStep, Math.max(1,st.dur)*1000);return;}
+  }
+  async function finish(complete){if(ended)return;ended=true;clearStep();clearInterval(tick);try{Sound.stop();}catch(e){}stopNarration();
+    if(complete){jnyClear(lesson.code);try{Sound.bell();}catch(e){}}  // finished → clear resume point
+    const mins=Math.max(1,Math.round((complete?totalEst:elapsed)/60));
+    const body={minutes:mins,soundscape:lesson.soundscape,mood:'',note:'Guided lesson · '+lesson.title,lesson:lesson.code};
+    if(geoFix&&Date.now()-geoFix.t<3600000){body.lat=geoFix.lat;body.lon=geoFix.lon;}
+    let res;try{res=await api('session/complete','POST',body);}catch(e){go('meditate');return;}
+    try{const r=await api('me');ME=r.profile;}catch(e){}
+    lessonReflect=complete&&lesson.prompt?lesson.prompt:null;
+    showRewards(res);}
+  $('#lend').onclick=()=>finish(false);
+  $('#lmute').onclick=()=>{lsSpeak=!lsSpeak;const m=$('#lmute');if(m){m.innerHTML=ic(lsSpeak?'sound':'mute');m.classList.toggle('on',lsSpeak);}
+    if(!lsSpeak)stopNarration();};
+  runStep();
+}
+
+/* ---- map ---- */
+let mapScope='today';
+let mapPhotos=(()=>{try{return localStorage.getItem('lumen_mapphotos')==='1';}catch(e){return false;}})();
+const SS_LABEL={rain:'Rain',forest:'Forest',ocean:'Ocean',space:'Deep Space',silence:'Silence'};
+function ago(iso){const s=(Date.now()-new Date(iso).getTime())/1000;if(s<90)return 'just now';if(s<3600)return Math.round(s/60)+'m ago';if(s<86400)return Math.round(s/3600)+'h ago';return Math.round(s/86400)+'d ago';}
+function mapMarker(pt){
+  const mine=pt.bot===0;const color=mine?'#f5c977':'#c084fc';
+  let icon;
+  if(mapPhotos&&pt.photo){
+    const sz=mine?40:34;
+    icon=L.divIcon({className:'mkr-wrap',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],
+      html:`<div class="mkr-photo ${mine?'me':''}" style="--c:${color}"><img src="${esc(pt.photo)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='${ic(pt.soundscape||'silence','mkri').replace(/'/g,'&#39;')}'"></div>`});
+  }else{
+    icon=L.divIcon({className:'mkr-wrap',iconSize:[mine?34:28,mine?34:28],iconAnchor:[mine?17:14,mine?17:14],
+      html:`<div class="mkr ${mine?'me':''}" style="--c:${color}">${ic(pt.soundscape||'silence','mkri')}</div>`});
+  }
+  const m=L.marker([pt.lat,pt.lon],{icon});
+  m.bindPopup(`<div class="pop">${pt.photo?`<img class="pop-img" src="${esc(pt.photo)}" alt="meditation spot" onerror="this.remove()">`:''}<div class="pop-h"><span class="pop-ic" style="color:${color}">${ic(pt.soundscape||'silence')}</span><b>${esc(pt.name)||'Someone'}</b>${mine?' <span class="pop-you">you</span>':''}</div>`+
+    `<div class="pop-b">${pt.minutes} min · ${SS_LABEL[pt.soundscape]||esc(pt.soundscape)}</div>`+
+    `<div class="pop-m">${esc(pt.city)||'Somewhere on Earth'} · ${ago(pt.ended)}</div></div>`,
+    {closeButton:false});
+  return m;
+}
+async function renderMap(){
+  journeyTok++;  // cancel any in-flight journey timelapse
+  try{Sound.stop();}catch(e){}
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>World</b></div>
+  <div class="seg" id="scope"><button class="${mapScope==='today'?'on':''}" data-s="today">Today</button><button class="${mapScope==='all'?'on':''}" data-s="all">All time</button><button class="${mapScope==='mine'?'on':''}" data-s="mine">My places</button></div>
+  <div class="map-view"><button class="map-vbtn ${mapPhotos?'on':''}" id="mvphoto">${ic('camera')} Photos</button><button class="map-vbtn ${mapPhotos?'':'on'}" id="mvicon">${ic('lumen')} Icons</button></div>
+  <div id="pres" class="muted center" style="margin:10px 0"></div>
+  <div id="map"></div>
+  <div class="card" id="legend" style="padding:12px 14px;margin-top:10px">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12px">
+      <span style="display:flex;align-items:center;gap:7px"><span class="dotleg" style="--c:#f5c977"></span>You</span>
+      <span style="display:flex;align-items:center;gap:7px"><span class="dotleg" style="--c:#c084fc"></span>Community</span>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:12px">
+      ${['rain','forest','ocean','space','silence'].map(s=>`<span style="display:flex;align-items:center;gap:5px">${ic(s,'p')} ${SS_LABEL[s]}</span>`).join('')}
+    </div>
+  </div>
+  <p class="muted center" style="font-size:12px;margin-top:10px">Each glow is a real session. Locations are blurred for privacy.</p>`;
+  $('#scope').querySelectorAll('button').forEach(b=>b.onclick=()=>{mapScope=b.dataset.s;renderMap();});
+  const setPhotos=(v)=>{mapPhotos=v;try{localStorage.setItem('lumen_mapphotos',v?'1':'0');}catch(e){}renderMap();};
+  $('#mvphoto').onclick=()=>{if(!mapPhotos)setPhotos(true);};
+  $('#mvicon').onclick=()=>{if(mapPhotos)setPhotos(false);};
+  map=L.map('map',{attributionControl:false,zoomControl:true,worldCopyJump:true}).setView([20,0],2);
+  map.zoomControl.setPosition('topright');
+  // Keyless Esri dark-gray basemap (same approach as travelog — no API key needed)
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:16}).addTo(map);
+  let data={points:[]};try{data=await api('map?scope='+mapScope);}catch(e){}
+  setTimeout(()=>map.invalidateSize(),120);
+  if(mapScope==='mine'){
+    const n=data.points.length, cities=(data.cities||[]);
+    $('#pres').innerHTML=n?`${ic('pin','g')} <b>${n}</b> ${n===1?'light':'lights'} across <b>${data.places}</b> ${data.places===1?'place':'places'}`
+      :`You haven’t lit anywhere yet — meditate with location on to begin your map.`;
+    if(cities.length){$('#legend').innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Your places</div><div style="display:flex;gap:7px;flex-wrap:wrap">${cities.map(c=>`<span class="pill" style="font-size:11px">${ic('pin','g')} ${esc(c)}</span>`).join('')}</div>`;}
+    else{$('#legend').innerHTML='';}
+    // overlay + play control for the journey timelapse
+    document.querySelectorAll('.jny-ui').forEach(x=>x.remove());
+    const mapEl=$('#map');
+    const ov=el(`<div class="jny-ov jny-ui" id="jov"></div>`);mapEl.appendChild(ov);
+    if(n>=1){const btn=el(`<button class="jny-play jny-ui" id="jplay">${ic('play')} Play my journey</button>`);mapEl.appendChild(btn);
+      btn.onclick=()=>playJourney(data.points.slice());}
+    MARKERS=L.layerGroup().addTo(map);
+    data.points.forEach(pt=>mapMarker(pt).addTo(MARKERS));
+    if(n){const b=L.latLngBounds(data.points.map(p=>[p.lat,p.lon]));setTimeout(()=>map.fitBounds(b.pad(0.4),{maxZoom:6,duration:1.2,animate:true}),350);}
+    return;
+  }
+  try{const p=await api('presence');$('#pres').innerHTML=`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--purple);box-shadow:0 0 7px var(--purple);vertical-align:middle"></span> <b>${p.now}</b> meditating now · <b>${p.today_sessions}</b> sessions · <b>${fmt(p.today_light)}</b> light today`;}catch(e){}
+  let recentM=null;
+  data.points.forEach((pt,i)=>{const m=mapMarker(pt).addTo(map);if(i===0)recentM=m;});
+  // auto-fly to + open the most recent meditator (points are ordered newest-first)
+  if(recentM){const pt=data.points[0];
+    setTimeout(()=>{map.flyTo([pt.lat,pt.lon],5,{duration:1.8});},400);
+    setTimeout(()=>recentM.openPopup(),2300);}
+}
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+function journeyDot(pt,color){
+  return L.marker([pt.lat,pt.lon],{icon:L.divIcon({className:'mkr-wrap',iconSize:[26,26],iconAnchor:[13,13],
+    html:`<div class="mkr jny-drop" style="--c:${color}">${ic(pt.soundscape||'silence','mkri')}</div>`})});
+}
+async function playJourney(points){
+  if(!map)return;
+  const tok=++journeyTok;
+  points.sort((a,b)=>new Date(a.ended)-new Date(b.ended)); // oldest → newest
+  if(MARKERS){MARKERS.clearLayers();}else{MARKERS=L.layerGroup().addTo(map);}
+  if(JPATH){map.removeLayer(JPATH);} JPATH=L.layerGroup().addTo(map);  // holds the fading trail segments
+  const btn=$('#jplay'); if(btn){btn.innerHTML=`${ic('stop')} Stop`; btn.onclick=()=>stopJourney();}
+  const ov=$('#jov'); if(ov)ov.classList.add('show');
+  try{Sound.bell();Sound.start('space');}catch(e){}
+  const total=points.length;
+  const step=total>24?650:(total>10?850:1100);
+  const line=[];
+  for(let i=0;i<total;i++){
+    if(TAB!=='map'){try{Sound.stop();}catch(e){}return;}  // left the map → stop music
+    if(tok!==journeyTok)return;                           // superseded / stopped (new loop owns sound)
+    const pt=points[i];
+    map.flyTo([pt.lat,pt.lon], total>1?5:4, {duration:step/1000*0.9, animate:true});
+    await sleep(Math.min(step*0.55,560));
+    if(tok!==journeyTok)return;
+    journeyDot(pt,'#f5c977').addTo(MARKERS);
+    const here=[pt.lat,pt.lon];
+    if(line.length){  // draw this leg as its own segment and fade it in
+      const seg=L.polyline([line[line.length-1],here],{color:'#f5c977',weight:2,opacity:.72,className:'jny-seg'}).addTo(JPATH);
+      const pe=seg.getElement?seg.getElement():seg._path;
+      if(pe){pe.style.opacity='0';requestAnimationFrame(()=>{requestAnimationFrame(()=>{pe.style.opacity='1';});});}
+    }
+    line.push(here);
+    if(ov)ov.innerHTML=`<div class="jny-count">${i+1}<span>/${total}</span></div>
+      <div class="jny-meta"><b>${esc(pt.city)||'Somewhere'}</b><span>${new Date(pt.ended).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})} · ${pt.minutes} min</span></div>
+      <div class="jny-bar"><i style="width:${Math.round(100*(i+1)/total)}%"></i></div>`;
+    try{if(i%4===0)Sound.bell();}catch(e){}
+    await sleep(step*0.6);
+  }
+  if(tok!==journeyTok)return;
+  // 1) pull back to the whole world and let it breathe
+  if(ov)ov.classList.remove('show');
+  const pb=$('#jplay'); if(pb)pb.style.display='none';
+  map.flyTo([18,0],2,{duration:2.4,animate:true});
+  await sleep(3800);
+  if(tok!==journeyTok||TAB!=='map')return;
+  // 2) the congratulations finale
+  showFinale(points);
+}
+function showFinale(points){
+  const pts=points.slice().sort((a,b)=>new Date(a.ended)-new Date(b.ended));
+  const sits=pts.length;
+  const places=new Set(pts.map(p=>p.city||(p.lat+','+p.lon))).size;
+  const mins=pts.reduce((s,p)=>s+(p.minutes||0),0);
+  const hrs=mins/60, hoursStr=hrs>=1?(hrs>=10?Math.round(hrs):hrs.toFixed(1)):mins+'m';
+  const first=new Date(pts[0].ended), last=new Date(pts[pts.length-1].ended);
+  const span=first.toLocaleDateString(undefined,{month:'short',year:'numeric'})+' → '+last.toLocaleDateString(undefined,{month:'short',year:'numeric'});
+  const months=Math.max(1,Math.round((last-first)/2592000000));
+  const dur=months>=12?`${(months/12).toFixed(months%12<2?0:1)} year${months>=24?'s':''}`:`${months} month${months>1?'s':''}`;
+  const sc={};pts.forEach(p=>sc[p.soundscape]=(sc[p.soundscape]||0)+1);
+  const favSc=Object.keys(sc).sort((a,b)=>sc[b]-sc[a])[0]||'silence';
+  const ci={};pts.forEach(p=>{if(p.city)ci[p.city]=(ci[p.city]||0)+1;});
+  const homeCity=Object.keys(ci).sort((a,b)=>ci[b]-ci[a])[0]||'the world';
+  const name=(ME&&ME.name)?ME.name.split(' ')[0]:'traveler';
+  const spk=[...Array(14)].map(()=>`<span class="fspark" style="left:${Math.round(Math.random()*100)}%;animation-delay:${(Math.random()*3).toFixed(2)}s;animation-duration:${(3+Math.random()*3).toFixed(2)}s"></span>`).join('');
+  const tiles=[[sits,'sits'],[places,places===1?'place':'places'],[hoursStr,'hrs of stillness']];
+  const lines=[
+    [ic('compass','g'),`${dur} of practice`,span],
+    [ic(favSc,'g'),`Your sound was ${SS_LABEL[favSc]||favSc}`,`${sc[favSc]} of ${sits} sits`],
+    [ic('pin','g'),`Most at home in ${esc(homeCity)}`,`${ci[homeCity]||1} sits here`],
+  ];
+  if(ME){lines.push([ic('spark','g'),`Level ${ME.level} · ${fmt(ME.light)} Light`,`best streak ${ME.best_streak||ME.streak||0} days`]);}
+  const ov=el(`<div class="jny-finale"><div class="fspk">${spk}</div>
+    <div class="finale-card">
+      <div class="finale-mark">${ic('lumen','lg grad-gold')}</div>
+      <div class="finale-sub">Your journey around the world</div>
+      <h1 class="finale-h">Congratulations,<br>${esc(name)}</h1>
+      <p class="finale-poem">You carried stillness to ${places} corners of the earth — one breath at a time.</p>
+      <div class="finale-stats">${tiles.map(t=>`<div class="fstat"><div class="fsn">${t[0]}</div><div class="fsl">${t[1]}</div></div>`).join('')}</div>
+      <div class="finale-lines">${lines.map(l=>`<div class="fline"><span class="fli">${l[0]}</span><div><b>${l[1]}</b><span>${l[2]}</span></div></div>`).join('')}</div>
+      <button class="btn gold" id="fdone" style="margin-top:4px">Return to the map</button>
+      <button class="btn ghost" id="freplay" style="margin-top:9px">${ic('play')} Replay the journey</button>
+    </div></div>`);
+  ov.querySelector('#fdone').onclick=()=>{try{Sound.stop();}catch(e){}ov.remove();renderMap();};
+  ov.querySelector('#freplay').onclick=()=>{ov.remove();renderMap().then(()=>{setTimeout(()=>{const b=$('#jplay');if(b)b.click();},400);});};
+  document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
+}
+function stopJourney(){
+  journeyTok++;                 // cancels the running loop
+  try{Sound.stop();}catch(e){}
+  renderMap();                  // restore the normal "My places" view
+}
+
+/* ---- leagues & leaderboards ---- */
+let lbScope='week',lbBy='light',leagueView='league';
+async function renderLeagues(){
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Leagues</b></div>
+    <div class="seg" id="lv"><button class="${leagueView==='league'?'on':''}" data-v="league">My league</button><button class="${leagueView==='global'?'on':''}" data-v="global">Global ranks</button></div>
+    <div id="lbody"></div>`;
+  $('#lv').querySelectorAll('button').forEach(b=>b.onclick=()=>{leagueView=b.dataset.v;renderLeagues();});
+  if(leagueView==='league'){await renderLeagueView();}else{await renderGlobalView();}
+}
+async function renderLeagueView(){
+  let d;try{d=await api('league');}catch(e){$('#lbody').innerHTML=`<div class="card muted">${e}</div>`;return;}
+  const lg=d.league;const toNext=lg.next_at?Math.max(0,lg.next_at-d.weekly_light):0;
+  const prog=lg.next_at?Math.min(100,100*(d.weekly_light-lg.at)/(lg.next_at-lg.at)):100;
+  $('#lbody').innerHTML=`
+  <div class="card center league-hero" style="border-color:${lg.color}">
+    <div class="league-badge" style="color:${lg.color};--lc:${lg.color}">${leagueIcon(lg.name)}</div>
+    <div class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase">Current league</div>
+    <h1 style="margin:6px 0;color:${lg.color}">${lg.name}</h1>
+    <div class="muted">${fmt(d.weekly_light)} light this week</div>
+    ${lg.next?`<div class="bar" style="margin:14px 0 6px"><i style="width:${prog}%"></i></div><div class="muted" style="font-size:13px">${toNext} light to <b style="color:var(--text)">${leagueIcon(lg.next,'g')} ${lg.next}</b></div>`:`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Top league — keep it lit</div>`}
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 6px;display:flex;align-items:center;gap:7px">${leagueIcon(lg.name,'g')} ${lg.name} league · this week</h3>
+    <p class="muted" style="font-size:12px;margin:0 0 8px">Top 5 promote ${ic('up','g')} · resets every week</p>
+    ${d.members.map(m=>`<div class="lb-row ${m.you?'you':''}"><div class="rk ${m.rank<=5?'g':''}">${m.rank<=5?ic('up','g'):''}${m.rank}</div><div class="nm">${esc(m.name)}${m.you?' (you)':''}</div><div class="vl">${fmt(m.weekly_light)}</div></div>`).join('')||'<div class="muted">No one here yet.</div>'}
+  </div>`;
+}
+async function renderGlobalView(){
+  $('#lbody').innerHTML=`
+  <div class="seg" id="sc" style="margin-bottom:8px"><button class="${lbScope==='today'?'on':''}" data-s="today">Today</button><button class="${lbScope==='week'?'on':''}" data-s="week">This week</button><button class="${lbScope==='all'?'on':''}" data-s="all">All time</button></div>
+  <div class="seg" id="by"><button class="${lbBy==='light'?'on':''}" data-b="light">Light</button><button class="${lbBy==='minutes'?'on':''}" data-b="minutes">Minutes</button></div>
+  <div class="card" id="rows"></div>`;
+  $('#sc').querySelectorAll('button').forEach(b=>b.onclick=()=>{lbScope=b.dataset.s;renderGlobalView();});
+  $('#by').querySelectorAll('button').forEach(b=>b.onclick=()=>{lbBy=b.dataset.b;renderGlobalView();});
+  let d;try{d=await api(`leaderboard?scope=${lbScope}&by=${lbBy}`);}catch(e){return;}
+  const unit=lbBy==='light'?'light':'min';
+  const medal=['#f5c977','#cbd5e1','#d9915b'];
+  $('#rows').innerHTML=d.rows.map(r=>`<div class="lb-row ${r.you?'you':''}"><div class="rk">${r.rank<=3?`<span style="color:${medal[r.rank-1]}">${ic('star','medal')}</span>`:r.rank}</div><div class="nm">${esc(r.name)}${r.you?' (you)':''}</div><div class="vl">${fmt(r.value)} <span class="muted" style="font-size:11px">${unit}</span></div></div>`).join('')||'<div class="muted">No sessions yet.</div>';
+}
+
+/* ---- journal ---- */
+let journalView='feed';
+let speakOn=(typeof localStorage!=='undefined'&&localStorage.getItem('lumen_speak')==='0')?false:true;
+function _pickVoice(u){try{const vs=speechSynthesis.getVoices();
+  const v=vs.find(x=>/Samantha|Serena|Moira|Karen|Google UK English Female|female/i.test(x.name))||vs.find(x=>/en/i.test(x.lang));
+  if(v)u.voice=v;}catch(e){}}
+function speak(text){
+  if(!('speechSynthesis' in window))return;
+  try{const t=(text||'').replace(/[“”"]/g,'');const u=new SpeechSynthesisUtterance(t);
+    u.rate=0.88;u.pitch=1.0;_pickVoice(u);
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }catch(e){}
+}
+// --- Lumen's voice: ElevenLabs via the server, played through the shared Web Audio
+// context (so it never fights the soundscape), with a browser-speech fallback ---
+let _ttsOn=true;               // flips off for the session only if the service is unreachable
+const _ttsBufCache={};         // text -> ArrayBuffer (dedupes repeated lines, enables prefetch)
+let _voiceHandle=null;
+function ttsBuf(text){
+  if(_ttsBufCache[text])return Promise.resolve(_ttsBufCache[text]);
+  return fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})})
+    .then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();})
+    .then(b=>{if(!b||b.byteLength<256)throw 0;_ttsBufCache[text]=b;return b;});
+}
+function ttsPrefetch(text){if(_ttsOn&&text)ttsBuf(text).catch(()=>{});}
+function speechNarrate(t,go,rate){
+  if(!('speechSynthesis' in window)){go();return;}
+  try{const u=new SpeechSynthesisUtterance(t);u.rate=rate||0.78;u.pitch=1.0;_pickVoice(u);
+    u.onend=go;u.onerror=go;speechSynthesis.speak(u);}catch(e){go();}
+}
+// narrate one line; calls done() when speech ends (or immediately if unavailable)
+function narrate(text,done,rate){
+  const t=(text||'').replace(/[“”"]/g,'');
+  let fired=false;const go=()=>{if(fired)return;fired=true;done&&done();};
+  if(_ttsOn){
+    ttsBuf(t).then(buf=>{ _voiceHandle=Sound.say(buf, go, ()=>speechNarrate(t,go,rate)); })
+             .catch(()=>{_ttsOn=false;speechNarrate(t,go,rate);});
+    return null;
+  }
+  speechNarrate(t,go,rate);return null;
+}
+function stopNarration(){try{if(_voiceHandle&&_voiceHandle.stop)_voiceHandle.stop();_voiceHandle=null;}catch(e){}
+  if(window.speechSynthesis){try{speechSynthesis.cancel();}catch(e){}}}
+// rough spoken-duration estimate in seconds (calm pace ~2.4 words/sec)
+function estSay(text){const w=(text||'').trim().split(/\s+/).filter(Boolean).length;return w/2.4+0.9;}
+function splitSents(text){return (text||'').match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g)||[text];}
+const JPROMPTS=[
+  "What are you carrying today that isn't yours to hold?",
+  "Where did you feel most alive this week?",
+  "What would you do today if you weren't afraid?",
+  "What is one thing you can let go of right now?",
+  "Who deserves your gratitude today?",
+  "What does your body need that your mind keeps ignoring?",
+  "What story are you telling yourself that may not be true?",
+  "When did you last feel truly at peace?",
+  "What small thing brought you joy recently?",
+  "What are you ready to begin?",
+  "Where are you rushing when you could be present?",
+  "What would you say to your younger self?"];
+let jPrompt='';let rec=null;let listening=false;
+const niceDate=(d)=>new Date(d).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+async function renderJournal(){
+  if(!jPrompt){
+    try{jPrompt=(await api('lifeos/prompts')).prompts.reflection;}catch(e){}
+    if(!jPrompt){try{jPrompt=(await api('prompt')).prompt;}catch(e){jPrompt=JPROMPTS[0];}}
+  }
+  listening=false;rec=null;
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b>
+    <button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button>
+    <button class="lo-btn" id="lobtn" style="margin-left:6px">${ic('compass')} Life OS</button></div>
+  <div class="letter">
+    <div class="letter-head">
+      <span>${niceDate(Date.now())}</span>
+      <button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Speak the prompt">${ic(speakOn?'sound':'mute')}</button>
+    </div>
+    <div class="letter-prompt">
+      <span class="lp-q">“${jPrompt}”</span>
+      <button class="lp-shuffle" id="jshuf" title="Another prompt">${ic('spark')} another prompt</button>
+    </div>
+    <textarea id="jt" class="letter-body" rows="7" placeholder="Dear me,&#10;&#10;Today I noticed…"></textarea>
+    <div id="jprev" class="letter-interim"></div>
+    <div class="letter-foot">
+      <button class="mic" id="jmic" title="Speak your letter"><span class="mic-ring"></span>${ic('mic')}</button>
+      <button class="mic" id="jcam" title="Photograph your handwriting">${ic('camera')}</button>
+      <input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">
+      <label class="letter-share"><input type="checkbox" id="js"> <span>Share</span></label>
+    </div>
+    <div class="mic-hint" id="michint"></div>
+    <button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button>
+  </div>
+  <div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='feed'?'on':''}" data-v="feed">The collective</button></div>
+  <div id="jbody"></div>`;
+  $('#jshuf').onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt);jPrompt=n;
+    $('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)speak(jPrompt);};
+  $('#lobtn').onclick=renderLifeOS;
+  $('#talkbtn').onclick=renderChat;
+  $('#jspeak').onclick=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
+    $('#jspeak').classList.toggle('on',speakOn);$('#jspeak').innerHTML=ic(speakOn?'sound':'mute');
+    if(speakOn)speak(jPrompt);else if(window.speechSynthesis)speechSynthesis.cancel();};
+  // gently speak the prompt a moment after the page settles
+  if(speakOn){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')speak(jPrompt);},1100);}
+  $('#jmic').onclick=toggleVoice;
+  $('#jcam').onclick=()=>$('#jfile').click();
+  $('#jfile').onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
+  $('#jsave').onclick=async()=>{if(listening&&rec)rec.stop();const t=$('#jt').value.trim();if(!t){toast('Write a few words first');return;}
+    const words=(t.match(/\S+/g)||[]).length;const share=$('#js').checked;
+    try{const r=await api('journal','POST',{text:t,prompt:jPrompt,share});$('#jt').value='';
+      showJournalSealed(r,words,share);}catch(e){toast(e);}};
+  $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournal();});
+  const body=$('#jbody');
+  if(journalView==='mine'){
+    const d=await api('journal');
+    body.innerHTML=d.entries.length?d.entries.map(e=>`<div class="letter mini"><div class="letter-head"><span>${niceDate(e.created)}</span>${e.shared?`<span class="letter-tag">${ic('globe')} shared</span>`:`<span class="letter-tag">${ic('lock')} private</span>`}</div>${e.prompt?`<div class="mini-q">“${esc(e.prompt)}”</div>`:''}<div class="mini-body">${esc(e.text)}</div>${e.mood?`<div class="mini-mood">— felt ${esc(e.mood)}</div>`:''}</div>`).join(''):`<div class="card center muted"><div style="color:var(--gold);margin-bottom:6px">${ic('book','lg')}</div>Your letters will gather here. Write your first above.</div>`;
+  }else{
+    const d=await api('feed');
+    const mine=d.me;
+    const mod=f=>(f.author_id&&f.author_id!==mine)?`<div class="mini-mod"><button class="mini-modbtn" data-report="${f.id}">${ic('flag')} Report</button><button class="mini-modbtn" data-block="${f.author_id}">Block</button></div>`:'';
+    const card=f=>f.type==='spot'
+      ? `<div class="letter mini spot-post"><img class="spot-img" src="${esc(f.photo)}" alt="meditation spot" onerror="this.remove()"><div class="spot-meta"><div class="letter-head"><span>${esc(f.name)||'Someone'}</span><span class="letter-tag">${niceDate(f.created)}</span></div><div class="spot-where">${ic('pin','g')} ${esc(f.city)||'Somewhere on Earth'} · ${f.minutes} min · ${SS_LABEL[f.soundscape]||esc(f.soundscape)}</div>${f.text?`<div class="mini-body">${esc(f.text)}</div>`:''}${f.mood?`<div class="mini-mood">— felt ${esc(f.mood)}</div>`:''}${mod(f)}</div></div>`
+      : `<div class="letter mini"><div class="letter-head"><span>${esc(f.name)}</span><span class="letter-tag">${niceDate(f.created)}</span></div><div class="mini-body">${esc(f.text)}</div>${f.mood?`<div class="mini-mood">— felt ${esc(f.mood)}</div>`:''}${mod(f)}</div>`;
+    body.innerHTML=d.feed.length?d.feed.map(card).join(''):'<div class="card center muted">Nothing shared yet. Meditate, snap your spot, and be the first.</div>';
+    body.querySelectorAll('.mini-modbtn[data-report]').forEach(b=>b.onclick=async()=>{await api('feed/report','POST',{id:+b.dataset.report});toast('Reported — thank you. Hidden from your feed.');renderJournal();});
+    body.querySelectorAll('.mini-modbtn[data-block]').forEach(b=>b.onclick=async()=>{await api('feed/block','POST',{author_id:+b.dataset.block});toast('Blocked. You will not see their entries.');renderJournal();});
+  }
+}
+function updateMic(){const m=$('#jmic');if(!m)return;m.classList.toggle('live',listening);
+  const h=$('#michint');if(h)h.textContent=listening?'Listening… speak softly, I’m writing it down.':'';
+  if(!listening){const p=$('#jprev');if(p)p.textContent='';}}
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('Voice writing isn’t supported in this browser — try Chrome or Safari.');return;}
+  if(listening&&rec){rec.stop();return;}
+  rec=new SR();rec.lang='en-US';rec.continuous=true;rec.interimResults=true;
+  const base=$('#jt').value.replace(/\s+$/,'');let finalText='';
+  rec.onresult=(e)=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)finalText+=t+' ';else interim+=t;}
+    const t=$('#jt');t.value=(base?base+' ':'')+finalText+interim;t.scrollTop=t.scrollHeight;
+    const p=$('#jprev');if(p)p.textContent=interim?'… '+interim:'';};
+  rec.onend=()=>{listening=false;updateMic();};
+  rec.onerror=(e)=>{listening=false;updateMic();if(e&&e.error==='not-allowed')toast('Microphone permission needed for voice writing.');};
+  try{rec.start();listening=true;updateMic();}catch(e){listening=false;}
+}
+const esc=(s)=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ---- photograph + transcribe handwriting ---- */
+function downscaleImage(file,maxDim,q){return new Promise((res,rej)=>{
+  const img=new Image();const url=URL.createObjectURL(file);
+  img.onload=()=>{let w=img.width,h=img.height;const s=Math.min(1,maxDim/Math.max(w,h));
+    const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(w*s));cv.height=Math.max(1,Math.round(h*s));
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(url);
+    try{res(cv.toDataURL('image/jpeg',q));}catch(e){rej('Could not process image');}};
+  img.onerror=()=>{URL.revokeObjectURL(url);rej('Could not read image');};
+  img.src=url;});}
+async function transcribePhoto(file){
+  if(!file)return;
+  const hint=$('#michint'),cam=$('#jcam');
+  if(hint)hint.textContent='Reading your handwriting…';if(cam)cam.classList.add('live');
+  try{
+    const dataUrl=await downscaleImage(file,1600,0.82);
+    const r=await api('journal/transcribe','POST',{image:dataUrl});
+    const t=$('#jt'),add=(r.text||'').trim();
+    if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;t.scrollTop=t.scrollHeight;toast('Transcribed '+ic('spark','g'));}
+    else toast('No text found in that photo');
+  }catch(e){toast(e);}
+  finally{if(hint)hint.textContent='';if(cam)cam.classList.remove('live');const f=$('#jfile');if(f)f.value='';}
+}
+/* ---- journal sealed celebration ---- */
+function showJournalSealed(res,words,shared){
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  const n=(res&&res.count)||1;
+  const ach=((res&&res.new_achievements)||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'book')} ${a.title}</div>`).join(' ');
+  const spk=[...Array(10)].map(()=>`<span class="fspark" style="left:${Math.round(Math.random()*100)}%;animation-delay:${(Math.random()*3).toFixed(2)}s;animation-duration:${(3+Math.random()*2.5).toFixed(2)}s"></span>`).join('');
+  const ov=el(`<div class="jny-finale seal-finale"><div class="fspk">${spk}</div>
+    <div class="finale-card">
+      <div class="seal-stamp">${ic('seal','grad-gold')}</div>
+      <div class="finale-sub">Your letter is kept</div>
+      <h1 class="finale-h" style="font-size:42px">Sealed</h1>
+      <p class="finale-poem">What you named today, you no longer carry alone.</p>
+      <div class="finale-stats">
+        <div class="fstat"><div class="fsn">${words}</div><div class="fsl">words</div></div>
+        <div class="fstat"><div class="fsn">${n}</div><div class="fsl">${n===1?'letter':'letters'}</div></div>
+        <div class="fstat"><div class="fsn" style="font-size:19px">${shared?'Shared':'Private'}</div><div class="fsl">kept</div></div>
+      </div>
+      ${ach?`<div style="margin-bottom:16px"><div class="muted" style="font-size:12px">Achievement unlocked</div><div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ach}</div></div>`:''}
+      <button class="btn gold" id="sdone">Done</button>
+    </div></div>`);
+  const close=()=>{ov.remove();renderJournal();};
+  ov.querySelector('#sdone').onclick=close;
+  ov.addEventListener('click',e=>{if(e.target===ov)close();});
+  document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
+}
+
+/* ---- Life OS: cardinal pillars, daily focuses, AI prompts ---- */
+let LO=null, LO_PILLARS=[];
+const DIRS=[['N','North'],['E','East'],['S','South'],['W','West']];
+const PILLAR_ICON={Family:'p_home',Hobbies:'p_music',Career:'p_career',Health:'p_health',Relationships:'p_rel','Inner Growth':'p_growth'};
+const picon=(p)=>PILLAR_ICON[p]||'spark';
+// pillars mirror Ora Health; blurbs are Ora's own
+const PILLAR_META={
+  Family:['#e0953a','Where you came from — and how you carry it.'],
+  Hobbies:['#a78bfa','The things you do for the love of doing them.'],
+  Career:['#5fb0fa','The work you’re building, seriously.'],
+  Health:['#34d399','Body, energy, and the basics that hold everything up.'],
+  Relationships:['#f472b6','The people you choose and how you show up for them.'],
+  'Inner Growth':['#818cf8','Who you’re becoming.']};
+// a short journaling lesson for each Ora pillar
+const PILLAR_LESSON={
+  Family:'Write to one family member as a whole person — their fears, their younger self — not just their role in your life.',
+  Hobbies:'Describe the last time something you love made you lose track of time. What did that flow give you?',
+  Career:'Name the work you’d do even if no one paid or noticed. Where does today meet — or miss — it?',
+  Health:'Check in with your body like a friend. What has it been asking for that your mind keeps overruling?',
+  Relationships:'Choose one relationship and write the thing you’ve been meaning to say. You don’t have to send it.',
+  'Inner Growth':'Write about who you were a year ago. What would that version of you thank you for?'};
+const pcolor=(p)=>(PILLAR_META[p]||['#a855f7'])[0];
+const pdesc=(p)=>(PILLAR_META[p]||['','A pillar of your life.'])[1];
+const plesson=(p)=>PILLAR_LESSON[p]||'';
+async function renderLifeOS(){
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  let d;try{d=await api('lifeos');LO=d.lifeos;LO_PILLARS=d.pillars;}catch(e){toast(e);return;}
+  LO.pillars=LO.pillars||{};LO.focus=LO.focus||[];
+  const chosen=DIRS.map(([k])=>LO.pillars[k]).filter(Boolean);
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Life OS</b>
+    <button class="lo-btn" id="loback">${ic('book')} Journal</button></div>
+  <p class="muted" style="font-size:13px;margin:0 0 10px">Your base at the center, four pillars at the cardinal directions. Choose two to focus on day to day.</p>
+  <div class="compass2" id="compass">
+    <svg class="crays" viewBox="0 0 300 300" aria-hidden="true">
+      <circle cx="150" cy="150" r="116" fill="none" stroke="#2e2747" stroke-width="1"/>
+      <circle cx="150" cy="150" r="78" fill="none" stroke="#221c38" stroke-width="1"/>
+      <line class="cray" data-k="N" x1="150" y1="150" x2="150" y2="46"/>
+      <line class="cray" data-k="E" x1="150" y1="150" x2="254" y2="150"/>
+      <line class="cray" data-k="S" x1="150" y1="150" x2="150" y2="254"/>
+      <line class="cray" data-k="W" x1="150" y1="150" x2="46" y2="150"/>
+    </svg>
+    <div class="cbase2"><input id="lobase" value="${esc(LO.base||'')}" placeholder="base" maxlength="40"><span>your base</span></div>
+    <div class="cnode cN" data-d="N"></div>
+    <div class="cnode cE" data-d="E"></div>
+    <div class="cnode cS" data-d="S"></div>
+    <div class="cnode cW" data-d="W"></div>
+  </div>
+  <div class="card">
+    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Daily focus — pick two</div>
+    <div id="lofocus" class="lo-focus"></div>
+  </div>
+  <button class="btn gold" id="losave">Save my Life OS</button>
+  <div id="loprompts"></div>`;
+  $('#loback').onclick=()=>renderJournal();
+  // render the four compass nodes + rays
+  function paintDirs(){DIRS.forEach(([k,label])=>{const node=$('.cnode.c'+k);if(!node)return;const p=LO.pillars[k];
+    const focus=p&&LO.focus.includes(p);
+    node.className='cnode c'+k+(p?' set':'')+(focus?' focus':'');
+    node.innerHTML=`<div class="cbadge">${p?ic(picon(p),'pico grad-gold'):'<span class="cadd">+</span>'}</div>
+      <div class="clabel">${p?esc(p):label}</div>`;
+    const ray=document.querySelector('.cray[data-k="'+k+'"]');if(ray)ray.classList.toggle('set',!!p);});}
+  paintDirs();
+  document.querySelectorAll('.cnode').forEach(node=>node.onclick=()=>pickPillar(node.dataset.d,paintDirs,paintFocus));
+  function paintFocus(){const ch=DIRS.map(([k])=>LO.pillars[k]).filter(Boolean);
+    const box=$('#lofocus');
+    box.innerHTML=ch.length?ch.map(p=>`<button class="fchip ${LO.focus.includes(p)?'on':''}" data-p="${esc(p)}">${ic(LO.focus.includes(p)?'check':picon(p))} ${esc(p)}</button>`).join(''):'<span class="muted" style="font-size:13px">Assign pillars above first.</span>';
+    box.querySelectorAll('.fchip').forEach(b=>b.onclick=()=>{const p=b.dataset.p;
+      if(LO.focus.includes(p))LO.focus=LO.focus.filter(x=>x!==p);
+      else{if(LO.focus.length>=2){toast('Two focuses is the sweet spot — tap one to swap');return;}LO.focus.push(p);}
+      paintFocus();});}
+  paintFocus();
+  $('#losave').onclick=async()=>{LO.base=$('#lobase').value.trim();
+    try{await api('lifeos','POST',{base:LO.base,pillars:LO.pillars,focus:LO.focus});toast('Life OS saved '+ic('spark','g'));loadLoPrompts(true);}catch(e){toast(e);}};
+  loadLoPrompts(false);
+}
+function pickPillar(dir,paintDirs,paintFocus){openPillarCard(dir,paintDirs,paintFocus);}
+function openPillarCard(dir,paintDirs,paintFocus){
+  const dirName=DIRS.find(x=>x[0]===dir)[1];
+  const p=LO.pillars[dir];
+  const assign=(name)=>{for(const [k] of DIRS){if(LO.pillars[k]===name&&k!==dir)LO.pillars[k]=null;}
+    LO.pillars[dir]=name;LO.focus=LO.focus.filter(f=>DIRS.some(([k])=>LO.pillars[k]===f));paintDirs();paintFocus();};
+  const clear=()=>{LO.pillars[dir]=null;LO.focus=LO.focus.filter(f=>DIRS.some(([k])=>LO.pillars[k]===f));paintDirs();paintFocus();};
+  let ov;
+  function chooser(){
+    const used=DIRS.map(([k])=>LO.pillars[k]);
+    ov.querySelector('.ach-card').innerHTML=`
+      <button class="ach-x">${ic('close')}</button><div class="ach-foil"></div>
+      <div class="ach-rare" style="color:var(--purple);border-color:var(--purple)">${dirName} pillar</div>
+      <div class="ach-title" style="font-size:22px;margin-top:4px">Choose a pillar</div>
+      <div class="ach-desc" style="font-family:var(--serif);font-style:italic">What matters most, to the ${dirName.toLowerCase()}?</div>
+      <div class="lo-pick" style="margin-top:6px">${LO_PILLARS.map(x=>`<button class="pchip ${used.includes(x)?'used':''}" data-p="${esc(x)}" style="--pc:${pcolor(x)}">${ic(picon(x))} ${esc(x)}</button>`).join('')}</div>`;
+    wire();
+    ov.querySelector('.ach-card').style.setProperty('--rc','#7c3aed');
+    ov.querySelectorAll('.pchip').forEach(b=>b.onclick=()=>{assign(b.dataset.p);ov.remove();});
+  }
+  function detail(){
+    const col=pcolor(p);const isFocus=LO.focus.includes(p);
+    ov.querySelector('.ach-card').style.setProperty('--rc',col);
+    ov.querySelector('.ach-card').innerHTML=`
+      <button class="ach-x">${ic('close')}</button><div class="ach-foil"></div>
+      <div class="ach-rare" style="color:${col};border-color:${col}">${dirName} pillar</div>
+      <div class="ach-badge"><div class="ach-ring"></div><div class="ach-ic" style="color:${col};filter:drop-shadow(0 0 10px ${col})">${ic(picon(p),'achbig')}</div></div>
+      <div class="ach-title">${esc(p)}</div>
+      <div class="ach-desc" style="font-family:var(--serif);font-style:italic">${esc(pdesc(p))}</div>
+      <div class="lo-lesson" style="--c:${col}">
+        <div class="lo-lesson-h">${ic('book')} Writing lesson</div>
+        <div class="lo-lesson-b">${esc(plesson(p))}</div>
+        <button class="btn gold" id="plearn" style="width:auto;padding:9px 16px;margin-top:10px">${ic('book')} Write this</button>
+      </div>
+      <div class="ach-meta" style="margin-top:4px">
+        <span class="ach-chip">${isFocus?ic('check','g')+' A daily focus':'Tap it on the compass to make it a daily focus'}</span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:4px">
+        <button class="btn" id="pchange" style="width:auto;padding:10px 16px">Replace</button>
+        <button class="btn ghost" id="premove" style="width:auto;padding:10px 16px;border-color:#5a2e3e;color:#fda4af">Remove</button>
+      </div>`;
+    wire();
+    ov.querySelector('#plearn').onclick=()=>{jPrompt=plesson(p);ov.remove();go('journal');};
+    ov.querySelector('#pchange').onclick=()=>chooser();
+    ov.querySelector('#premove').onclick=()=>{clear();chooser();};
+  }
+  function wire(){ov.querySelector('.ach-x').onclick=()=>ov.remove();}
+  ov=el(`<div class="ach-ov"><div class="ach-card" style="--rc:#7c3aed;--tint:#16122a;--glow:rgba(124,58,237,.25)"></div></div>`);
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  (p?detail:chooser)();
+  document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
+}
+async function loadLoPrompts(regen){
+  const box=$('#loprompts');if(!box)return;
+  box.innerHTML=`<div class="card muted center" style="font-size:13px">${ic('spark','g glow')} ${regen?'Writing your prompts…':'Loading today’s prompts…'}</div>`;
+  let p;try{p=(await api('lifeos/prompts')).prompts;}catch(e){box.innerHTML='';return;}
+  const rows=[['focus','Your focus','compass'],['reflection','Daily reflection','lotus'],['gratitude','Gratitude','spark']];
+  box.innerHTML=`<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;margin:14px 0 8px">Today’s Light ${p.ai?'· AI':''}</div>`+
+    rows.map(([k,label,icn])=>`<div class="lo-prompt" data-p="${esc(p[k])}" title="Write about this in your journal"><div class="lo-pico">${ic(icn,'g')}</div>
+      <div style="flex:1"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">${label}</div>
+      <div style="font-family:var(--serif);font-size:15.5px;margin-top:2px">${esc(p[k])}</div></div>
+      <span class="lo-write">${ic('book')}</span></div>`).join('')+
+    `<p class="muted center" style="font-size:12px;margin-top:10px">Tap a prompt to carry it into your journal.</p>`;
+  box.querySelectorAll('.lo-prompt').forEach(row=>row.onclick=()=>{jPrompt=row.dataset.p;go('journal');});
+}
+
+/* ---- the Keeper: voice/text chat with tools ---- */
+let chatMsgs=[];let chatRec=null;let chatListening=false;let chatBusy=false;
+function renderChat(){
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  if(!chatMsgs.length)chatMsgs=[{role:'model',text:`Hello${ME&&ME.name?', '+ME.name.split(' ')[0]:''}. I'm the Keeper. Talk to me about your day, ask about your practice, or say "write this down" and I'll keep it for you.`}];
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>The Keeper</b>
+    <button class="lp-speak ${speakOn?'on':''}" id="cspeak" title="Read replies aloud" style="margin-left:auto">${ic(speakOn?'sound':'mute')}</button>
+    <button class="lo-btn" id="cback" style="margin-left:8px">${ic('book')} Journal</button></div>
+  <div id="chatbox" class="chatbox"></div>
+  <div class="chat-input">
+    <button class="mic" id="cmic" title="Speak"><span class="mic-ring"></span>${ic('mic')}</button>
+    <input id="cfield" placeholder="Talk to the Keeper…" autocomplete="off">
+    <button class="csend" id="csend">${ic('send')}</button>
+  </div>`;
+  $('#cback').onclick=()=>renderJournal();
+  $('#cspeak').onclick=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
+    $('#cspeak').classList.toggle('on',speakOn);$('#cspeak').innerHTML=ic(speakOn?'sound':'mute');if(!speakOn&&window.speechSynthesis)speechSynthesis.cancel();};
+  $('#csend').onclick=()=>sendChat();
+  $('#cfield').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+  $('#cmic').onclick=chatVoice;
+  paintChat(false);
+}
+function paintChat(scroll){const box=$('#chatbox');if(!box)return;
+  box.innerHTML=chatMsgs.map(m=>m.role==='model'
+    ? `<div class="msg k"><span class="msg-ic">${ic('lumen')}</span><div class="bub">${esc(m.text)}</div></div>`
+    : `<div class="msg u"><div class="bub">${esc(m.text)}</div></div>`).join('')
+    +(chatBusy?`<div class="msg k"><span class="msg-ic">${ic('lumen')}</span><div class="bub typing"><i></i><i></i><i></i></div></div>`:'');
+  box.scrollTop=box.scrollHeight;
+}
+async function sendChat(text){
+  const field=$('#cfield');const t=(text!=null?text:(field?field.value:'')).trim();
+  if(!t||chatBusy)return;
+  if(field)field.value='';
+  chatMsgs.push({role:'user',text:t});chatBusy=true;paintChat(true);
+  try{const r=await api('chat','POST',{messages:chatMsgs.map(m=>({role:m.role,text:m.text}))});
+    chatBusy=false;const reply=r.reply||'…';chatMsgs.push({role:'model',text:reply});paintChat(true);
+    if(speakOn)speak(reply);
+    if((r.tools||[]).some(x=>['write_journal','set_lifeos_pillar','set_focus'].includes(x))){try{const me=await api('me');ME=me.profile;}catch(e){}}
+  }catch(e){chatBusy=false;chatMsgs.push({role:'model',text:'I lost that thread for a moment — try again?'});paintChat(true);}
+}
+function chatVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('Voice isn’t supported in this browser');return;}
+  if(chatListening&&chatRec){chatRec.stop();return;}
+  chatRec=new SR();chatRec.lang='en-US';chatRec.interimResults=true;chatRec.continuous=false;
+  let fin='';
+  chatRec.onresult=(e)=>{fin='';let interim='';for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t;else interim+=t;}
+    const f=$('#cfield');if(f)f.value=(fin+interim).trim();};
+  chatRec.onend=()=>{chatListening=false;const b=$('#cmic');if(b)b.classList.remove('live');
+    const f=$('#cfield');if(f&&f.value.trim())sendChat();};
+  chatRec.onerror=()=>{chatListening=false;const b=$('#cmic');if(b)b.classList.remove('live');};
+  try{chatRec.start();chatListening=true;$('#cmic').classList.add('live');}catch(e){chatListening=false;}
+}
+
+/* ---- profile ---- */
+const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['community','Community activity'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
+function hoursOpts(sel){let h='';for(let i=0;i<24;i++){const lbl=(i===0?'12 AM':i<12?i+' AM':i===12?'12 PM':(i-12)+' PM');h+=`<option value="${i}" ${i===sel?'selected':''}>${lbl}</option>`;}return h;}
+async function renderProfile(){
+  const r=await api('me');ME=r.profile;const p=ME;
+  const prog=Math.min(100,100*p.level_into/(p.level_into+p.level_need));
+  let ach={achievements:[]};try{ach=await api('achievements');}catch(e){}
+  let horo=null;try{horo=await api('horoscope?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
+  let np=null;try{np=await api('notif/prefs');}catch(e){}
+  const starLine = (horo&&!horo.need_sign)
+    ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6">${horo.glyph} <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
+    : `<p class="muted" style="font-size:13px;margin:0 0 12px">Add your birthday to receive your daily Vedic reading.</p>`;
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>${esc(p.name)}</b></div>
+  <div class="card">
+    <div class="row" style="align-items:center"><div><div class="muted" style="font-size:12px">LEVEL</div><div style="font-size:40px;font-weight:800">${p.level}</div></div>
+    <div style="text-align:right"><div class="pill" style="border-color:${p.league.color};color:${p.league.color}">${p.league.name} league</div></div></div>
+    <div class="bar" style="margin:10px 0 6px"><i style="width:${prog}%"></i></div>
+    <div class="muted" style="font-size:12px">${p.level_into} / ${p.level_into+p.level_need} light to level ${p.level+1}</div>
+  </div>
+  <div class="card"><div class="grid3">
+    <div class="stat"><div class="n">${fmt(p.light)}</div><div class="l">Light</div></div>
+    <div class="stat"><div class="n">${p.streak}</div><div class="l">Streak</div></div>
+    <div class="stat"><div class="n">${p.total_sessions}</div><div class="l">Sessions</div></div>
+    <div class="stat"><div class="n">${p.total_minutes}</div><div class="l">Minutes</div></div>
+    <div class="stat"><div class="n">${p.best_streak}</div><div class="l">Best streak</div></div>
+    <div class="stat"><div class="n">${fmt(p.weekly_light)}</div><div class="l">This week</div></div>
+  </div></div>
+  <div class="card">
+    <h3 style="margin:0 0 2px">Achievements</h3>
+    <p class="muted" style="font-size:12px;margin:0 0 10px">Tap a badge to open its card</p>
+    ${ach.achievements.map(a=>{const r=RARITY[rarityOf(a.code)];return `<div class="ach ${a.unlocked?'on':''}" data-ac="${a.code}"><div class="e">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</div><div style="flex:1"><b>${a.title}</b><div class="muted" style="font-size:13px">${a.unlocked?a.desc:'Locked'}</div></div><span class="rtag" style="--c:${r[1]}">${r[0]}</span></div>`;}).join('')}
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 6px">Home location</h3>
+    <p class="muted" style="font-size:13px;margin:0 0 10px" id="locstate">${p.city?(ic('pin')+' '+esc(p.city)):'Not set — your sessions aren’t shown on the map until you set this.'}</p>
+    <button class="btn ghost" id="loc">${ic('pin')} Use my current location</button>
+    <p class="muted" id="lochelp" style="font-size:12px;margin:10px 0 0;display:none"></p>
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 6px">Your stars ${ic('nova','g')}</h3>
+    ${starLine}
+    <label>Birthday</label><input id="pbd" type="date" value="${esc(p.birth_date||'')}">
+    <label>Birth time <span class="muted" style="font-weight:400">(optional — for your birth star &amp; daśā)</span></label>
+    <div style="display:flex;gap:8px"><input id="pbt" type="time" value="${esc(p.birth_time||'')}" style="flex:0 0 42%"><input id="pbp" placeholder="City of birth" value="${esc(p.birth_place||'')}" style="flex:1"></div>
+    <button class="btn ghost" id="psave" style="margin-top:10px">Save birth details</button>
+  </div>
+  ${np?`<div class="card">
+    <div class="nrow" style="border-top:0;padding-top:0">
+      <div><b>Push notifications</b><div class="muted" style="font-size:12px">Gentle nudges to sit, streak saves &amp; celebrations.</div></div>
+      <label class="switch"><input type="checkbox" id="nen" ${np.enabled?'checked':''}><span class="sl"></span></label>
+    </div>
+    <p class="muted" id="nstat" style="font-size:12px;margin:4px 0 0">${np.registered?(ic('spark','g')+' This device is set up for push.'):'To get them on your phone: open Lumen on iOS and tap <b>Allow</b> when asked (needs the latest build).'}</p>
+    <div id="ncatwrap" style="margin-top:12px;${np.enabled?'':'opacity:.45;pointer-events:none'}">
+      <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">What to send</div>
+      ${NCATS.map(cc=>`<div class="nrow"><span class="nl">${esc(cc[1])}</span><label class="switch"><input type="checkbox" id="nc_${cc[0]}" ${(np.cats&&np.cats[cc[0]]===0)?'':'checked'}><span class="sl"></span></label></div>`).join('')}
+      <div class="nrow"><span class="nl">Quiet hours <span class="muted" style="font-size:11px">(your local time)</span></span>
+        <span style="display:flex;align-items:center;gap:6px"><select id="nqs" class="nsel">${hoursOpts(np.quiet_start)}</select><span class="muted">to</span><select id="nqe" class="nsel">${hoursOpts(np.quiet_end)}</select></span></div>
+    </div>
+  </div>`:''}
+  <button class="btn ghost" id="out" style="margin-top:4px">Sign out</button>
+  <button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button>
+  <p class="muted" style="font-size:11px;text-align:center;margin:8px 20px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can't be undone.</p>`;
+  $('#loc').onclick=async()=>{
+    const btn=$('#loc'),help=$('#lochelp');help.style.display='none';
+    if(!navigator.geolocation){toast('Geolocation isn’t available on this device');return;}
+    // iOS remembers a prior “Don’t allow” and won’t re-prompt — surface that clearly
+    try{const ps=await navigator.permissions.query({name:'geolocation'});
+      if(ps.state==='denied'){help.style.display='block';
+        help.innerHTML='Location is blocked for this site. On iPhone: Settings → Apps → Safari → Location → Allow, then reload this page and tap again.';return;}
+    }catch(e){}
+    btn.disabled=true;const old=btn.innerHTML;btn.innerHTML=ic('live','g')+' Locating…';
+    navigator.geolocation.getCurrentPosition(async pos=>{
+      try{await api('location','POST',{lat:pos.coords.latitude,lon:pos.coords.longitude});toast(ic('pin')+' Location saved');renderProfile();}
+      catch(e){toast(e);btn.disabled=false;btn.innerHTML=old;}
+    },err=>{
+      btn.disabled=false;btn.innerHTML=old;help.style.display='block';
+      help.innerHTML=err.code===1
+        ?'Location permission was denied. On iPhone: Settings → Apps → Safari → Location → Allow, then reload this page and tap again.'
+        :'Couldn’t get a location fix. Make sure Location Services is on, then try again near a window.';
+    },{enableHighAccuracy:true,timeout:12000,maximumAge:0});  // maximumAge:0 forces a fresh fix so a stale/wrong pin gets corrected
+  };
+  {const ps=$('#psave');if(ps)ps.onclick=async()=>{
+    const bd=$('#pbd').value,bt=$('#pbt').value,bp=$('#pbp').value.trim();
+    ps.disabled=true;ps.textContent='Saving…';
+    try{await api('natal','POST',{birth_date:bd,birth_time:bt,birth_place:bp,birth_tz:-new Date().getTimezoneOffset()});
+      toast('Birth details saved '+ic('spark','g'));renderProfile();}
+    catch(e){ps.disabled=false;ps.textContent='Save birth details';toast(e);}
+  };}
+  if(np){
+    const collectNotif=()=>{const cats={};NCATS.forEach(cc=>{const el=document.getElementById('nc_'+cc[0]);if(el)cats[cc[0]]=el.checked;});
+      return {enabled:$('#nen').checked,cats,quiet_start:+$('#nqs').value,quiet_end:+$('#nqe').value,tz_offset_min:-new Date().getTimezoneOffset()};};
+    const saveNotif=async()=>{try{await api('notif/prefs','POST',collectNotif());toast('Notifications updated');}catch(e){toast(e);}};
+    const en=$('#nen');if(en)en.onchange=()=>{const w=$('#ncatwrap');if(w){w.style.opacity=en.checked?'':'.45';w.style.pointerEvents=en.checked?'':'none';}saveNotif();};
+    NCATS.forEach(cc=>{const el=document.getElementById('nc_'+cc[0]);if(el)el.onchange=saveNotif;});
+    ['nqs','nqe'].forEach(id=>{const el=document.getElementById(id);if(el)el.onchange=saveNotif;});
+  }
+  $('#out').onclick=async()=>{await api('logout','POST',{});ME=null;renderAuth();};
+  $('#del').onclick=async()=>{const b=$('#del');
+    if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Tap again to permanently delete';b.style.background='#5a2230';b.style.color='#fff';
+      setTimeout(()=>{if(b&&b.dataset.armed==='1'){b.dataset.armed='0';b.textContent='Delete account';b.style.background='';b.style.color='#ff9aa6';}},4000);return;}
+    b.disabled=true;b.textContent='Deleting…';
+    try{await api('account/delete','POST',{});}catch(e){}
+    try{Object.keys(localStorage).filter(k=>k.indexOf('lumen_jny_')===0).forEach(k=>localStorage.removeItem(k));}catch(e){}
+    ME=null;toast('Your account has been deleted');renderAuth();};
+  window._ACH=ach.achievements;
+  document.querySelectorAll('.ach').forEach(x=>x.onclick=()=>openAchCard(x.dataset.ac));
+}
+
+/* ---- achievement collectible card ---- */
+function openAchCard(code){
+  const a=(window._ACH||[]).find(x=>x.code===code);if(!a)return;
+  const ri=rarityOf(a.code);const r=RARITY[ri];const rname=r[0],rcol=r[1],tint=r[2],glow=r[3];
+  const locked=!a.unlocked;
+  const date=a.created?new Date(a.created).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'';
+  const grad=locked?'':(ri===3?'grad-gold':ri===2?'grad-aur':ri===1?'grad-blue':'grad-slate');
+  const ov=el(`<div class="ach-ov">
+    <div class="ach-card rar-${ri} ${locked?'locked':''}" style="--rc:${rcol};--tint:${tint};--glow:${glow}">
+      <button class="ach-x">${ic('close')}</button>
+      <div class="ach-foil"></div>
+      <div class="ach-rare" style="color:${rcol};border-color:${rcol}">${rname}</div>
+      <div class="ach-badge">
+        <div class="ach-ring"></div>
+        <div class="ach-ic" style="${locked?'':'color:'+rcol}">${ic(locked?'lock':(ACH_ICON[code]||'star'),'achbig '+grad)}</div>
+      </div>
+      <div class="ach-title">${locked?'???':a.title}</div>
+      <div class="ach-desc">${a.desc}</div>
+      <div class="ach-meta">
+        ${locked?`<span class="ach-chip">${ic('lock')} Locked</span>`:`<span class="ach-chip" style="color:var(--good)">${ic('check')} Unlocked${date?' · '+date:''}</span>`}
+        <span class="ach-chip">${a.pct}% of lumens have this</span>
+      </div>
+    </div></div>`);
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.ach-x'))ov.remove();});
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>ov.classList.add('show'));
+}
+
+/* ---- collection: real-world meditation items ---- */
+let collectView='altar';
+const GRADOF=['slate','blue','aur','gold'];
+const ELEMENT_COL={Light:'#f5c977',Fire:'#fb923c',Water:'#5fb0fa',Air:'#67e8f9',Earth:'#6ee7b7',Cosmos:'#c084fc'};
+// each altar piece is placed when you unlock its achievement
+async function renderCollection(){
+  const r=await api('me');ME=r.profile;
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Collect</b>
+    <span class="motebal">${ic('spark','g glow')} ${fmt(ME.motes)}</span></div>
+  <div class="seg" id="cv">
+    <button class="${collectView!=='artifacts'?'on':''}" data-v="altar">Mandala</button>
+    <button class="${collectView==='artifacts'?'on':''}" data-v="artifacts">Artifacts</button>
+  </div>
+  <div id="cbody"></div>`;
+  $('#cv').querySelectorAll('button').forEach(b=>b.onclick=()=>{collectView=b.dataset.v;renderCollection();});
+  if(collectView==='artifacts')await renderArtifacts();
+  else await renderAltar();
+}
+/* ---- the altar: a single multi-colour rose-window whose facets are achievements ---- */
+function buildAltar(achs){
+  const N=achs.length, n=achs.filter(a=>a.unlocked).length, frac=n/Math.max(1,N), complete=n>=N;
+  const C=150, step=360/N;
+  const petalOuter='M150 150 C137 100 141 60 150 44 C159 60 163 100 150 150 Z';   // tall facet
+  const petalInner='M150 150 C144 118 146 96 150 86 C154 96 156 118 150 150 Z';   // short inner frond
+  const P=[`<defs>
+    <radialGradient id="aglow" cx="50%" cy="50%" r="64%"><stop offset="0" stop-color="#ffffff14"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+    <radialGradient id="acore" cx="50%" cy="40%" r="62%"><stop offset="0" stop-color="#fff6df"/><stop offset="1" stop-color="#e0953a"/></radialGradient>
+    <filter id="apg" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`,`<rect width="300" height="300" fill="url(#aglow)"/>`];
+  // slowly turning outer bead ring
+  let dots='';for(let i=0;i<48;i++){const a=i*7.5*Math.PI/180;dots+=`<circle cx="${(C+131*Math.sin(a)).toFixed(1)}" cy="${(C-131*Math.cos(a)).toFixed(1)}" r="${i%2?1.4:0.9}" fill="#4a4168"/>`;}
+  P.push(`<g><animateTransform attributeName="transform" type="rotate" from="0 150 150" to="360 150 150" dur="140s" repeatCount="indefinite"/>${dots}</g>`);
+  // structural rings (stained-glass leading)
+  P.push(`<circle cx="150" cy="150" r="121" fill="none" stroke="#2e2747" stroke-width="1.3"/><circle cx="150" cy="150" r="78" fill="none" stroke="#241f38"/>`);
+  // radial leading lines between facets
+  let leads='';for(let i=0;i<N;i++){const a=(i*step+step/2)*Math.PI/180;leads+=`<line x1="${(C+32*Math.sin(a)).toFixed(1)}" y1="${(C-32*Math.cos(a)).toFixed(1)}" x2="${(C+120*Math.sin(a)).toFixed(1)}" y2="${(C-120*Math.cos(a)).toFixed(1)}" stroke="#2a2540" stroke-width="1"/>`;}
+  P.push(leads);
+  // decorative inner fronds between the facets (faint, same hue family)
+  achs.forEach((a,i)=>{const ang=i*step+step/2;const col=a.unlocked?catColor(a.code):'#3a3550';
+    P.push(`<g transform="rotate(${ang} 150 150)"><path d="${petalInner}" fill="none" stroke="${col}" stroke-width="1" opacity="${a.unlocked?0.5:0.22}"/></g>`);});
+  // the facets — one coloured petal per achievement
+  achs.forEach((a,i)=>{const ang=i*step;const on=a.unlocked;const col=catColor(a.code);
+    P.push(`<g class="apiece" data-ach="${a.code}" transform="rotate(${ang} 150 150)" style="cursor:pointer">`+
+      `<path d="${petalOuter}" fill="${on?col:'none'}" fill-opacity="${on?0.8:0}" stroke="${on?col:'#3a3550'}" stroke-width="${on?1.2:1.3}" stroke-linejoin="round" opacity="${on?0.98:0.45}" ${on?'filter="url(#apg)"':''}/>`+
+      `<path d="${petalOuter}" fill="none" stroke="${on?'#ffffffaa':'transparent'}" stroke-width="0.5" opacity="0.5"/></g>`);
+  });
+  // inner jewel ring — a coloured gem per facet
+  achs.forEach((a,i)=>{const ang=i*step*Math.PI/180,r=60,x=C+r*Math.sin(ang),y=C-r*Math.cos(ang);const on=a.unlocked;
+    P.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${on?3:1.8}" fill="${on?catColor(a.code):'#3a3550'}" ${on?'filter="url(#apg)"':''}/>`);
+  });
+  // faceted crystal core — gold, radiating with completion
+  P.push(`<circle cx="150" cy="150" r="30" fill="#140f24" stroke="${complete?'#f5c977':'#3a3550'}" stroke-width="1.4" ${complete?'filter="url(#apg)"':''}/>`);
+  const gem=(SVGP['crystal']||'').replace(/currentColor/g,'url(#acore)');
+  P.push(`<g opacity="${(0.3+0.7*frac).toFixed(2)}" ${frac>0.5?'filter="url(#apg)"':''}><g transform="translate(135,134) scale(1.3)" fill="none" stroke="url(#acore)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${gem}</g></g>`);
+  return `<svg viewBox="0 0 300 300" class="altar-svg">${P.join('')}</svg>`;
+}
+async function renderAltar(){
+  let ach={achievements:[]};try{ach=await api('achievements');}catch(e){}
+  window._ACH=ach.achievements;
+  const achs=ach.achievements;
+  const n=achs.filter(a=>a.unlocked).length, total=achs.length||1, complete=n>=total&&n>0;
+  $('#cbody').innerHTML=`
+  <div class="card center" style="padding:12px">
+    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Your mandala</div>
+    <div style="font-size:26px;font-weight:800;margin:2px 0">${n}<span class="muted" style="font-size:16px">/${total} facets</span></div>
+    <div class="bar" style="max-width:220px;margin:4px auto 0"><i style="width:${Math.round(100*n/total)}%"></i></div>
+    ${complete?`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Your mandala is whole</div>`:`<div class="muted" style="font-size:12px;margin-top:8px">Every achievement reveals one facet of the whole</div>`}
+  </div>
+  <div class="altar-stage ${complete?'complete':''}">${buildAltar(achs)}</div>
+  <p class="muted center" style="font-size:12px;margin-top:2px">Tap a facet to see the achievement that reveals it.</p>`;
+  document.querySelectorAll('.apiece').forEach(g=>g.addEventListener('click',()=>openAchCard(g.getAttribute('data-ach'))));
+}
+async function renderItems(){
+  let d={items:[],equipped:null};try{d=await api('collection');}catch(e){}
+  window._COL=d;
+  const owned=d.items.filter(i=>i.owned).length,total=d.items.length;
+  const claimable=d.items.filter(i=>i.eligible&&!i.owned).length;
+  $('#cbody').innerHTML=`
+  <div class="card center" style="padding:14px">
+    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Your mandala</div>
+    <div style="font-size:28px;font-weight:800;margin:3px 0">${owned}<span class="muted" style="font-size:17px">/${total}</span></div>
+    <div class="bar" style="max-width:220px;margin:0 auto"><i style="width:${Math.round(100*owned/total)}%"></i></div>
+    ${claimable?`<div class="pill" style="margin-top:12px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} ${claimable} ready to claim</div>`:''}
+  </div>
+  <div class="coll-grid">
+    ${d.items.map(it=>{const ri=it.rarity,r=RARITY[ri];const state=it.owned?'owned':(it.eligible?'claim':'locked');
+      return `<div class="coll ${state}" data-code="${it.code}" style="--rc:${r[1]}">
+        <div class="coll-ic">${ic(it.owned||it.eligible?ITEM_ICON[it.code]:'lock', (it.owned?'grad-'+GRADOF[ri]:''))}</div>
+        <div class="coll-nm">${it.owned||it.eligible?esc(it.name):'• • •'}</div>
+        <div class="coll-st">${it.owned?(d.equipped===it.code?'Carried':'Owned'):(it.eligible?'Claim':r[0])}</div>
+      </div>`;}).join('')}
+  </div>`;
+  document.querySelectorAll('.coll').forEach(x=>x.onclick=()=>openItemCard(x.dataset.code));
+}
+async function renderCompanions(){
+  let d={companions:[],equipped:null,motes:0};try{d=await api('companions');}catch(e){}
+  window._COMP=d;
+  const have=d.companions.filter(x=>x.owned).length;
+  $('#cbody').innerHTML=`
+  ${have?'':'<div class="card muted center" style="font-size:13px">Adopt a companion to sit with — then feed it Motes you earn each session and watch it grow from a Spark into something Celestial.</div>'}
+  <div class="comp-grid">
+    ${d.companions.map(x=>{const eq=d.equipped===x.code;const col=ELEMENT_COL[x.element]||'#a855f7';
+      const st=x.owned?x.stage:null;
+      return `<div class="comp ${x.owned?'owned':'locked'} ${eq?'eq':''}" data-code="${x.code}" style="--el:${col}">
+        ${eq?`<span class="comp-eqtag">Companion</span>`:''}
+        <div class="comp-ic s${x.owned?st.index:0}">${ic(COMP_ICON[x.code])}</div>
+        <div class="comp-nm">${esc(x.name)}</div>
+        <div class="comp-st">${x.owned?st.name:(x.cost?`${ic('spark','g')} ${fmt(x.cost)}`:'Free')}</div>
+      </div>`;}).join('')}
+  </div>
+  <p class="muted center" style="font-size:12px;margin-top:12px">Tap a companion to adopt, feed, or set as your own.</p>`;
+  document.querySelectorAll('.comp').forEach(x=>x.onclick=()=>openCompanionCard(x.dataset.code));
+}
+async function renderShop(){
+  let d={shop:[],motes:0,member_days:0};try{d=await api('shop');}catch(e){}
+  $('#cbody').innerHTML=`
+  <div class="card center" style="padding:13px">
+    <div class="muted" style="font-size:12px">You hold</div>
+    <div style="font-size:24px;font-weight:800;color:var(--gold)">${ic('spark','g glow')} ${fmt(d.motes)} Motes</div>
+    <div class="muted" style="font-size:11px;margin-top:2px">Member for ${d.member_days} ${d.member_days===1?'day':'days'}</div>
+  </div>
+  ${d.shop.map(it=>{const r=RARITY[it.rarity];return `<div class="shop-row ${it.owned?'owned':''} ${it.locked?'locked':''}" style="--rc:${r[1]}">
+    <div class="shop-ic">${ic(ITEM_ICON[it.code],'grad-'+GRADOF[it.rarity])}</div>
+    <div style="flex:1;min-width:0">
+      <div class="shop-nm">${esc(it.name)} <span class="rtag" style="--c:${r[1]};font-size:9px">${r[0]}</span></div>
+      <div class="muted" style="font-size:12px;font-family:var(--serif);font-style:italic">${esc(it.flavor)}</div>
+      ${it.gate?`<div style="font-size:11px;color:${it.locked?'var(--muted)':'var(--good)'};margin-top:3px">${it.locked?ic('lock'):ic('check')} ${esc(it.gate)}</div>`:''}
+    </div>
+    <div class="shop-buy">${it.owned?`<span class="muted" style="font-size:12px">${ic('check','g')} Owned</span>`
+      :it.locked?`<span class="muted" style="font-size:12px">${ic('lock')}</span>`
+      :`<button class="btn gold" data-code="${it.code}" style="width:auto;padding:9px 14px;font-size:14px">${it.price?`${ic('spark')} ${fmt(it.price)}`:'Claim'}</button>`}</div>
+  </div>`;}).join('')}
+  <p class="muted center" style="font-size:12px;margin-top:12px">Earn Motes every time you meditate. Founder items open as your membership grows.</p>`;
+  document.querySelectorAll('.shop-buy button').forEach(b=>b.onclick=async()=>{
+    try{const r=await api('shop/buy','POST',{code:b.dataset.code});toast((r.name||'Item')+' is yours '+ic('spark','g'));renderCollection();}catch(e){toast(e);}});
+}
+/* ---- Artifacts: real pieces + digital travel companion ---- */
+async function renderArtifacts(){
+  let d={artifacts:[],equipped:null};try{d=await api('nft');}catch(e){}
+  window._ART=d;
+  $('#cbody').innerHTML=`
+  <div class="card center" style="padding:14px">
+    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.12em">Artifacts</div>
+    <div style="font-family:var(--serif);font-style:italic;color:#cbbfe6;font-size:14px;margin-top:6px">A companion to carry as you meditate. Each is a real, meaningful object — kept at your side and in the app — that travels with you, wherever you sit.</div>
+  </div>
+  ${d.artifacts.map(a=>{const r=RARITY[a.rarity];const eq=d.equipped===a.code;
+    return `<div class="art-row ${a.owned?'owned':''}" data-code="${a.code}" style="--rc:${r[1]}">
+      <div class="art-ic">${ic(ART_ICON[a.code],'grad-'+GRADOF[a.rarity])}${a.img?`<img src="${a.img}" class="art-img" alt="" onerror="this.remove()">`:''}</div>
+      <div style="flex:1;min-width:0">
+        <div class="art-nm">${esc(a.name)}</div>
+        <div class="art-origin">${esc(a.origin)} · ${esc(a.material)}</div>
+        <div class="art-sub">${esc(a.edition)} · <b>$${a.price}</b></div>
+      </div>
+      <div class="art-act">${a.owned?`<span class="art-pill" style="color:var(--good);border-color:#2e4a38">${ic('check','g')} ${eq?'carried':'reserved'}</span>`:`<span class="art-pill" style="color:${r[1]};border-color:${r[1]}">view</span>`}</div>
+    </div>`;}).join('')}
+  <div class="card" style="padding:14px;margin-top:4px">
+    <div style="display:flex;align-items:center;gap:8px;color:var(--good);font-weight:700;font-size:13px">${ic('check','g')} Ethically sourced</div>
+    <p class="muted" style="font-size:12.5px;line-height:1.6;margin:8px 0 0">Every piece comes from a <b style="color:var(--text)">trusted dealer</b> or a <b style="color:var(--text)">verified local artisan</b> — and the makers are <b style="color:var(--text)">paid fairly</b> for their craft. Antique originals arrive with <b style="color:var(--text)">provenance &amp; a certificate of authenticity</b>; handmade pieces support the maker directly. We never sell looted, faked, or endangered materials.</p>
+  </div>
+  <p class="muted center" style="font-size:12px;margin-top:10px">Tap a piece to see its story and reserve yours.</p>`;
+  document.querySelectorAll('.art-row').forEach(row=>row.onclick=()=>openNftCard(row.dataset.code));
+}
+function openNftCard(code){
+  const d=window._ART||{artifacts:[]};const a=d.artifacts.find(x=>x.code===code);if(!a)return;
+  const r=RARITY[a.rarity],rcol=r[1],tint=r[2],glow=r[3];const eq=d.equipped===code;
+  const ov=el(`<div class="ach-ov">
+    <div class="ach-card rar-${a.rarity}" style="--rc:${rcol};--tint:${tint};--glow:${glow}">
+      <button class="ach-x">${ic('close')}</button>
+      <div class="ach-foil"></div>
+      <div class="ach-rare" style="color:${rcol};border-color:${rcol}">${r[0]} · Artifact</div>
+      <div class="ach-badge"><div class="ach-ring"></div>
+        <div class="ach-ic" style="color:${rcol}">${ic(ART_ICON[code],'achbig grad-'+GRADOF[a.rarity])}</div>
+        ${a.img?`<img src="${a.img}" class="art-cimg" alt="" onerror="this.remove()">`:''}
+      </div>
+      <div class="ach-title">${esc(a.name)}</div>
+      <div class="ach-desc" style="font-family:var(--serif);font-style:italic">“${esc(a.flavor)}”</div>
+      <div class="ach-meta">
+        <span class="ach-chip">${ic('pin')} ${esc(a.origin)}</span>
+        <span class="ach-chip">${esc(a.material)} · ${esc(a.edition)}</span>
+        <span class="ach-chip" style="color:var(--good)">${ic('check','g')} ${esc(a.source)}</span>
+        <span class="ach-chip" style="color:var(--gold)">A companion to carry as you meditate · $${a.price}</span>
+      </div>
+      <div id="nftact" style="margin-top:4px"></div>
+    </div></div>`);
+  const act=ov.querySelector('#nftact');
+  if(!a.owned){
+    act.innerHTML=`<button class="btn gold" style="width:auto;padding:11px 20px">Reserve yours · $${a.price}</button><div class="muted" style="font-size:11px;margin-top:7px">Reserves your numbered piece — we’ll reach out to arrange it.</div>`;
+    act.querySelector('button').onclick=async()=>{try{await api('nft/reserve','POST',{code});toast('Reserved '+esc(a.name)+' '+ic('spark','g'));ov.remove();renderCollection();}catch(e){toast(e);}};
+  }else if(eq){
+    act.innerHTML=`<span class="ach-chip" style="color:var(--good)">${ic('check')} Carried in your sessions</span>`;
+  }else{
+    act.innerHTML=`<span class="ach-chip" style="color:var(--good)">${ic('check','g')} Reserved</span><button class="btn" style="width:auto;padding:10px 18px;margin-top:8px">Carry in meditation</button>`;
+    act.querySelector('button').onclick=async()=>{try{await api('collection/equip','POST',{code});toast('Carrying your '+esc(a.name));ov.remove();renderCollection();}catch(e){toast(e);}};
+  }
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.ach-x'))ov.remove();});
+  document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
+}
+function openItemCard(code){
+  const d=window._COL||{items:[]};const it=d.items.find(x=>x.code===code);if(!it)return;
+  const ri=it.rarity,r=RARITY[ri],rcol=r[1],tint=r[2],glow=r[3];
+  const state=it.owned?'owned':(it.eligible?'claim':'locked');
+  const equipped=d.equipped===code;
+  const grad=(it.owned||it.eligible)?'grad-'+GRADOF[ri]:'';
+  const ov=el(`<div class="ach-ov">
+    <div class="ach-card rar-${ri} ${state==='locked'?'locked':''}" style="--rc:${rcol};--tint:${tint};--glow:${glow}">
+      <button class="ach-x">${ic('close')}</button>
+      <div class="ach-foil"></div>
+      <div class="ach-rare" style="color:${rcol};border-color:${rcol}">${r[0]} · Item</div>
+      <div class="ach-badge"><div class="ach-ring"></div>
+        <div class="ach-ic" style="${state==='locked'?'':'color:'+rcol}">${ic(state==='locked'?'lock':ITEM_ICON[code],'achbig '+grad)}</div>
+      </div>
+      <div class="ach-title">${state==='locked'?'???':esc(it.name)}</div>
+      <div class="ach-desc" style="font-family:var(--serif);font-style:italic">${state==='locked'?esc(it.unlock):'“'+esc(it.flavor)+'”'}</div>
+      <div class="ach-meta" id="itemact"></div>
+    </div></div>`);
+  const act=ov.querySelector('#itemact');
+  if(state==='locked'){act.innerHTML=`<span class="ach-chip">${ic('lock')} ${esc(it.unlock)}</span>`;}
+  else if(state==='claim'){act.innerHTML=`<button class="btn gold" style="width:auto;padding:11px 20px">${ic('spark')} Add to collection</button>`;
+    act.querySelector('button').onclick=async()=>{try{await api('collection/claim','POST',{code});toast(esc(it.name)+' claimed '+ic('spark','g'));ov.remove();renderCollection();}catch(e){toast(e);}};}
+  else{act.innerHTML=equipped?`<span class="ach-chip" style="color:var(--good)">${ic('check')} Carried in sessions</span>`
+      :`<button class="btn" style="width:auto;padding:11px 20px">Carry in sessions</button>`;
+    const b=act.querySelector('button');if(b)b.onclick=async()=>{try{await api('collection/equip','POST',{code});toast('Carrying your '+esc(it.name));ov.remove();renderCollection();}catch(e){toast(e);}};}
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.ach-x'))ov.remove();});
+  document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
+}
+
+/* ---- companion card: adopt, feed, grow, equip ---- */
+function openCompanionCard(code){
+  const d=window._COMP||{companions:[]};const x=d.companions.find(c=>c.code===code);if(!x)return;
+  const col=ELEMENT_COL[x.element]||'#a855f7';
+  const st=x.owned?x.stage:null;
+  const prog=(x.owned&&!st.max)?Math.min(100,100*(x.fed-st.at)/(st.next_at-st.at)):100;
+  const ov=el(`<div class="ach-ov">
+    <div class="ach-card" style="--rc:${col};--tint:#15131f;--glow:${col}33">
+      <button class="ach-x">${ic('close')}</button>
+      <div class="ach-foil"></div>
+      <div class="ach-rare" style="color:${col};border-color:${col}">${esc(x.element)} companion</div>
+      <div class="ach-badge"><div class="ach-ring"></div>
+        <div class="ach-ic s${x.owned?st.index:0}" style="color:${col}">${ic(COMP_ICON[code],'achbig')}</div>
+      </div>
+      <div class="ach-title">${esc(x.name)}</div>
+      <div class="ach-desc" style="font-family:var(--serif);font-style:italic">“${esc(x.flavor)}”</div>
+      ${x.owned?`<div style="position:relative;z-index:2;margin:2px 24px 10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)"><span style="color:${col}">${st.name}</span><span>${st.max?'Fully grown':fmt(x.fed)+' / '+fmt(st.next_at)}</span></div>
+          <div class="bar" style="margin-top:5px"><i style="width:${prog}%;background:linear-gradient(90deg,${col},#fff6)"></i></div>
+        </div>`:''}
+      <div class="ach-meta" id="compact"></div>
+    </div></div>`);
+  const act=ov.querySelector('#compact');
+  const close=()=>ov.remove();
+  if(!x.owned){
+    const afford=(ME.motes||0)>=x.cost;
+    act.innerHTML=`<button class="btn gold" ${afford?'':'disabled style="opacity:.5"'} style="width:auto;padding:11px 20px">${x.cost?`Adopt · ${ic('spark')} ${fmt(x.cost)}`:'Adopt — free'}</button>${afford?'':`<span class="ach-chip">Need ${fmt(x.cost-(ME.motes||0))} more Motes</span>`}`;
+    const b=act.querySelector('button');if(b&&afford)b.onclick=async()=>{try{await api('companions/adopt','POST',{code});toast('You adopted '+esc(x.name)+' '+ic('spark','g'));close();renderCollection();}catch(e){toast(e);}};
+  }else{
+    const eq=d.equipped===code;
+    const feeds=[['+50',50],['+200',200]];
+    act.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+      ${st.max?'':feeds.map(f=>`<button class="btn ghost feed" data-amt="${f[1]}" style="width:auto;padding:9px 14px">${ic('spark','g')} ${f[0]}</button>`).join('')}
+      ${eq?`<span class="ach-chip" style="color:var(--good)">${ic('check')} Your companion</span>`:`<button class="btn equip" style="width:auto;padding:9px 16px">Set as companion</button>`}
+    </div><div class="muted" style="font-size:11px;margin-top:8px">You hold ${ic('spark','g')} ${fmt(ME.motes||0)} Motes</div>`;
+    act.querySelectorAll('.feed').forEach(b=>b.onclick=async()=>{
+      const amt=+b.dataset.amt;if((ME.motes||0)<1){toast('Meditate to earn Motes first');return;}
+      try{const r=await api('companions/feed','POST',{code,amount:amt});const me=await api('me');ME=me.profile;
+        if(r.evolved)toast(esc(x.name)+' evolved to '+r.stage.name+'! '+ic('spark','g'));else toast('Fed '+esc(x.name));
+        close();openCompanionCardFresh(code);}catch(e){toast(e);}});
+    const eb=act.querySelector('.equip');if(eb)eb.onclick=async()=>{try{await api('companions/equip','POST',{code});toast(esc(x.name)+' walks with you now');close();renderCollection();}catch(e){toast(e);}};
+  }
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.ach-x'))close();});
+  document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
+}
+async function openCompanionCardFresh(code){try{window._COMP=await api('companions');}catch(e){}openCompanionCard(code);}
+
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+boot();
+</script>
+</body>
+</html>"""
+
+class H(BaseHTTPRequestHandler):
+    server_version = "Lumen/1.0"
+
+    def log_message(self, *a):
+        pass
+
+    # -- plumbing ----------------------------------------------------------
+    def _send(self, code, body, ct="application/json", extra=None):
+        if isinstance(body, (dict, list)):
+            body = json.dumps(body).encode()
+        elif isinstance(body, str):
+            body = body.encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ct)
+        self.send_header("Content-Length", str(len(body)))
+        if extra:
+            for k, v in extra:
+                self.send_header(k, v)
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _body(self):
+        try:
+            n = int(self.headers.get("Content-Length", "0"))
+            return json.loads(self.rfile.read(n) or b"{}")
+        except Exception:
+            return {}
+
+    def _cookie(self, name):
+        raw = self.headers.get("Cookie", "")
+        for part in raw.split(";"):
+            if "=" in part:
+                k, v = part.strip().split("=", 1)
+                if k == name:
+                    return v
+        return None
+
+    def _me(self, c):
+        tok = self._cookie("lumen_sess")
+        email = session_email(tok) if tok else None
+        if not email:
+            return None
+        return user_by_email(c, email)
+
+    def _owner(self, c):
+        u = self._me(c)
+        if not u:
+            return None, (401, {"error": "sign in"})
+        if (u["email"] or "").lower() not in OWNER_EMAILS:
+            return None, (403, {"error": "forbidden"})
+        return u, None
+
+    def _path(self):
+        p = self.path
+        if BASE and p.startswith(BASE):
+            p = p[len(BASE):] or "/"
+        q = ""
+        if "?" in p:
+            p, q = p.split("?", 1)
+        return p, dict(urllib_parse_qsl(q))
+
+    # -- routing -----------------------------------------------------------
+    def do_GET(self):
+        p, q = self._path()
+        if p in ("/", "/index.html"):
+            self._send(200, PAGE, "text/html; charset=utf-8",
+                       extra=[("Cache-Control", "no-cache, no-store, must-revalidate")]); return
+        if p == "/manifest.webmanifest":
+            self._send(200, MANIFEST, "application/manifest+json"); return
+        if p == "/sw.js":
+            self._send(200, SERVICE_WORKER, "application/javascript; charset=utf-8",
+                       extra=[("Cache-Control", "no-cache, no-store, must-revalidate")]); return
+        if p in ("/privacy", "/privacy.html"):
+            self._send(200, PRIVACY_PAGE, "text/html; charset=utf-8"); return
+        if p in ("/admin", "/admin.html"):
+            self._send(200, ADMIN_PAGE, "text/html; charset=utf-8",
+                       extra=[("Cache-Control", "no-cache, no-store, must-revalidate")]); return
+        if p in ("/site", "/site.html", "/lp"):
+            self._send(200, site_page(), "text/html; charset=utf-8"); return
+        if p == "/health":
+            self._send(200, {"ok": True}); return
+        rel = p.lstrip("/")
+        if rel in ("icon.png", "icon-192.png", "icon-512.png", "icon.svg") or \
+           (rel.startswith("art/") and re.fullmatch(r"art/[a-z0-9_]+\.(?:png|jpg|jpeg|webp)", rel)):
+            fp = os.path.join(HERE, rel)
+            if os.path.isfile(fp):
+                if fp.endswith(".svg"): ct = "image/svg+xml"
+                elif fp.endswith((".jpg", ".jpeg")): ct = "image/jpeg"
+                elif fp.endswith(".webp"): ct = "image/webp"
+                else: ct = "image/png"
+                with open(fp, "rb") as f:
+                    self._send(200, f.read(), ct, extra=[("Cache-Control", "max-age=86400")])
+                return
+            self._send(404, {"error": "not found"}); return
+        m = re.fullmatch(r"/spot/(\d+\.(?:jpg|png))", p)
+        if m:
+            fp = os.path.join(SPOT_DIR, m.group(1))
+            if os.path.isfile(fp):
+                ct = "image/png" if fp.endswith(".png") else "image/jpeg"
+                with open(fp, "rb") as f:
+                    self._send(200, f.read(), ct, extra=[("Cache-Control", "public, max-age=31536000, immutable")])
+                return
+            self._send(404, {"error": "not found"}); return
+        if not p.startswith("/api/"):
+            self._send(404, {"error": "not found"}); return
+        with _dblock:
+            c = db()
+            try:
+                self._get_api(p, q, c)
+            finally:
+                c.close()
+
+    def do_POST(self):
+        p, q = self._path()
+        with _dblock:
+            c = db()
+            try:
+                self._post_api(p, q, c)
+            finally:
+                c.close()
+
+    # -- GET api -----------------------------------------------------------
+    def _get_api(self, p, q, c):
+        if p == "/api/me":
+            u = self._me(c)
+            if not u:
+                self._send(200, {"authed": False}); return
+            self._send(200, {"authed": True, "profile": profile_dict(c, u)}); return
+
+        if p == "/api/prompt":
+            self._send(200, {"prompt": prompt_for_today(), "date": today_str()}); return
+
+        if p == "/api/challenge":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            try:
+                tz_off = max(-840, min(840, int(q.get("tz", "0"))))
+            except Exception:
+                tz_off = 0
+            local_day = (datetime.now(timezone.utc) + timedelta(minutes=tz_off)).date().isoformat()
+            row = c.execute("SELECT * FROM challenges WHERE user_id=? AND day=?", (u["id"], local_day)).fetchone()
+            photo_today = bool(row["photo"]) if row else False
+            new_today = bool(row["new_place"]) if row else False
+            places = distinct_places(c, u["id"])
+            # this user's passport preview: their most recent spots
+            thumbs = [{"photo": r["photo"], "city": r["city"]}
+                      for r in c.execute("SELECT photo,city FROM sessions WHERE user_id=? AND photo IS NOT NULL "
+                                         "ORDER BY id DESC LIMIT 8", (u["id"],))]
+            # community hook: spots shared to the map today
+            shared_today = c.execute("SELECT COUNT(*) n FROM sessions WHERE day=? AND photo IS NOT NULL "
+                                     "AND photo_share=1", (local_day,)).fetchone()["n"]
+            nxt = next((m for m in PILG_MILESTONES if m > places), None)
+            self._send(200, {
+                "title": "Atlas",
+                "blurb": "Collect the places you meditate. Travel somewhere new, keep a photo of your spot, and share it with the world.",
+                "day": local_day,
+                "streak": u["chal_streak"] or 0,
+                "best": u["chal_best"] or 0,
+                "places": places,
+                "next_milestone": nxt,
+                "photo_today": photo_today,
+                "new_today": new_today,
+                "new_bonus": PILG_NEW_PLACE,
+                "photo_bonus": PILG_PHOTO,
+                "thumbs": thumbs,
+                "shared_today": shared_today,
+            }); return
+
+        if p == "/api/horoscope":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            try:
+                tz_off = max(-840, min(840, int(q.get("tz", "0"))))
+            except Exception:
+                tz_off = 0
+            local_day = (datetime.now(timezone.utc) + timedelta(minutes=tz_off)).date().isoformat()
+            sign = sign_from_birthdate(u["birth_date"]) if u["birth_date"] else (u["sun_sign"] or "").lower()
+            if sign not in ZODIAC_BY_KEY:
+                self._send(200, {"need_sign": True,
+                    "signs": [{"key": z[0], "name": z[2], "sanskrit": z[3], "glyph": z[1]} for z in ZODIAC]}); return
+            h = personal_horoscope(c, u, local_day)
+            z = ZODIAC_BY_KEY[sign]
+            self._send(200, {"need_sign": False, "sign": z[0], "name": z[2], "sanskrit": z[3],
+                "glyph": z[1], "lord": z[4], "date": local_day,
+                "text": h["text"], "theme": h["theme"], "soundscape": h["soundscape"],
+                "minutes": h.get("minutes", 10), "nakshatra": h.get("nakshatra"),
+                "deity": h.get("deity"), "nak_theme": h.get("nak_theme"), "pada": h.get("pada"),
+                "janma": h.get("janma"), "maha": h.get("maha"), "antar": h.get("antar"),
+                "has_natal": bool(u["birth_time"])}); return
+
+        if p == "/api/presence":
+            today = today_str()
+            row = c.execute("SELECT COUNT(*) n, COALESCE(SUM(light),0) l, COALESCE(SUM(minutes),0) m FROM sessions WHERE day=?", (today,)).fetchone()
+            live = LIVE.count()
+            self._send(200, {"now": live, "today_sessions": row["n"], "today_light": row["l"], "today_minutes": row["m"]}); return
+
+        if p == "/api/map":
+            scope = q.get("scope", "today")
+            sql = """SELECT s.id id, s.lat lat, s.lon lon, s.city city, s.minutes minutes, s.soundscape soundscape,
+                            s.ended ended, s.photo photo, s.photo_share pshare, u.name name, u.is_bot bot
+                     FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.lat IS NOT NULL"""
+            args = []
+            mine_scope = (scope == "mine")
+            if scope == "today":
+                sql += " AND s.day=?"; args.append(today_str())
+            elif scope == "mine":
+                me = self._me(c)
+                if not me:
+                    self._send(401, {"error": "sign in"}); return
+                sql += " AND s.user_id=?"; args.append(me["id"])
+            sql += " ORDER BY s.ended DESC LIMIT 1200"
+            pts = []
+            for r in c.execute(sql, args):
+                pt = dict(r)
+                # only reveal a photo publicly if the author chose to share it;
+                # on your own "My places" map you always see your own photos
+                if not (mine_scope or pt.pop("pshare", 0)):
+                    pt["photo"] = None
+                else:
+                    pt.pop("pshare", None)
+                pts.append(pt)
+            resp = {"scope": scope, "points": pts}
+            if scope == "mine":
+                resp["places"] = len({(p["city"] or f"{round(p['lat'],2)},{round(p['lon'],2)}") for p in pts})
+                resp["cities"] = sorted({p["city"] for p in pts if p["city"]})
+            self._send(200, resp); return
+
+        if p == "/api/leaderboard":
+            scope = q.get("scope", "week")
+            by = "minutes" if q.get("by") == "minutes" else "light"
+            me = self._me(c)
+            if scope == "all":
+                col = "u.light" if by == "light" else "u.total_minutes"
+                rows = c.execute(f"SELECT u.id id,u.name name,{col} val FROM users u WHERE u.name IS NOT NULL ORDER BY val DESC LIMIT 100").fetchall()
+            else:
+                wk = week_str() if scope == "week" else None
+                day = today_str() if scope == "today" else None
+                agg = "SUM(s.light)" if by == "light" else "SUM(s.minutes)"
+                cond = "s.week=?" if scope == "week" else "s.day=?"
+                arg = wk if scope == "week" else day
+                rows = c.execute(f"""SELECT u.id id,u.name name,{agg} val
+                                     FROM sessions s JOIN users u ON u.id=s.user_id
+                                     WHERE {cond} GROUP BY u.id ORDER BY val DESC LIMIT 100""", (arg,)).fetchall()
+            out = []
+            for i, r in enumerate(rows):
+                out.append({"rank": i + 1, "name": r["name"], "value": r["val"] or 0,
+                            "you": bool(me and r["id"] == me["id"])})
+            self._send(200, {"scope": scope, "by": by, "rows": out}); return
+
+        if p == "/api/league":
+            me = self._me(c)
+            if not me:
+                self._send(401, {"error": "sign in"}); return
+            wk = week_str()
+            rows = c.execute("""SELECT u.id id,u.name name, COALESCE(SUM(s.light),0) wl
+                                FROM users u LEFT JOIN sessions s ON s.user_id=u.id AND s.week=?
+                                WHERE u.name IS NOT NULL GROUP BY u.id""", (wk,)).fetchall()
+            my_wl = next((r["wl"] for r in rows if r["id"] == me["id"]), 0)
+            my_lg = league_for(my_wl)["name"]
+            peers = [r for r in rows if league_for(r["wl"])["name"] == my_lg]
+            peers.sort(key=lambda r: r["wl"], reverse=True)
+            members = [{"rank": i + 1, "name": r["name"], "weekly_light": r["wl"],
+                        "you": r["id"] == me["id"]} for i, r in enumerate(peers)]
+            self._send(200, {"league": league_for(my_wl), "weekly_light": my_wl,
+                             "members": members, "promote_zone": 5,
+                             "relegate_zone": max(0, len(members) - 5)}); return
+
+        if p == "/api/journal":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            rows = c.execute("SELECT id,prompt,text,mood,shared,created FROM journal WHERE user_id=? ORDER BY id DESC LIMIT 200", (u["id"],)).fetchall()
+            self._send(200, {"entries": [dict(r) for r in rows]}); return
+
+        if p == "/api/feed":
+            me = self._me(c)
+            uid = me["id"] if me else 0
+            # hide: entries from users I blocked, entries I reported, and any entry
+            # with 2+ distinct reports (community moderation per App Store Guideline 1.2)
+            # shared spot photo-posts: a picture of where someone meditated.
+            # feed id is the NEGATED session id so it can't collide with journal
+            # ids and still flows through the existing report/block endpoints.
+            spots = c.execute("""SELECT s.id sid, s.city city, s.minutes minutes, s.soundscape soundscape,
+                                        s.mood mood, s.note note, s.photo photo, s.ended created,
+                                        u.name name, u.id author_id
+                                 FROM sessions s JOIN users u ON u.id=s.user_id
+                                 WHERE s.photo_share=1 AND s.photo IS NOT NULL
+                                   AND s.user_id NOT IN (SELECT blocked_id FROM mod_blocks WHERE blocker_id=?)
+                                   AND (-s.id) NOT IN (SELECT entry_id FROM mod_reports WHERE reporter_id=?)
+                                   AND (SELECT COUNT(*) FROM mod_reports r WHERE r.entry_id=-s.id) < 2
+                                 ORDER BY s.id DESC LIMIT 60""", (uid, uid)).fetchall()
+            # shared journal letters — but skip the ones tied to a shared spot
+            # post (its note is already shown as the photo's caption)
+            rows = c.execute("""SELECT j.id id, j.text text, j.mood mood, j.created created,
+                                       u.name name, u.id author_id
+                                FROM journal j JOIN users u ON u.id=j.user_id
+                                WHERE j.shared=1
+                                  AND j.user_id NOT IN (SELECT blocked_id FROM mod_blocks WHERE blocker_id=?)
+                                  AND j.id NOT IN (SELECT entry_id FROM mod_reports WHERE reporter_id=?)
+                                  AND (SELECT COUNT(*) FROM mod_reports r WHERE r.entry_id=j.id) < 2
+                                  AND (j.session_id IS NULL OR j.session_id NOT IN
+                                       (SELECT id FROM sessions WHERE photo_share=1 AND photo IS NOT NULL))
+                                ORDER BY j.id DESC LIMIT 60""", (uid, uid)).fetchall()
+            feed = []
+            for r in spots:
+                d = dict(r)
+                feed.append({"type": "spot", "id": -d["sid"], "name": d["name"],
+                             "author_id": d["author_id"], "created": d["created"],
+                             "photo": d["photo"], "city": d["city"], "minutes": d["minutes"],
+                             "soundscape": d["soundscape"], "mood": d["mood"],
+                             "text": (d["note"] or "").strip()})
+            for r in rows:
+                d = dict(r); d["type"] = "letter"; feed.append(d)
+            feed.sort(key=lambda f: f["created"] or "", reverse=True)
+            self._send(200, {"feed": feed[:60], "me": uid}); return
+
+        if p == "/api/achievements":
+            u = self._me(c)
+            have = {}
+            total = max(1, c.execute("SELECT COUNT(*) n FROM users WHERE name IS NOT NULL").fetchone()["n"])
+            if u:
+                have = {r["code"]: r["created"] for r in c.execute("SELECT code,created FROM achievements WHERE user_id=?", (u["id"],))}
+            out = []
+            for a in ACHIEVEMENTS:
+                earned = c.execute("SELECT COUNT(DISTINCT user_id) n FROM achievements WHERE code=?", (a[0],)).fetchone()["n"]
+                out.append({"code": a[0], "title": a[1], "desc": a[2], "emoji": a[3],
+                            "unlocked": a[0] in have, "created": have.get(a[0]),
+                            "pct": round(100.0 * earned / total)})
+            self._send(200, {"achievements": out}); return
+
+        if p == "/api/collection":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            self._send(200, {"items": collection_for(c, u), "equipped": u["equipped"]}); return
+
+        if p == "/api/companions":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            self._send(200, {"companions": companions_for(c, u), "equipped": u["companion"],
+                             "motes": u["motes"] or 0}); return
+
+        if p == "/api/shop":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            self._send(200, {"shop": shop_for(c, u), "motes": u["motes"] or 0,
+                             "member_days": member_days(u)}); return
+
+        if p == "/api/nft":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            self._send(200, {"artifacts": artifacts_for(c, u), "equipped": u["equipped"]}); return
+
+        if p == "/api/lifeos":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            self._send(200, {"lifeos": lifeos_get(u), "pillars": PILLARS}); return
+
+        if p == "/api/lifeos/prompts":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            self._send(200, {"prompts": daily_prompts(c, u)}); return
+
+        if p == "/api/notif/prefs":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            pr = _notif_prefs(c, u["id"])
+            self._send(200, {"enabled": bool(pr["enabled"]),
+                             "quiet_start": pr["quiet_start"], "quiet_end": pr["quiet_end"],
+                             "tz_offset_min": pr["tz_offset_min"], "sto": bool(pr["sto"]),
+                             "cats": json.loads(pr["cats"] or "{}"),
+                             "registered": bool(_tokens_for(c, u["id"]))}); return
+
+        if p == "/api/admin/notifications":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            self._send(200, notif_admin_stats(c)); return
+
+        if p == "/api/admin/overview":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            resp = admin_overview(c)
+            resp["pipeline"] = PIPELINE
+            resp["materials"] = MATERIALS
+            resp["outlets"] = OUTLETS
+            resp["dist_cols"] = DIST_COLS
+            resp["state"] = _mkt_state(c)
+            resp["subtasks"] = subtasks_by_parent(c)
+            self._send(200, resp); return
+
+        self._send(404, {"error": "not found"})
+
+    # -- POST api ----------------------------------------------------------
+    def _post_api(self, p, q, c):
+        if p == "/api/feed/report":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            try:
+                eid = int(self._body().get("id") or 0)
+            except Exception:
+                eid = 0
+            if eid:
+                c.execute("INSERT OR IGNORE INTO mod_reports(entry_id,reporter_id,created) VALUES(?,?,?)",
+                          (eid, u["id"], now_iso()))
+                c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/feed/block":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            try:
+                bid = int(self._body().get("author_id") or 0)
+            except Exception:
+                bid = 0
+            if bid and bid != u["id"]:
+                c.execute("INSERT OR IGNORE INTO mod_blocks(blocker_id,blocked_id,created) VALUES(?,?,?)",
+                          (u["id"], bid, now_iso()))
+                c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/push/register":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            tok = (d.get("token") or "").strip()
+            if not tok.startswith("ExponentPushToken"):
+                self._send(400, {"error": "bad token"}); return
+            plat = (d.get("platform") or "ios")[:16]
+            c.execute("INSERT INTO push_tokens(user_id,token,platform,created,updated) VALUES(?,?,?,?,?) "
+                      "ON CONFLICT(token) DO UPDATE SET user_id=excluded.user_id, updated=excluded.updated",
+                      (u["id"], tok, plat, now_iso(), now_iso()))
+            pr = _notif_prefs(c, u["id"])  # ensure defaults exist
+            if d.get("tz_offset_min") is not None:
+                try:
+                    c.execute("UPDATE notif_prefs SET tz_offset_min=?, updated=? WHERE user_id=?",
+                              (int(d["tz_offset_min"]), now_iso(), u["id"]))
+                except Exception:
+                    pass
+            c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/notif/prefs":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            pr = _notif_prefs(c, u["id"])
+            enabled = 1 if d.get("enabled", bool(pr["enabled"])) else 0
+            sto = 1 if d.get("sto", bool(pr["sto"])) else 0
+            cats = pr["cats"]
+            if isinstance(d.get("cats"), dict):
+                cats = json.dumps({k: (1 if d["cats"].get(k, 1) else 0) for k in NOTIF_CATS})
+            qs = pr["quiet_start"]; qe = pr["quiet_end"]; tz = pr["tz_offset_min"]; ph = pr["pref_hour"]
+            try:
+                if d.get("quiet_start") is not None: qs = max(0, min(23, int(d["quiet_start"])))
+                if d.get("quiet_end") is not None: qe = max(0, min(23, int(d["quiet_end"])))
+                if d.get("tz_offset_min") is not None: tz = int(d["tz_offset_min"])
+                if d.get("pref_hour") is not None: ph = max(0, min(23, int(d["pref_hour"])))
+            except Exception:
+                pass
+            c.execute("UPDATE notif_prefs SET enabled=?,sto=?,cats=?,quiet_start=?,quiet_end=?,tz_offset_min=?,pref_hour=?,updated=? WHERE user_id=?",
+                      (enabled, sto, cats, qs, qe, tz, ph, now_iso(), u["id"]))
+            c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/notif/opened":
+            d = self._body()
+            try:
+                nid = int(d.get("id") or 0)
+            except Exception:
+                nid = 0
+            if nid:
+                c.execute("UPDATE notif_log SET opened=? WHERE id=? AND opened IS NULL", (now_iso(), nid))
+                c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/admin/notify/test":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            toks = _tokens_for(c, u["id"])
+            if not toks:
+                self._send(400, {"error": "No push token registered for your account yet. Open the app (build with push) first."}); return
+            ok = expo_push_send(c, toks, "Lumen — test ✨", "Your notification service is wired up.", {"category": "test"})
+            self._send(200, {"ok": ok, "tokens": len(toks)}); return
+
+        if p == "/api/admin/notify/broadcast":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            d = self._body()
+            title = (d.get("title") or "").strip()[:60]
+            body = (d.get("body") or "").strip()[:160]
+            if not title or not body:
+                self._send(400, {"error": "title and body required"}); return
+            dk = "broadcast:" + hashlib.sha1((title + body + now_iso()).encode()).hexdigest()[:10]
+            sent = 0
+            for r in c.execute("SELECT DISTINCT user_id FROM push_tokens").fetchall():
+                toks = _tokens_for(c, r["user_id"])
+                ok = expo_push_send(c, toks, title, body, {"category": "broadcast"})
+                c.execute("INSERT INTO notif_log(user_id,category,title,body,dedupe_key,status,created,sent) "
+                          "VALUES(?,?,?,?,?,?,?,?)",
+                          (r["user_id"], "broadcast", title, body, dk, "sent" if ok else "failed",
+                           now_iso(), now_iso() if ok else None))
+                sent += 1 if ok else 0
+            c.commit()
+            self._send(200, {"ok": True, "sent": sent}); return
+
+        if p == "/api/admin/task":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            d = self._body()
+            key = (d.get("key") or "").strip()
+            status = (d.get("status") or "").strip()
+            if status not in ("todo", "doing", "done"):
+                self._send(400, {"error": "bad request"}); return
+            # key is either a task/outlet key, or a checkbox sub-step "key#idx"
+            base, _, idx = key.partition("#")
+            task = next((t for t in PIPELINE if t["key"] == base), None) or OUTLET_BY_KEY.get(base)
+            if not task or (idx and not (idx.isdigit() and int(idx) < len(task["steps"]))):
+                self._send(400, {"error": "bad request"}); return
+            c.execute("INSERT INTO mkt_state(key,status,note,updated) VALUES(?,?,?,?) "
+                      "ON CONFLICT(key) DO UPDATE SET status=excluded.status, updated=excluded.updated",
+                      (key, status, d.get("note"), datetime.now(timezone.utc).isoformat()))
+            c.commit()
+            self._send(200, {"ok": True, "key": key, "status": status}); return
+
+        if p == "/api/admin/subtask":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            d = self._body(); act = (d.get("action") or "").strip()
+            if act == "add":
+                parent = (d.get("parent") or "").strip()[:64]
+                text = (d.get("text") or "").strip()[:200]
+                if not parent or not text:
+                    self._send(400, {"error": "parent + text required"}); return
+                pos = (c.execute("SELECT COALESCE(MAX(pos),-1)+1 n FROM mkt_subtasks WHERE parent=?", (parent,)).fetchone()["n"])
+                cur = c.execute("INSERT INTO mkt_subtasks(parent,text,status,pos,created) VALUES(?,?,?,?,?)",
+                                (parent, text, "todo", pos, now_iso()))
+                c.commit()
+                self._send(200, {"ok": True, "id": cur.lastrowid, "parent": parent, "text": text, "status": "todo"}); return
+            if act == "toggle":
+                try: sid = int(d.get("id") or 0)
+                except Exception: sid = 0
+                status = "done" if d.get("done") else "todo"
+                c.execute("UPDATE mkt_subtasks SET status=? WHERE id=?", (status, sid)); c.commit()
+                self._send(200, {"ok": True, "id": sid, "status": status}); return
+            if act == "delete":
+                try: sid = int(d.get("id") or 0)
+                except Exception: sid = 0
+                c.execute("DELETE FROM mkt_subtasks WHERE id=?", (sid,)); c.commit()
+                self._send(200, {"ok": True, "id": sid}); return
+            self._send(400, {"error": "bad action"}); return
+
+        if p == "/api/signup":
+            d = self._body()
+            email = (d.get("email") or "").strip().lower()
+            pw = d.get("password") or ""
+            name = (d.get("name") or "").strip() or (email.split("@")[0] if email else "")
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email) or len(pw) < 6:
+                self._send(400, {"error": "Enter a valid email and a password of at least 6 characters."}); return
+            if user_by_email(c, email):
+                self._send(400, {"error": "That email already has an account — sign in instead."}); return
+            bd = (d.get("birth_date") or "").strip() or None
+            sign = sign_from_birthdate(bd) if bd else None
+            bt = (d.get("birth_time") or "").strip() or None
+            bp = (d.get("birth_place") or "").strip()[:120] or None
+            try:
+                btz = int(d.get("birth_tz")) if d.get("birth_tz") is not None else None
+            except Exception:
+                btz = None
+            salt = secrets.token_hex(16)
+            c.execute("INSERT INTO users(email,name,salt,hash,birth_date,birth_time,birth_place,birth_tz,sun_sign,created) "
+                      "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                      (email, name, salt, _hash_pw(pw, salt), bd, bt, bp, btz, sign, now_iso()))
+            c.commit()
+            tok = new_session(email)
+            self._send(200, {"ok": True}, extra=[("Set-Cookie", _cookie_hdr(tok))]); return
+
+        if p == "/api/login":
+            d = self._body()
+            email = (d.get("email") or "").strip().lower()
+            pw = d.get("password") or ""
+            u = user_by_email(c, email)
+            if not u or not u["salt"] or not hmac.compare_digest(_hash_pw(pw, u["salt"]), u["hash"] or ""):
+                self._send(400, {"error": "Wrong email or password."}); return
+            tok = new_session(email)
+            self._send(200, {"ok": True}, extra=[("Set-Cookie", _cookie_hdr(tok))]); return
+
+        if p == "/api/logout":
+            tok = self._cookie("lumen_sess")
+            SESSIONS.pop(tok, None)
+            self._send(200, {"ok": True}, extra=[("Set-Cookie", "lumen_sess=; Path=/; Max-Age=0")]); return
+
+        if p == "/api/tts":
+            audio = eleven_tts(self._body().get("text"))
+            if not audio:
+                self._send(503, {"error": "tts unavailable"}); return
+            self._send(200, audio, "audio/mpeg", extra=[("Cache-Control", "public, max-age=604800")]); return
+
+        if p == "/api/account/delete":
+            # App Store requirement (Guideline 5.1.1(v)): let users delete their account
+            # and all associated data in-app. Irreversible.
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            uid = u["id"]
+            for tbl in ("sessions", "journal", "achievements", "items", "companions", "user_notes"):
+                try:
+                    c.execute("DELETE FROM %s WHERE user_id=?" % tbl, (uid,))
+                except Exception:
+                    pass
+            c.execute("DELETE FROM users WHERE id=?", (uid,))
+            c.commit()
+            try:
+                LIVE.remove(uid)
+            except Exception:
+                pass
+            tok = self._cookie("lumen_sess")
+            SESSIONS.pop(tok, None)
+            self._send(200, {"ok": True}, extra=[("Set-Cookie", "lumen_sess=; Path=/; Max-Age=0")]); return
+
+        if p == "/api/location":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            try:
+                lat = _fuzz(float(d["lat"])); lon = _fuzz(float(d["lon"]))
+            except Exception:
+                self._send(400, {"error": "bad coords"}); return
+            city = nearest_city(lat, lon) or (d.get("city") or u["city"] or "").strip() or None
+            c.execute("UPDATE users SET lat=?,lon=?,city=? WHERE id=?", (lat, lon, city, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "lat": lat, "lon": lon, "city": city}); return
+
+        if p == "/api/horoscope/sign":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            sign = (d.get("sign") or "").lower().strip()
+            bd = (d.get("birth_date") or "").strip()
+            if bd and not sign:
+                sign = sign_from_birthdate(bd) or ""
+            if sign not in ZODIAC_BY_KEY:
+                self._send(400, {"error": "pick a valid sign"}); return
+            c.execute("UPDATE users SET sun_sign=?, birth_date=COALESCE(?,birth_date), horo=NULL, horo_day=NULL WHERE id=?",
+                      (sign, bd or None, u["id"]))
+            c.commit()
+            z = ZODIAC_BY_KEY[sign]
+            self._send(200, {"ok": True, "sign": z[0], "name": z[2], "sanskrit": z[3], "glyph": z[1]}); return
+
+        if p == "/api/natal":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            bd = (d.get("birth_date") or u["birth_date"] or "").strip() or None
+            bt = (d.get("birth_time") or "").strip() or None
+            bp = (d.get("birth_place") or "").strip()[:120] or None
+            try:
+                btz = int(d.get("birth_tz")) if d.get("birth_tz") is not None else u["birth_tz"]
+            except Exception:
+                btz = u["birth_tz"]
+            sign = sign_from_birthdate(bd) if bd else (u["sun_sign"] or None)
+            c.execute("UPDATE users SET birth_date=COALESCE(?,birth_date), birth_time=?, birth_place=?, "
+                      "birth_tz=?, sun_sign=COALESCE(?,sun_sign), horo=NULL, horo_day=NULL WHERE id=?",
+                      (bd, bt, bp, btz, sign, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/session/start":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            LIVE.add(u["id"])
+            self._send(200, {"ok": True, "started": now_iso()}); return
+
+        if p == "/api/session/complete":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            LIVE.remove(u["id"])
+            d = self._body()
+            try:
+                minutes = max(1, min(240, int(d.get("minutes") or 0)))
+            except Exception:
+                self._send(400, {"error": "bad minutes"}); return
+            ss = (d.get("soundscape") or "silence")
+            mood = (d.get("mood") or "")[:24]
+            note = (d.get("note") or "")[:2000]
+            lat = u["lat"]; lon = u["lon"]; city = u["city"]
+            raw_lat = u["lat"]; raw_lon = u["lon"]   # pre-fuzz coords, for a stable place key
+            if d.get("lat") is not None and d.get("lon") is not None:
+                try:
+                    raw_lat = float(d["lat"]); raw_lon = float(d["lon"])
+                    lat = _fuzz(raw_lat); lon = _fuzz(raw_lon)
+                    city = nearest_city(lat, lon) or d.get("city") or city
+                except Exception:
+                    pass
+            sess_pk = place_key(raw_lat, raw_lon)
+            dt = datetime.now(timezone.utc)
+            try:
+                tz_off = max(-840, min(840, int(d.get("tz_offset_min") or 0)))
+            except Exception:
+                tz_off = 0
+            local_dt = dt + timedelta(minutes=tz_off)
+            local_day = local_dt.date().isoformat()
+            # streak
+            last = u["last_day"]
+            streak = u["streak"] or 0
+            td = dt.date()
+            if last == td.isoformat():
+                pass  # already practiced today; keep streak
+            elif last == (td - timedelta(days=1)).isoformat():
+                streak += 1
+            else:
+                streak = 1
+            best = max(u["best_streak"] or 0, streak)
+            # light
+            light = compute_light(minutes, streak, dt)
+            lesson_code = (d.get("lesson") or "")[:32] or None
+            cur = c.execute("""INSERT INTO sessions(user_id,minutes,soundscape,light,lat,lon,city,mood,note,started,ended,day,week,lesson,pk)
+                         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      (u["id"], minutes, ss, light, lat, lon, city, mood, note,
+                       dt.isoformat(), dt.isoformat(), td.isoformat(), week_str(td), lesson_code, sess_pk))
+            sid = cur.lastrowid
+            # spot photo: a picture of where you sat (optional). photo_share gates
+            # whether it appears on the public map / community feed.
+            photo_url = save_spot_photo(sid, d.get("photo")) if d.get("photo") else None
+            if photo_url:
+                c.execute("UPDATE sessions SET photo=?, photo_share=? WHERE id=?",
+                          (photo_url, 1 if d.get("photo_share") else 0, sid))
+            # Atlas: photo-streak + places passport (travel reward)
+            chal_prog, chal_newly, chal_bonus, chal_fields = eval_pilgrimage(
+                c, u, local_day, sess_pk, bool(photo_url))
+            cs = chal_fields.get("chal_streak"); cb = chal_fields.get("chal_best"); cl = chal_fields.get("chal_last_day")
+            add_light = light + (chal_bonus if chal_newly else 0)
+            new_light = (u["light"] or 0) + add_light
+            old_lvl = level_for(u["light"])[0]
+            c.execute("""UPDATE users SET light=?,streak=?,best_streak=?,last_day=?,
+                         total_minutes=total_minutes+?,total_sessions=total_sessions+?,
+                         motes=COALESCE(motes,0)+?,
+                         chal_streak=COALESCE(?,chal_streak),chal_best=COALESCE(?,chal_best),chal_last_day=COALESCE(?,chal_last_day),
+                         lat=COALESCE(?,lat),lon=COALESCE(?,lon),city=COALESCE(?,city) WHERE id=?""",
+                      (new_light, streak, best, td.isoformat(), minutes, 1, add_light,
+                       cs, cb, cl, lat, lon, city, u["id"]))
+            if note.strip():
+                c.execute("INSERT INTO journal(user_id,prompt,text,mood,shared,session_id,created) VALUES(?,?,?,?,?,?,?)",
+                          (u["id"], "", note.strip(), mood, 1 if d.get("share") else 0, sid, now_iso()))
+            u2 = c.execute("SELECT * FROM users WHERE id=?", (u["id"],)).fetchone()
+            new_ach = check_achievements(c, u2, minutes, dt)
+            if d.get("lesson") and "pilgrim" not in {r["code"] for r in c.execute("SELECT code FROM achievements WHERE user_id=?", (u["id"],))}:
+                c.execute("INSERT OR IGNORE INTO achievements(user_id,code,created) VALUES(?,?,?)", (u["id"], "pilgrim", now_iso()))
+                new_ach.append("pilgrim")
+            try:
+                notif_on_complete(c, u2, new_ach, level_for(new_light)[0] > old_lvl, streak)
+            except Exception as _e:
+                print("notif_on_complete error:", _e)
+            c.commit()
+            new_lvl = level_for(new_light)[0]
+            self._send(200, {
+                "ok": True, "light_earned": light, "motes_earned": add_light, "streak": streak,
+                "photo": photo_url,
+                "leveled_up": new_lvl > old_lvl, "level": new_lvl,
+                "new_achievements": [{"code": a, "title": ACH_BY_CODE[a][1], "emoji": ACH_BY_CODE[a][3]} for a in new_ach],
+                "multiplier": round(streak_multiplier(streak), 2),
+                "time_bonus": time_bonus(dt)[1],
+                "challenge": {"progress": chal_prog, "newly_done": chal_newly,
+                              "bonus": chal_bonus if chal_newly else 0,
+                              "new_place": chal_prog.get("new_place", False),
+                              "places": distinct_places(c, u["id"]),
+                              "streak": cs if cs is not None else (u["chal_streak"] or 0)},
+            }); return
+
+        if p == "/api/journal":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            text = (d.get("text") or "").strip()
+            if not text:
+                self._send(400, {"error": "write something first"}); return
+            c.execute("INSERT INTO journal(user_id,prompt,text,mood,shared,created) VALUES(?,?,?,?,?,?)",
+                      (u["id"], (d.get("prompt") or "")[:300], text[:2000], (d.get("mood") or "")[:24],
+                       1 if d.get("share") else 0, now_iso()))
+            new_ach = award_journal_ach(c, u)
+            c.commit()
+            total = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=?", (u["id"],)).fetchone()["n"]
+            self._send(200, {"ok": True, "count": total,
+                             "new_achievements": [{"code": a, "title": ACH_BY_CODE[a][1]} for a in new_ach]}); return
+
+        if p == "/api/journal/transcribe":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            img = (self._body().get("image") or "")
+            mime = "image/jpeg"
+            if img.startswith("data:"):
+                head, _, b64 = img.partition(",")
+                m = re.search(r"data:([^;]+)", head)
+                if m:
+                    mime = m.group(1)
+                img = b64
+            if not img:
+                self._send(400, {"error": "no image"}); return
+            text = gemini_transcribe(img, mime)
+            if text is None:
+                self._send(502, {"error": "Couldn’t read that image — try better light or a closer shot."}); return
+            self._send(200, {"ok": True, "text": text}); return
+
+        if p == "/api/chat":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            if not GEMINI_KEY:
+                self._send(200, {"reply": "I'm resting right now — the companion isn't available."}); return
+            msgs = self._body().get("messages") or []
+            contents = []
+            for m in msgs[-20:]:
+                role = "model" if m.get("role") == "model" else "user"
+                t = str(m.get("text") or "")[:4000]
+                if t:
+                    contents.append({"role": role, "parts": [{"text": t}]})
+            if not contents:
+                self._send(400, {"error": "say something"}); return
+            reply = None; used = []
+            for _ in range(6):
+                parts = gemini_chat(contents)
+                if not parts:
+                    break
+                fcs = [pt["functionCall"] for pt in parts if isinstance(pt, dict) and "functionCall" in pt]
+                if fcs:
+                    contents.append({"role": "model", "parts": parts})
+                    fresp = []
+                    for fc in fcs:
+                        res = chat_tool_exec(c, u, fc.get("name"), fc.get("args"))
+                        used.append(fc.get("name"))
+                        fr = {"name": fc.get("name"), "response": res if isinstance(res, dict) else {"result": res}}
+                        if fc.get("id"):
+                            fr["id"] = fc["id"]
+                        fresp.append({"functionResponse": fr})
+                    contents.append({"role": "user", "parts": fresp})
+                    continue
+                reply = "".join(pt.get("text", "") for pt in parts if isinstance(pt, dict))
+                break
+            if not reply:
+                reply = "I'm here with you. Could you say that again?"
+            self._send(200, {"reply": reply.strip(), "tools": used}); return
+
+        if p == "/api/collection/claim":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            code = (self._body().get("code") or "")
+            it = ITEM_BY_CODE.get(code)
+            if not it:
+                self._send(400, {"error": "no such item"}); return
+            if c.execute("SELECT 1 FROM items WHERE user_id=? AND code=?", (u["id"], code)).fetchone():
+                self._send(200, {"ok": True, "already": True}); return
+            if not item_eligible(c, u, it[5]):
+                self._send(400, {"error": "Not unlocked yet — " + it[6]}); return
+            c.execute("INSERT OR IGNORE INTO items(user_id,code,created) VALUES(?,?,?)", (u["id"], code, now_iso()))
+            # auto-equip the first item claimed
+            if not u["equipped"]:
+                c.execute("UPDATE users SET equipped=? WHERE id=?", (code, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "name": it[1]}); return
+
+        if p == "/api/collection/equip":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            code = (self._body().get("code") or "")
+            if code and not c.execute("SELECT 1 FROM items WHERE user_id=? AND code=?", (u["id"], code)).fetchone():
+                self._send(400, {"error": "You don't own that yet"}); return
+            c.execute("UPDATE users SET equipped=? WHERE id=?", (code or None, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "equipped": code or None}); return
+
+        if p == "/api/companions/adopt":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            code = (self._body().get("code") or "")
+            comp = COMP_BY_CODE.get(code)
+            if not comp:
+                self._send(400, {"error": "no such companion"}); return
+            if c.execute("SELECT 1 FROM companions WHERE user_id=? AND code=?", (u["id"], code)).fetchone():
+                self._send(200, {"ok": True, "already": True}); return
+            cost = comp[4]
+            if (u["motes"] or 0) < cost:
+                self._send(400, {"error": f"You need {cost} Motes to adopt {comp[1]}."}); return
+            c.execute("INSERT OR IGNORE INTO companions(user_id,code,fed,created) VALUES(?,?,0,?)", (u["id"], code, now_iso()))
+            c.execute("UPDATE users SET motes=COALESCE(motes,0)-? WHERE id=?", (cost, u["id"]))
+            if not u["companion"]:
+                c.execute("UPDATE users SET companion=? WHERE id=?", (code, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "name": comp[1]}); return
+
+        if p == "/api/companions/feed":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body(); code = (d.get("code") or "")
+            try:
+                amt = int(d.get("amount") or 0)
+            except Exception:
+                amt = 0
+            row = c.execute("SELECT fed FROM companions WHERE user_id=? AND code=?", (u["id"], code)).fetchone()
+            if not row:
+                self._send(400, {"error": "You haven't adopted that companion."}); return
+            amt = max(1, min(amt, u["motes"] or 0))
+            if amt < 1:
+                self._send(400, {"error": "You have no Motes to feed."}); return
+            before = comp_stage(row["fed"])["index"]
+            c.execute("UPDATE companions SET fed=fed+? WHERE user_id=? AND code=?", (amt, u["id"], code))
+            c.execute("UPDATE users SET motes=COALESCE(motes,0)-? WHERE id=?", (amt, u["id"]))
+            c.commit()
+            new_fed = row["fed"] + amt
+            after = comp_stage(new_fed)
+            self._send(200, {"ok": True, "fed": new_fed, "stage": after,
+                             "evolved": after["index"] > before}); return
+
+        if p == "/api/companions/equip":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            code = (self._body().get("code") or "")
+            if code and not c.execute("SELECT 1 FROM companions WHERE user_id=? AND code=?", (u["id"], code)).fetchone():
+                self._send(400, {"error": "You haven't adopted that companion."}); return
+            c.execute("UPDATE users SET companion=? WHERE id=?", (code or None, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "companion": code or None}); return
+
+        if p == "/api/lifeos":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            pillars = d.get("pillars") or {}
+            pillars = {k: (str(v)[:24] if v else None) for k, v in pillars.items() if k in ("N", "E", "S", "W")}
+            chosen = [v for v in pillars.values() if v]
+            focus = [f for f in (d.get("focus") or []) if f in chosen][:2]
+            base = (d.get("base") or u["city"] or "My base")[:40]
+            lo = {"base": base, "pillars": pillars, "focus": focus}
+            # config changed → clear today's cached prompts so they regenerate from new focuses
+            c.execute("UPDATE users SET lifeos=?, lo_prompts=NULL, lo_prompts_day=NULL WHERE id=?",
+                      (json.dumps(lo), u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "lifeos": {**lo, "configured": bool(chosen)}}); return
+
+        if p == "/api/nft/reserve":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            code = (self._body().get("code") or "")
+            art = ART_BY_CODE.get(code)
+            if not art:
+                self._send(400, {"error": "no such artifact"}); return
+            if c.execute("SELECT 1 FROM items WHERE user_id=? AND code=?", (u["id"], code)).fetchone():
+                self._send(200, {"ok": True, "already": True}); return
+            c.execute("INSERT OR IGNORE INTO items(user_id,code,created) VALUES(?,?,?)", (u["id"], code, now_iso()))
+            if not u["equipped"]:
+                c.execute("UPDATE users SET equipped=? WHERE id=?", (code, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "name": art[1]}); return
+
+        if p == "/api/shop/buy":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            code = (self._body().get("code") or "")
+            it = SHOP_BY_CODE.get(code)
+            if not it:
+                self._send(400, {"error": "no such item"}); return
+            _, name, icon, rar, price, gate, flavor = it
+            if c.execute("SELECT 1 FROM items WHERE user_id=? AND code=?", (u["id"], code)).fetchone():
+                self._send(200, {"ok": True, "already": True}); return
+            if gate and gate[0] == "days" and member_days(u) < gate[1]:
+                self._send(400, {"error": f"Unlocks after {gate[1]} days of membership."}); return
+            if (u["motes"] or 0) < price:
+                self._send(400, {"error": f"You need {price} Motes for {name}."}); return
+            c.execute("INSERT OR IGNORE INTO items(user_id,code,created) VALUES(?,?,?)", (u["id"], code, now_iso()))
+            if price:
+                c.execute("UPDATE users SET motes=COALESCE(motes,0)-? WHERE id=?", (price, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "name": name}); return
+
+        self._send(404, {"error": "not found"})
+
+
+# live presence (in-memory): user ids currently in a session
+class _Live:
+    def __init__(self):
+        self.m = {}  # uid -> expiry epoch
+        self.lock = threading.Lock()
+    def add(self, uid):
+        with self.lock:
+            self.m[uid] = time.time() + 3600
+    def remove(self, uid):
+        with self.lock:
+            self.m.pop(uid, None)
+    def count(self):
+        now = time.time()
+        with self.lock:
+            dead = [k for k, v in self.m.items() if v < now]
+            for k in dead:
+                self.m.pop(k, None)
+            # add a gentle synthetic baseline so "meditating now" is never a lonely 0
+            base = 3 + int(12 * (0.5 + 0.5 * math.sin(now / 900)))
+            return len(self.m) + base
+
+LIVE = _Live()
+
+
+def _cookie_hdr(tok):
+    return f"lumen_sess={tok}; Path=/; Max-Age={SESSION_TTL}; HttpOnly; SameSite=Lax"
+
+
+# minimal urllib query parse without importing at module scope confusion
+from urllib.parse import parse_qsl as urllib_parse_qsl
+
+MANIFEST = json.dumps({
+    "name": "Lumen — light up the world", "short_name": "Lumen",
+    "description": "A gamified meditation app. Light up a living world map with every sit, earn Light, build streaks, and walk guided voice journeys.",
+    "start_url": ".", "scope": ".", "display": "standalone", "orientation": "portrait",
+    "background_color": "#0b0a12", "theme_color": "#0b0a12",
+    "categories": ["health", "lifestyle", "education"],
+    "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+              {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+              {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]
+})
+
+# Service worker: makes Lumen an installable, offline-capable PWA. Strategy is
+# network-first for navigations (so a new build always wins when online — this is
+# what fixes the stale-page-on-iPhone problem) and cache-first for static assets.
+# API requests are never intercepted. skipWaiting + clients.claim so updates apply
+# immediately. Bump CACHE on any change you want to force-evict.
+PRIVACY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen — Privacy Policy</title>
+<style>
+body{margin:0;background:#0b0a12;color:#ece9f5;font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;line-height:1.65}
+.wrap{max-width:720px;margin:0 auto;padding:40px 22px 80px}
+h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;margin:28px 0 6px}
+.muted{color:#9a93b8;font-size:13px}a{color:#f5c977}ul{padding-left:20px}li{margin:4px 0}
+</style></head><body><div class="wrap">
+<h1>Lumen — Privacy Policy</h1>
+<p class="muted">Last updated: 12 October 2026</p>
+<p>Lumen is a meditation app. This policy explains what it collects, why, and the control you have. We keep data collection to the minimum needed to run the app.</p>
+<h2>What we collect</h2>
+<ul>
+<li><b>Account</b>: your email and a securely hashed password (we never store your password in plain text), and a display name you choose.</li>
+<li><b>Practice data</b>: your meditation sessions (duration, soundscape, time), streaks, Light/XP, achievements, and any journal entries you write.</li>
+<li><b>Approximate location (optional)</b>: only if you grant permission. Your coordinates are deliberately <b>fuzzed/coarsened</b> before storage and shown on the shared world map as an approximate glow. You can use the entire app without sharing location.</li>
+</ul>
+<h2>How we use it</h2>
+<ul>
+<li>To provide the app: your profile, progress, streaks, leagues, and the community world map.</li>
+<li>Journal entries are private to you unless you explicitly choose to share one to the community feed.</li>
+</ul>
+<h2>Third parties</h2>
+<ul>
+<li><b>Google Gemini</b>: if you use the AI companion, journal transcription, or AI-generated prompts, the relevant text or image is sent to Google's Gemini API to generate a response. Don't put anything in those features you wouldn't want processed by a third-party AI.</li>
+<li><b>Map tiles</b>: the world map loads background map imagery from Esri/ArcGIS.</li>
+<li>We do <b>not</b> sell your data or use third-party advertising trackers.</li>
+</ul>
+<h2>Data retention &amp; deletion</h2>
+<p>Your data is stored on Lumen's own server. You can <b>delete your account and all associated data at any time</b> from the app: open the <b>You</b> (profile) tab and tap <b>Delete account</b>. This permanently removes your profile, sessions, journal, and progress and cannot be undone.</p>
+<h2>Children</h2>
+<p>Lumen is not directed to children under 13 and we do not knowingly collect their data.</p>
+<h2>Contact</h2>
+<p>Questions or requests: <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
+</div></body></html>"""
+
+SERVICE_WORKER = r"""
+const CACHE = 'lumen-v1';
+const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).catch(() => {}));
+});
+self.addEventListener('activate', e => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.pathname.indexOf('/api/') !== -1) return;           // never cache the API
+  if (req.mode === 'navigate') {                               // app shell: network-first
+    e.respondWith(
+      fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return r; })
+                .catch(() => caches.match(req).then(m => m || caches.match('./')))
+    );
+    return;
+  }
+  e.respondWith(                                               // static: cache-first
+    caches.match(req).then(m => m || fetch(req).then(r => {
+      if (r && r.ok && url.origin === location.origin) { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); }
+      return r;
+    }).catch(() => m))
+  );
+});
+"""
+
+
+# ===========================================================================
+# MARKETING — go-to-market pipeline + generated materials (owner /admin only)
+# ===========================================================================
+# Distilled from Matthew's growth handoff: Apple editorial/ASO levers first,
+# then short-form video + niche communities + a coordinated Product Hunt spike.
+
+APP_STORE_URL = "https://apps.apple.com/app/id6822133425"
+SITE_URL      = os.environ.get("LUMEN_SITE_URL", "https://lumen.app")
+IG_HANDLE     = "@lumen.meditation"
+
+# Launch pipeline as a CHECKLIST. Each task carries impact (1-5) and effort
+# (1=easiest … 5=hardest); the server auto-orders them by a priority score
+# (high impact + low effort first) so the owner always sees the best next move
+# at the top. Every task has explicit, checkable sub-steps (persisted per step).
+PIPELINE_RAW = [
+    {"key": "apple_aso", "section": "Apple", "title": "Lock in ASO (title, subtitle, keywords)",
+     "impact": 5, "effort": 1,
+     "why": "Free, compounding App Store search traffic. Pure copy-paste from the Materials tab.",
+     "steps": [
+         "Open App Store Connect → Lumen → App Information",
+         "Paste the Title: “Lumen: Meditate & Glow”",
+         "Paste the Subtitle: “Stoic journeys, journal & streaks”",
+         "Paste the 100-char keyword field (Materials tab)",
+         "Make screenshot #1 carry the hook text, not just a UI shot",
+         "Rewrite the description + keywords for everything we've shipped since launch (Vedic astrology, the Atlas photo-map, journeys) — far richer than the v1 copy",
+     ]},
+    {"key": "website", "section": "Owned", "title": "Ship the marketing website",
+     "impact": 4, "effort": 1,
+     "why": "A home base every ad, bio, and press mention points to. Already built — just finish it.",
+     "steps": [
+         "Confirm the landing page is live at /site",
+         "Point a custom domain at it (optional)",
+         "Swap in 3 real app screenshots",
+         "Double-check the App Store button link",
+     ]},
+    {"key": "apple_featuring", "section": "Apple", "title": "Submit an App Store Featuring nomination",
+     "impact": 5, "effort": 2,
+     "why": "Editorial features are the single biggest free spike you can get.",
+     "steps": [
+         "App Store Connect → Lumen → Featuring → start a nomination",
+         "Write the STORY, not a feature list: “talk to Marcus Aurelius about your bad week”",
+         "Note your next update/launch date (nominate 2–3 weeks ahead)",
+         "Submit",
+     ]},
+    {"key": "instagram", "section": "Owned", "title": "Stand up the Instagram account",
+     "impact": 4, "effort": 2,
+     "why": "Evergreen home for Reels and a link-in-bio funnel to the App Store.",
+     "steps": [
+         "Create the @lumen.meditation account",
+         "Set the bio + profile photo (use the Lumen icon)",
+         "Add the App Store link in bio",
+         "Post your first 6 posts (generated for you)",
+         "Follow ~20 stoicism / meditation / Jungian accounts to seed reach",
+     ]},
+    {"key": "video_shortform", "section": "Short-form", "title": "Post 3–5 short-form clips / week",
+     "impact": 5, "effort": 4,
+     "why": "A clip of someone roasted by The Forge or advised by Marcus Aurelius is inherently shareable — your #1 channel.",
+     "steps": [
+         "Pick a script from the Materials tab (start with “The Forge roast”)",
+         "Screen-record the voice interaction with captions on",
+         "Post to TikTok, then cross-post the Reel to Instagram",
+         "Batch-film weekly; keep a 3–5/week cadence",
+     ]},
+    {"key": "communities", "section": "Communities", "title": "Show up in niche communities",
+     "impact": 4, "effort": 3,
+     "why": "Niche beats broad — stoicism/Jungian subreddits and self-improvement Discords actually convert.",
+     "steps": [
+         "Pick 2 subreddits (start: r/Stoicism, r/Meditation)",
+         "Spend a week genuinely commenting — no links yet",
+         "Post the generated Reddit post once the rules allow it",
+         "Offer free access; funnel warm leads to the Telegram group",
+     ]},
+    {"key": "apple_events", "section": "Apple", "title": "Create an In-App Event per season",
+     "impact": 4, "effort": 3,
+     "why": "Events surface in Search and on your product page — your seasonal challenges are a perfect fit.",
+     "steps": [
+         "App Store Connect → In-App Events → Create",
+         "Title a seasonal challenge (“7 Days with the Stoics”)",
+         "Add event art + a short hook",
+         "Schedule start/end dates",
+     ]},
+    {"key": "apple_ads", "section": "Apple", "title": "Run Apple Ads on niche keywords (small budget)",
+     "impact": 3, "effort": 2,
+     "why": "Cheap on niche terms; learn what converts before spending broadly.",
+     "steps": [
+         "Create an Apple Ads account",
+         "Start $10–20/day on: stoic, journaling, mental fitness",
+         "Point each ad at its matching Custom Product Page",
+         "Review conversions weekly; cut the losers",
+     ]},
+    {"key": "referrals", "section": "Growth loop", "title": "Turn Light into referral rewards",
+     "impact": 4, "effort": 4,
+     "why": "You already have the gamification layer — invites that unlock rooms/Light compound organically.",
+     "steps": [
+         "Add an “Invite a friend” flow with a per-user share link",
+         "Reward: both people get Light + unlock a guide/room",
+         "Surface the invite right after a completed session",
+         "Track invites in the admin dashboard",
+     ]},
+    {"key": "producthunt", "section": "Spike", "title": "Coordinate a Product Hunt launch",
+     "impact": 4, "effort": 4,
+     "why": "Time it WITH the featuring nomination for one big coordinated spike.",
+     "steps": [
+         "Create the PH listing (tagline + description from Materials)",
+         "Schedule a Tue/Wed 12:01am PT launch",
+         "Line up the Telegram group to support in hour one",
+         "Post the maker first-comment; reply to everyone all day",
+     ]},
+    {"key": "apple_custompages", "section": "Apple", "title": "Build Custom Product Pages per audience",
+     "impact": 3, "effort": 3,
+     "why": "Match the store page to the ad that drove the tap → higher conversion.",
+     "steps": [
+         "App Store Connect → Custom Product Pages → Create",
+         "Page A — Stoic/philosophy (headline + body from Materials)",
+         "Page B — Jungian/self-work (headline + body from Materials)",
+         "Link each ad campaign to its matching page",
+     ]},
+]
+
+# Priority score: reward impact, penalize effort. Highest score = do first.
+# Tie-break: easier first, then higher impact.
+def _priority(t):
+    return (t["impact"] * 2 - t["effort"], -t["effort"], t["impact"])
+
+PIPELINE = sorted(PIPELINE_RAW, key=_priority, reverse=True)
+for _i, _t in enumerate(PIPELINE):
+    _t["rank"] = _i + 1
+    _t["quick_win"] = _t["effort"] <= 2 and _t["impact"] >= 4
+
+# ---------------------------------------------------------------------------
+# DISTRIBUTION MATRIX — every outlet we can push Lumen through, as rows; the
+# four phases we run each one through, as columns (Prep → Set up → Launch →
+# Follow-up). Each cell is a checkable step persisted per owner (keys o_*#idx,
+# sharing the mkt_state store with the pipeline checklist).
+DIST_COLS = ["Prep", "Set up", "Launch / Post", "Follow-up"]
+OUTLETS = [
+    # --- Apple (first-party, mostly free) ---
+    {"key": "o_apple_featuring", "cat": "Apple", "name": "App Store Featuring", "cost": "Free",
+     "link": "https://developer.apple.com/contact/app-store/promote/",
+     "steps": ["Draft the STORY pitch (not a feature list)", "Build a press/media kit",
+               "Submit via ASC → Featuring, 2–3 wks pre-launch", "Follow up before the launch date"]},
+    {"key": "o_apple_events", "cat": "Apple", "name": "In-App Events", "cost": "Free",
+     "link": "https://appstoreconnect.apple.com",
+     "steps": ["Pick a seasonal challenge to feature", "Create event art + hook",
+               "Create & schedule in ASC → In-App Events", "Renew each season"]},
+    {"key": "o_apple_cpp", "cat": "Apple", "name": "Custom Product Pages", "cost": "Free",
+     "link": "https://appstoreconnect.apple.com",
+     "steps": ["Define 2 audiences (Stoic, Jungian)", "Write copy from Materials tab",
+               "Create both pages in ASC", "Link each ad to its page"]},
+    {"key": "o_apple_ads", "cat": "Apple", "name": "Apple Ads", "cost": "Paid",
+     "link": "https://searchads.apple.com",
+     "steps": ["Create an Apple Ads account", "Pick niche keywords (stoic, journaling…)",
+               "Fund $10–20/day", "Review weekly, cut losers"]},
+    {"key": "o_apple_aso", "cat": "Apple", "name": "ASO (title / subtitle / keywords)", "cost": "Free",
+     "link": "https://appstoreconnect.apple.com",
+     "steps": ["Finalize title/subtitle/keywords (Materials)", "Put the hook on screenshot #1",
+               "Publish in ASC", "Iterate on keyword ranks"]},
+    # --- Press / publications ---
+    {"key": "o_press_wellness", "cat": "Press", "name": "Wellness / meditation press", "cost": "Free",
+     "link": "https://www.mindful.org",
+     "steps": ["Build a target list (Mindful, Well+Good…)", "Write the story angle",
+               "Send personalized pitches", "Follow up in ~1 week"]},
+    {"key": "o_press_tech", "cat": "Press", "name": "Tech / app press", "cost": "Free",
+     "link": "https://techcrunch.com/got-a-tip/",
+     "steps": ["Find the right reporter", "Draft a one-line hook", "Send with the press kit", "Follow up once"]},
+    {"key": "o_press_reporters", "cat": "Press", "name": "Qwoted / Featured.com (reporter requests)", "cost": "Free",
+     "link": "https://www.qwoted.com",
+     "steps": ["Sign up as a source (HARO is gone)", "Set wellness + tech alerts",
+               "Reply fast with a usable quote", "Track any links earned"]},
+    {"key": "o_newsletters", "cat": "Press", "name": "Niche newsletters", "cost": "Free · Paid",
+     "link": "https://www.dailystoic.com",
+     "steps": ["List 5 relevant newsletters", "Pitch a mention / sponsor slot",
+               "Offer free-access codes", "Track referral clicks"]},
+    # --- Free directories / launch platforms ---
+    {"key": "o_producthunt", "cat": "Directories", "name": "Product Hunt", "cost": "Free",
+     "link": "https://www.producthunt.com/ship",
+     "steps": ["Build listing (tagline/desc from Materials)", "Prep assets + a hunter",
+               "Launch Tue/Wed 12:01 PT", "Reply all day; rally the Telegram group"]},
+    {"key": "o_betalist", "cat": "Directories", "name": "BetaList", "cost": "Free",
+     "link": "https://betalist.com/submit",
+     "steps": ["Submit the startup", "Add screenshots + blurb", "Share the live listing", "Collect sign-up emails"]},
+    {"key": "o_taaft", "cat": "Directories", "name": "There's An AI For That", "cost": "Free",
+     "link": "https://theresanaiforthat.com/submit/",
+     "steps": ["Submit the tool (AI guides angle)", "Choose category + media",
+               "Verify the listing", "Share the badge"]},
+    {"key": "o_alternativeto", "cat": "Directories", "name": "AlternativeTo", "cost": "Free",
+     "link": "https://alternativeto.net",
+     "steps": ["Add as alt to Headspace / Calm", "Fill description + icon",
+               "Add screenshots", "Seed a few upvotes"]},
+    {"key": "o_ih_hn", "cat": "Directories", "name": "Indie Hackers / Show HN", "cost": "Free",
+     "link": "https://news.ycombinator.com/showhn.html",
+     "steps": ["Write the build story", "Share a real metric", "Post Show HN / IH", "Reply to every comment"]},
+    {"key": "o_appreview", "cat": "Directories", "name": "App review sites", "cost": "Free",
+     "link": "https://appadvice.com",
+     "steps": ["List sites (AppAdvice, 148Apps)", "Prepare promo codes",
+               "Submit via their forms", "Follow up for coverage"]},
+    # --- Social / UGC ---
+    {"key": "o_instagram", "cat": "Social / UGC", "name": "Instagram (owned)", "cost": "Free",
+     "link": "https://instagram.com",
+     "steps": ["Create @lumen.meditation", "Bio + App Store link",
+               "Post first 6 (Materials)", "Follow 20 niche accounts"]},
+    {"key": "o_shortform", "cat": "Social / UGC", "name": "TikTok + Reels (short-form)", "cost": "Free",
+     "link": "https://www.tiktok.com",
+     "steps": ["Pick a script (Materials tab)", "Screen-record with captions",
+               "Post TikTok + cross-post the Reel", "Hold a 3–5/week cadence"]},
+    {"key": "o_ugc", "cat": "Social / UGC", "name": "UGC creators", "cost": "Free · Paid",
+     "link": "https://instagram.com",
+     "steps": ["Find 5 micro-creators", "Send free access + a brief",
+               "Collect their clips", "Repost + whitelist the best"]},
+    {"key": "o_communities", "cat": "Social / UGC", "name": "Niche communities (Reddit / Discord)", "cost": "Free",
+     "link": "https://www.reddit.com/r/Stoicism/",
+     "steps": ["Pick 2 subreddits / Discords", "Engage genuinely ~1 wk",
+               "Post the generated content", "Funnel warm leads to Telegram"]},
+    # --- UGC content production (hire creators/models → content → ads) ---
+    {"key": "o_ugc_sourcing", "cat": "UGC content", "name": "Hire creators (UGC platforms)", "cost": "Paid",
+     "link": "https://billo.app",
+     "steps": ["Write the brief + set budget/rate", "Post on Billo · Insense · TikTok Creator Marketplace",
+               "Shortlist & contract 3–5 creators", "Collect first content batch"]},
+    {"key": "o_ugc_shoots", "cat": "UGC content", "name": "Model & location shoots", "cost": "Paid",
+     "link": "",
+     "steps": ["Build a shot list (nature, balcony sunrise, exotic, cozy indoor)", "Cast models + scout locations",
+               "Shoot people meditating in-place with the app", "Review & pick the selects"]},
+    {"key": "o_ugc_rights", "cat": "UGC content", "name": "Usage rights & whitelisting", "cost": "Free · Paid",
+     "link": "",
+     "steps": ["Secure paid-ads usage rights in every contract", "Get handles for Spark Ads / whitelisting",
+               "Store raw footage + signed releases", "Renew / extend rights before they lapse"]},
+    {"key": "o_ugc_ads", "cat": "UGC content", "name": "Turn UGC into ads", "cost": "Paid",
+     "link": "",
+     "steps": ["Edit Reels/TikTok cuts with captions", "Build 3–5 ad variants per concept",
+               "Launch on Meta / TikTok / Apple Ads", "Scale winners, kill losers weekly"]},
+    # --- Growth loop ---
+    {"key": "o_referrals", "cat": "Growth loop", "name": "Referral rewards", "cost": "Free",
+     "link": "",
+     "steps": ["Build an invite-link flow", "Reward both sides with Light",
+               "Surface it right after a session", "Track invites in this dashboard"]},
+]
+OUTLET_BY_KEY = {o["key"]: o for o in OUTLETS}
+
+# Starter sub-items for outlets that benefit from a granular, editable checklist
+# (owner can add/check/delete more). Seeded once per parent, then fully user-owned.
+SUBTASK_SEEDS = {
+    "o_ugc_sourcing": ["Shortlist 3+ candidate creators", "Send outreach DMs / emails",
+                       "Agree rate + deliverables", "Sign contract incl. paid-ads usage rights"],
+    "o_ugc_shoots":   ["Contact 3+ models", "Schedule the shoot", "Do the shoot",
+                       "Edit the videos", "Upload them to our socials"],
+    "o_ugc_rights":   ["Confirm paid-ads rights in writing", "Collect signed releases",
+                       "Get Spark / whitelist handles"],
+    "o_ugc_ads":      ["Cut 3–5 ad variants", "Write hooks / captions",
+                       "Launch a test campaign", "Scale the winner"],
+}
+
+def seed_subtasks():
+    """Insert the starter sub-items once per parent (guarded by a marker in mkt_state),
+    so restarts never clobber the owner's own edits."""
+    c = db()
+    for parent, items in SUBTASK_SEEDS.items():
+        marker = "__subinit__:" + parent
+        if c.execute("SELECT 1 FROM mkt_state WHERE key=?", (marker,)).fetchone():
+            continue
+        for i, txt in enumerate(items):
+            c.execute("INSERT INTO mkt_subtasks(parent,text,status,pos,created) VALUES(?,?,?,?,?)",
+                      (parent, txt, "todo", i, now_iso()))
+        c.execute("INSERT OR IGNORE INTO mkt_state(key,status,note,updated) VALUES(?,?,?,?)",
+                  (marker, "done", "seed marker", now_iso()))
+    c.commit(); c.close()
+
+def subtasks_by_parent(c):
+    out = {}
+    for r in c.execute("SELECT id,parent,text,status FROM mkt_subtasks ORDER BY parent,pos,id"):
+        out.setdefault(r["parent"], []).append({"id": r["id"], "text": r["text"], "status": r["status"]})
+    return out
+
+MATERIALS = {
+    "aso": {
+        "title": "Lumen: Meditate & Glow",
+        "subtitle": "Stoic journeys, journal & streaks",
+        "keywords": "stoic,meditation,vedic,astrology,horoscope,nakshatra,journal,mindfulness,calm,sleep,streak,habit",
+        "note": "30-char title, 30-char subtitle, 100-char keyword field (no spaces, comma-separated, no plurals you can avoid). This set adds the Vedic-astrology terms we now rank for; rotate low performers out as App Store Connect shows what converts."
+    },
+    "app_store_description_v2": (
+        "Lumen is the meditation app that finally feels worth opening every day — part calm, "
+        "part practice, part living world you light up with everyone else who sits.\n\n"
+        "Every morning opens with a real Vedic reading: your rāśi and the Moon's nakshatra of the "
+        "day, grounded in classical Jyotish — not vague horoscope filler. Then sit for a few minutes "
+        "with a guided voice journey (the Stoics, inner archetypes, gratitude, sleep), and watch your "
+        "session light up your spot on a shared world map.\n\n"
+        "• A daily Vedic reading (rāśi + nakshatra), with your birth star & daśā if you add a birth time\n"
+        "• Atlas — photograph each place you meditate, build a photo streak, and collect new spots as you travel\n"
+        "• Guided voice journeys with distinct guides and soundscapes\n"
+        "• A living world map — see the world meditate in real time, with photos of real places\n"
+        "• Light, levels, streaks & weekly leagues that make the habit stick\n"
+        "• A private journal with prompts; share a place or entry to the community only if you choose\n\n"
+        "Free to start. Your journal and birth details stay private. Light up the world."
+    ),
+    "custom_pages": [
+        {"angle": "Stoic / Philosophy",
+         "headline": "Talk to Marcus Aurelius about your bad week.",
+         "body": "Lumen turns ancient Stoic practice into a daily ritual. Walk guided voice journeys with the Stoics, journal with prompts that actually land, and watch your light grow on a living world map. Build the one streak that matters."},
+        {"angle": "Jungian / Self-work",
+         "headline": "Meet the parts of yourself you've been avoiding.",
+         "body": "Lumen is a guided path through shadow work and inner archetypes. Sit with a voice guide, journal what surfaces, and track the quiet work over weeks — not as a chore, but as a world you light up one session at a time."},
+    ],
+    "app_store_description": (
+        "Lumen is a meditation app that finally feels worth opening every day.\n\n"
+        "Sit for a few minutes with a guided voice journey — the Stoics, inner archetypes, "
+        "gratitude, sleep — and every session lights up your spot on a living world map shared "
+        "with everyone meditating right now. Earn Light, build a streak, climb weekly leagues, "
+        "and keep a private journal of what surfaces.\n\n"
+        "• Guided voice journeys with distinct guides and soundscapes\n"
+        "• A living world map — see the world meditate in real time\n"
+        "• Light, levels, streaks & weekly leagues that make the habit stick\n"
+        "• A private journal with prompts; share an entry to the community only if you choose\n"
+        "• Collect guides & companions as you go\n\n"
+        "Free to start. Your journal stays private. Light up the world."
+    ),
+    "instagram": {
+        "handle": IG_HANDLE,
+        "bio": "Meditate. Glow. Grow. 🌕\nStoic journeys + a world map you light up.\nFree on iOS 👇",
+        "pillars": ["Voice-clip hooks (roast/advice)", "Map/ritual aesthetic", "Stoic & Jungian quotes", "Streak/community proof", "Behind-the-build"],
+        "captions": [
+            "POV: you tell Marcus Aurelius about your week and he does NOT coddle you. 🫠 #stoicism #meditation",
+            "The Forge doesn't do gentle. Tag someone who needs this roast. 🔥",
+            "Every dot is a real person meditating right now. Add yours. 🌍",
+            "You don't need motivation. You need a streak you're scared to break.",
+            "Shadow work, but make it a 6-minute voice journey.",
+            "Three breaths before you reply to that text. That's the whole lesson.",
+            "What would a Stoic do with your inbox? Ask one. (link in bio)",
+            "Your journal entry from 30 days ago is going to humble you.",
+            "Light up a dot. Climb a league. Actually meditate. In that order.",
+            "The app that gamified the one habit you keep abandoning.",
+            "Guided journey → journal prompt → map glows. The loop that got me to day 40.",
+            "Building Lumen in public: here's why every session lights up a world map. 🧵",
+        ],
+        "calendar": [
+            "Mon — Reel: Marcus Aurelius advice clip (captioned screen-rec)",
+            "Tue — Carousel: Stoic quote → how Lumen turns it into practice",
+            "Wed — Reel: The Forge roast clip (the shareable one)",
+            "Thu — Story: world map screen-rec + 'add your dot' CTA → link",
+            "Fri — Reel: '40-day streak changed X' testimonial/POV",
+            "Sat — Carousel: Jungian/shadow-work angle",
+            "Sun — Behind-the-build post + week recap",
+        ],
+    },
+    "video_scripts": [
+        {"title": "The Forge roast", "hook": "I let an AI Stoic roast my excuses for 60 seconds.",
+         "beats": ["Open on the chat: type a real excuse ('I'll meditate tomorrow').", "Play The Forge's blunt voice reply (captioned).", "Cut to the world map lighting up as you actually sit.", "End card: 'Lumen — free on iOS. Link in bio.'"]},
+        {"title": "Marcus about your bad week", "hook": "Told Marcus Aurelius about my worst week. His reply hit different.",
+         "beats": ["Type the bad-week rant.", "Marcus's measured voice reply, captioned line-by-line.", "Screen-rec the 5-min journey that follows.", "End: streak counter ticks up."]},
+        {"title": "The map", "hook": "Every glowing dot is a stranger meditating with you right now.",
+         "beats": ["Slow pan over the live world map.", "Tap 'begin' → your dot ignites.", "Text overlay: 'you're never sitting alone.'", "CTA."]},
+        {"title": "Streak psychology", "hook": "I gamified meditation so I'd stop quitting. Day 40.",
+         "beats": ["Show streak + league screen.", "Fast cuts of Light/levels.", "'turns out I just needed a number I was scared to lose.'", "CTA."]},
+        {"title": "Shadow work", "hook": "A 6-minute voice journey into the part of me I avoid.",
+         "beats": ["Dim aesthetic, archetype guide intro.", "Journal prompt appears post-session.", "Type a raw line.", "Soft CTA — 'this one's private unless you share it.'"]},
+    ],
+    "community": {
+        "reddit_rules": "Read each sub's self-promo rules first. Ratio: ~9 genuine comments for every 1 mention. Lead with value, disclose you built it.",
+        "reddit_post": ("Title: I built a meditation app that turns Stoic practice into a daily ritual (and a world map)\n\n"
+                        "Body: Longtime lurker here. I kept abandoning meditation apps, so I built the one I'd actually keep: short guided voice journeys with the Stoics, a journal with prompts, and — the part that hooked me — every session lights up your spot on a shared world map. Streaks and weekly leagues keep me honest.\n\n"
+                        "Not trying to spam — genuinely want feedback from people who take this seriously. Happy to give TestFlight/free access. What would make a Stoic-grounded practice app actually earn a place on your home screen?"),
+        "discord_intro": "Hey all — I lurk here because this community actually practices, not just quotes. I've been building a Stoic-grounded meditation app (voice journeys + journaling + a bit of gamification to beat my own inconsistency). Not dropping a link unless it's welcome — mods, happy to follow your rules. Mostly here to learn.",
+        "subreddits": ["r/Stoicism", "r/Meditation", "r/Jung", "r/getdisciplined", "r/selfimprovement", "r/Mindfulness"],
+    },
+    "product_hunt": {
+        "tagline": "Meditate, glow, and grow — Stoic journeys on a living world map",
+        "description": ("Lumen turns meditation into a daily ritual you won't abandon. Walk short guided voice "
+                        "journeys with the Stoics and inner archetypes, journal what surfaces, and light up your "
+                        "spot on a world map shared with everyone meditating right now. Light, streaks, and weekly "
+                        "leagues make the habit actually stick."),
+        "first_comment": ("Hey PH 👋 I'm Matthew. I built Lumen because I kept quitting every meditation app I tried. "
+                          "Two things fixed it for me: (1) short guided voice journeys where you can genuinely talk to a "
+                          "Stoic about your week, and (2) a world map where every session lights up a dot — so you're never "
+                          "sitting alone, and the streak becomes something you're scared to break. Would love your honest take, "
+                          "especially on the voice guides. AMA about the build."),
+        "timing": "Launch Tue/Wed 12:01am PT, timed with the Apple featuring nomination. Rally the Telegram group in hour one.",
+    },
+    "website_copy": {
+        "hero_h": "Light up the world, one breath at a time.",
+        "hero_sub": "Lumen turns meditation into a daily ritual you'll actually keep — a real Vedic reading each morning, guided voice journeys with the Stoics, and a world map you light up with a photo of every place you sit.",
+        "cta": "Download on iOS",
+        "features": [
+            {"t": "A reading written in the sky", "d": "Each day opens with a real Vedic reading — your rāśi and the Moon's nakshatra, grounded in classical Jyotish. Not vague horoscope filler."},
+            {"t": "Atlas", "d": "Photograph every place you meditate and build a photo streak. Travel somewhere new, collect the spot, and see where the world is sitting."},
+            {"t": "Talk to the Stoics", "d": "Short guided voice journeys with real guides. Tell Marcus Aurelius about your week; sit with an archetype for six minutes."},
+            {"t": "A streak worth keeping", "d": "Light, levels, and weekly leagues turn the habit into something you're scared to break — in the best way."},
+            {"t": "A journal that's yours", "d": "Prompts that land, entries that stay private. Share one to the community only if you choose to."},
+        ],
+    },
+}
+
+
+def _mkt_state(c):
+    rows = c.execute("SELECT key,status,note,updated FROM mkt_state").fetchall()
+    return {r["key"]: {"status": r["status"], "note": r["note"], "updated": r["updated"]} for r in rows}
+
+
+def admin_overview(c):
+    """Real, live app metrics for the owner dashboard."""
+    def one(sql, args=()):
+        r = c.execute(sql, args).fetchone()
+        return (r[0] if r else 0) or 0
+    today = today_str()
+    users = one("SELECT COUNT(*) FROM users WHERE is_bot=0 AND name IS NOT NULL")
+    with_email = one("SELECT COUNT(*) FROM users WHERE is_bot=0 AND email IS NOT NULL")
+    sess = one("SELECT COUNT(*) FROM sessions")
+    light = one("SELECT COALESCE(SUM(light),0) FROM sessions")
+    minutes = one("SELECT COALESCE(SUM(minutes),0) FROM sessions")
+    today_sess = one("SELECT COUNT(*) FROM sessions WHERE day=?", (today,))
+    dau = one("SELECT COUNT(DISTINCT user_id) FROM sessions WHERE day=?", (today,))
+    journals = one("SELECT COUNT(*) FROM journal")
+    # signups per day, last 14d
+    sign = {r["d"]: r["n"] for r in c.execute(
+        "SELECT substr(created,1,10) d, COUNT(*) n FROM users WHERE is_bot=0 AND created IS NOT NULL GROUP BY d")}
+    series = []
+    base = datetime.now(timezone.utc).date()
+    for i in range(13, -1, -1):
+        d = (base - timedelta(days=i)).isoformat()
+        series.append({"day": d[5:], "signups": sign.get(d, 0),
+                       "sessions": one("SELECT COUNT(*) FROM sessions WHERE day=?", (d,))})
+    top = [dict(r) for r in c.execute(
+        "SELECT name, light, streak, total_sessions FROM users WHERE is_bot=0 AND name IS NOT NULL "
+        "ORDER BY light DESC LIMIT 8")]
+    cities = one("SELECT COUNT(DISTINCT city) FROM sessions WHERE city IS NOT NULL")
+    return {
+        "kpis": {"users": users, "with_email": with_email, "sessions": sess, "light": light,
+                 "minutes": minutes, "today_sessions": today_sess, "dau": dau,
+                 "journals": journals, "cities": cities, "live": LIVE.count()},
+        "series": series, "top": top,
+        "links": {"app_store": APP_STORE_URL, "site": SITE_URL, "instagram": IG_HANDLE},
+    }
+
+
+ADMIN_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen · Admin</title>
+<style>
+:root{--bg:#0b0a12;--card:#161326;--ink:#ece9f5;--mut:#9a93b8;--gold:#f5c977;--purp:#a855f7;--line:#2a2540;--ok:#34d399;--go:#60a5fa}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif}
+a{color:var(--gold)}.wrap{max-width:1040px;margin:0 auto;padding:22px 18px 90px}
+h1{font-size:22px;margin:0;color:var(--gold)}.sub{color:var(--mut);font-size:13px;margin:2px 0 18px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.tab{background:var(--card);border:1px solid var(--line);color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer;font-size:14px}
+.tab.on{background:var(--purp);border-color:var(--purp);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.kpi .n{font-size:26px;font-weight:700;color:var(--gold)}.kpi .l{color:var(--mut);font-size:12px;margin-top:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--purp)}
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:8px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.bar i{width:70%;background:linear-gradient(180deg,var(--gold),var(--purp));border-radius:3px 3px 0 0;min-height:2px;display:block}
+.bar b{font-size:9px;color:var(--mut);font-weight:400}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:500}
+.pcol{display:flex;gap:12px;flex-wrap:wrap}.psec{flex:1;min-width:280px}
+.task{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.task.complete{border-color:var(--ok);opacity:.72}
+.task .top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.task .t{font-weight:600;font-size:15px}.task .why{color:var(--mut);font-size:12.5px;margin:8px 0 10px;line-height:1.45}
+.rank{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--purp);color:#fff;font-size:12px;font-weight:700;margin-right:8px;vertical-align:middle}
+.qw{background:rgba(245,201,119,.16);color:var(--gold);border:1px solid rgba(245,201,119,.4);border-radius:999px;font-size:10.5px;padding:1px 7px;margin-left:8px;white-space:nowrap}
+.prog{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--mut);flex:none}
+.pbar{width:60px;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--ok))}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.chip{background:var(--line);border-radius:999px;padding:2px 9px;font-size:11px;color:var(--mut)}
+.checks{display:flex;flex-direction:column;gap:2px}
+.chk{display:flex;align-items:flex-start;gap:9px;padding:7px 8px;border-radius:9px;cursor:pointer;font-size:13.5px;line-height:1.45}
+.chk:hover{background:#1d1933}.chk input{margin-top:2px;width:17px;height:17px;accent-color:var(--ok);flex:none;cursor:pointer}
+.chk.on span{color:var(--mut);text-decoration:line-through}
+.sechd{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:14px 0 2px}
+.mat{background:#0f0d1c;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;white-space:pre-wrap;font-size:13px;line-height:1.55}
+.copy{float:right;background:var(--line);border:0;color:var(--ink);border-radius:8px;padding:3px 9px;font-size:11px;cursor:pointer;margin-left:8px}
+.pill{display:inline-block;background:var(--line);border-radius:999px;padding:2px 8px;font-size:11px;color:var(--mut);margin:2px 4px 2px 0}
+.hidden{display:none}.lbl{color:var(--gold);font-weight:600;font-size:13px;margin-top:10px}
+.gate{max-width:360px;margin:60px auto;text-align:center}.gate input{width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);margin:6px 0}
+.gate button{width:100%;padding:11px;border-radius:10px;border:0;background:var(--purp);color:#fff;font-weight:600;cursor:pointer}
+.err{color:#fda4af;font-size:13px;min-height:16px}
+/* distribution matrix */
+.matrix{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+table.mtx{width:100%;min-width:720px;border-collapse:collapse;font-size:12.5px}
+table.mtx th,table.mtx td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left}
+table.mtx th{position:sticky;top:0;background:#1b1733;color:var(--mut);font-weight:600;font-size:11.5px;z-index:1}
+table.mtx th.outlet,table.mtx td.outlet{position:sticky;left:0;background:var(--card);z-index:1;min-width:190px;border-right:1px solid var(--line)}
+table.mtx th.outlet{z-index:2;background:#1b1733}
+.catrow td{background:#120f22;color:var(--purp);font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;position:sticky;left:0}
+tr.rdone td.outlet{opacity:.65}
+.outlet .onm{font-weight:600;font-size:13px}.outlet .onm a{color:var(--ink);text-decoration:none}.outlet .onm a:hover{color:var(--gold)}
+.ometa{display:flex;align-items:center;gap:8px;margin-top:5px}
+.cost{font-size:10px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
+.cost.free{color:var(--ok);border-color:rgba(52,211,153,.4)}.cost.paid{color:var(--gold);border-color:rgba(245,201,119,.4)}.cost.mix{color:var(--go);border-color:rgba(96,165,250,.4)}
+.mini{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--mut)}
+.mbar{width:42px;height:5px;border-radius:999px;background:var(--line);overflow:hidden}.mbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--ok))}
+td.cell.on{background:rgba(52,211,153,.08)}td.x{background:#100e1d}
+.mcell{display:flex;gap:7px;cursor:pointer;line-height:1.4}
+.mcell input{margin-top:1px;width:15px;height:15px;accent-color:var(--ok);flex:none;cursor:pointer}
+.cell.on .mcell span{color:var(--mut);text-decoration:line-through}
+.subx{margin-top:7px;background:#1b1733;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:3px 9px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.subx:hover{border-color:var(--purp);color:var(--ink)}
+.subcount{font-size:11px}
+tr.subrow>td{background:#100e1d;padding:10px 14px}
+.sublist{display:flex;flex-direction:column;gap:2px;max-width:560px}
+.submt{color:var(--mut);font-size:12px;padding:4px 2px}
+.subitem{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px}
+.subitem:hover{background:#171430}
+.subitem label{display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;font-size:13.5px}
+.subitem input{width:16px;height:16px;accent-color:var(--ok);flex:none;cursor:pointer}
+.subitem.on span{color:var(--mut);text-decoration:line-through}
+.subdel{background:transparent;border:0;color:#6b6388;cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px}
+.subdel:hover{color:#fda4af;background:#241a2a}
+.subadd{display:flex;gap:7px;margin-top:8px}
+.subadd input{flex:1;background:#161326;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font-size:13px;font-family:inherit}
+.subadd button{background:var(--purp);border:0;color:#fff;border-radius:9px;padding:7px 14px;font-size:13px;cursor:pointer}
+</style></head><body><div class="wrap" id="app"><p class="sub">Loading…</p></div>
+<script>
+const $=s=>document.querySelector(s), app=document.getElementById('app');
+const esc=t=>(t||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+let DATA=null, TAB='dashboard';
+async function j(u,o){const r=await fetch(u,o||{});return r.json();}
+function gate(msg){app.innerHTML=`<div class="gate"><h1>Lumen Admin</h1><p class="sub">Owner sign-in required</p>
+<input id="ge" type="email" placeholder="email" autocomplete="username"><input id="gp" type="password" placeholder="password" autocomplete="current-password">
+<button onclick="login()">Sign in</button><p class="err">${msg||''}</p></div>`;}
+async function login(){const email=$('#ge').value.trim(), password=$('#gp').value;
+ const r=await j('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+ if(r.error){$('.err').textContent=r.error;return;} boot();}
+async function boot(){const r=await j('/api/admin/overview'); if(r.error){gate(r.error==='forbidden'?'That account is not an owner.':'');return;}
+ DATA=r; render();}
+function render(){
+ app.innerHTML=`<h1>🌕 Lumen Admin</h1><p class="sub">Live metrics + launch pipeline · <a href="/site" target="_blank">marketing site ↗</a></p>
+ <div class="tabs">${['dashboard','pipeline','distribution','materials','notifications'].map(t=>`<button class="tab ${t==TAB?'on':''}" onclick="go('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>
+ <div id="body"></div>`;
+ ({dashboard:dash,pipeline:pipe,distribution:dist,materials:mats,notifications:notif}[TAB])();
+}
+function go(t){TAB=t;render();}
+function dash(){const k=DATA.kpis, S=DATA.series, mx=Math.max(1,...S.map(d=>d.sessions));
+ const kpi=(n,l)=>`<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+ $('#body').innerHTML=`<div class="grid">
+  ${kpi(k.users,'Users')}${kpi(k.live,'Live now')}${kpi(k.dau,'Active today')}${kpi(k.sessions,'Sessions')}
+  ${kpi(k.light.toLocaleString(),'Light earned')}${kpi(k.minutes.toLocaleString(),'Minutes')}${kpi(k.journals,'Journal entries')}${kpi(k.cities,'Cities')}
+ </div>
+ <div class="card"><h3>Last 14 days · sessions</h3><div class="bars">
+  ${S.map(d=>`<div class="bar" title="${d.day}: ${d.sessions} sessions, ${d.signups} signups"><i style="height:${Math.round(100*d.sessions/mx)}%"></i><b>${d.day}</b></div>`).join('')}
+ </div></div>
+ <div class="card"><h3>Top meditators</h3><table><tr><th>#</th><th>Name</th><th>Light</th><th>Streak</th><th>Sessions</th></tr>
+  ${DATA.top.map((u,i)=>`<tr><td>${i+1}</td><td>${esc(u.name)}</td><td>${u.light}</td><td>${u.streak}🔥</td><td>${u.total_sessions}</td></tr>`).join('')||'<tr><td colspan=5>No users yet</td></tr>'}
+ </table></div>`;
+}
+function stepDone(t,i){const s=DATA.state[t.key+'#'+i];return s&&s.status==='done';}
+function pipe(){const st=DATA.state;
+ const done=t=>t.steps.filter((_,i)=>stepDone(t,i)).length;
+ const total=DATA.pipeline.length, allDone=DATA.pipeline.filter(t=>done(t)===t.steps.length).length;
+ const dots=n=>'●'.repeat(n)+'<span style="opacity:.3">'+'●'.repeat(5-n)+'</span>';
+ const taskHtml=t=>{const d=done(t),n=t.steps.length,pct=Math.round(100*d/n),complete=d===n;
+  return `<div class="task ${complete?'complete':''}">
+   <div class="top"><div><span class="rank">${t.rank}</span><span class="t">${esc(t.title)}</span>
+     ${t.quick_win?'<span class="qw">⚡ quick win</span>':''}</div>
+     <div class="prog"><span>${d}/${n}</span><div class="pbar"><i style="width:${pct}%"></i></div></div></div>
+   <div class="chips"><span class="chip">${esc(t.section)}</span>
+     <span class="chip">impact <b style="color:var(--gold)">${dots(t.impact)}</b></span>
+     <span class="chip">effort <b style="color:var(--go)">${dots(t.effort)}</b></span></div>
+   <div class="why">${esc(t.why)}</div>
+   <div class="checks">${t.steps.map((s,i)=>`<label class="chk ${stepDone(t,i)?'on':''}"><input type="checkbox" ${stepDone(t,i)?'checked':''} onchange="toggleStep('${t.key}',${i},this.checked)"><span>${esc(s)}</span></label>`).join('')}</div>
+  </div>`;};
+ $('#body').innerHTML=`<p class="sub">${allDone}/${total} tasks complete · ordered by impact ÷ effort — start at the top.</p>`+DATA.pipeline.map(taskHtml).join('');
+}
+async function toggleStep(key,i,checked){const k=key+'#'+i, status=checked?'done':'todo';
+ DATA.state[k]={status}; if(TAB==='distribution')dist();else pipe();
+ await j('/api/admin/task',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k,status})});}
+const DIST_OPEN=new Set();
+function subsFor(key){return (DATA.subtasks&&DATA.subtasks[key])||[];}
+function subCountLabel(key){const s=subsFor(key);return s.length?`${s.filter(x=>x.status==='done').length}/${s.length} steps`:'+ add steps';}
+function subListHTML(key){const subs=subsFor(key);
+ return `<div class="sublist">${subs.map(s=>`<div class="subitem ${s.status==='done'?'on':''}"><label><input type="checkbox" ${s.status==='done'?'checked':''} onchange="subToggle(${s.id},this.checked,'${key}')"><span>${esc(s.text)}</span></label><button class="subdel" title="Delete" onclick="subDel(${s.id},'${key}')">✕</button></div>`).join('')||'<div class="submt">No steps yet — add your own below.</div>'}
+  <div class="subadd"><input id="sa_${key}" placeholder="Add a step…" onkeydown="if(event.key==='Enter')subAdd('${key}')"><button onclick="subAdd('${key}')">Add</button></div></div>`;}
+function subExpand(key){if(DIST_OPEN.has(key))DIST_OPEN.delete(key);else DIST_OPEN.add(key);
+ const r=document.getElementById('sub_'+key);if(r)r.classList.toggle('hidden',!DIST_OPEN.has(key));
+ const cr=document.getElementById('cr_'+key);if(cr)cr.textContent=DIST_OPEN.has(key)?'▾':'▸';}
+function updateSubCount(key){const el=document.getElementById('cnt_'+key);if(el)el.textContent=subCountLabel(key);}
+async function subToggle(id,checked,key){const it=subsFor(key).find(s=>s.id===id);if(it)it.status=checked?'done':'todo';
+ const box=event.target.closest('.subitem');if(box)box.classList.toggle('on',checked);updateSubCount(key);
+ try{await j('/api/admin/subtask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'toggle',id,done:checked})});}catch(e){}}
+async function subDel(id,key){DATA.subtasks[key]=subsFor(key).filter(s=>s.id!==id);
+ const td=document.querySelector('#sub_'+key+' td');if(td)td.innerHTML=subListHTML(key);updateSubCount(key);
+ try{await j('/api/admin/subtask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',id})});}catch(e){}}
+async function subAdd(key){const inp=document.getElementById('sa_'+key);if(!inp)return;const text=(inp.value||'').trim();if(!text)return;inp.value='';
+ try{const r=await j('/api/admin/subtask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'add',parent:key,text})});
+   if(r&&r.id){DATA.subtasks[key]=subsFor(key);DATA.subtasks[key].push({id:r.id,text:r.text,status:'todo'});
+     const td=document.querySelector('#sub_'+key+' td');if(td)td.innerHTML=subListHTML(key);updateSubCount(key);
+     const ni=document.getElementById('sa_'+key);if(ni)ni.focus();}}catch(e){}}
+function dist(){const O=DATA.outlets,COLS=DATA.dist_cols;if(!DATA.subtasks)DATA.subtasks={};
+ const doneN=o=>o.steps.filter((_,i)=>stepDone(o,i)).length;
+ const totSteps=O.reduce((a,o)=>a+o.steps.length,0), totDone=O.reduce((a,o)=>a+doneN(o),0);
+ const costClass=c=>c==='Free'?'free':(c==='Paid'?'paid':'mix');
+ const cell=(o,i)=>{const s=o.steps[i];if(!s)return '<td class="x"></td>';const on=stepDone(o,i);
+   return `<td class="cell ${on?'on':''}"><label class="mcell"><input type="checkbox" ${on?'checked':''} onchange="toggleStep('${o.key}',${i},this.checked)"><span>${esc(s)}</span></label></td>`;};
+ const row=o=>{const d=doneN(o),n=o.steps.length,pct=Math.round(100*d/n);
+   const nm=o.link?`<a href="${esc(o.link)}" target="_blank" rel="noopener">${esc(o.name)} ↗</a>`:esc(o.name);
+   const open=DIST_OPEN.has(o.key);
+   const main=`<tr class="${d===n?'rdone':''}"><td class="outlet"><div class="onm">${nm}</div>
+     <div class="ometa"><span class="cost ${costClass(o.cost)}">${esc(o.cost)}</span>
+     <span class="mini"><span class="mbar"><i style="width:${pct}%"></i></span>${d}/${n}</span></div>
+     <button class="subx" onclick="subExpand('${o.key}')"><span class="caret" id="cr_${o.key}">${open?'▾':'▸'}</span> <span class="subcount" id="cnt_${o.key}">${subCountLabel(o.key)}</span></button></td>
+     ${COLS.map((_,i)=>cell(o,i)).join('')}</tr>`;
+   const sub=`<tr class="subrow ${open?'':'hidden'}" id="sub_${o.key}"><td colspan="${COLS.length+1}">${subListHTML(o.key)}</td></tr>`;
+   return main+sub;};
+ let rows='',lastCat=null;
+ O.forEach(o=>{if(o.cat!==lastCat){lastCat=o.cat;
+   rows+=`<tr class="catrow"><td colspan="${COLS.length+1}">${esc(o.cat)}</td></tr>`;}
+   rows+=row(o);});
+ $('#body').innerHTML=`<p class="sub">${totDone}/${totSteps} steps done · ${O.length} outlets. Each row is a channel; each column is a phase. Tap <b>▸</b> on any row to add your own sub-steps. Everything saves automatically.</p>
+  <div class="matrix"><table class="mtx"><thead><tr><th class="outlet">Outlet</th>${COLS.map((c,i)=>`<th>${i+1} · ${esc(c)}</th>`).join('')}</tr></thead>
+  <tbody>${rows}</tbody></table></div>
+  <p class="sub" style="margin-top:12px">Copy for most of these lives in the <b onclick="go('materials')" style="cursor:pointer;color:var(--gold)">Materials</b> tab. The prioritized “what to do first” order is in <b onclick="go('pipeline')" style="cursor:pointer;color:var(--gold)">Pipeline</b>.</p>`;
+}
+async function notif(){const b=$('#body');b.innerHTML='<p class="sub">Loading…</p>';
+ const n=await j('/api/admin/notifications');
+ const kpi=(v,l)=>`<div class="kpi"><div class="n">${v}</div><div class="l">${l}</div></div>`;
+ const rows=(n.by_category||[]).map(r=>`<tr><td>${esc(r.category)}</td><td>${r.sent}</td><td>${r.opened||0}</td><td>${r.sent?Math.round(100*(r.opened||0)/r.sent):0}%</td></tr>`).join('')||'<tr><td colspan=4>No sends yet</td></tr>';
+ const recent=(n.recent||[]).map(r=>`<tr><td>${esc(r.category)}</td><td>${esc(r.title)}</td><td><span class="chip">${esc(r.status)}</span></td><td style="color:var(--mut);font-size:11px">${esc((r.created||'').slice(5,16))}</td></tr>`).join('')||'<tr><td colspan=4>Nothing yet</td></tr>';
+ b.innerHTML=`<div class="grid">${kpi(n.opt_in+' ('+n.opt_in_pct+'%)','Opted in')}${kpi(n.tokens,'Devices')}${kpi(n.sent_7d,'Sent · 7d')}${kpi(n.queued,'Queued')}</div>
+  <div class="card"><h3>By category</h3><table><tr><th>Category</th><th>Sent</th><th>Opened</th><th>Open rate</th></tr>${rows}</table></div>
+  <div class="card"><h3>Send a test to your device</h3><p class="sub">Pushes to the phone(s) signed in as you. Needs a push-enabled build installed.</p>
+   <button class="tab on" onclick="notifTest(this)">Send test push</button></div>
+  <div class="card"><h3>Broadcast to all opted-in users</h3>
+   <input id="bt" placeholder="Title (≤60)" style="width:100%;padding:9px;margin:4px 0;border-radius:8px;border:1px solid var(--line);background:#0f0d1c;color:var(--ink)">
+   <textarea id="bb" placeholder="Message (≤160)" rows="2" style="width:100%;padding:9px;margin:4px 0;border-radius:8px;border:1px solid var(--line);background:#0f0d1c;color:var(--ink)"></textarea>
+   <button class="tab on" onclick="notifBroadcast(this)">Send broadcast</button></div>
+  <div class="card"><h3>Recent activity</h3><table><tr><th>Cat</th><th>Title</th><th>Status</th><th>When</th></tr>${recent}</table></div>`;
+}
+async function notifTest(btn){btn.textContent='Sending…';const r=await j('/api/admin/notify/test',{method:'POST'});
+ btn.textContent=r.ok?('Sent ✓ ('+r.tokens+' device)'):(r.error||'Failed');}
+async function notifBroadcast(btn){const title=$('#bt').value.trim(),body=$('#bb').value.trim();
+ if(!title||!body){btn.textContent='Title + message needed';return;}
+ btn.textContent='Sending…';const r=await j('/api/admin/notify/broadcast',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,body})});
+ btn.textContent=r.ok?('Sent to '+r.sent+' ✓'):(r.error||'Failed');notif();}
+function block(label,text){const id='m'+Math.random().toString(36).slice(2,8);
+ return `<div class="lbl">${esc(label)}<button class="copy" onclick="cp('${id}')">copy</button></div><div class="mat" id="${id}">${esc(text)}</div>`;}
+function cp(id){const t=document.getElementById(id).textContent;navigator.clipboard.writeText(t);
+ event.target.textContent='copied ✓';setTimeout(()=>event.target.textContent='copy',1200);}
+function mats(){const M=DATA.materials;let h='';
+ h+='<div class="card"><h3>App Store · ASO</h3>'+block('Title (30)',M.aso.title)+block('Subtitle (30)',M.aso.subtitle)+block('Keyword field (100)',M.aso.keywords)+`<p class="sub">${esc(M.aso.note)}</p>`+block('Description (v1 — launch)',M.app_store_description)+(M.app_store_description_v2?block('Improved description (v2 — all new features · paste this)',M.app_store_description_v2):'')+'</div>';
+ h+='<div class="card"><h3>Custom Product Pages</h3>'+M.custom_pages.map(p=>block(p.angle+' — headline',p.headline)+block(p.angle+' — body',p.body)).join('')+'</div>';
+ const ig=M.instagram;
+ h+='<div class="card"><h3>Instagram ('+esc(ig.handle)+')</h3>'+block('Bio',ig.bio)+'<div class="lbl">Content pillars</div><div>'+ig.pillars.map(p=>`<span class="pill">${esc(p)}</span>`).join('')+'</div>'+block('12 captions',ig.captions.map((c,i)=>(i+1)+'. '+c).join('\n\n'))+block('2-week calendar',ig.calendar.join('\n'))+'</div>';
+ h+='<div class="card"><h3>Short-form video scripts</h3>'+M.video_scripts.map(v=>block(v.title+' — "'+v.hook+'"',v.beats.map((b,i)=>(i+1)+'. '+b).join('\n'))).join('')+'</div>';
+ const cm=M.community;
+ h+='<div class="card"><h3>Community outreach</h3><p class="sub">'+esc(cm.reddit_rules)+'</p><div>'+cm.subreddits.map(s=>`<span class="pill">${esc(s)}</span>`).join('')+'</div>'+block('Reddit post',cm.reddit_post)+block('Discord intro',cm.discord_intro)+'</div>';
+ const ph=M.product_hunt;
+ h+='<div class="card"><h3>Product Hunt</h3>'+block('Tagline',ph.tagline)+block('Description',ph.description)+block('Maker first comment',ph.first_comment)+`<p class="sub">${esc(ph.timing)}</p>`+'</div>';
+ const w=M.website_copy;
+ h+='<div class="card"><h3>Website copy (live at /site)</h3>'+block('Hero headline',w.hero_h)+block('Hero subhead',w.hero_sub)+block('Features',w.features.map(f=>f.t+' — '+f.d).join('\n\n'))+'</div>';
+ $('#body').innerHTML=h;
+}
+boot();
+</script></body></html>"""
+
+
+def site_page():
+    w = MATERIALS["website_copy"]
+    # brand icon set (real imagery, served from /art) in place of emoji
+    feat_set = [
+        ("feat_vedic", "A reading written in the sky", "Each day opens with a real Vedic reading — your sidereal rāśi and the Moon's nakshatra, grounded in classical Jyotish. Add your birth time for your birth star and daśā."),
+        ("feat_pilgrimage", "Atlas", "Photograph every place you sit and build a photo streak. Travel somewhere new for bonus Light, collect the spot, and watch the world's places light up together."),
+        ("feat_stoic", "Walk with the Stoics", "Short guided voice journeys with real guides. Tell Marcus Aurelius about your week and actually be answered."),
+        ("feat_forge", "Meet The Forge", "For when you don't want to be soothed. The Forge replies direct and unsentimental — the obstacle is the way."),
+        ("feat_streak", "An unbreakable streak", "Light, levels, and weekly leagues turn the habit into a flame you're scared to let go out."),
+        ("feat_inward", "Go inward", "A private journal and shadow-work journeys. Sit with what's actually there — and come out a little more whole."),
+    ]
+    feats = "".join(
+        f'<div class="f"><div class="fi"><img src="/art/{img}.png" alt="{t}" loading="lazy" '
+        f'onerror="this.closest(\'.fi\').style.display=\'none\'"></div>'
+        f'<h3>{t}</h3><p>{d}</p></div>' for img, t, d in feat_set)
+    steps = "".join(
+        f'<div class="step"><div class="sn">{i+1}</div><h4>{t}</h4><p>{d}</p></div>'
+        for i, (t, d) in enumerate([
+            ("Open today's sky", "Start with your Vedic reading — your rāśi and the Moon's nakshatra — then pick a guided journey and sit for a few minutes."),
+            ("Light up a place", "Your session ignites your spot on a living world map. Snap a photo of where you sat and add it to your Atlas."),
+            ("Build the streak", "Earn Light, keep your photo streak, climb the weekly league, and journal what surfaced."),
+        ]))
+    faqs = "".join(
+        f'<details class="faq"><summary>{q}</summary><p>{a}</p></details>'
+        for q, a in [
+            ("Is Lumen free?", "Yes — free to start. You can meditate, journal, build streaks, get your daily reading, and light up the map without paying."),
+            ("Is the Vedic reading real astrology?", "Yes. Your sign is your sidereal rāśi (Lahiri ayanāṁśa) and each day centers on the Moon's nakshatra, drawn from classical Jyotish — add your birth time for your birth star and Vimśottarī daśā."),
+            ("Do I have to share my location or photos?", "No. Location is optional and deliberately coarsened, and the photos of your meditation spots are yours — they only appear to others if you choose to share them."),
+            ("Is my journal private?", "Completely. Entries stay yours unless you explicitly choose to share one to the community feed."),
+            ("What makes it different?", "It's the one meditation app that opens with a real Vedic reading, turns every sit into a photo you collect on a world map, and gives you a streak you're actually scared to break."),
+        ])
+    ig_url = "https://instagram.com/" + IG_HANDLE.lstrip("@")
+    return (r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen — meditate, glow, and grow</title>
+<meta name="description" content="__SUB__">
+<meta property="og:title" content="Lumen — light up the world, one breath at a time">
+<meta property="og:description" content="__SUB__"><meta property="og:type" content="website">
+<meta name="theme-color" content="#0b0a12"><link rel="icon" href="/icon.svg">
+<style>
+:root{--bg:#0b0a12;--ink:#ece9f5;--mut:#b4acd0;--gold:#f5c977;--purp:#a855f7;--line:#2a2540}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:
+ radial-gradient(1200px 700px at 50% -8%,rgba(168,85,247,.30),transparent 60%),
+ radial-gradient(900px 600px at 85% 15%,rgba(245,201,119,.14),transparent 55%),var(--bg);
+ color:var(--ink);font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;line-height:1.6}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:9;backdrop-filter:blur(10px);background:rgba(11,10,18,.55);
+ padding:14px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+.logo{font-weight:800;color:var(--gold);font-size:19px;display:flex;align-items:center;gap:8px}
+.logo img{width:26px;height:26px;border-radius:7px}
+.nav{display:flex;gap:18px;align-items:center}.nav a{color:var(--mut);text-decoration:none;font-size:14px;white-space:nowrap}
+.nav a:hover{color:var(--ink)}
+@media(max-width:620px){
+ .nav{gap:12px}.nav a.navlink{display:none}
+ .btn{padding:10px 16px;font-size:14px}.logo{font-size:17px}
+}
+.btn{display:inline-block;background:linear-gradient(90deg,var(--gold),var(--purp));color:#140f22;font-weight:800;
+ text-decoration:none;padding:12px 22px;border-radius:999px;font-size:15px;box-shadow:0 10px 30px rgba(168,85,247,.35);transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}.btn.lg{padding:15px 30px;font-size:16px}
+.hero{text-align:center;padding:60px 0 34px}
+.badge{display:inline-block;border:1px solid var(--line);background:rgba(22,19,38,.7);color:var(--mut);
+ border-radius:999px;padding:5px 14px;font-size:12.5px;margin-bottom:20px}
+.hero h1{font-size:clamp(32px,6.5vw,60px);margin:0 0 16px;line-height:1.08;
+ background:linear-gradient(90deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:clamp(16px,2.6vw,21px);color:var(--mut);max-width:640px;margin:0 auto 28px}
+.orbit{width:96px;height:96px;margin:0 auto 10px;display:block;border-radius:24px;
+ filter:drop-shadow(0 0 28px rgba(245,201,119,.6));animation:float 5s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-10px)}}
+.sub2{color:var(--mut);font-size:13px;margin-top:14px}
+h2.sec{text-align:center;font-size:clamp(22px,4vw,32px);margin:60px 0 6px}
+.lead{text-align:center;color:var(--mut);max-width:560px;margin:0 auto 26px}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.f{background:rgba(22,19,38,.7);border:1px solid var(--line);border-radius:18px;padding:22px}
+.fi{margin-bottom:12px}.fi img{width:68px;height:68px;border-radius:16px;object-fit:cover;
+ border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.f h3{margin:0 0 6px;color:var(--gold);font-size:18px}.f p{margin:0;color:var(--mut);font-size:14.5px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.step{background:rgba(22,19,38,.5);border:1px solid var(--line);border-radius:18px;padding:22px;position:relative}
+.sn{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--purp));
+ color:#140f22;font-weight:800;display:grid;place-items:center;margin-bottom:10px}
+.step h4{margin:0 0 6px;font-size:16px}.step p{margin:0;color:var(--mut);font-size:14px}
+.quote{text-align:center;max-width:720px;margin:64px auto 0;font-size:clamp(20px,3.4vw,28px);line-height:1.4}
+.quote span{color:var(--gold)}.quote .by{display:block;color:var(--mut);font-size:14px;margin-top:14px}
+.faqs{max-width:720px;margin:14px auto 0}
+.faq{border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin:10px 0;background:rgba(22,19,38,.5)}
+.faq summary{cursor:pointer;padding:14px 0;font-weight:600;font-size:15px;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';float:right;color:var(--gold);font-size:20px}
+.faq[open] summary::after{content:'–'}.faq p{margin:0 0 14px;color:var(--mut);font-size:14.5px}
+.cta2{text-align:center;padding:70px 0 20px}.cta2 h2{font-size:clamp(24px,4vw,34px);margin:0 0 20px}
+footer{text-align:center;color:var(--mut);font-size:13px;padding:44px 0 64px;border-top:1px solid var(--line);margin-top:50px}
+footer a{color:var(--gold);text-decoration:none}
+</style></head><body>
+<header class="wraphd"><div class="wrap" style="display:flex;justify-content:space-between;align-items:center;padding:0">
+<div class="logo"><img src="/icon.svg" alt="Lumen"> Lumen</div>
+<nav class="nav"><a class="navlink" href="#how">How it works</a><a class="navlink" href="#features">Features</a><a class="navlink" href="#faq">FAQ</a><a class="btn" href="__APP__">__CTA__</a></nav>
+</div></header>
+<div class="wrap">
+<section class="hero"><img class="orbit" src="/icon.svg" alt="Lumen">
+<div class="badge">Now on the App Store</div>
+<h1>__H__</h1><p>__SUB__</p><a class="btn lg" href="__APP__">__CTA__</a>
+<div class="sub2">Free to start · Your journal stays private</div></section>
+
+<section id="how"><h2 class="sec">Three minutes a day</h2><p class="lead">A loop simple enough to keep, gratifying enough to miss.</p>
+<div class="steps">__STEPS__</div></section>
+
+<section id="features"><h2 class="sec">Why it sticks</h2><p class="lead">Everything in Lumen is built around one idea: make the practice something you look forward to.</p>
+<div class="feats">__FEATS__</div></section>
+
+<div class="quote">"Talk to <span>Marcus Aurelius</span> about your bad week — then watch your light spread across the map."
+<span class="by">— the one meditation app you won't quit on day 3</span></div>
+
+<section id="faq"><h2 class="sec">Questions</h2><div class="faqs">__FAQS__</div></section>
+
+<section class="cta2"><h2>Start your streak tonight.</h2><a class="btn lg" href="__APP__">__CTA__</a></section>
+</div>
+<footer>Lumen · <a href="/privacy">Privacy</a> · <a href="__IG__">Instagram</a> · <a href="__APP__">App Store</a><br>© 2026 Lumen. Light up the world.</footer>
+</body></html>"""
+            .replace("__H__", w["hero_h"]).replace("__SUB__", w["hero_sub"])
+            .replace("__CTA__", w["cta"]).replace("__APP__", APP_STORE_URL)
+            .replace("__FEATS__", feats).replace("__STEPS__", steps).replace("__FAQS__", faqs)
+            .replace("__IG__", ig_url))
+
+
+# ===========================================================================
+# NOTIFICATION SERVICE  (see NOTIFICATIONS.md)
+# Two paths (event celebrations + time-based nudges) through one arbiter:
+# per-user daily cap, local quiet hours, category prefs, and dedupe.
+# ===========================================================================
+
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+NOTIF_CATS = ["reminder", "streak", "progress", "community", "discovery", "winback"]
+DEFAULT_CATS = {k: 1 for k in NOTIF_CATS}
+TIME_CATS = ("daily_reminder", "streak_save", "weekly_recap", "winback")  # count toward daily cap
+DAILY_CAP = 1          # automatic time-based sends per local day
+CELEBRATION_CAP = 3    # event celebrations per local day
+MILESTONES = (7, 30, 50, 100, 365)
+_ACH_DESC = {a[0]: f"{a[3]} {a[1]} — {a[2]}" for a in ACHIEVEMENTS}
+
+
+def _notif_prefs(c, user_id):
+    r = c.execute("SELECT * FROM notif_prefs WHERE user_id=?", (user_id,)).fetchone()
+    if not r:
+        c.execute("INSERT OR IGNORE INTO notif_prefs(user_id,cats,updated) VALUES(?,?,?)",
+                  (user_id, json.dumps(DEFAULT_CATS), now_iso()))
+        c.commit()
+        r = c.execute("SELECT * FROM notif_prefs WHERE user_id=?", (user_id,)).fetchone()
+    return r
+
+
+def _notif_local(prefs):
+    return datetime.now(timezone.utc) + timedelta(minutes=(prefs["tz_offset_min"] or 0))
+
+
+def _notif_quiet(prefs, lt):
+    qs, qe, h = prefs["quiet_start"], prefs["quiet_end"], lt.hour
+    if qs == qe:
+        return False
+    return (qs <= h < qe) if qs < qe else (h >= qs or h < qe)
+
+
+def _days_since(last_day):
+    if not last_day:
+        return 999
+    try:
+        return (datetime.now(timezone.utc).date() - date.fromisoformat(last_day[:10])).days
+    except Exception:
+        return 999
+
+
+def _notif_tier(user):
+    if (user["total_sessions"] or 0) == 0:
+        return "new"
+    ds = _days_since(user["last_day"])
+    if ds <= 1:
+        return "habitual"
+    if ds <= 6:
+        return "at_risk"
+    if ds <= 29:
+        return "dormant"
+    return "churned"
+
+
+def _modal_hour(c, user_id, off):
+    from collections import Counter
+    cnt = Counter()
+    for r in c.execute("SELECT ended FROM sessions WHERE user_id=? AND ended IS NOT NULL "
+                       "ORDER BY id DESC LIMIT 60", (user_id,)):
+        try:
+            cnt[(int(r["ended"][11:13]) + off // 60) % 24] += 1
+        except Exception:
+            pass
+    return cnt.most_common(1)[0][0] if cnt else 19  # default 7pm local
+
+
+def _notif_personalize(kind, user):
+    name = (user["name"] or "there").split()[0]
+    streak = user["streak"] or 0
+    prompt = (f'Write ONE short push notification for a calm meditation app "Lumen". '
+              f'User first name: {name}. Current streak: {streak} days. Intent: {kind}. '
+              f'Tone: warm, calm, direct, NEVER guilt-tripping or anxious. Body under 12 words. '
+              f'Return strict JSON {{"title":"...","body":"..."}} with title <= 5 words.')
+    try:
+        r = gemini_json(prompt, timeout=6)
+    except Exception:
+        r = None
+    if r and r.get("title") and r.get("body"):
+        return str(r["title"])[:60], str(r["body"])[:160]
+    return None
+
+
+def notif_copy(kind, user, ctx=None, personalize=False):
+    ctx = ctx or {}
+    name = (user["name"] or "there").split()[0]
+    streak = user["streak"] or 0
+    T = {
+        "daily_reminder": ("A moment for you", f"{name}, three minutes with the breath before the day closes?"),
+        "streak_save": (f"Your {streak}-day flame is still lit", "Keep it burning — just three minutes tonight."),
+        "weekly_recap": ("Your week in light", f"{ctx.get('sessions',0)} sits, +{ctx.get('light',0)} Light this week. Quietly proud of you."),
+        "winback": ("The map is still glowing", "No streak pressure — a 3-minute reset whenever you're ready."),
+        "level_up": ("You leveled up ✨", f"Your practice is compounding, {name}. New light unlocked."),
+        "achievement": ("Achievement unlocked", ctx.get("desc", "You earned something new.")),
+        "milestone": (f"{streak}-day streak 🔥", "That's real consistency. Proud of you."),
+        "broadcast": (ctx.get("title", "Lumen"), ctx.get("body", "")),
+    }
+    title, body = T.get(kind, ("Lumen", ""))
+    if personalize and kind in ("daily_reminder", "winback"):
+        p = _notif_personalize(kind, user)
+        if p:
+            title, body = p
+    return title, body
+
+
+def expo_push_send(c, tokens, title, body, data=None):
+    """Send via the Expo Push API and honour the per-ticket response.
+
+    Expo returns HTTP 200 even when individual messages fail, with one ticket
+    per message in `data`. We must read those tickets: a success is only a
+    ticket with status "ok", and a `DeviceNotRegistered` ticket means the token
+    is dead (app uninstalled / reinstalled / token rotated) and must be pruned
+    so we stop sending to it and metrics don't record phantom deliveries.
+    Returns True only if at least one message was accepted by Expo.
+    """
+    sent_toks = [t for t in tokens if t and t.startswith("ExponentPushToken")]
+    if not sent_toks:
+        return False
+    msgs = [{"to": t, "title": title, "body": body, "sound": "default",
+             "data": data or {}} for t in sent_toks]
+    try:
+        req = urllib.request.Request(EXPO_PUSH_URL, data=json.dumps(msgs).encode(),
+                                     headers={"Content-Type": "application/json",
+                                              "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            resp = json.loads((r.read() or b"{}").decode() or "{}")
+    except Exception:
+        return False
+    tickets = resp.get("data")
+    if not isinstance(tickets, list):
+        return False
+    any_ok = False
+    dead = []
+    for tok, tk in zip(sent_toks, tickets):
+        if not isinstance(tk, dict):
+            continue
+        if tk.get("status") == "ok":
+            any_ok = True
+        elif ((tk.get("details") or {}).get("error")) == "DeviceNotRegistered":
+            dead.append(tok)
+    if dead:
+        try:
+            c.executemany("DELETE FROM push_tokens WHERE token=?", [(t,) for t in dead])
+            c.commit()
+        except Exception:
+            pass
+    return any_ok
+
+
+def _dedup_exists(c, uid, dk):
+    return bool(c.execute("SELECT 1 FROM notif_log WHERE user_id=? AND dedupe_key=? LIMIT 1",
+                          (uid, dk)).fetchone())
+
+
+def _notif_enqueue(c, uid, category, title, body, dk):
+    if _dedup_exists(c, uid, dk):
+        return False
+    c.execute("INSERT INTO notif_log(user_id,category,title,body,dedupe_key,status,created) "
+              "VALUES(?,?,?,?,?,?,?)", (uid, category, title, body, dk, "queued", now_iso()))
+    return True
+
+
+def _tokens_for(c, uid):
+    return [r["token"] for r in c.execute("SELECT token FROM push_tokens WHERE user_id=?", (uid,))]
+
+
+def _sent_today_count(c, uid, cats):
+    ph = ",".join("?" for _ in cats)
+    return c.execute(f"SELECT COUNT(*) n FROM notif_log WHERE user_id=? AND status='sent' "
+                     f"AND substr(created,1,10)=? AND category IN ({ph})",
+                     (uid, today_str(), *cats)).fetchone()["n"]
+
+
+def notif_on_complete(c, user, new_ach, leveled_up, streak):
+    """Event path: enqueue celebrations right after a completed session."""
+    uid = user["id"]
+    if leveled_up:
+        _notif_enqueue(c, uid, "progress", *notif_copy("level_up", user),
+                       f"level_up:{level_for(user['light'])[0]}")
+    for code in (new_ach or []):
+        _notif_enqueue(c, uid, "progress", *notif_copy("achievement", user, {"desc": _ACH_DESC.get(code, "You earned something new.")}),
+                       f"achievement:{code}")
+    if streak in MILESTONES:
+        _notif_enqueue(c, uid, "progress", *notif_copy("milestone", user), f"milestone:{streak}")
+
+
+def _notif_flush_queued(c):
+    """Send queued celebrations; respect quiet hours, celebration cap, 24h expiry."""
+    now = datetime.now(timezone.utc)
+    for n in c.execute("SELECT * FROM notif_log WHERE status='queued' ORDER BY id LIMIT 300").fetchall():
+        u = c.execute("SELECT * FROM users WHERE id=?", (n["user_id"],)).fetchone()
+        try:
+            age_h = (now - datetime.fromisoformat(n["created"])).total_seconds() / 3600
+        except Exception:
+            age_h = 0
+        if not u or age_h > 24:
+            c.execute("UPDATE notif_log SET status='void' WHERE id=?", (n["id"],)); continue
+        prefs = _notif_prefs(c, u["id"])
+        cats = json.loads(prefs["cats"] or "{}")
+        if not prefs["enabled"] or not cats.get("progress", 1):
+            c.execute("UPDATE notif_log SET status='void' WHERE id=?", (n["id"],)); continue
+        lt = _notif_local(prefs)
+        if _notif_quiet(prefs, lt):
+            continue  # try again after quiet hours
+        if _sent_today_count(c, u["id"], ("progress",)) >= CELEBRATION_CAP:
+            continue
+        toks = _tokens_for(c, u["id"])
+        ok = expo_push_send(c, toks, n["title"], n["body"], {"category": n["category"]}) if toks else False
+        c.execute("UPDATE notif_log SET status=?, sent=? WHERE id=?",
+                  ("sent" if ok else ("failed" if toks else "no_token"),
+                   now_iso() if ok else None, n["id"]))
+    c.commit()
+
+
+def _notif_candidate(c, u, prefs, lt):
+    """Return (category, title, body, dedupe_key) for the top time-based nudge, or None."""
+    cats = json.loads(prefs["cats"] or "{}")
+    off = prefs["tz_offset_min"] or 0
+    h, wd = lt.hour, lt.weekday()           # Mon=0 … Sun=6
+    tier = _notif_tier(u)
+    sat_today = (u["last_day"] or "")[:10] == today_str()
+    # 1) streak-save (highest)
+    if cats.get("streak", 1) and (u["streak"] or 0) >= 2 and not sat_today and h >= 18:
+        return ("streak_save", *notif_copy("streak_save", u), f"streak_save:{today_str()}")
+    # 2) weekly recap — Sunday evening
+    if cats.get("progress", 1) and wd == 6 and 18 <= h < 22:
+        row = c.execute("SELECT COALESCE(SUM(light),0) s, COUNT(*) n FROM sessions "
+                        "WHERE user_id=? AND week=?", (u["id"], week_str())).fetchone()
+        if row["n"] > 0:
+            return ("weekly_recap", *notif_copy("weekly_recap", u, {"light": row["s"], "sessions": row["n"]}),
+                    f"weekly_recap:{week_str()}")
+    # 3) daily reminder — send-time optimized (learned modal hour once we have
+    #    history, else the practice time they chose during onboarding, else 7pm)
+    if cats.get("reminder", 1) and not sat_today and tier in ("new", "habitual", "at_risk"):
+        pref_hour = prefs["pref_hour"] if prefs["pref_hour"] is not None else 19
+        learned = (u["total_sessions"] or 0) >= 5
+        target = _modal_hour(c, u["id"], off) if (prefs["sto"] and learned) else pref_hour
+        if h == target:
+            return ("daily_reminder", *notif_copy("daily_reminder", u, personalize=True),
+                    f"reminder:{today_str()}")
+    # 4) win-back — gentle, rate-limited
+    if cats.get("winback", 1) and tier in ("dormant", "churned") and h == 12:
+        if tier == "dormant" and (lt.timetuple().tm_yday % 3 == 0):
+            return ("winback", *notif_copy("winback", u, personalize=True), f"winback:{today_str()}")
+        if tier == "churned" and wd == 0:
+            return ("winback", *notif_copy("winback", u, personalize=True), f"winback:{week_str()}")
+    return None
+
+
+def _notif_time_pass(c):
+    """Evaluate every opted-in, reachable user for a time-based nudge."""
+    users = c.execute("SELECT DISTINCT u.* FROM users u JOIN push_tokens p ON p.user_id=u.id "
+                      "WHERE u.is_bot=0").fetchall()
+    for u in users:
+        prefs = _notif_prefs(c, u["id"])
+        if not prefs["enabled"]:
+            continue
+        lt = _notif_local(prefs)
+        if _notif_quiet(prefs, lt):
+            continue
+        if _sent_today_count(c, u["id"], TIME_CATS) >= DAILY_CAP:
+            continue
+        cand = _notif_candidate(c, u, prefs, lt)
+        if not cand:
+            continue
+        cat, title, body, dk = cand
+        if _dedup_exists(c, u["id"], dk):
+            continue
+        toks = _tokens_for(c, u["id"])
+        ok = expo_push_send(c, toks, title, body, {"category": cat})
+        c.execute("INSERT INTO notif_log(user_id,category,title,body,dedupe_key,status,created,sent) "
+                  "VALUES(?,?,?,?,?,?,?,?)",
+                  (u["id"], cat, title, body, dk, "sent" if ok else "failed",
+                   now_iso(), now_iso() if ok else None))
+    c.commit()
+
+
+def notif_tick():
+    with _dblock:
+        c = db()
+        try:
+            _notif_flush_queued(c)
+            _notif_time_pass(c)
+        except Exception as e:
+            print("notif_tick error:", e)
+        finally:
+            c.close()
+
+
+def notif_loop():
+    time.sleep(20)  # let the server settle on boot
+    while True:
+        notif_tick()
+        time.sleep(900)  # every 15 minutes
+
+
+def notif_admin_stats(c):
+    def one(q, a=()):
+        r = c.execute(q, a).fetchone(); return (r[0] if r else 0) or 0
+    users = max(1, one("SELECT COUNT(*) FROM users WHERE is_bot=0 AND name IS NOT NULL"))
+    optin = one("SELECT COUNT(DISTINCT user_id) FROM push_tokens")
+    by_cat = [dict(r) for r in c.execute(
+        "SELECT category, COUNT(*) sent, SUM(CASE WHEN opened IS NOT NULL THEN 1 ELSE 0 END) opened "
+        "FROM notif_log WHERE status='sent' GROUP BY category ORDER BY sent DESC")]
+    recent = [dict(r) for r in c.execute(
+        "SELECT category,title,body,status,created FROM notif_log ORDER BY id DESC LIMIT 25")]
+    sent7 = one("SELECT COUNT(*) FROM notif_log WHERE status='sent' AND created >= ?",
+                ((datetime.now(timezone.utc) - timedelta(days=7)).isoformat(),))
+    return {"opt_in": optin, "opt_in_pct": round(100.0 * optin / users),
+            "tokens": one("SELECT COUNT(*) FROM push_tokens"),
+            "sent_7d": sent7, "queued": one("SELECT COUNT(*) FROM notif_log WHERE status='queued'"),
+            "by_category": by_cat, "recent": recent}
+
+
+def main():
+    init_db()
+    seed_world()
+    seed_subtasks()
+    threading.Thread(target=notif_loop, daemon=True).start()
+    httpd = ThreadingHTTPServer((HOST, PORT), H)
+    print(f"Lumen on http://{HOST}:{PORT}  (BASE={BASE or '/'})")
+    httpd.serve_forever()
+
+
+if __name__ == "__main__":
+    main()
