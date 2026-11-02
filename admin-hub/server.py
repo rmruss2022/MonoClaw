@@ -38,7 +38,7 @@ APP_PANELS = [
 
 OPS = [
     ("Command Hub", "🛰️", HUB + "/", "Central control — cron/scheduler dashboard + links to everything.", "live", None),
-    ("App Catalog", "🗂️", HUB + "/apps", "The user-facing index of every app you've built.", "live", None),
+    ("App Catalog", "🗂️", "https://apps.bedrock.casa", "The user-facing index of every app you've built.", "live", None),
     ("MonoClaw Dashboard", "📊", HUB + ":18802/", "Workspace/services dashboard (monoclaw-dashboard).", "live", None),
     ("Mission Control", "🎛️", HUB + ":18795/", "Agent/ops mission control.", "live", None),
     ("Agent Swarm", "🐝", HUB + ":18798/", "Multi-agent orchestration kanban.", "live", None),
@@ -144,7 +144,7 @@ PAGE = r'''<!DOCTYPE html><html lang="en"><head>
   <h2>Documentation</h2>
   <div class="grid">__DOCS__</div>
 
-  <div class="foot">Lives at <code>/admin</code> on the command hub, beside the catalog at <code>/apps</code>.
+  <div class="foot">Live at <code>admin.bedrock.casa</code>, beside the catalog at <code>apps.bedrock.casa</code>.
     <code>live</code> = hosted · <code>hub</code> = served here · <code>source</code> = in the repo, not yet hosted.
     Add an app by editing <code>admin-hub/server.py</code>.</div>
 </div></body></html>'''

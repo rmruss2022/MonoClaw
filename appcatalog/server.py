@@ -23,6 +23,7 @@ LIVE_HUB = [
     ("Travelog",           "🧳", HUB + "/travelog", "Travel journal with an AI companion — place/history briefings, reflective journaling, and AI photo collages.", "hub"),
 ]
 LIVE_OTHER = [
+    ("Admin Hub",    "⚙️", "https://admin.bedrock.casa/", "Every app's admin panel, admin tools, and docs — one place.", "cloud"),
     ("openhome",   "🏠", "https://home.bedrock.casa/", "Smart-home hub — lights, music, climate, voice agent. Runs on the Pi (login-gated).", "pi"),
     ("Daylight",   "⚡", "https://web-production-970f8.up.railway.app/", "Energy-management dashboard — Django + React + Postgres on Railway.", "cloud"),
 ]
