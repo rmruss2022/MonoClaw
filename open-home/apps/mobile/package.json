@@ -27,6 +27,12 @@
   "devDependencies": {
     "@types/react": "~18.2.14",
     "babel-plugin-module-resolver": "^5.0.3",
+    "metro": "0.76.8",
+    "metro-cache": "0.76.8",
+    "metro-config": "0.76.8",
+    "metro-core": "0.76.8",
+    "metro-resolver": "0.76.8",
+    "metro-transform-worker": "0.76.8",
     "typescript": "^5.1.3"
   }
 }
