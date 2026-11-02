@@ -19,6 +19,12 @@ export const colors = {
   pink: "#ec4899",
   danger: "#ff6b6b",
   warn: "#f5b544",
+  // Status: online / playing / "on" indicators (AA on the night bg).
+  success: "#5fd38d",
+  // Ink used on top of the gold accent (buttons, active knobs). High-contrast.
+  onAccent: "#1a1205",
+  // Pressable feedback overlay.
+  press: "rgba(255,255,255,0.06)",
 };
 
 export const radius = {
@@ -28,7 +34,19 @@ export const radius = {
   pill: 999,
 };
 
+// 8pt-based spacing scale: space(1)=4, space(2)=8, space(3)=12, space(4)=16…
 export const space = (n: number) => n * 4;
+
+/** Calm, consistent card elevation shared across every surface. */
+export const elevation = {
+  card: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+} as const;
 
 export const font = {
   h1: 24,

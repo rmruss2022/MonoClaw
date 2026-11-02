@@ -2,8 +2,8 @@ import React from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePoll, useCommand } from "@/api/hooks";
-import { SectionTitle, Loading, Empty } from "@/components/ui";
-import { colors, radius, font } from "@/theme";
+import { Card, SectionTitle, StatusDot, Toggle, Loading, Empty } from "@/components/ui";
+import { colors, radius, font, space } from "@/theme";
 
 interface LightView {
   id: string; name: string; room: string; on: boolean; brightness: number;
@@ -52,52 +52,71 @@ export default function LightsScreen() {
 
         {rooms.map((group) => {
           const anyOn = group.lights.some((l) => l.on);
+          const onCount = group.lights.filter((l) => l.on).length;
           return (
-            <View key={group.room} style={{ marginTop: 18 }}>
+            <View key={group.room} style={styles.group}>
               <View style={styles.roomHead}>
-                <SectionTitle>{group.room}</SectionTitle>
-                <Pressable onPress={() => roomPower(group.room, !anyOn)} style={styles.roomBtn}>
-                  <Text style={styles.roomBtnText}>{anyOn ? "All off" : "All on"}</Text>
+                <View>
+                  <SectionTitle>{group.room}</SectionTitle>
+                  <Text style={styles.roomCount}>{onCount}/{group.lights.length} on</Text>
+                </View>
+                <Pressable
+                  onPress={() => roomPower(group.room, !anyOn)}
+                  accessibilityRole="button"
+                  accessibilityLabel={anyOn ? `Turn all ${group.room} lights off` : `Turn all ${group.room} lights on`}
+                  style={({ pressed }) => [styles.roomBtn, anyOn && styles.roomBtnOn, pressed && { opacity: 0.7 }]}
+                >
+                  <Text style={[styles.roomBtnText, anyOn && { color: colors.accent }]}>
+                    {anyOn ? "All off" : "All on"}
+                  </Text>
                 </Pressable>
               </View>
-              {group.lights.map((l) => (
-                <View key={l.id} style={styles.lightCard}>
-                  <Pressable onPress={() => toggle(l)} style={styles.lightHead}>
-                    <View style={[styles.bulb, l.on && styles.bulbOn]} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.lightName}>{l.name}</Text>
-                      <Text style={styles.lightMeta}>
-                        {l.on ? `On · ${l.brightness}%` : "Off"}
-                        {!l.online ? " · offline" : ""}
-                        {!l.real ? " · demo" : ""}
-                      </Text>
-                    </View>
-                    <View style={[styles.toggle, l.on && styles.toggleOn]}>
-                      <View style={[styles.knob, l.on && styles.knobOn]} />
-                    </View>
-                  </Pressable>
-                  {l.on && l.dimmable && (
-                    <View style={styles.levels}>
-                      {LEVELS.map((lv) => (
-                        <Pressable
-                          key={lv}
-                          onPress={() => setBrightness(l, lv)}
-                          style={[styles.level, Math.round(l.brightness / 25) * 25 === lv && styles.levelOn]}
-                        >
-                          <Text
-                            style={[
-                              styles.levelText,
-                              Math.round(l.brightness / 25) * 25 === lv && { color: colors.accent },
-                            ]}
-                          >
-                            {lv}%
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ))}
+
+              {group.lights.map((l) => {
+                const activeLevel = Math.round(l.brightness / 25) * 25;
+                return (
+                  <Card key={l.id} active={l.on} style={styles.lightCard}>
+                    <Pressable
+                      onPress={() => toggle(l)}
+                      accessibilityRole="switch"
+                      accessibilityLabel={l.name}
+                      accessibilityState={{ checked: l.on, disabled: !l.online }}
+                      style={({ pressed }) => [styles.lightHead, pressed && { opacity: 0.8 }]}
+                    >
+                      <StatusDot color={l.on ? colors.accent : colors.muted} glow={l.on} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.lightName}>{l.name}</Text>
+                        <Text style={styles.lightMeta}>
+                          {l.on ? `On · ${l.brightness}%` : "Off"}
+                          {!l.online ? " · offline" : ""}
+                          {!l.real ? " · demo" : ""}
+                        </Text>
+                      </View>
+                      <Toggle on={l.on} />
+                    </Pressable>
+
+                    {l.on && l.dimmable && (
+                      <View style={styles.levels}>
+                        {LEVELS.map((lv) => {
+                          const sel = activeLevel === lv;
+                          return (
+                            <Pressable
+                              key={lv}
+                              onPress={() => setBrightness(l, lv)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Set ${l.name} to ${lv} percent`}
+                              accessibilityState={{ selected: sel }}
+                              style={({ pressed }) => [styles.level, sel && styles.levelOn, pressed && { opacity: 0.7 }]}
+                            >
+                              <Text style={[styles.levelText, sel && { color: colors.accent }]}>{lv}%</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </Card>
+                );
+              })}
             </View>
           );
         })}
@@ -108,58 +127,45 @@ export default function LightsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: space(5), paddingBottom: space(10) },
   title: { color: colors.text, fontSize: font.h1, fontWeight: "700" },
-  subtitle: { color: colors.muted, fontSize: font.small, marginTop: 2 },
-  roomHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  subtitle: { color: colors.muted, fontSize: font.small, marginTop: space(1) },
+
+  group: { marginTop: space(5) },
+  roomHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: space(3),
+  },
+  roomCount: { color: colors.muted, fontSize: font.tiny, marginTop: space(1) },
   roomBtn: {
-    paddingVertical: 5,
-    paddingHorizontal: 12,
+    minHeight: 44,
+    paddingHorizontal: space(4),
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.line,
-  },
-  roomBtnText: { color: colors.muted, fontSize: font.tiny, fontWeight: "700" },
-  lightCard: {
-    backgroundColor: colors.panel,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    padding: 14,
-    marginTop: 8,
-  },
-  lightHead: { flexDirection: "row", alignItems: "center", gap: 12 },
-  bulb: { width: 14, height: 14, borderRadius: 7, backgroundColor: colors.line },
-  bulbOn: {
-    backgroundColor: colors.accent,
-    shadowColor: colors.accent,
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-  },
-  lightName: { color: colors.text, fontSize: font.body, fontWeight: "600" },
-  lightMeta: { color: colors.muted, fontSize: font.tiny, marginTop: 2 },
-  toggle: {
-    width: 46,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.bg,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 3,
+    alignItems: "center",
     justifyContent: "center",
   },
-  toggleOn: { backgroundColor: colors.accentWash, borderColor: colors.accentDim },
-  knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.muted },
-  knobOn: { backgroundColor: colors.accent, alignSelf: "flex-end" },
-  levels: { flexDirection: "row", gap: 8, marginTop: 12 },
+  roomBtnOn: { borderColor: colors.accentDim, backgroundColor: colors.accentWash },
+  roomBtnText: { color: colors.muted, fontSize: font.small, fontWeight: "700" },
+
+  lightCard: { padding: space(4), borderRadius: radius.md, marginTop: space(2) },
+  lightHead: { flexDirection: "row", alignItems: "center", gap: space(3), minHeight: 44 },
+  lightName: { color: colors.text, fontSize: font.body, fontWeight: "600" },
+  lightMeta: { color: colors.muted, fontSize: font.tiny, marginTop: space(1) },
+
+  levels: { flexDirection: "row", gap: space(2), marginTop: space(3) },
   level: {
     flex: 1,
-    paddingVertical: 8,
+    minHeight: 44,
     borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.line,
     alignItems: "center",
+    justifyContent: "center",
   },
   levelOn: { borderColor: colors.accentDim, backgroundColor: colors.accentWash },
-  levelText: { color: colors.muted, fontSize: font.tiny, fontWeight: "700" },
+  levelText: { color: colors.muted, fontSize: font.small, fontWeight: "700" },
 });

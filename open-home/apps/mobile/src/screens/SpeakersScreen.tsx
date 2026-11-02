@@ -2,8 +2,8 @@ import React from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePoll, useCommand } from "@/api/hooks";
-import { SectionTitle, Loading, Empty } from "@/components/ui";
-import { colors, radius, font } from "@/theme";
+import { Card, SectionTitle, StatusDot, Loading, Empty } from "@/components/ui";
+import { colors, radius, font, space } from "@/theme";
 
 interface NowPlaying {
   source?: string; title?: string; artist?: string; album?: string;
@@ -38,6 +38,8 @@ export default function SpeakersScreen() {
   if (loading && !data) return <Loading />;
   const np = data?.nowPlaying;
   const rooms = data?.rooms ?? [];
+  const playing = !!np?.playing;
+  const hasTrack = !!np?.title;
   const pct = np?.durationMs ? Math.min(100, ((np.positionMs ?? 0) / np.durationMs) * 100) : 0;
 
   return (
@@ -50,12 +52,25 @@ export default function SpeakersScreen() {
           </Text>
         )}
 
-        <View style={styles.np}>
-          <Text style={styles.npTitle} numberOfLines={1}>{np?.title || "Nothing playing"}</Text>
-          <Text style={styles.npArtist} numberOfLines={1}>
-            {np?.artist || "Pick a room and hit play"}
-            {np?.device ? ` · ${np.device}` : ""}
-          </Text>
+        {/* Now playing */}
+        <Card active={playing} style={styles.np}>
+          <View style={styles.npTop}>
+            <View style={[styles.art, playing && styles.artOn]}>
+              <Text style={[styles.artGlyph, playing && { color: colors.accent }]}>♪</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.statusRow}>
+                <StatusDot color={playing ? colors.success : colors.muted} glow={playing} />
+                <Text style={styles.statusText}>{playing ? "Playing" : hasTrack ? "Paused" : "Idle"}</Text>
+              </View>
+              <Text style={styles.npTitle} numberOfLines={1}>{np?.title || "Nothing playing"}</Text>
+              <Text style={styles.npArtist} numberOfLines={1}>
+                {np?.artist || "Pick a room and hit play"}
+                {np?.device ? ` · ${np.device}` : ""}
+              </Text>
+            </View>
+          </View>
+
           <View style={styles.bar}>
             <View style={[styles.barFill, { width: `${pct}%` }]} />
           </View>
@@ -63,23 +78,42 @@ export default function SpeakersScreen() {
             <Text style={styles.time}>{fmt(np?.positionMs)}</Text>
             <Text style={styles.time}>{fmt(np?.durationMs)}</Text>
           </View>
+
           <View style={styles.transport}>
-            <Pressable onPress={() => transport("prev")} style={styles.tbtn}>
+            <Pressable
+              onPress={() => transport("prev")}
+              accessibilityRole="button"
+              accessibilityLabel="Previous track"
+              style={({ pressed }) => [styles.tbtn, pressed && styles.tbtnPressed]}
+            >
               <Text style={styles.tico}>⏮</Text>
             </Pressable>
-            <Pressable onPress={() => transport(np?.playing ? "pause" : "play")} style={[styles.tbtn, styles.tmain]}>
-              <Text style={styles.ticoMain}>{np?.playing ? "⏸" : "▶"}</Text>
+            <Pressable
+              onPress={() => transport(playing ? "pause" : "play")}
+              accessibilityRole="button"
+              accessibilityLabel={playing ? "Pause" : "Play"}
+              style={({ pressed }) => [styles.tbtn, styles.tmain, pressed && { opacity: 0.85 }]}
+            >
+              <Text style={styles.ticoMain}>{playing ? "⏸" : "▶"}</Text>
             </Pressable>
-            <Pressable onPress={() => transport("next")} style={styles.tbtn}>
+            <Pressable
+              onPress={() => transport("next")}
+              accessibilityRole="button"
+              accessibilityLabel="Next track"
+              style={({ pressed }) => [styles.tbtn, pressed && styles.tbtnPressed]}
+            >
               <Text style={styles.tico}>⏭</Text>
             </Pressable>
           </View>
-        </View>
+        </Card>
 
-        <SectionTitle>Rooms</SectionTitle>
+        <View style={styles.sectionHead}>
+          <SectionTitle>Rooms</SectionTitle>
+        </View>
         {rooms.length === 0 && <Empty text="No speakers yet. Add Wi-Fi/Bluetooth speakers or a Snapcast server from the hub." />}
         {rooms.map((r) => (
-          <View key={r.id} style={styles.room}>
+          <Card key={r.id} style={styles.room}>
+            <StatusDot color={r.online ? colors.success : colors.muted} glow={r.online} />
             <View style={{ flex: 1 }}>
               <Text style={styles.roomName}>{r.name}</Text>
               <Text style={styles.roomMeta} numberOfLines={1}>
@@ -87,10 +121,21 @@ export default function SpeakersScreen() {
                 {r.online ? "" : " · offline"}
               </Text>
             </View>
-            <Pressable onPress={() => playRoom(r.name)} style={styles.playBtn} disabled={!r.online}>
+            <Pressable
+              onPress={() => playRoom(r.name)}
+              disabled={!r.online}
+              accessibilityRole="button"
+              accessibilityLabel={`Play in ${r.name}`}
+              accessibilityState={{ disabled: !r.online }}
+              style={({ pressed }) => [
+                styles.playBtn,
+                !r.online && styles.playBtnOff,
+                pressed && r.online && { opacity: 0.75 },
+              ]}
+            >
               <Text style={[styles.playText, !r.online && { color: colors.muted }]}>Play</Text>
             </Pressable>
-          </View>
+          </Card>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -99,50 +144,68 @@ export default function SpeakersScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: space(5), paddingBottom: space(10) },
   title: { color: colors.text, fontSize: font.h1, fontWeight: "700" },
-  subtitle: { color: colors.muted, fontSize: font.small, marginTop: 2, marginBottom: 14 },
-  np: {
-    backgroundColor: colors.panel,
-    borderColor: colors.line,
+  subtitle: { color: colors.muted, fontSize: font.small, marginTop: space(1), marginBottom: space(4) },
+
+  np: { padding: space(5), marginBottom: space(5) },
+  npTop: { flexDirection: "row", gap: space(4), alignItems: "center" },
+  art: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.md,
+    backgroundColor: colors.panelAlt,
     borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: 20,
-    marginBottom: 20,
+    borderColor: colors.line,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  npTitle: { color: colors.text, fontSize: font.h2, fontWeight: "700" },
-  npArtist: { color: colors.muted, fontSize: font.small, marginTop: 2 },
-  bar: { height: 4, borderRadius: 2, backgroundColor: colors.line, marginTop: 16, overflow: "hidden" },
-  barFill: { height: 4, borderRadius: 2, backgroundColor: colors.accent },
-  times: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+  artOn: { borderColor: colors.accentDim, backgroundColor: colors.accentWash },
+  artGlyph: { color: colors.muted, fontSize: 28 },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
+  statusText: {
+    color: colors.muted,
+    fontSize: font.tiny,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  npTitle: { color: colors.text, fontSize: font.h2, fontWeight: "700", marginTop: space(1) },
+  npArtist: { color: colors.muted, fontSize: font.small, marginTop: space(1) },
+
+  bar: { height: 5, borderRadius: 3, backgroundColor: colors.line, marginTop: space(4), overflow: "hidden" },
+  barFill: { height: 5, borderRadius: 3, backgroundColor: colors.accent },
+  times: { flexDirection: "row", justifyContent: "space-between", marginTop: space(2) },
   time: { color: colors.muted, fontSize: font.tiny, fontVariant: ["tabular-nums"] },
-  transport: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24, marginTop: 14 },
-  tbtn: { width: 54, height: 54, alignItems: "center", justifyContent: "center" },
-  tmain: {
-    backgroundColor: colors.accent,
-    borderRadius: 27,
-  },
+
+  transport: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space(6), marginTop: space(4) },
+  tbtn: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center" },
+  tbtnPressed: { backgroundColor: colors.press },
+  tmain: { backgroundColor: colors.accent },
   tico: { color: colors.text, fontSize: 24 },
-  ticoMain: { color: "#05251a", fontSize: 22 },
+  ticoMain: { color: colors.onAccent, fontSize: 22 },
+
+  sectionHead: { marginBottom: space(3) },
   room: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.panel,
-    borderColor: colors.line,
-    borderWidth: 1,
+    gap: space(3),
+    padding: space(4),
     borderRadius: radius.md,
-    padding: 14,
-    marginBottom: 8,
+    marginBottom: space(2),
   },
   roomName: { color: colors.text, fontSize: font.body, fontWeight: "600" },
-  roomMeta: { color: colors.muted, fontSize: font.tiny, marginTop: 2 },
+  roomMeta: { color: colors.muted, fontSize: font.tiny, marginTop: space(1) },
   playBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 18,
+    minHeight: 44,
+    paddingHorizontal: space(5),
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.accentDim,
     backgroundColor: colors.accentWash,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  playBtnOff: { borderColor: colors.line, backgroundColor: "transparent" },
   playText: { color: colors.accent, fontWeight: "700", fontSize: font.small },
 });

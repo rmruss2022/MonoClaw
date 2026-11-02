@@ -8,14 +8,48 @@ import {
   ViewStyle,
   StyleProp,
 } from "react-native";
-import { colors, radius, font } from "@/theme";
+import { colors, radius, font, space, elevation } from "@/theme";
 
-export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[styles.card, style]}>{children}</View>;
+/**
+ * The single card surface for the whole app. Rounded, softly elevated, calm.
+ * `active` lifts a card into the "on / playing" state with an accent edge.
+ */
+export function Card({
+  children,
+  style,
+  active,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+  active?: boolean;
+}) {
+  return <View style={[styles.card, active && styles.cardActive, style]}>{children}</View>;
 }
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return <Text style={styles.section}>{children}</Text>;
+}
+
+/** Small status dot — green=online/on, muted=off/offline. `glow` adds a soft halo. */
+export function StatusDot({ color, glow }: { color: string; glow?: boolean }) {
+  return (
+    <View
+      style={[
+        styles.dot,
+        { backgroundColor: color },
+        glow && { shadowColor: color, shadowOpacity: 0.9, shadowRadius: 7, shadowOffset: { width: 0, height: 0 } },
+      ]}
+    />
+  );
+}
+
+/** Presentational switch (the row around it owns the Pressable + a11y state). */
+export function Toggle({ on }: { on: boolean }) {
+  return (
+    <View style={[styles.toggle, on && styles.toggleOn]}>
+      <View style={[styles.knob, on && styles.knobOn]} />
+    </View>
+  );
 }
 
 export function Pill({
@@ -28,7 +62,12 @@ export function Pill({
   onPress?: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={[styles.pill, active && styles.pillOn]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!active }}
+      style={({ pressed }) => [styles.pill, active && styles.pillOn, pressed && styles.pressed]}
+    >
       <Text style={[styles.pillText, active && styles.pillTextOn]}>{label}</Text>
     </Pressable>
   );
@@ -49,10 +88,12 @@ export function PrimaryButton({
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!(disabled || loading) }}
       style={({ pressed }) => [styles.btn, (disabled || loading) && { opacity: 0.6 }, pressed && { opacity: 0.85 }]}
     >
       {loading ? (
-        <ActivityIndicator color="#05251a" />
+        <ActivityIndicator color={colors.onAccent} />
       ) : (
         <Text style={styles.btnText}>{label}</Text>
       )}
@@ -82,7 +123,12 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     borderWidth: 1,
     borderRadius: radius.lg,
-    padding: 16,
+    padding: space(4),
+    ...elevation.card,
+  },
+  cardActive: {
+    borderColor: colors.accentDim,
+    backgroundColor: colors.bgElev,
   },
   section: {
     color: colors.muted,
@@ -90,16 +136,31 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
-    marginBottom: 10,
-    marginTop: 6,
   },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  toggle: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 3,
+    justifyContent: "center",
+  },
+  toggleOn: { backgroundColor: colors.accentWash, borderColor: colors.accentDim },
+  knob: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.muted },
+  knobOn: { backgroundColor: colors.accent, alignSelf: "flex-end" },
   pill: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    minHeight: 44,
+    paddingVertical: space(2),
+    paddingHorizontal: space(4),
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.panel,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pillOn: {
     borderColor: colors.accentDim,
@@ -107,15 +168,17 @@ const styles = StyleSheet.create({
   },
   pillText: { color: colors.muted, fontWeight: "700", fontSize: font.small },
   pillTextOn: { color: colors.accent },
+  pressed: { opacity: 0.7 },
   btn: {
     backgroundColor: colors.accent,
     borderRadius: radius.md,
-    paddingVertical: 14,
+    minHeight: 48,
+    paddingVertical: space(3),
     alignItems: "center",
     justifyContent: "center",
   },
-  btnText: { color: "#05251a", fontWeight: "700", fontSize: font.body },
-  empty: { padding: 24, alignItems: "center" },
+  btnText: { color: colors.onAccent, fontWeight: "700", fontSize: font.body },
+  empty: { padding: space(6), alignItems: "center" },
   emptyText: { color: colors.muted, fontSize: font.small, textAlign: "center", lineHeight: 20 },
-  loading: { padding: 40, alignItems: "center" },
+  loading: { padding: space(10), alignItems: "center" },
 });
