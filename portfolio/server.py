@@ -177,6 +177,7 @@ ICONS = {
  "reports": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_rp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a855f7"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_rp)"/><rect x="13" y="14" width="26" height="24" rx="2.5" fill="#fff"/><rect x="16.5" y="18" width="10" height="7" rx="1" fill="#8b5cf6"/><g fill="#b9a7f0"><rect x="28.5" y="18" width="7" height="2" rx="1"/><rect x="28.5" y="22.5" width="7" height="2" rx="1"/><rect x="16.5" y="28" width="19" height="2" rx="1"/><rect x="16.5" y="32" width="19" height="2" rx="1"/></g></svg>',
  "recilia": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_rc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_rc)"/><circle cx="18" cy="26" r="3.1" fill="#fff"/><g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M24 20a9 9 0 0 1 0 12"/><path d="M29 16a16 16 0 0 1 0 20"/><path d="M34 12.5a23 23 0 0 1 0 27"/></g></svg>',
  "creatorcut": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_cc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b983ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_cc)"/><rect x="12" y="15" width="28" height="22" rx="3" fill="#fff"/><g fill="#7c4dff"><rect x="15" y="18" width="3.4" height="3.4" rx="0.8"/><rect x="15" y="30.6" width="3.4" height="3.4" rx="0.8"/><rect x="33.6" y="18" width="3.4" height="3.4" rx="0.8"/><rect x="33.6" y="30.6" width="3.4" height="3.4" rx="0.8"/></g><path d="M23 21.5l8 4.5-8 4.5z" fill="#7c4dff"/></svg>',
+ "adminhub": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ah" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5c977"/><stop offset="1" stop-color="#7fe3ff"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ah)"/><g fill="#1a2238"><rect x="15" y="18" width="22" height="2.8" rx="1.4"/><rect x="15" y="24.6" width="22" height="2.8" rx="1.4"/><rect x="15" y="31.2" width="22" height="2.8" rx="1.4"/></g><g fill="#fff" stroke="#1a2238" stroke-width="1.6"><circle cx="22" cy="19.4" r="3.1"/><circle cx="31" cy="26" r="3.1"/><circle cx="25" cy="32.6" r="3.1"/></g></svg>',
 }
 
 # (icon_key, name, url_or_None, description, status)  status: public | private | wip
@@ -187,7 +188,7 @@ APPS = [
      "Agentic-AI wellness app — dynamic conversations, daily meditations &amp; mindset work. React Native · ElevenLabs.", "public"),
     ("lumen", "Lumen", "https://lumen-production-a8c6.up.railway.app/",
      "Gamified meditation — every sit lights up a living world map, earns Light, builds streaks, and climbs weekly leagues. Guided voice journeys &amp; a reflective journal.", "public"),
-    ("recilia", "Nightbloom", "https://recilia.bedrock.casa/",
+    ("recilia", "Recilia", "https://recilia.bedrock.casa/",
      "A tinnitus companion that turns practice into a living night-garden you grow. Research-grade sound engine, daily streaks, and a glowing garden that fills in as the ringing recedes. React Native · Expo (web preview).", "public"),
     ("inkling", "Inkling", "https://inkling.bedrock.casa/",
      "Voice-first writing room — speak, and an AI librarian co-writes your book in your voice, tending your ideas like rare books.", "public"),
@@ -213,6 +214,8 @@ APPS = [
 CLAW_APPS = [
     ("reports", "Daily Reports &amp; News", "https://reports.bedrock.casa/",
      "Daily NYC news digest &amp; archive — morning briefings with inline mp3 voice notes.", "public"),
+    ("adminhub", "Admin Hub", "https://admin.bedrock.casa/",
+     "Every app&rsquo;s real admin dashboard, tools &amp; docs in one place — Ora, Recilia, Groundfloor, plus the OpenClaw ops dashboards.", "public"),
 ]
 
 TAGS = {
