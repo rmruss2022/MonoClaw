@@ -215,7 +215,7 @@ CLAW_APPS = [
     ("reports", "Daily Reports &amp; News", "https://reports.bedrock.casa/",
      "Daily NYC news digest &amp; archive — morning briefings with inline mp3 voice notes.", "public"),
     ("adminhub", "Admin Hub", "https://admin.bedrock.casa/",
-     "Every app&rsquo;s real admin dashboard, tools &amp; docs in one place — Ora, Recilia, Groundfloor, plus the OpenClaw ops dashboards.", "public"),
+     "Every app&rsquo;s real admin dashboard, tools &amp; docs in one place — Ora, Recilia, plus the OpenClaw ops dashboards.", "public"),
 ]
 
 TAGS = {

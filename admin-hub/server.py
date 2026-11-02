@@ -28,12 +28,6 @@ APP_PANELS = [
     ("Recilia", "🌙", BASE + "/app/recilia",
      "Tinnitus relief — grove, sound tools, and Vera the journey companion. Admin panel includes Vera's context graph.",
      "hub", BASE + "/app/recilia/doc/spec"),
-    ("Groundfloor (Raves)", "🎉", None,
-     "NYC events / outings. 'GROUNDFLOOR ADMIN' console (groundfloor-nyc/admin.html + projects/raves/admin.html) — served by its own backend; not currently on a public URL.",
-     "source", None),
-    ("PayMe", "💸", None,
-     "Payments app. Admin page + observability API (PayMe/apps/web AdminPage, apps/api routes/admin.py).",
-     "source", None),
     ("Favorly", "🤝", None,
      "Microfavors / Helping Hands. NestJS admin module (favorly/apps/api/src/admin).",
      "source", None),
@@ -54,7 +48,6 @@ OPS = [
 DOCS = [
     ("Recilia · journey-agent", "🧭", BASE + "/app/recilia/doc/spec", "Vera persona, journey states, tools, context graph."),
     ("Recilia · Vera graph", "✦", BASE + "/app/recilia/doc/graph", "The rendered companion context graph."),
-    ("PayMe · docs", "💸", None, "PayMe/docs (source)."),
     ("Open Home · docs", "🏠", None, "open-home/docs (source)."),
     ("Port map", "🗺️", None, "PORT-MAP.md — every service and its port (source)."),
 ]
