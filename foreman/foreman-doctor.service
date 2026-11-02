@@ -1,0 +1,17 @@
+# Foreman doctor — verifies each finished subagent job (tsc/build/health-check)
+# and stamps a verdict the Dash board renders as a ✓/✗ badge. See foreman/doctor.py.
+[Unit]
+Description=Foreman doctor — verify finished subagent jobs and stamp verdicts
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/MonoClaw/foreman
+Environment=PATH=/usr/bin:/bin:/usr/local/bin:/root/.npm-global/bin
+ExecStart=/usr/bin/python3 /root/MonoClaw/foreman/doctor.py
+Restart=on-failure
+RestartSec=8
+User=root
+
+[Install]
+WantedBy=multi-user.target

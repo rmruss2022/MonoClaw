@@ -99,12 +99,28 @@ threads:
 - (C) Hybrid — supergroup+topics for most, dedicated bots for high-traffic ones
   (openhome, ora).
 
-## Build phases (recommended default: start Phase 1 only)
-- **Phase 1 (first slice):** Foreman core (job store + dispatch + doctor) + the UI,
-  wired to **3 existing agents** (atlas/ora/builder) to prove the loop end-to-end.
-- **Phase 2:** add the full roster (all ~10 projects as agents + channel bindings).
-- **Phase 3:** polish — SLAs/stall-nudging, retries, auth on the UI, per-project
-  deploy hooks, metrics.
+## Build phases
+- **Phase 1 — DONE (Nov 2):** live per-project kanban in Dash (`dash.bedrock.casa`,
+  bottom) reading OpenClaw's `subagent_runs` (read-only) via `/api/foreman` in
+  `portfolio/server.py`; roster = `foreman/projects.json` (all ~11 projects);
+  jobs lane by the `slug:jobid` label convention; running/queued/done/failed
+  counts; 2.5s poll; click-to-expand.
+- **Phase 2 — DONE (Nov 2): the doctor + intake.**
+  - **Doctor** = `foreman/doctor.py`, a ~12s poll loop (systemd
+    `foreman-doctor.service`, unit versioned at `foreman/foreman-doctor.service`).
+    On each finished job it runs that project's `doctorCmd` (from the roster) in
+    its `repoDir`, once per `run_id`, and writes a verdict to
+    `foreman/data/verdicts.json` (`{ok: true|false|null, note, …}`). The Dash
+    endpoint merges verdicts → each card shows **✓ verified / ✗ <reason> /
+    · checking…**; `ok:null` = skipped (no badge), projects with no `doctorCmd`
+    are never badged. Read-only on the OpenClaw DB; never writes it.
+  - **Intake** = the `job <project>: <task>` convention. `foreman/job.py`
+    validates the project against the roster, mints the canonical
+    `slug:jobid` label + repo cwd, and the agent spawns the subagent
+    (`mode=run, cleanup=keep`). Drive everything from one chat; watch lanes light up.
+- **Phase 3 (next):** SLAs/stall-nudging, retries + "re-run/nudge/cancel" controls
+  on the cards, auth on the dashboard, optional per-project deploy hooks, metrics,
+  and a Telegram-topic-per-project intake (the supergroup option above).
 
 ## Default I'll proceed with unless told otherwise
 **Subagent-first**: Foreman spawns a tracked subagent per job into the project repo

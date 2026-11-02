@@ -35,7 +35,8 @@ def _roster():
                     color = p.get("color") or _FALLBACK_COLOR
                     if not slug:
                         continue
-                    by_slug[slug] = {"name": name, "color": color}
+                    by_slug[slug] = {"name": name, "color": color,
+                                     "doctorCmd": p.get("doctorCmd")}
                     if name not in seen:
                         order.append({"name": name, "color": color}); seen.add(name)
         except Exception:
@@ -44,8 +45,9 @@ def _roster():
     return _ROSTER_CACHE
 
 def _project_of(label, workspace_dir):
-    """Resolve a job's project (name,color): prefer the 'project:jobid' label
-    prefix, else the workspace folder basename, matched against the roster."""
+    """Resolve a job's project (name,color,slug): prefer the 'project:jobid'
+    label prefix, else the workspace folder basename, matched against the
+    roster. slug is None when the job doesn't map to a known project."""
     r = _roster()["by_slug"]
     key = None
     if label and ":" in label:
@@ -53,8 +55,18 @@ def _project_of(label, workspace_dir):
     elif workspace_dir:
         key = os.path.basename(workspace_dir.rstrip("/"))
     if key and key in r:
-        return r[key]["name"], r[key]["color"]
-    return (key or "—"), _FALLBACK_COLOR
+        return r[key]["name"], r[key]["color"], key
+    return (key or "—"), _FALLBACK_COLOR, None
+
+
+def _verdicts():
+    """run_id -> {ok,note,...} written by foreman/doctor.py (read each call;
+    tiny file). Missing/absent -> {}."""
+    try:
+        with open(os.path.join(os.path.dirname(ROSTER_PATH), "data", "verdicts.json")) as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
 def foreman_data():
     """Snapshot of subagent runs from OpenClaw's state DB, newest first."""
@@ -73,6 +85,8 @@ def foreman_data():
         return out
     now = out["ts"]
     counts = {"running": 0, "queued": 0, "done": 0, "failed": 0}
+    verdicts = _verdicts()
+    by_slug = _roster()["by_slug"]
     for r in rows:
         d = dict(r)
         started, ended = d.get("started_at"), d.get("ended_at")
@@ -108,7 +122,21 @@ def foreman_data():
             if len(result) > 220:
                 result = result[:217] + "…"
         # prefer the "project:jobid" label convention; fall back to the workspace dir
-        project, color = _project_of(d.get("label") or "", d.get("workspace_dir"))
+        project, color, slug = _project_of(d.get("label") or "", d.get("workspace_dir"))
+        # doctor verdict: True=verified, False=failed(+note), "pending"=awaiting
+        # a doctor run, None=not applicable (no doctorCmd / skipped). Only "done"
+        # jobs are doctored (a failed agent run isn't worth verifying).
+        doctor, doctor_note = None, ""
+        has_doctor_cmd = bool(slug and by_slug.get(slug, {}).get("doctorCmd"))
+        if status == "done" and has_doctor_cmd:
+            v = verdicts.get(d.get("run_id"))
+            if v is None:
+                doctor = "pending"
+            elif v.get("ok") is True:
+                doctor = True
+            elif v.get("ok") is False:
+                doctor, doctor_note = False, v.get("note") or "doctor failed"
+            # v.ok is None -> skipped -> leave doctor=None (no badge)
         out["jobs"].append({
             "id": d.get("run_id"), "project": project, "color": color,
             "status": status, "task": task, "model": d.get("model") or "",
@@ -116,6 +144,7 @@ def foreman_data():
             "label": d.get("label") or d.get("task_name") or "",
             "requester": d.get("requester_display_key") or "", "result": result,
             "created": d.get("created_at"), "started": started, "ended": ended,
+            "doctor": doctor, "doctorNote": doctor_note,
         })
     out["stats"] = counts
     out["roster"] = _roster()["order"]  # column order for the board
