@@ -22,18 +22,21 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # MonoClaw/
 # (name, emoji, admin_url_or_None, description, status, docs_url_or_None)
 #   status: "live" (hosted) · "hub" (served here) · "source" (code, not hosted)
 APP_PANELS = [
+    ("Ora", "🧘", "https://ora-backend-production.up.railway.app/admin",
+     "Meditation / community app. Live token-gated admin — the 'Volume Browser': browse generated meditation volumes, files and DB records. Served by the Ora backend on Railway.",
+     "live", None),
     ("Recilia", "🌙", BASE + "/app/recilia",
      "Tinnitus relief — grove, sound tools, and Vera the journey companion. Admin panel includes Vera's context graph.",
      "hub", BASE + "/app/recilia/doc/spec"),
+    ("Groundfloor (Raves)", "🎉", None,
+     "NYC events / outings. 'GROUNDFLOOR ADMIN' console (groundfloor-nyc/admin.html + projects/raves/admin.html) — served by its own backend; not currently on a public URL.",
+     "source", None),
     ("PayMe", "💸", None,
-     "Payments app. Admin page + observability API (apps/web AdminPage, apps/api routes/admin.py).",
+     "Payments app. Admin page + observability API (PayMe/apps/web AdminPage, apps/api routes/admin.py).",
      "source", None),
     ("Favorly", "🤝", None,
-     "Microfavors / Helping Hands. NestJS admin module (apps/api/src/admin).",
+     "Microfavors / Helping Hands. NestJS admin module (favorly/apps/api/src/admin).",
      "source", None),
-    ("Raves", "🎉", HUB + ":3004/admin.html",
-     "Events / outings tracker. Admin page (projects/raves/admin.html).",
-     "live", None),
 ]
 
 OPS = [
@@ -133,9 +136,9 @@ PAGE = r'''<!DOCTYPE html><html lang="en"><head>
   code{background:#0c111f;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12px}
 </style></head><body><div class="wrap">
   <div class="head"><div class="mark">⚙️</div><div>
-    <h1><b>Admin Hub</b></h1><div class="sub">Every app's admin panel, admin tools, and docs — one place.</div></div></div>
+    <h1><b>Admin Hub</b></h1><div class="sub">Every app's real admin dashboard, tools, and docs — one place.</div></div></div>
 
-  <h2>App admin panels</h2>
+  <h2>App admin dashboards</h2>
   <div class="grid">__PANELS__</div>
 
   <h2>Ops dashboards · OpenClaw</h2>
