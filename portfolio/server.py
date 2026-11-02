@@ -416,35 +416,35 @@ PAGE = r'''<!DOCTYPE html>
   .fm-stats{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;margin-top:4px}
   .fm-stats b{font-weight:800;color:var(--ink)}
   .fm-empty{color:var(--muted);font-size:14px;padding:10px 2px}
-  /* board: a horizontal row of project lanes */
-  .fm-board{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x proximity}
-  .fm-board::-webkit-scrollbar{height:8px}.fm-board::-webkit-scrollbar-thumb{background:#dbe3f0;border-radius:8px}
-  .fm-col{flex:0 0 288px;scroll-snap-align:start;background:#f7faff;border:1px solid #eaf0fb;
-    border-top:3px solid var(--accent,#94a3b8);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-width:0}
+  /* board: a full-width vertical list of job rows, grouped by project (no horizontal scroll) */
+  .fm-board{display:flex;flex-direction:column;gap:16px}
+  .fm-group{background:#f7faff;border:1px solid #eaf0fb;border-left:4px solid var(--accent,#94a3b8);
+    border-radius:14px;padding:12px 14px}
   .fm-col-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .fm-chip{width:10px;height:10px;border-radius:50%;background:var(--accent,#94a3b8);flex:0 0 auto;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#94a3b8) 18%,transparent)}
   .fm-col-name{font-weight:800;font-size:14px;letter-spacing:.01em}
   .fm-col-count{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid #e7edf7;border-radius:999px;padding:2px 8px}
-  .fm-col-body{display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:440px}
-  .fm-job{display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-radius:12px;background:#fff;border:1px solid #edf1f8;cursor:pointer;transition:border-color .12s,box-shadow .12s}
-  .fm-job:hover{border-color:#d9e2f3;box-shadow:0 4px 14px -8px rgba(37,99,235,.3)}
-  .fm-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:4px}
+  .fm-col-body{display:flex;flex-direction:column;gap:8px}
+  /* each subagent = one full-width row */
+  .fm-job{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;border-radius:12px;background:#fff;border:1px solid #edf1f8;cursor:pointer;transition:border-color .12s,box-shadow .12s,transform .12s}
+  .fm-job:hover{border-color:#d9e2f3;box-shadow:0 6px 18px -10px rgba(37,99,235,.35);transform:translateY(-1px)}
+  .fm-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px}
   .fm-dot.running{background:#2563eb;animation:fmpulse 1.4s infinite}
   .fm-dot.queued{background:#f59e0b}.fm-dot.done{background:#10b981}.fm-dot.failed{background:#ef4444}
   @keyframes fmpulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.45)}70%{box-shadow:0 0 0 7px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
   .fm-main{min-width:0;flex:1}
-  .fm-row1{display:flex;align-items:center;gap:7px}
+  .fm-row1{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .fm-badge{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
   .fm-badge.running{background:#e8efff;color:#2563eb}.fm-badge.queued{background:#fef3e2;color:#b45309}
   .fm-badge.done{background:#e6f7ef;color:#047857}.fm-badge.failed{background:#fdeaea;color:#b91c1c}
   .fm-elapsed{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .fm-task{margin:4px 0 0;font-size:12.5px;color:#2b3340;line-height:1.45;word-break:break-word;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .fm-job.open .fm-task{-webkit-line-clamp:unset;overflow:visible}
-  .fm-result{margin:5px 0 0;font-size:11.5px;color:var(--muted);line-height:1.4;
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .fm-job.open .fm-result{-webkit-line-clamp:unset;overflow:visible}
-  .fm-doc{margin:6px 0 0;font-size:10.5px;font-weight:700}
+  .fm-chev{color:#c3ccda;font-size:17px;font-weight:700;line-height:1;margin-left:2px;transition:color .12s,transform .12s}
+  .fm-job:hover .fm-chev{color:#2563eb;transform:translateX(2px)}
+  /* the full prompt, always visible and wrapping — no clamp, no side-scroll */
+  .fm-task{margin:5px 0 0;font-size:13px;color:#2b3340;line-height:1.5;word-break:break-word;white-space:pre-wrap}
+  .fm-result{margin:7px 0 0;font-size:11.5px;color:var(--muted);line-height:1.45;word-break:break-word;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .fm-doc{margin:7px 0 0;font-size:10.5px;font-weight:700}
   .fm-doc.ok{color:#047857}.fm-doc.bad{color:#b91c1c}.fm-doc.pending{color:var(--muted)}
   /* job detail modal */
   .fm-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
@@ -582,11 +582,12 @@ PAGE = r'''<!DOCTYPE html>
     var doc = j.doctor===true?'<div class="fm-doc ok">✓ verified</div>'
             : j.doctor===false?'<div class="fm-doc bad">✗ '+esc(j.doctorNote||'doctor failed')+'</div>'
             : (j.status==='done'&&j.doctor==='pending')?'<div class="fm-doc pending">· checking…</div>':'';
-    return '<div class="fm-job" data-id="'+esc(j.id)+'">'
+    return '<div class="fm-job" data-id="'+esc(j.id)+'" role="button" tabindex="0" aria-label="Open job details">'
       +'<span class="fm-dot '+j.status+'"></span>'
       +'<div class="fm-main"><div class="fm-row1">'
       +'<span class="fm-badge '+j.status+'">'+j.status+'</span>'
-      +'<span class="fm-elapsed">'+el+'</span></div>'
+      +'<span class="fm-elapsed">'+el+'</span>'
+      +'<span class="fm-chev" aria-hidden="true">›</span></div>'
       +'<div class="fm-task">'+esc(j.task||j.label||'(no task)')+'</div>'
       +(j.result?'<div class="fm-result">↳ '+esc(j.result)+'</div>':'')
       +doc+'</div></div>';
@@ -605,7 +606,7 @@ PAGE = r'''<!DOCTYPE html>
       boardEl.innerHTML=order.map(function(name){
         var g=groups[name].slice().sort(function(a,b){return (rank[a.status]-rank[b.status])||((b.created||0)-(a.created||0));});
         var live=g.filter(function(j){return j.status==='running';}).length;
-        return '<div class="fm-col" style="--accent:'+esc(colors[name])+'">'
+        return '<div class="fm-group" style="--accent:'+esc(colors[name])+'">'
           +'<div class="fm-col-head"><span class="fm-chip"></span>'
           +'<span class="fm-col-name">'+esc(name)+'</span>'
           +'<span class="fm-col-count">'+(live?live+' live · ':'')+g.length+'</span></div>'
@@ -645,9 +646,12 @@ PAGE = r'''<!DOCTYPE html>
     modalEl.hidden=false;
   }
   function closeModal(){openId=null;modalEl.hidden=true;}
-  boardEl.addEventListener('click',function(ev){
+  function openFromEl(c){if(!c)return;openId=c.getAttribute('data-id');if(byId[openId])renderModal(byId[openId]);}
+  boardEl.addEventListener('click',function(ev){openFromEl(ev.target.closest('.fm-job'));});
+  boardEl.addEventListener('keydown',function(ev){
+    if(ev.key!=='Enter'&&ev.key!==' ')return;
     var c=ev.target.closest('.fm-job');if(!c)return;
-    openId=c.getAttribute('data-id');if(byId[openId])renderModal(byId[openId]);
+    ev.preventDefault();openFromEl(c);
   });
   modalEl.addEventListener('click',function(ev){
     if(ev.target===modalEl||ev.target.closest('[data-close]'))closeModal();
