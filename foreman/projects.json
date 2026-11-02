@@ -3,14 +3,13 @@
   "projects": [
     { "slug": "creator-cut", "name": "Creator Cut", "color": "#2563eb", "repoDir": "/tmp/creator-cut", "doctorCmd": "npm -w server run check", "deployCmd": "railway up --service creator-cut" },
     { "slug": "recilia", "name": "Nightbloom", "color": "#22c55e", "repoDir": "/root/MonoClaw/recilia", "doctorCmd": "npx tsc --noEmit", "deployCmd": "npx expo export -p web && systemctl restart recilia-web" },
-    { "slug": "travelog", "name": "Trip Sync", "color": "#f59e0b", "repoDir": "/root/MonoClaw/travelog", "doctorCmd": null, "deployCmd": null },
+    { "slug": "travelog", "name": "Trip Sync", "color": "#f59e0b", "repoDir": "/root/MonoClaw/travelog", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
     { "slug": "open-home", "name": "openhome", "color": "#f5c977", "repoDir": "/root/MonoClaw/open-home", "doctorCmd": "node --experimental-strip-types --check services/hub/src/index.ts", "deployCmd": null },
-    { "slug": "rolodex", "name": "Rolodex", "color": "#a855f7", "repoDir": "/root/MonoClaw/rolodex", "doctorCmd": null, "deployCmd": null },
+    { "slug": "rolodex", "name": "Rolodex", "color": "#a855f7", "repoDir": "/root/MonoClaw/rolodex", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
     { "slug": "ora-health", "name": "Ora", "color": "#ec4899", "repoDir": "/root/MonoClaw/ora-health/ora-health", "doctorCmd": "npx tsc --noEmit", "deployCmd": null },
-    { "slug": "slipstream", "name": "Slipstream", "color": "#06b6d4", "repoDir": "/root/MonoClaw/slipstream", "doctorCmd": null, "deployCmd": null },
-    { "slug": "chase", "name": "Slipstream", "color": "#06b6d4", "repoDir": "/root/MonoClaw/chase", "doctorCmd": null, "deployCmd": null },
-    { "slug": "croppa", "name": "Croppa", "color": "#14b8a6", "repoDir": "/root/MonoClaw/croppa", "doctorCmd": null, "deployCmd": null },
-    { "slug": "inkling", "name": "Inkling", "color": "#8b5cf6", "repoDir": "/root/MonoClaw/inkling", "doctorCmd": null, "deployCmd": null },
+    { "slug": "chase", "name": "Slipstream", "color": "#06b6d4", "repoDir": "/root/MonoClaw/chase", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
+    { "slug": "croppa", "name": "Croppa", "color": "#14b8a6", "repoDir": "/root/MonoClaw/croppa", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
+    { "slug": "inkling", "name": "Inkling", "color": "#8b5cf6", "repoDir": "/root/MonoClaw/inkling", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
     { "slug": "foreman", "name": "Foreman", "color": "#0ea5e9", "repoDir": "/root/MonoClaw/foreman", "doctorCmd": null, "deployCmd": null },
     { "slug": "MonoClaw", "name": "MonoClaw", "color": "#64748b", "repoDir": "/root/MonoClaw", "doctorCmd": null, "deployCmd": null }
   ]
