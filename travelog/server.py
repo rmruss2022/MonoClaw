@@ -85,6 +85,13 @@ def init_db():
       best INTEGER DEFAULT 0, total INTEGER DEFAULT 0, completed INTEGER DEFAULT 0,
       created TEXT, updated TEXT);
     CREATE UNIQUE INDEX IF NOT EXISTS ix_quizprog ON quiz_progress(entry_id, device);
+    CREATE TABLE IF NOT EXISTS expenses(
+      id INTEGER PRIMARY KEY, trip_id INTEGER, payer TEXT, amount_cents INTEGER,
+      currency TEXT DEFAULT 'USD', description TEXT, created TEXT);
+    CREATE INDEX IF NOT EXISTS ix_expenses ON expenses(trip_id, id);
+    CREATE TABLE IF NOT EXISTS expense_shares(
+      expense_id INTEGER, member TEXT);
+    CREATE INDEX IF NOT EXISTS ix_eshares ON expense_shares(expense_id);
     """)
     # any job still marked "running" at startup lost its worker thread when the process stopped
     c.execute("UPDATE import_jobs SET state='interrupted', updated=? WHERE state='running'", (now(),))
@@ -118,6 +125,56 @@ def init_db():
 
 def now():
     return datetime.now(timezone.utc).isoformat()
+
+def expenses_payload(c, tid):
+    """Everything the Split tab needs: the members, the expenses (each with who
+    it was split among), each person's net balance, and the fewest transfers
+    that settle everyone up."""
+    members = [{"name": r["name"], "color": r["color"]}
+               for r in c.execute("SELECT name,color FROM trip_members WHERE trip_id=? ORDER BY id", (tid,)).fetchall()]
+    rows = c.execute("SELECT id,payer,amount_cents,currency,description,created FROM expenses "
+                     "WHERE trip_id=? ORDER BY id DESC", (tid,)).fetchall()
+    currency = rows[0]["currency"] if rows else "USD"
+    # net[name] in cents: positive = owed money back, negative = owes
+    net = {m["name"]: 0 for m in members}
+    expenses = []
+    for r in rows:
+        shares = [x["member"] for x in
+                  c.execute("SELECT member FROM expense_shares WHERE expense_id=?", (r["id"],)).fetchall()]
+        amt = r["amount_cents"] or 0
+        expenses.append({"id": r["id"], "payer": r["payer"], "amount_cents": amt,
+                         "currency": r["currency"] or "USD", "description": r["description"] or "",
+                         "created": r["created"], "shares": shares})
+        if not shares:
+            continue
+        net.setdefault(r["payer"], 0)
+        net[r["payer"]] += amt
+        # integer cents, remainder spread onto the first few so the split is exact
+        base, rem = divmod(amt, len(shares))
+        for i, person in enumerate(shares):
+            net.setdefault(person, 0)
+            net[person] -= base + (1 if i < rem else 0)
+    balances = []
+    for m in members:
+        n = net.get(m["name"], 0)
+        paid = sum(e["amount_cents"] for e in expenses if e["payer"] == m["name"])
+        balances.append({"name": m["name"], "color": m["color"], "net_cents": n, "paid_cents": paid})
+    # settle-up: greedily match the biggest debtor to the biggest creditor
+    debt = sorted([[k, v] for k, v in net.items() if v < -0], key=lambda x: x[1])      # most negative first
+    cred = sorted([[k, v] for k, v in net.items() if v > 0], key=lambda x: -x[1])       # most positive first
+    settle, i, j = [], 0, 0
+    while i < len(debt) and j < len(cred):
+        pay = min(-debt[i][1], cred[j][1])
+        if pay > 0:
+            settle.append({"from": debt[i][0], "to": cred[j][0], "amount_cents": pay})
+            debt[i][1] += pay
+            cred[j][1] -= pay
+        if debt[i][1] == 0:
+            i += 1
+        if cred[j][1] == 0:
+            j += 1
+    return {"members": members, "expenses": expenses, "balances": balances,
+            "settle": settle, "currency": currency}
 
 # ---- AI + geo backend ------------------------------------------------------
 
@@ -843,7 +900,7 @@ PAGE = r'''<!doctype html><html lang="en"><head>
 <link rel="apple-touch-icon" href="__BASE__/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Travelog</title>
+<title>Trip Sync</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&family=Newsreader:ital,opsz@0,6..72;1,6..72&display=swap" rel="stylesheet">
@@ -1363,11 +1420,43 @@ width:32px;height:32px;cursor:pointer;flex:none;display:flex;align-items:center;
 #impbar .impfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#f0b457);border-radius:5px;transition:width .4s ease}
 #impbar .impx{margin-left:auto;background:none;border:0;color:var(--muted);font-size:17px;cursor:pointer;line-height:1;padding:0 2px}
 #impbar.ok .impfill{background:#49b36b}#impbar.err .impfill{background:#d8574e}
+/* ---- shareable trip card ---- */
+.tcard-sheet{padding:16px 16px 22px}
+.tcard{position:relative;overflow:hidden;border-radius:22px;padding:24px 22px 20px;background:linear-gradient(145deg,#141019,#2a1c3a 55%,#0f1a2e);box-shadow:0 18px 50px rgba(0,0,0,.5);min-height:300px;display:flex;flex-direction:column}
+.tcard-glow{position:absolute;top:-80px;right:-60px;width:320px;height:320px;background:radial-gradient(circle,rgba(245,201,119,.33),transparent 70%);pointer-events:none}
+.tcard-brand{display:flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.14em;font-weight:700;color:rgba(235,232,248,.82)}
+.tcard-brand .ic{width:16px;height:16px}
+.tcard-body{margin-top:auto;padding-top:34px}
+.tcard-kicker{font-size:11px;letter-spacing:.13em;font-weight:700;color:var(--accent);text-transform:uppercase}
+.tcard-dest{margin:6px 0 8px;font-size:34px;line-height:1.05;font-weight:800;color:#fbfaff}
+.tcard-dates{font-size:15px;color:rgba(235,232,248,.7)}
+.tcard-stats{display:flex;gap:26px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)}
+.tcard-stat b{display:block;font-size:24px;font-weight:800;color:#fbfaff}
+.tcard-stat span{font-size:12px;color:rgba(235,232,248,.6)}
+.tcard-cta{display:flex;gap:10px;margin-top:16px}
+.tcard-cta .btn{flex:1}
+/* ---- Split (shared expenses) ---- */
+.splform input,.splform select{width:100%;background:var(--panel2,#1a1a24);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;margin-bottom:8px}
+.splrow{display:flex;gap:8px}.splrow select{flex:1}.splrow input{width:120px}
+.splrow2{display:flex;align-items:center;gap:10px;margin-top:4px}
+.splchks{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.splchk{display:inline-flex;align-items:center;gap:6px;background:var(--panel2,#1a1a24);border:1px solid var(--line);border-radius:999px;padding:4px 11px 4px 8px;font-size:13px;cursor:pointer}
+.splchk input{width:auto;margin:0}
+.splhd{font-weight:800;margin:18px 2px 8px;font-size:15px}
+.balrow,.setrow,.exprow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.balrow:last-child,.setrow:last-child,.exprow:last-child{border-bottom:0}
+.balnm{flex:1}.balv{font-weight:700;font-size:13px}.balv.pos{color:#3ddc97}.balv.neg{color:#ff6b6b}
+.setrow .ic{width:15px;height:15px;opacity:.7}.setrow .setv{margin-left:auto;font-weight:800}
+.setrow b{color:var(--text)}
+.exprow .expmain{flex:1;min-width:0}.exprow .expd{font-weight:600}
+.exprow .expamt{font-weight:800;white-space:nowrap}
+.iconbtn{background:none;border:0;color:var(--muted);cursor:pointer;padding:4px;border-radius:8px}
+.iconbtn:hover{color:#ff6b6b}.iconbtn .ic{width:17px;height:17px}
 </style></head><body>
 <header id="topbar">
   <div class="headrow">
     <span class="logo">__MARK__</span>
-    <h1>Trave<span>log</span></h1>
+    <h1>Trip<span>Sync</span></h1>
     <div class="tripselwrap" id="tripselwrap">
      <button class="tripsel" id="tripsel" style="display:none" onclick="openSelector()">
       <span class="tcover" id="tripselCov" data-ic="map" data-icsize="18"></span>
@@ -1385,6 +1474,7 @@ width:32px;height:32px;cursor:pointer;flex:none;display:flex;align-items:center;
   <button class="tab" data-t="map" data-ic="map" onclick="goTab('map')">Map</button>
   <button class="tab" data-t="memories" data-ic="film" onclick="goTab('memories')">Memories</button>
   <button class="tab" data-t="chat" data-ic="chat" onclick="goTab('chat')">Chat</button>
+  <button class="tab" data-t="split" data-ic="wallet" onclick="goTab('split')">Split</button>
 </nav>
 <canvas id="cv" style="display:none"></canvas>
 <script>
@@ -1395,6 +1485,8 @@ const esc=s=>(s||"").replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]
 
 // ---- inline SVG icon set (line style, inherits text color; replaces all emoji) ----
 const ICONS={
+ wallet:'<rect x="3" y="6" width="18" height="13" rx="2.4"/><path d="M3 9h18"/><path d="M16 13h2.5"/>',
+ scale:'<path d="M12 4v16M7 20h10M5 7l7-2 7 2"/><path d="M5 7 2.5 13a2.5 2.5 0 0 0 5 0L5 7Zm14 0-2.5 6a2.5 2.5 0 0 0 5 0L19 7Z"/>',
  pin:'<path d="M12 21s7-6.3 7-12a7 7 0 1 0-14 0c0 5.7 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/>',
  camera:'<path d="M3 9a2 2 0 0 1 2-2h1.5L8 5h8l1.5 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.2"/>',
  map:'<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>',
@@ -1571,7 +1663,7 @@ async function showJoin(token){
  let info;try{info=await api('/api/join/'+encodeURIComponent(token));}catch(e){info=null;}
  if(!info||!info.trip_id){
   el('app').innerHTML=`<div class="empty">This invite link isn't valid anymore.</div>
-   <button class="btn" onclick="clearJoinUrl();boot()">Go to Travelog</button>`;return;}
+   <button class="btn" onclick="clearJoinUrl();boot()">Go to Trip Sync</button>`;return;}
  const cov=info.cover?`<img src="${BASE}/collage/${info.cover}" style="width:100%;height:150px;object-fit:cover;border-radius:14px;margin-bottom:14px">`:'';
  el('app').innerHTML=`<div style="padding:20px 2px">
    ${cov}
@@ -1666,7 +1758,54 @@ function renderTab(){
  if(TAB==='map')return openMap();
  if(TAB==='memories')return renderMemories();
  if(TAB==='chat')return renderChat();
+ if(TAB==='split')return renderSplit();
 }
+
+// ---- Split: shared-expense tracking (Splitwise-style) ----
+function money(cents,cur){const v=(Math.abs(cents||0)/100).toFixed(2);
+ const sym=cur==='USD'?'$':cur==='EUR'?'€':cur==='GBP'?'£':'';return sym?sym+v:v+' '+(cur||'');}
+async function renderSplit(){
+ const app=el('app');if(!TRIP)return;
+ app.innerHTML=`<div class="tabhead"><h2>${ic('wallet')} Split</h2></div><div class="muted sm">Loading…</div>`;
+ let d;try{d=await api('/api/trips/'+TRIP.id+'/expenses');}catch(e){app.innerHTML=`<div class="tabhead"><h2>${ic('wallet')} Split</h2></div><div class="empty">Couldn't load expenses.</div>`;return;}
+ const mem=d.members||[],cur=d.currency||'USD';
+ if(!mem.length){app.innerHTML=`<div class="tabhead"><h2>${ic('wallet')} Split</h2></div>
+   <div class="empty">Add the people on this trip first — tap <b>Invite</b> on the trip home — then you can split expenses between them.</div>`;return;}
+ const opts=mem.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+ const checks=mem.map(m=>`<label class="splchk"><input type="checkbox" class="spl-mem" value="${esc(m.name)}" checked>${avatarHTML(m.name,m.color,22)}<span>${esc(m.name)}</span></label>`).join('');
+ const settle=(d.settle||[]).length?d.settle.map(s=>`<div class="setrow"><span>${esc(s.from)}</span>${ic('send')}<b>${esc(s.to)}</b><span class="setv">${money(s.amount_cents,cur)}</span></div>`).join(''):'<div class="muted sm">Everyone\'s square 🎉</div>';
+ const bal=(d.balances||[]).map(b=>{const n=b.net_cents||0,cls=n>0?'pos':n<0?'neg':'';
+   const lbl=n>0?('gets back '+money(n,cur)):n<0?('owes '+money(-n,cur)):'settled up';
+   return `<div class="balrow">${avatarHTML(b.name,b.color,28)}<span class="balnm">${esc(b.name)}</span><span class="balv ${cls}">${lbl}</span></div>`;}).join('');
+ const list=(d.expenses||[]).length?d.expenses.map(e=>`<div class="exprow"><div class="expmain">
+     <div class="expd">${esc(e.description||'Expense')}</div>
+     <div class="muted sm">${esc(e.payer)} paid · split ${e.shares.length} way${e.shares.length===1?'':'s'}</div></div>
+     <div class="expamt">${money(e.amount_cents,e.currency||cur)}</div>
+     <button class="iconbtn" title="Delete" onclick="delExpense(${e.id})">${ic('trash')}</button></div>`).join(''):'<div class="muted sm">No expenses yet — add the first one above.</div>';
+ app.innerHTML=`<div class="tabhead"><h2>${ic('wallet')} Split</h2></div>
+   <div class="card splform">
+     <input id="exp_desc" placeholder="What was it? (dinner, taxi, hotel…)">
+     <div class="splrow"><select id="exp_payer" title="Who paid">${opts}</select>
+       <input id="exp_amt" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+     <div class="muted sm" style="margin:2px 0">Split between</div>
+     <div class="splchks">${checks}</div>
+     <div class="splrow2"><button class="btn" onclick="addExpense()">${ic('plus')}Add expense</button><span id="expMsg" class="muted sm"></span></div>
+   </div>
+   <div class="splhd">Who owes who</div><div class="card">${settle}</div>
+   <div class="splhd">Balances</div><div class="card balcard">${bal}</div>
+   <div class="splhd">Expenses</div>${list}`;
+}
+async function addExpense(){
+ const desc=el('exp_desc').value,payer=el('exp_payer').value,amount=el('exp_amt').value;
+ const members=[...document.querySelectorAll('.spl-mem:checked')].map(c=>c.value);
+ if(!amount||Number(amount)<=0){el('expMsg').textContent='Enter an amount.';return;}
+ if(!members.length){el('expMsg').textContent='Pick who to split between.';return;}
+ el('expMsg').textContent='Saving…';
+ let r;try{r=await api('/api/trips/'+TRIP.id+'/expenses',{method:'POST',body:JSON.stringify({payer,amount:Number(amount),description:desc,members})});}catch(e){el('expMsg').textContent='Could not save.';return;}
+ if(r&&r.error){el('expMsg').textContent=r.error;return;}
+ renderSplit();
+}
+async function delExpense(id){if(!confirm('Delete this expense?'))return;try{await api('/api/expenses/'+id,{method:'DELETE'});}catch(e){}renderSplit();}
 
 function tripSubhead(){const t=TRIP;const dates=[t.start_date,t.end_date].filter(Boolean).join(' → ');
  return `<div class="muted sm" style="margin:2px 0 12px">${esc(t.destination||'')}${dates?' · '+esc(dates):''}</div>`;}
@@ -1713,11 +1852,12 @@ async function openShareSheet(){
    <div class="iv-cta">
      ${canNative?`<button class="btn iv-primary" onclick="nativeShare()">${ic('users')} Share invite</button>`:''}
      <button class="btn ${canNative?'ghost':''} iv-copy" onclick="copyShare()"><span class="iv-link">${esc(link)}</span><span class="iv-copybtn">Copy</span></button>
+     <button class="btn ghost" onclick="openTripCard()">${ic('image')} Make a shareable trip card</button>
    </div>
    <div class="iv-chans">
-     <a class="iv-chan" href="sms:?&body=${encodeURIComponent('Join my trip on Travelog: '+link)}">${ic('chat')}<span>Messages</span></a>
-     <a class="iv-chan" href="https://wa.me/?text=${encodeURIComponent('Join my trip on Travelog: '+link)}" target="_blank" rel="noopener">${ic('users')}<span>WhatsApp</span></a>
-     <a class="iv-chan" href="mailto:?subject=${encodeURIComponent('Join my trip: '+TRIP.title)}&body=${encodeURIComponent('Come travel '+TRIP.title+' with me on Travelog — add your photos and journal:\\n\\n'+link)}">${ic('mail')}<span>Email</span></a>
+     <a class="iv-chan" href="sms:?&body=${encodeURIComponent('Join my trip on Trip Sync: '+link)}">${ic('chat')}<span>Messages</span></a>
+     <a class="iv-chan" href="https://wa.me/?text=${encodeURIComponent('Join my trip on Trip Sync: '+link)}" target="_blank" rel="noopener">${ic('users')}<span>WhatsApp</span></a>
+     <a class="iv-chan" href="mailto:?subject=${encodeURIComponent('Join my trip: '+TRIP.title)}&body=${encodeURIComponent('Come travel '+TRIP.title+' with me on Trip Sync — add your photos and journal:\\n\\n'+link)}">${ic('mail')}<span>Email</span></a>
    </div>
    ${crew.length?`<div class="iv-crew"><div class="iv-crewhd">${crewLine}</div>${rows}</div>`:''}
  </div>`);
@@ -1725,7 +1865,7 @@ async function openShareSheet(){
 function nativeShare(){
  if(!SHARE_LINK)return;
  const title=TRIP?('Join my trip: '+TRIP.title):'Join my trip';
- if(navigator.share){navigator.share({title:title,text:'Travel '+(TRIP?TRIP.title:'')+' together on Travelog — add your photos and journal.',url:SHARE_LINK}).catch(()=>{});}
+ if(navigator.share){navigator.share({title:title,text:'Travel '+(TRIP?TRIP.title:'')+' together on Trip Sync — add your photos and journal.',url:SHARE_LINK}).catch(()=>{});}
  else copyShare();
 }
 function copyShare(){const v=SHARE_LINK||'';if(!v)return;
@@ -1733,6 +1873,62 @@ function copyShare(){const v=SHARE_LINK||'';if(!v)return;
  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(v).then(done).catch(()=>fallbackCopy(v,done));}
  else fallbackCopy(v,done);}
 function fallbackCopy(v,done){try{const t=document.createElement('textarea');t.value=v;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);done();}catch(e){toast('Copy the link manually');}}
+
+// ---- shareable trip card: a designed summary you can share/download as an image ----
+let TCARD_BLOB=null, TCARD_URL='';
+function tripDateStr(){const f=d=>{if(!d)return'';try{return new Date(d+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(_){return d;}};
+ const s=TRIP&&TRIP.start_date, e=TRIP&&TRIP.end_date; if(s&&e&&s!==e)return f(s)+' – '+f(e); return f(s||e||'');}
+async function openTripCard(){
+ if(!TRIP){toast('Open a trip first');return;}
+ const dest=TRIP.destination||TRIP.title||'My Trip', dates=tripDateStr();
+ const nE=(TRIP.entries||[]).length, nP=(TRIP.photos||[]).length;
+ let crew=1; try{const d=await api('/api/trips/'+TRIP.id+'/members');crew=Math.max(1,(d.members||[]).length);}catch(_){}
+ sheet(`<div class="tcard-sheet">
+   <div class="tcard" id="tcardPreview">
+     <div class="tcard-glow"></div>
+     <div class="tcard-brand">${ic('map')} TRIP SYNC</div>
+     <div class="tcard-body">
+       <div class="tcard-kicker">${esc(TRIP.title||'Trip')}</div>
+       <h2 class="tcard-dest">${esc(dest)}</h2>
+       <div class="tcard-dates">${esc(dates)||'&nbsp;'}</div>
+     </div>
+     <div class="tcard-stats">
+       <div class="tcard-stat"><b>${nE}</b><span>place${nE===1?'':'s'}</span></div>
+       <div class="tcard-stat"><b>${nP}</b><span>photo${nP===1?'':'s'}</span></div>
+       <div class="tcard-stat"><b>${crew}</b><span>traveler${crew===1?'':'s'}</span></div>
+     </div>
+   </div>
+   <div class="tcard-cta">
+     <button class="btn iv-primary" onclick="shareTripCard()">${ic('send')} Share card</button>
+     <button class="btn ghost" onclick="downloadTripCard()">${ic('image')} Download</button>
+   </div>
+ </div>`);
+ renderTripCardPNG(dest,dates,nE,nP,crew);
+}
+function tcWrap(g,text,x,y,maxW,lh){const words=(text||'').split(' ');let line='',yy=y;
+ words.forEach(w=>{const t=line?line+' '+w:w;if(g.measureText(t).width>maxW&&line){g.fillText(line,x,yy);line=w;yy+=lh;}else line=t;});if(line)g.fillText(line,x,yy);return yy;}
+function renderTripCardPNG(dest,dates,nE,nP,crew){try{
+ const W=1080,H=1350,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+ const bg=g.createLinearGradient(0,0,W,H);bg.addColorStop(0,'#141019');bg.addColorStop(.55,'#2a1c3a');bg.addColorStop(1,'#0f1a2e');g.fillStyle=bg;g.fillRect(0,0,W,H);
+ const rg=g.createRadialGradient(W*0.8,H*0.18,40,W*0.8,H*0.18,620);rg.addColorStop(0,'rgba(245,201,119,.33)');rg.addColorStop(1,'rgba(245,201,119,0)');g.fillStyle=rg;g.fillRect(0,0,W,H);
+ g.textAlign='left';
+ g.fillStyle='rgba(235,232,248,.85)';g.font='700 34px -apple-system,Segoe UI,Roboto,sans-serif';g.fillText('✦  TRIP SYNC',90,150);
+ g.fillStyle='rgba(245,201,119,.95)';g.font='700 38px -apple-system,Segoe UI,Roboto,sans-serif';g.fillText(((TRIP.title||'').toUpperCase()).slice(0,42),90,H*0.52-150);
+ g.fillStyle='#fbfaff';g.font='800 108px -apple-system,Segoe UI,Roboto,sans-serif';
+ const endY=tcWrap(g,dest,88,H*0.52,W-176,112);
+ g.fillStyle='rgba(235,232,248,.72)';g.font='400 46px -apple-system,Segoe UI,Roboto,sans-serif';if(dates)g.fillText(dates,90,endY+90);
+ const stats=[[nE,'places'],[nP,'photos'],[crew,'travelers']];let x=90;const y=H-150;
+ g.strokeStyle='rgba(255,255,255,.12)';g.lineWidth=2;g.beginPath();g.moveTo(90,y-80);g.lineTo(W-90,y-80);g.stroke();
+ stats.forEach(([n,l])=>{g.fillStyle='#fbfaff';g.font='800 66px -apple-system,Segoe UI,Roboto,sans-serif';g.fillText(String(n),x,y);const w=g.measureText(String(n)).width;g.fillStyle='rgba(235,232,248,.6)';g.font='400 32px -apple-system,Segoe UI,Roboto,sans-serif';g.fillText(l,x,y+44);x+=Math.max(w,110)+78;});
+ cv.toBlob(b=>{if(!b)return;if(TCARD_URL)URL.revokeObjectURL(TCARD_URL);TCARD_BLOB=b;TCARD_URL=URL.createObjectURL(b);},'image/png');
+}catch(e){}}
+function downloadTripCard(){if(!TCARD_URL){toast('Card still rendering…');return;}
+ const a=document.createElement('a');a.href=TCARD_URL;a.download=(((TRIP&&TRIP.title)||'trip').replace(/[^a-z0-9]+/gi,'-').toLowerCase())+'-tripsync.png';
+ document.body.appendChild(a);a.click();a.remove();toast('Card downloaded ✓');}
+async function shareTripCard(){
+ if(TCARD_BLOB&&navigator.canShare){const f=new File([TCARD_BLOB],'trip-card.png',{type:'image/png'});
+  if(navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:(TRIP&&TRIP.title)||'My trip',text:'My trip on Trip Sync'});return;}catch(e){if(e&&e.name==='AbortError')return;}}}
+ downloadTripCard();}
 
 // ---- Places tab: a compact list of destinations; tap one to open its sections ----
 function renderPlaces(){const t=TRIP;
@@ -2706,7 +2902,7 @@ paintStaticIcons();initDnD();boot();
 </script></body></html>'''
 
 MANIFEST = json.dumps({
-    "name": "Travelog", "short_name": "Travelog",
+    "name": "Trip Sync", "short_name": "Trip Sync",
     "start_url": (BASE + "/") or "/", "scope": (BASE + "/") or "/",
     "display": "standalone", "background_color": "#14110f", "theme_color": "#14110f",
     "description": "A travel journal with an AI companion — places, people, ideas, and collages.",
@@ -2716,7 +2912,7 @@ MANIFEST = json.dumps({
     ],
 })
 
-SW = ("const C='travelog-v4';const SHELL=['__B__/','__B__/manifest.webmanifest','__B__/icon-192.png','__B__/icon-512.png'];"
+SW = ("const C='tripsync-v5';const SHELL=['__B__/','__B__/manifest.webmanifest','__B__/icon-192.png','__B__/icon-512.png'];"
       "self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL).catch(()=>{})))});"
       "self.addEventListener('activate',e=>{self.clients.claim();e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))))});"
       "self.addEventListener('fetch',e=>{const u=new URL(e.request.url);"
@@ -2881,6 +3077,13 @@ class H(BaseHTTPRequestHandler):
             finally:
                 c.close()
             return self._json(200, {"members": out, "share_token": tok["share_token"] if tok else None})
+        m = re.match(r"/api/trips/(\d+)/expenses$", p)
+        if m:
+            tid = int(m.group(1)); c = db()
+            try:
+                return self._json(200, expenses_payload(c, tid))
+            finally:
+                c.close()
         m = re.match(r"/api/join/([A-Za-z0-9_-]+)$", p)
         if m:
             c = db()
@@ -3110,6 +3313,31 @@ class H(BaseHTTPRequestHandler):
                               (tid, dev, name, color, now(), now()))
                 c.commit()
                 return self._json(200, {"name": name, "color": color})
+
+            m = re.match(r"/api/trips/(\d+)/expenses$", p)
+            if m:
+                tid = int(m.group(1))
+                payer = (b.get("payer") or "").strip()[:40]
+                desc = (b.get("description") or "").strip()[:200]
+                currency = (b.get("currency") or "USD").strip()[:8] or "USD"
+                shares = [str(x).strip()[:40] for x in (b.get("members") or []) if str(x).strip()]
+                try:
+                    cents = round(float(b.get("amount") or 0) * 100)
+                except (TypeError, ValueError):
+                    cents = 0
+                if not payer:
+                    return self._json(400, {"error": "who paid?"})
+                if cents <= 0:
+                    return self._json(400, {"error": "enter an amount greater than zero"})
+                if not shares:
+                    return self._json(400, {"error": "pick at least one person to split between"})
+                cur = c.execute("INSERT INTO expenses(trip_id,payer,amount_cents,currency,description,created) "
+                                "VALUES(?,?,?,?,?,?)", (tid, payer, cents, currency, desc, now()))
+                eid = cur.lastrowid
+                for person in shares:
+                    c.execute("INSERT INTO expense_shares(expense_id,member) VALUES(?,?)", (eid, person))
+                c.commit()
+                return self._json(200, expenses_payload(c, tid))
 
             if p == "/api/entries":
                 eid = b.get("id")
@@ -3442,7 +3670,7 @@ class H(BaseHTTPRequestHandler):
                     for cat, items in by.items():
                         ctx.append(f"  [{cat}] " + " | ".join(items[:15]))
                 system = (
-                    "You are Travelog's trip companion — a warm, knowledgeable travel guide and journaling buddy for the "
+                    "You are Trip Sync's trip companion — a warm, knowledgeable travel guide and journaling buddy for the "
                     "specific trip below. Chat naturally: give concrete recommendations, history, planning help and reflective "
                     "prompts, grounded in the trip context. Keep replies conversational and fairly concise.\n\n"
                     "YOU ALSO KEEP A STRUCTURED NOTEBOOK for this trip. Whenever the conversation surfaces something worth "
@@ -3609,7 +3837,17 @@ class H(BaseHTTPRequestHandler):
                 c.execute("DELETE FROM chat_messages WHERE trip_id=?", (tid,))
                 c.execute("DELETE FROM trip_notes WHERE trip_id=?", (tid,))
                 c.execute("DELETE FROM trip_members WHERE trip_id=?", (tid,))
+                for ex in c.execute("SELECT id FROM expenses WHERE trip_id=?", (tid,)).fetchall():
+                    c.execute("DELETE FROM expense_shares WHERE expense_id=?", (ex["id"],))
+                c.execute("DELETE FROM expenses WHERE trip_id=?", (tid,))
                 c.execute("DELETE FROM trips WHERE id=?", (tid,))
+                c.commit()
+                return self._json(200, {"ok": True})
+            m = re.match(r"/api/expenses/(\d+)$", p)
+            if m:
+                eid = int(m.group(1))
+                c.execute("DELETE FROM expense_shares WHERE expense_id=?", (eid,))
+                c.execute("DELETE FROM expenses WHERE id=?", (eid,))
                 c.commit()
                 return self._json(200, {"ok": True})
             m = re.match(r"/api/notes/(\d+)$", p)
