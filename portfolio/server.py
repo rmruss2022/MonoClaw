@@ -15,16 +15,46 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # ---- Foreman: live subagent activity, read from OpenClaw's state DB ----
 STATE_DB = os.environ.get("OPENCLAW_STATE_DB", "/root/.openclaw/state/openclaw.sqlite")
-PROJECT_NAMES = {
-    "creator-cut": "Creator Cut", "recilia": "Nightbloom", "travelog": "Trip Sync",
-    "open-home": "openhome", "rolodex": "Rolodex", "ora-health": "Ora",
-    "foreman": "Foreman", "MonoClaw": "MonoClaw", "slipstream": "Slipstream",
-    "chase": "Slipstream", "croppa": "Croppa", "inkling": "Inkling",
-}
-def _proj(wd):
-    if not wd:
-        return "—"
-    return PROJECT_NAMES.get(os.path.basename(wd.rstrip("/")), os.path.basename(wd.rstrip("/")))
+ROSTER_PATH = os.environ.get("FOREMAN_ROSTER", "/root/MonoClaw/foreman/projects.json")
+_ROSTER_CACHE = {"mtime": 0, "by_slug": {}, "order": []}
+_FALLBACK_COLOR = "#94a3b8"
+
+def _roster():
+    """Load foreman/projects.json (cached by mtime): slug -> {name,color}, plus
+    the column order. The roster is the single source of truth for lanes."""
+    try:
+        m = os.path.getmtime(ROSTER_PATH)
+    except OSError:
+        return _ROSTER_CACHE
+    if m != _ROSTER_CACHE["mtime"]:
+        by_slug, order, seen = {}, [], set()
+        try:
+            with open(ROSTER_PATH) as f:
+                for p in (json.load(f).get("projects") or []):
+                    slug, name = p.get("slug"), p.get("name") or p.get("slug")
+                    color = p.get("color") or _FALLBACK_COLOR
+                    if not slug:
+                        continue
+                    by_slug[slug] = {"name": name, "color": color}
+                    if name not in seen:
+                        order.append({"name": name, "color": color}); seen.add(name)
+        except Exception:
+            pass
+        _ROSTER_CACHE.update(mtime=m, by_slug=by_slug, order=order)
+    return _ROSTER_CACHE
+
+def _project_of(label, workspace_dir):
+    """Resolve a job's project (name,color): prefer the 'project:jobid' label
+    prefix, else the workspace folder basename, matched against the roster."""
+    r = _roster()["by_slug"]
+    key = None
+    if label and ":" in label:
+        key = label.split(":", 1)[0]
+    elif workspace_dir:
+        key = os.path.basename(workspace_dir.rstrip("/"))
+    if key and key in r:
+        return r[key]["name"], r[key]["color"]
+    return (key or "—"), _FALLBACK_COLOR
 
 def foreman_data():
     """Snapshot of subagent runs from OpenClaw's state DB, newest first."""
@@ -78,14 +108,9 @@ def foreman_data():
             if len(result) > 220:
                 result = result[:217] + "…"
         # prefer the "project:jobid" label convention; fall back to the workspace dir
-        lbl = (d.get("label") or "")
-        if ":" in lbl:
-            pfx = lbl.split(":", 1)[0]
-            project = PROJECT_NAMES.get(pfx, pfx)
-        else:
-            project = _proj(d.get("workspace_dir"))
+        project, color = _project_of(d.get("label") or "", d.get("workspace_dir"))
         out["jobs"].append({
-            "id": d.get("run_id"), "project": project,
+            "id": d.get("run_id"), "project": project, "color": color,
             "status": status, "task": task, "model": d.get("model") or "",
             "mode": d.get("spawn_mode") or "", "elapsed": elapsed,
             "label": d.get("label") or d.get("task_name") or "",
@@ -93,6 +118,7 @@ def foreman_data():
             "created": d.get("created_at"), "started": started, "ended": ended,
         })
     out["stats"] = counts
+    out["roster"] = _roster()["order"]  # column order for the board
     return out
 
 PORT = int(os.environ.get("PORTFOLIO_PORT", "18824"))
@@ -343,32 +369,47 @@ PAGE = r'''<!DOCTYPE html>
   .todo-foot{margin-top:14px;display:flex;justify-content:flex-end}
   .todo-clear{border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer}
   .todo-clear:hover{color:#ec4899}
-  /* Foreman — live subagent activity */
-  .foreman{position:relative;border-radius:20px;padding:22px;max-width:720px;
+  /* Foreman — live subagent mission control (per-project kanban) */
+  .foreman{position:relative;border-radius:20px;padding:22px;max-width:1120px;
     box-shadow:0 1px 2px rgba(20,23,30,.04),0 18px 44px -14px rgba(37,99,235,.22);
     background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#2563eb,#06b6d4,#22d3ee) border-box;border:1.5px solid transparent}
-  .fm-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+  .fm-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:12px}
   .fm-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
     background:linear-gradient(135deg,#2563eb,#06b6d4);-webkit-background-clip:text;background-clip:text;color:transparent}
   .fm-title{margin:3px 0 0;font-size:21px}
-  .fm-stats{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+  .fm-stats{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;margin-top:4px}
   .fm-stats b{font-weight:800;color:var(--ink)}
-  .fm-list{display:flex;flex-direction:column;gap:8px}
   .fm-empty{color:var(--muted);font-size:14px;padding:10px 2px}
-  .fm-job{display:flex;align-items:flex-start;gap:11px;padding:11px 13px;border-radius:14px;background:#f7faff;border:1px solid #eaf0fb}
-  .fm-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px}
+  /* board: a horizontal row of project lanes */
+  .fm-board{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x proximity}
+  .fm-board::-webkit-scrollbar{height:8px}.fm-board::-webkit-scrollbar-thumb{background:#dbe3f0;border-radius:8px}
+  .fm-col{flex:0 0 288px;scroll-snap-align:start;background:#f7faff;border:1px solid #eaf0fb;
+    border-top:3px solid var(--accent,#94a3b8);border-radius:14px;padding:12px;display:flex;flex-direction:column;min-width:0}
+  .fm-col-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .fm-chip{width:10px;height:10px;border-radius:50%;background:var(--accent,#94a3b8);flex:0 0 auto;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent,#94a3b8) 18%,transparent)}
+  .fm-col-name{font-weight:800;font-size:14px;letter-spacing:.01em}
+  .fm-col-count{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid #e7edf7;border-radius:999px;padding:2px 8px}
+  .fm-col-body{display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:440px}
+  .fm-job{display:flex;align-items:flex-start;gap:10px;padding:10px 11px;border-radius:12px;background:#fff;border:1px solid #edf1f8;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+  .fm-job:hover{border-color:#d9e2f3;box-shadow:0 4px 14px -8px rgba(37,99,235,.3)}
+  .fm-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:4px}
   .fm-dot.running{background:#2563eb;animation:fmpulse 1.4s infinite}
   .fm-dot.queued{background:#f59e0b}.fm-dot.done{background:#10b981}.fm-dot.failed{background:#ef4444}
   @keyframes fmpulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.45)}70%{box-shadow:0 0 0 7px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
   .fm-main{min-width:0;flex:1}
-  .fm-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .fm-proj{font-weight:700;font-size:14px}
-  .fm-badge{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
+  .fm-row1{display:flex;align-items:center;gap:7px}
+  .fm-badge{font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
   .fm-badge.running{background:#e8efff;color:#2563eb}.fm-badge.queued{background:#fef3e2;color:#b45309}
   .fm-badge.done{background:#e6f7ef;color:#047857}.fm-badge.failed{background:#fdeaea;color:#b91c1c}
-  .fm-elapsed{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-  .fm-task{margin:3px 0 0;font-size:13px;color:#2b3340;line-height:1.45;word-break:break-word}
-  .fm-result{margin:4px 0 0;font-size:12px;color:var(--muted);line-height:1.4}
+  .fm-elapsed{margin-left:auto;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .fm-task{margin:4px 0 0;font-size:12.5px;color:#2b3340;line-height:1.45;word-break:break-word;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .fm-job.open .fm-task{-webkit-line-clamp:unset;overflow:visible}
+  .fm-result{margin:5px 0 0;font-size:11.5px;color:var(--muted);line-height:1.4;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .fm-job.open .fm-result{-webkit-line-clamp:unset;overflow:visible}
+  .fm-doc{margin:6px 0 0;font-size:10.5px;font-weight:700}
+  .fm-doc.ok{color:#047857}.fm-doc.bad{color:#b91c1c}.fm-doc.pending{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -424,7 +465,7 @@ PAGE = r'''<!DOCTYPE html>
       </div>
       <span class="fm-stats" id="fmStats"></span>
     </div>
-    <div id="fmList" class="fm-list"></div>
+    <div id="fmBoard" class="fm-board"></div>
   </div>
 </section>
 
@@ -464,30 +505,53 @@ PAGE = r'''<!DOCTYPE html>
   clearBtn.onclick=function(){todos=todos.filter(function(t){return !t.done;});save();render();};
   render();
 })();
-// ---- Foreman live panel: poll subagent activity ----
+// ---- Foreman mission control: per-project kanban of live subagents ----
 (function(){
-  var listEl=document.getElementById('fmList'),statsEl=document.getElementById('fmStats');
-  if(!listEl)return;
-  var order={running:0,queued:1,failed:2,done:3};
+  var boardEl=document.getElementById('fmBoard'),statsEl=document.getElementById('fmStats');
+  if(!boardEl)return;
+  var rank={running:0,queued:1,failed:2,done:3};
+  var open={};  // run id -> expanded, preserved across polls
   function fmt(s){s=s||0;if(s<60)return s+'s';var m=Math.floor(s/60);if(m<60)return m+'m '+(s%60)+'s';var h=Math.floor(m/60);return h+'h '+(m%60)+'m';}
   function esc(s){return (s||'').replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function card(j){
+    var el=(j.status==='running')?fmt(j.elapsed):((j.status==='done'||j.status==='failed')?('took '+fmt(j.elapsed)):'');
+    var doc = j.doctor===true?'<div class="fm-doc ok">✓ verified</div>'
+            : j.doctor===false?'<div class="fm-doc bad">✗ '+esc(j.doctorNote||'doctor failed')+'</div>'
+            : (j.status==='done'&&j.doctor==='pending')?'<div class="fm-doc pending">· checking…</div>':'';
+    return '<div class="fm-job'+(open[j.id]?' open':'')+'" data-id="'+esc(j.id)+'">'
+      +'<span class="fm-dot '+j.status+'"></span>'
+      +'<div class="fm-main"><div class="fm-row1">'
+      +'<span class="fm-badge '+j.status+'">'+j.status+'</span>'
+      +'<span class="fm-elapsed">'+el+'</span></div>'
+      +'<div class="fm-task">'+esc(j.task||j.label||'(no task)')+'</div>'
+      +(j.result?'<div class="fm-result">↳ '+esc(j.result)+'</div>':'')
+      +doc+'</div></div>';
+  }
   function draw(d){
-    var jobs=(d.jobs||[]).slice().sort(function(a,b){return (order[a.status]-order[b.status])||((b.created||0)-(a.created||0));});
-    var s=d.stats||{};
+    var jobs=d.jobs||[],s=d.stats||{};
     statsEl.innerHTML='<b>'+(s.running||0)+'</b> running · '+(s.queued||0)+' queued · '+(s.done||0)+' done'+((s.failed||0)?' · <b style="color:#ef4444">'+s.failed+' failed</b>':'');
-    if(!jobs.length){listEl.innerHTML='<div class="fm-empty">No subagents yet — send a task in Telegram and watch them light up here.</div>';return;}
-    listEl.innerHTML=jobs.map(function(j){
-      var el=(j.status==='running')?fmt(j.elapsed):((j.status==='done'||j.status==='failed')?('took '+fmt(j.elapsed)):'');
-      return '<div class="fm-job"><span class="fm-dot '+j.status+'"></span>'
-        +'<div class="fm-main"><div class="fm-row1">'
-        +'<span class="fm-proj">'+esc(j.project)+'</span>'
-        +'<span class="fm-badge '+j.status+'">'+j.status+'</span>'
-        +'<span class="fm-elapsed">'+el+'</span></div>'
-        +'<div class="fm-task">'+esc(j.task||j.label||'(no task)')+'</div>'
-        +(j.result?'<div class="fm-result">↳ '+esc(j.result)+'</div>':'')
-        +'</div></div>';
+    if(!jobs.length){boardEl.innerHTML='<div class="fm-empty">No subagents yet — send a task in Telegram and watch them light up here.</div>';return;}
+    // group by project, keep each project's accent colour
+    var groups={},colors={};
+    jobs.forEach(function(j){(groups[j.project]=groups[j.project]||[]).push(j);colors[j.project]=j.color||'#94a3b8';});
+    // column order: roster first, then any extra projects that have jobs
+    var order=[],seen={};
+    (d.roster||[]).forEach(function(p){if(groups[p.name]&&!seen[p.name]){order.push(p.name);seen[p.name]=1;colors[p.name]=colors[p.name]||p.color;}});
+    Object.keys(groups).forEach(function(n){if(!seen[n]){order.push(n);seen[n]=1;}});
+    boardEl.innerHTML=order.map(function(name){
+      var g=groups[name].slice().sort(function(a,b){return (rank[a.status]-rank[b.status])||((b.created||0)-(a.created||0));});
+      var live=g.filter(function(j){return j.status==='running';}).length;
+      return '<div class="fm-col" style="--accent:'+esc(colors[name])+'">'
+        +'<div class="fm-col-head"><span class="fm-chip"></span>'
+        +'<span class="fm-col-name">'+esc(name)+'</span>'
+        +'<span class="fm-col-count">'+(live?live+' live · ':'')+g.length+'</span></div>'
+        +'<div class="fm-col-body">'+g.map(card).join('')+'</div></div>';
     }).join('');
   }
+  boardEl.addEventListener('click',function(ev){
+    var c=ev.target.closest('.fm-job');if(!c)return;
+    var id=c.getAttribute('data-id');open[id]=!open[id];c.classList.toggle('open',open[id]);
+  });
   function tick(){fetch('api/foreman',{cache:'no-store'}).then(function(r){return r.json();}).then(draw).catch(function(){});}
   tick();setInterval(tick,2500);
 })();
