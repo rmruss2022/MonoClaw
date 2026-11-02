@@ -87,12 +87,24 @@ def init_db():
     CREATE UNIQUE INDEX IF NOT EXISTS ix_quizprog ON quiz_progress(entry_id, device);
     CREATE TABLE IF NOT EXISTS expenses(
       id INTEGER PRIMARY KEY, trip_id INTEGER, payer TEXT, amount_cents INTEGER,
-      currency TEXT DEFAULT 'USD', description TEXT, created TEXT);
+      currency TEXT DEFAULT 'USD', description TEXT, created TEXT,
+      source TEXT DEFAULT 'manual', external_id TEXT);
     CREATE INDEX IF NOT EXISTS ix_expenses ON expenses(trip_id, id);
     CREATE TABLE IF NOT EXISTS expense_shares(
       expense_id INTEGER, member TEXT);
     CREATE INDEX IF NOT EXISTS ix_eshares ON expense_shares(expense_id);
+    CREATE TABLE IF NOT EXISTS trip_cards(
+      trip_id INTEGER PRIMARY KEY, provider TEXT DEFAULT 'sim',
+      cardholder_id TEXT, card_id TEXT, last4 TEXT, brand TEXT DEFAULT 'Visa',
+      status TEXT DEFAULT 'active', funder TEXT, currency TEXT DEFAULT 'USD', created TEXT);
     """)
+    # migrate older expenses tables (pre trip-card) to carry source + external_id
+    ecol = [r[1] for r in c.execute("PRAGMA table_info(expenses)").fetchall()]
+    for col, ddl in (("source", "source TEXT DEFAULT 'manual'"), ("external_id", "external_id TEXT")):
+        if col not in ecol:
+            c.execute(f"ALTER TABLE expenses ADD COLUMN {ddl}")
+    # now that external_id exists (fresh or migrated), the dedupe index is safe
+    c.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_exp_ext ON expenses(external_id) WHERE external_id IS NOT NULL")
     # any job still marked "running" at startup lost its worker thread when the process stopped
     c.execute("UPDATE import_jobs SET state='interrupted', updated=? WHERE state='running'", (now(),))
     # collaborative trips: a share token to invite others, and per-row contributor attribution
@@ -174,7 +186,92 @@ def expenses_payload(c, tid):
         if cred[j][1] == 0:
             j += 1
     return {"members": members, "expenses": expenses, "balances": balances,
-            "settle": settle, "currency": currency}
+            "settle": settle, "currency": currency, "card": get_trip_card(c, tid),
+            "card_live": stripe_live()}
+
+# ---- Trip Card: a shared card whose charges auto-split (Stripe Issuing) ----
+STRIPE_SECRET = os.environ.get("STRIPE_SECRET_KEY")        # sk_test_... (test mode) or sk_live_...
+STRIPE_WH_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")  # whsec_... to verify webhooks
+
+def stripe_live():
+    return bool(STRIPE_SECRET)
+
+def _stripe(method, path, params=None):
+    """Minimal Stripe REST call (form-encoded), no SDK. Flattens nested dicts
+    into Stripe's bracket syntax (e.g. billing[address][city])."""
+    import urllib.request
+    flat = {}
+    def put(k, v):
+        if isinstance(v, dict):
+            for kk, vv in v.items():
+                put(f"{k}[{kk}]", vv)
+        elif isinstance(v, (list, tuple)):
+            for i, vv in enumerate(v):
+                put(f"{k}[{i}]", vv)
+        elif v is not None:
+            flat[k] = v
+    for k, v in (params or {}).items():
+        put(k, v)
+    data = urllib.parse.urlencode(flat).encode() if flat else None
+    req = urllib.request.Request("https://api.stripe.com/v1/" + path, data=data, method=method)
+    req.add_header("Authorization", "Bearer " + STRIPE_SECRET)
+    req.add_header("Stripe-Version", "2024-06-20")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read().decode())
+
+def create_trip_card(c, tid, funder, currency="USD"):
+    """Issue a virtual card for the trip. Real card via Stripe Issuing when a
+    secret key is set; otherwise a simulated card so the flow is demoable."""
+    name = funder or "Trip"
+    if stripe_live():
+        ch = _stripe("POST", "issuing/cardholders", {
+            "name": name[:24], "type": "individual",
+            "billing": {"address": {"line1": "1 Trip St", "city": "NYC",
+                                     "state": "NY", "postal_code": "10001", "country": "US"}}})
+        card = _stripe("POST", "issuing/cards", {
+            "cardholder": ch["id"], "currency": currency.lower(), "type": "virtual",
+            "status": "active", "metadata": {"trip_id": str(tid)}})
+        last4 = card.get("last4", "----"); brand = (card.get("brand") or "Visa").title()
+        prov, chid, cid = "stripe", ch["id"], card["id"]
+    else:
+        import random
+        last4 = "".join(random.choice("0123456789") for _ in range(4))
+        prov, chid, cid, brand = "sim", None, "sim_" + secrets.token_hex(6), "Visa"
+    c.execute("INSERT OR REPLACE INTO trip_cards(trip_id,provider,cardholder_id,card_id,last4,brand,status,funder,currency,created) "
+              "VALUES(?,?,?,?,?,?,?,?,?,?)",
+              (tid, prov, chid, cid, last4, brand, "active", funder, currency, now()))
+    c.commit()
+    return get_trip_card(c, tid)
+
+def get_trip_card(c, tid):
+    r = c.execute("SELECT provider,card_id,last4,brand,status,funder,currency FROM trip_cards WHERE trip_id=?",
+                  (tid,)).fetchone()
+    if not r:
+        return None
+    d = dict(r); d["live"] = (d["provider"] == "stripe")
+    return d
+
+def capture_card_charge(c, tid, amount_cents, merchant, ext_id, currency="USD"):
+    """A swipe on the trip card becomes an expense paid by the card's funder,
+    split equally across everyone on the trip. Deduped on the external id so a
+    replayed webhook can't double-charge."""
+    if amount_cents <= 0:
+        return None
+    if ext_id and c.execute("SELECT 1 FROM expenses WHERE external_id=?", (ext_id,)).fetchone():
+        return None  # already captured
+    card = get_trip_card(c, tid)
+    funder = (card or {}).get("funder") or "Trip Card"
+    members = [r["name"] for r in c.execute("SELECT name FROM trip_members WHERE trip_id=? ORDER BY id", (tid,)).fetchall()]
+    if not members:
+        members = [funder]
+    cur = c.execute("INSERT INTO expenses(trip_id,payer,amount_cents,currency,description,created,source,external_id) "
+                    "VALUES(?,?,?,?,?,?, 'card', ?)",
+                    (tid, funder, amount_cents, currency, merchant or "Card charge", now(), ext_id))
+    eid = cur.lastrowid
+    for m in members:
+        c.execute("INSERT INTO expense_shares(expense_id,member) VALUES(?,?)", (eid, m))
+    c.commit()
+    return eid
 
 # ---- AI + geo backend ------------------------------------------------------
 
@@ -1452,6 +1549,12 @@ width:32px;height:32px;cursor:pointer;flex:none;display:flex;align-items:center;
 .exprow .expamt{font-weight:800;white-space:nowrap}
 .iconbtn{background:none;border:0;color:var(--muted);cursor:pointer;padding:4px;border-radius:8px}
 .iconbtn:hover{color:#ff6b6b}.iconbtn .ic{width:17px;height:17px}
+.tcard{background:linear-gradient(135deg,#1c2030,#2a2340);border:1px solid var(--line)}
+.tcardface{display:flex;flex-direction:column;gap:4px;padding:6px 2px}
+.tcardbrand{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#cbb6ff}
+.tcarddots{font-size:20px;font-weight:700;letter-spacing:2px;font-variant-numeric:tabular-nums}
+.tcardmeta{font-size:12px;color:var(--muted)}
+.tcard .btn.ghost,.splform .btn{white-space:nowrap}
 </style></head><body>
 <header id="topbar">
   <div class="headrow">
@@ -1772,6 +1875,24 @@ async function renderSplit(){
  if(!mem.length){app.innerHTML=`<div class="tabhead"><h2>${ic('wallet')} Split</h2></div>
    <div class="empty">Add the people on this trip first — tap <b>Invite</b> on the trip home — then you can split expenses between them.</div>`;return;}
  const opts=mem.map(m=>`<option value="${esc(m.name)}">${esc(m.name)}</option>`).join('');
+ const card=d.card;
+ let cardHtml;
+ if(!card){
+   cardHtml=`<div class="card tcardnew"><div class="splhd" style="margin:0 0 6px">${ic('wallet')} Trip Card</div>
+     <div class="muted sm">Add one shared card — every charge on it auto-splits across everyone on the trip. No manual entry.</div>
+     <div class="splrow" style="margin-top:10px"><select id="card_funder" title="Who funds the card">${opts}</select>
+       <button class="btn" onclick="createCard()">${ic('plus')}Create card</button></div>
+     <div class="muted sm" style="margin-top:6px">${d.card_live?'Stripe test cards are enabled.':'Demo mode — issues a simulated card. Add a Stripe test key to mint real test cards.'}</div></div>`;
+ } else {
+   cardHtml=`<div class="card tcard"><div class="tcardface">
+       <span class="tcardbrand">${esc(card.brand||'Visa')} ${card.live?'· Stripe test':'· Demo'}</span>
+       <span class="tcarddots">•••• •••• •••• ${esc(card.last4||'----')}</span>
+       <span class="tcardmeta">Funded by ${esc(card.funder||'—')} · ${esc(card.status||'active')}</span></div>
+     <div class="splrow" style="margin-top:10px"><input id="sim_amt" type="number" min="0" step="0.01" placeholder="amount">
+       <input id="sim_mer" placeholder="merchant (Uber, hotel…)">
+       <button class="btn ghost" onclick="simCharge()">Simulate swipe</button></div>
+     <div class="muted sm" style="margin-top:4px">${card.live?'Real test charges arrive automatically via webhook; simulate one to preview.':'Demo: simulate a swipe to watch it auto-split below.'}</div></div>`;
+ }
  const checks=mem.map(m=>`<label class="splchk"><input type="checkbox" class="spl-mem" value="${esc(m.name)}" checked>${avatarHTML(m.name,m.color,22)}<span>${esc(m.name)}</span></label>`).join('');
  const settle=(d.settle||[]).length?d.settle.map(s=>`<div class="setrow"><span>${esc(s.from)}</span>${ic('send')}<b>${esc(s.to)}</b><span class="setv">${money(s.amount_cents,cur)}</span></div>`).join(''):'<div class="muted sm">Everyone\'s square 🎉</div>';
  const bal=(d.balances||[]).map(b=>{const n=b.net_cents||0,cls=n>0?'pos':n<0?'neg':'';
@@ -1783,6 +1904,8 @@ async function renderSplit(){
      <div class="expamt">${money(e.amount_cents,e.currency||cur)}</div>
      <button class="iconbtn" title="Delete" onclick="delExpense(${e.id})">${ic('trash')}</button></div>`).join(''):'<div class="muted sm">No expenses yet — add the first one above.</div>';
  app.innerHTML=`<div class="tabhead"><h2>${ic('wallet')} Split</h2></div>
+   ${cardHtml}
+   <div class="splhd">Add an expense by hand</div>
    <div class="card splform">
      <input id="exp_desc" placeholder="What was it? (dinner, taxi, hotel…)">
      <div class="splrow"><select id="exp_payer" title="Who paid">${opts}</select>
@@ -1806,6 +1929,13 @@ async function addExpense(){
  renderSplit();
 }
 async function delExpense(id){if(!confirm('Delete this expense?'))return;try{await api('/api/expenses/'+id,{method:'DELETE'});}catch(e){}renderSplit();}
+async function createCard(){const funder=el('card_funder').value;
+ let r;try{r=await api('/api/trips/'+TRIP.id+'/card',{method:'POST',body:JSON.stringify({funder})});}catch(e){toast('Could not create card');return;}
+ if(r&&r.error){toast(r.error);return;}renderSplit();}
+async function simCharge(){const amount=el('sim_amt').value,merchant=el('sim_mer').value;
+ if(!amount||Number(amount)<=0){toast('Enter an amount');return;}
+ try{await api('/api/trips/'+TRIP.id+'/card/charge',{method:'POST',body:JSON.stringify({amount:Number(amount),merchant})});}catch(e){toast('Could not add charge');return;}
+ renderSplit();}
 
 function tripSubhead(){const t=TRIP;const dates=[t.start_date,t.end_date].filter(Boolean).join(' → ');
  return `<div class="muted sm" style="margin:2px 0 12px">${esc(t.destination||'')}${dates?' · '+esc(dates):''}</div>`;}
@@ -3338,6 +3468,55 @@ class H(BaseHTTPRequestHandler):
                     c.execute("INSERT INTO expense_shares(expense_id,member) VALUES(?,?)", (eid, person))
                 c.commit()
                 return self._json(200, expenses_payload(c, tid))
+
+            m = re.match(r"/api/trips/(\d+)/card$", p)
+            if m:
+                tid = int(m.group(1))
+                funder = (b.get("funder") or "").strip()[:40]
+                if not funder:
+                    return self._json(400, {"error": "pick who funds the card"})
+                try:
+                    create_trip_card(c, tid, funder, (b.get("currency") or "USD")[:8])
+                except Exception as e:
+                    return self._json(502, {"error": "card provider error: " + str(e)[:160]})
+                return self._json(200, expenses_payload(c, tid))
+
+            m = re.match(r"/api/trips/(\d+)/card/charge$", p)
+            if m:
+                # Simulate a swipe (dev/test). In live mode real charges arrive via the webhook.
+                tid = int(m.group(1))
+                try:
+                    cents = round(float(b.get("amount") or 0) * 100)
+                except (TypeError, ValueError):
+                    cents = 0
+                if cents <= 0:
+                    return self._json(400, {"error": "enter an amount"})
+                if not get_trip_card(c, tid):
+                    return self._json(400, {"error": "create the trip card first"})
+                capture_card_charge(c, tid, cents, (b.get("merchant") or "Card charge").strip()[:80],
+                                    "sim_" + secrets.token_hex(8))
+                return self._json(200, expenses_payload(c, tid))
+
+            if p == "/api/stripe/webhook":
+                # Don't trust the payload — use it only as a ping, then re-fetch the
+                # authoritative object from Stripe with our own key before capturing.
+                try:
+                    obj = (b.get("data") or {}).get("object") or {}
+                    kind = b.get("type") or ""
+                    if stripe_live() and ("issuing_transaction" in kind or "issuing_authorization" in kind):
+                        oid = obj.get("id")
+                        path2 = "issuing/transactions/" if "transaction" in kind else "issuing/authorizations/"
+                        real = _stripe("GET", path2 + oid)
+                        card_id = real.get("card", {}).get("id") if isinstance(real.get("card"), dict) else real.get("card")
+                        row = c.execute("SELECT trip_id FROM trip_cards WHERE card_id=?", (card_id,)).fetchone()
+                        if row:
+                            amt = abs(int(real.get("amount") or 0))
+                            mer = ((real.get("merchant_data") or {}).get("name")) or "Card charge"
+                            capture_card_charge(c, row["trip_id"], amt, mer, real.get("id"),
+                                                (real.get("currency") or "usd").upper())
+                except Exception:
+                    pass  # never 500 a webhook; Stripe will retry on non-2xx
+                return self._json(200, {"received": True})
 
             if p == "/api/entries":
                 eid = b.get("id")
