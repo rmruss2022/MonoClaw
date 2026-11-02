@@ -106,19 +106,22 @@ def foreman_data():
         counts[status] = counts.get(status, 0) + 1
         base = started or d.get("created_at") or now
         elapsed = max(0, int(((ended or now) - base) / 1000))
-        task = (d.get("task") or d.get("task_name") or d.get("label") or "").strip().replace("\n", " ")
+        task_full = (d.get("task") or d.get("task_name") or d.get("label") or "").strip()[:8000]
+        task = task_full.replace("\n", " ")
         if len(task) > 180:
             task = task[:177] + "…"
+        result_full = ""
         result = None
         if status in ("done", "failed"):
-            result = (d.get("frozen_result_text") or "")
-            if not result:
+            result_full = (d.get("frozen_result_text") or "")
+            if not result_full:
                 try:
                     oj = json.loads(d.get("outcome_json") or "{}")
-                    result = oj.get("summary") or oj.get("result") or ""
+                    result_full = oj.get("summary") or oj.get("result") or ""
                 except Exception:
-                    result = ""
-            result = (result or "").strip().replace("\n", " ")
+                    result_full = ""
+            result_full = (result_full or "").strip()[:8000]
+            result = result_full.replace("\n", " ")
             if len(result) > 220:
                 result = result[:217] + "…"
         # prefer the "project:jobid" label convention; fall back to the workspace dir
@@ -143,6 +146,7 @@ def foreman_data():
             "mode": d.get("spawn_mode") or "", "elapsed": elapsed,
             "label": d.get("label") or d.get("task_name") or "",
             "requester": d.get("requester_display_key") or "", "result": result,
+            "taskFull": task_full, "resultFull": result_full,
             "created": d.get("created_at"), "started": started, "ended": ended,
             "doctor": doctor, "doctorNote": doctor_note,
         })
@@ -442,6 +446,23 @@ PAGE = r'''<!DOCTYPE html>
   .fm-job.open .fm-result{-webkit-line-clamp:unset;overflow:visible}
   .fm-doc{margin:6px 0 0;font-size:10.5px;font-weight:700}
   .fm-doc.ok{color:#047857}.fm-doc.bad{color:#b91c1c}.fm-doc.pending{color:var(--muted)}
+  /* job detail modal */
+  .fm-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .fm-modal-backdrop[hidden]{display:none}
+  .fm-modal{background:#fff;border-radius:18px;max-width:660px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 30px 80px -20px rgba(15,23,42,.45);border-top:4px solid var(--accent,#2563eb)}
+  .fm-m-head{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid #eef2f8;position:sticky;top:0;background:#fff;z-index:1}
+  .fm-m-proj{font-weight:800;font-size:16px}
+  .fm-m-x{margin-left:auto;border:none;background:#f1f5f9;color:#475569;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;flex:0 0 auto}
+  .fm-m-x:hover{background:#e2e8f0}
+  .fm-m-meta{display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;padding:15px 18px;border-bottom:1px solid #eef2f8}
+  .fm-m-kv{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .fm-m-kv span{font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .fm-m-kv b{font-size:13px;font-weight:600;color:var(--ink);word-break:break-word}
+  .fm-m-section{padding:14px 18px}
+  .fm-m-section h4{margin:0 0 6px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .fm-m-section pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.5;color:#2b3340;background:#f7faff;border:1px solid #eaf0fb;border-radius:10px;padding:11px 13px}
+  .fm-m-doc{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px}
+  .fm-m-doc.ok{background:#e6f7ef;color:#047857}.fm-m-doc.bad{background:#fdeaea;color:#b91c1c}.fm-m-doc.pending{background:#eef2f8;color:#64748b}
 </style>
 </head>
 <body>
@@ -501,6 +522,8 @@ PAGE = r'''<!DOCTYPE html>
   </div>
 </section>
 
+<div id="fmModal" class="fm-modal-backdrop" hidden><div class="fm-modal"></div></div>
+
 <footer><div class="wrap">Designed &amp; built by Matthew Russell</div></footer>
 <script>
 (function(){
@@ -537,20 +560,29 @@ PAGE = r'''<!DOCTYPE html>
   clearBtn.onclick=function(){todos=todos.filter(function(t){return !t.done;});save();render();};
   render();
 })();
-// ---- Foreman mission control: per-project kanban of live subagents ----
+// ---- Foreman mission control: per-project kanban + job detail modal ----
 (function(){
-  var boardEl=document.getElementById('fmBoard'),statsEl=document.getElementById('fmStats');
+  var boardEl=document.getElementById('fmBoard'),statsEl=document.getElementById('fmStats'),
+      modalEl=document.getElementById('fmModal');
   if(!boardEl)return;
   var rank={running:0,queued:1,failed:2,done:3};
-  var open={};  // run id -> expanded, preserved across polls
+  var byId={}, openId=null;   // latest job snapshots + which one the modal shows
   function fmt(s){s=s||0;if(s<60)return s+'s';var m=Math.floor(s/60);if(m<60)return m+'m '+(s%60)+'s';var h=Math.floor(m/60);return h+'h '+(m%60)+'m';}
   function esc(s){return (s||'').replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  function when(ms){if(!ms)return '—';try{return new Date(ms).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){return '—';}}
+  function docBadge(j,cls){
+    if(j.doctor===true)return '<span class="'+cls+' ok">✓ verified</span>';
+    if(j.doctor===false)return '<span class="'+cls+' bad">✗ '+esc(j.doctorNote||'failed')+'</span>';
+    if(j.status==='done'&&j.doctor==='pending')return '<span class="'+cls+' pending">· checking…</span>';
+    return '';
+  }
+  // --- compact card: the basics + status, click to open the full modal ---
   function card(j){
     var el=(j.status==='running')?fmt(j.elapsed):((j.status==='done'||j.status==='failed')?('took '+fmt(j.elapsed)):'');
     var doc = j.doctor===true?'<div class="fm-doc ok">✓ verified</div>'
             : j.doctor===false?'<div class="fm-doc bad">✗ '+esc(j.doctorNote||'doctor failed')+'</div>'
             : (j.status==='done'&&j.doctor==='pending')?'<div class="fm-doc pending">· checking…</div>':'';
-    return '<div class="fm-job'+(open[j.id]?' open':'')+'" data-id="'+esc(j.id)+'">'
+    return '<div class="fm-job" data-id="'+esc(j.id)+'">'
       +'<span class="fm-dot '+j.status+'"></span>'
       +'<div class="fm-main"><div class="fm-row1">'
       +'<span class="fm-badge '+j.status+'">'+j.status+'</span>'
@@ -561,29 +593,66 @@ PAGE = r'''<!DOCTYPE html>
   }
   function draw(d){
     var jobs=d.jobs||[],s=d.stats||{};
+    byId={};jobs.forEach(function(j){byId[j.id]=j;});
     statsEl.innerHTML='<b>'+(s.running||0)+'</b> running · '+(s.queued||0)+' queued · '+(s.done||0)+' done'+((s.failed||0)?' · <b style="color:#ef4444">'+s.failed+' failed</b>':'');
-    if(!jobs.length){boardEl.innerHTML='<div class="fm-empty">No subagents yet — send a task in Telegram and watch them light up here.</div>';return;}
-    // group by project, keep each project's accent colour
-    var groups={},colors={};
-    jobs.forEach(function(j){(groups[j.project]=groups[j.project]||[]).push(j);colors[j.project]=j.color||'#94a3b8';});
-    // column order: roster first, then any extra projects that have jobs
-    var order=[],seen={};
-    (d.roster||[]).forEach(function(p){if(groups[p.name]&&!seen[p.name]){order.push(p.name);seen[p.name]=1;colors[p.name]=colors[p.name]||p.color;}});
-    Object.keys(groups).forEach(function(n){if(!seen[n]){order.push(n);seen[n]=1;}});
-    boardEl.innerHTML=order.map(function(name){
-      var g=groups[name].slice().sort(function(a,b){return (rank[a.status]-rank[b.status])||((b.created||0)-(a.created||0));});
-      var live=g.filter(function(j){return j.status==='running';}).length;
-      return '<div class="fm-col" style="--accent:'+esc(colors[name])+'">'
-        +'<div class="fm-col-head"><span class="fm-chip"></span>'
-        +'<span class="fm-col-name">'+esc(name)+'</span>'
-        +'<span class="fm-col-count">'+(live?live+' live · ':'')+g.length+'</span></div>'
-        +'<div class="fm-col-body">'+g.map(card).join('')+'</div></div>';
-    }).join('');
+    if(!jobs.length){boardEl.innerHTML='<div class="fm-empty">No subagents yet — send a task in Telegram and watch them light up here.</div>';}
+    else{
+      var groups={},colors={};
+      jobs.forEach(function(j){(groups[j.project]=groups[j.project]||[]).push(j);colors[j.project]=j.color||'#94a3b8';});
+      var order=[],seen={};
+      (d.roster||[]).forEach(function(p){if(groups[p.name]&&!seen[p.name]){order.push(p.name);seen[p.name]=1;colors[p.name]=colors[p.name]||p.color;}});
+      Object.keys(groups).forEach(function(n){if(!seen[n]){order.push(n);seen[n]=1;}});
+      boardEl.innerHTML=order.map(function(name){
+        var g=groups[name].slice().sort(function(a,b){return (rank[a.status]-rank[b.status])||((b.created||0)-(a.created||0));});
+        var live=g.filter(function(j){return j.status==='running';}).length;
+        return '<div class="fm-col" style="--accent:'+esc(colors[name])+'">'
+          +'<div class="fm-col-head"><span class="fm-chip"></span>'
+          +'<span class="fm-col-name">'+esc(name)+'</span>'
+          +'<span class="fm-col-count">'+(live?live+' live · ':'')+g.length+'</span></div>'
+          +'<div class="fm-col-body">'+g.map(card).join('')+'</div></div>';
+      }).join('');
+    }
+    if(openId&&byId[openId])renderModal(byId[openId]);  // keep an open modal live
   }
+  // --- the modal: full query, full result, every status detail ---
+  function kv(k,v){return '<div class="fm-m-kv"><span>'+k+'</span><b>'+v+'</b></div>';}
+  function renderModal(j){
+    var box=modalEl.firstElementChild;
+    box.style.setProperty('--accent',j.color||'#2563eb');
+    var dur=j.status==='running'?(fmt(j.elapsed)+' (running)'):(j.status==='queued'?'—':'took '+fmt(j.elapsed));
+    box.innerHTML=
+      '<div class="fm-m-head">'
+        +'<span class="fm-chip" style="--accent:'+esc(j.color||'#2563eb')+'"></span>'
+        +'<span class="fm-m-proj">'+esc(j.project)+'</span>'
+        +'<span class="fm-badge '+j.status+'">'+j.status+'</span>'
+        +docBadge(j,'fm-m-doc')
+        +'<button class="fm-m-x" data-close="1" aria-label="Close">✕</button>'
+      +'</div>'
+      +'<div class="fm-m-meta">'
+        +kv('Label',esc(j.label||'—'))
+        +kv('Model',esc((j.model||'—').replace(/^.*\//,'')))
+        +kv('Mode',esc(j.mode||'—'))
+        +kv('Requester',esc(j.requester||'—'))
+        +kv('Duration',dur)
+        +kv('Started',when(j.started))
+        +kv('Created',when(j.created))
+        +kv('Ended',when(j.ended))
+      +'</div>'
+      +'<div class="fm-m-section"><h4>Query</h4><pre>'+esc(j.taskFull||j.task||'—')+'</pre></div>'
+      +((j.resultFull||j.result)?'<div class="fm-m-section"><h4>Result</h4><pre>'+esc(j.resultFull||j.result)+'</pre></div>'
+         :(j.status==='running'?'<div class="fm-m-section"><h4>Result</h4><pre>· still running…</pre></div>':''))
+      +(j.doctor===false&&j.doctorNote?'<div class="fm-m-section"><h4>Doctor</h4><pre>'+esc(j.doctorNote)+'</pre></div>':'');
+    modalEl.hidden=false;
+  }
+  function closeModal(){openId=null;modalEl.hidden=true;}
   boardEl.addEventListener('click',function(ev){
     var c=ev.target.closest('.fm-job');if(!c)return;
-    var id=c.getAttribute('data-id');open[id]=!open[id];c.classList.toggle('open',open[id]);
+    openId=c.getAttribute('data-id');if(byId[openId])renderModal(byId[openId]);
   });
+  modalEl.addEventListener('click',function(ev){
+    if(ev.target===modalEl||ev.target.closest('[data-close]'))closeModal();
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});
   function tick(){fetch('api/foreman',{cache:'no-store'}).then(function(r){return r.json();}).then(draw).catch(function(){});}
   tick();setInterval(tick,2500);
 })();
