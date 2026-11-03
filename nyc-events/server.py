@@ -16,7 +16,7 @@ Env:
   MARQUEE_REFRESH_H   cache freshness hours (default 12)
   MARQUEE_DATA        data dir (default ./data)
 """
-import json, os, re, threading, time, html, uuid, urllib.request
+import json, os, re, threading, time, html, uuid, hashlib, urllib.request
 from urllib.parse import urlparse
 from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -26,10 +26,13 @@ GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 FIRECRAWL_KEY = os.environ.get("FIRECRAWL_API_KEY", "")
 REFRESH_H = float(os.environ.get("MARQUEE_REFRESH_H", "12"))
+CACHE_H = float(os.environ.get("MARQUEE_CACHE_H", "12"))        # scraped-content cache TTL
+CRAWL_EVERY_H = float(os.environ.get("MARQUEE_CRAWL_EVERY_H", "6"))  # background crawler cadence
 HOME = os.environ.get("MARQUEE_HOME", "Bushwick, Brooklyn")
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get("MARQUEE_DATA", os.path.join(HERE, "data"))
 STORE = os.path.join(DATA, "events.json")
+CACHE_DIR = os.path.join(DATA, "cache")
 
 CATEGORIES = ["Music", "Nightlife", "Arts", "Theater", "Comedy", "Sports",
               "Food", "Festival", "Family", "Film", "Wellness"]
@@ -193,10 +196,45 @@ def expand_personal(days=32):
 
 
 # -------------------------------------------------- Firecrawl scan of regulars
-def fc_scrape(url):
-    """Scrape a page to markdown via the Firecrawl API. Returns '' on failure."""
-    if not FIRECRAWL_KEY or not url:
+# ---- content cache: scraped pages are cached on disk and served first ----
+def _cache_path(url):
+    return os.path.join(CACHE_DIR, hashlib.sha1(url.encode()).hexdigest() + ".json")
+
+
+def cache_get(url, max_age_h=CACHE_H):
+    try:
+        with open(_cache_path(url)) as f:
+            c = json.load(f)
+        if (time.time() * 1000 - (c.get("ts") or 0)) <= max_age_h * 3600 * 1000:
+            return c.get("markdown") or ""
+    except Exception:
+        pass
+    return None
+
+
+def cache_put(url, md):
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        tmp = _cache_path(url) + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump({"url": url, "ts": int(time.time() * 1000), "markdown": md}, f)
+        os.replace(tmp, _cache_path(url))
+    except Exception as e:
+        print("[marquee] cache write failed:", e, flush=True)
+
+
+def fc_scrape(url, max_age_h=CACHE_H, force=False):
+    """Scrape a page to markdown, CACHE-FIRST: serve fresh cached content when
+    available, otherwise crawl via Firecrawl and cache it. Returns '' on failure
+    (but will fall back to stale cache if the live crawl fails)."""
+    if not url:
         return ""
+    if not force:
+        hit = cache_get(url, max_age_h)
+        if hit is not None:
+            return hit
+    if not FIRECRAWL_KEY:
+        return cache_get(url, 1e9) or ""   # no key -> any cached copy
     try:
         body = json.dumps({"url": url, "formats": ["markdown"],
                            "onlyMainContent": True}).encode()
@@ -204,10 +242,13 @@ def fc_scrape(url):
                                      headers={"Authorization": "Bearer " + FIRECRAWL_KEY,
                                               "Content-Type": "application/json"}, method="POST")
         j = json.loads(urllib.request.urlopen(req, timeout=60).read())
-        return ((j.get("data") or {}).get("markdown") or "")[:18000]
+        md = ((j.get("data") or {}).get("markdown") or "")[:18000]
+        if md:
+            cache_put(url, md)
+        return md
     except Exception as e:
         print("[marquee] firecrawl failed:", e, flush=True)
-        return ""
+        return cache_get(url, 1e9) or ""   # fall back to any stale cache
 
 
 def scan_regular(rec):
@@ -267,6 +308,21 @@ def scan_stale_regulars(max_age_h=24):
                 scan_regular_by_id(r["id"])
             except Exception as e:
                 print("[marquee] auto-scan failed:", e, flush=True)
+
+
+def crawler_loop():
+    """The crawl agent: on a cadence, refresh the content cache for every
+    regular's source page, then re-extract sessions. The app always reads the
+    cache first, so pages are served instantly and crawled in the background."""
+    while True:
+        try:
+            for r in load_personal():
+                if r.get("scan_url"):
+                    fc_scrape(r["scan_url"], force=True)   # refresh cached content
+            scan_stale_regulars(max_age_h=CRAWL_EVERY_H)
+        except Exception as e:
+            print("[marquee] crawler pass failed:", e, flush=True)
+        time.sleep(max(1800, CRAWL_EVERY_H * 3600))
 
 
 def scan_regular_by_id(pid):
@@ -884,8 +940,13 @@ class H(BaseHTTPRequestHandler):
                                    "fetched_at": store.get("fetched_at", 0)}))
         elif p in ("/health", "/healthz"):
             s = load_store()
+            try:
+                cached = len([f for f in os.listdir(CACHE_DIR) if f.endswith(".json")])
+            except Exception:
+                cached = 0
             self._send(json.dumps({"ok": True, "events": len(s.get("events") or []),
-                                   "fetched_at": s.get("fetched_at", 0)}))
+                                   "fetched_at": s.get("fetched_at", 0),
+                                   "cached_pages": cached}))
         else:
             self._send("not found", "text/plain", 404)
 
@@ -944,9 +1005,10 @@ def main():
     os.makedirs(DATA, exist_ok=True)
     seed_personal()
     print(f"Marquee on 127.0.0.1:{PORT} (data={DATA}, llm={'on' if GEMINI_KEY else 'off'})", flush=True)
-    # warm the cache + refresh scannable regulars in the background on boot
+    # warm the event cache on boot + start the background crawl agent (keeps the
+    # scraped-content cache fresh and re-extracts regulars' real times)
     threading.Thread(target=lambda: get_events(force=False), daemon=True).start()
-    threading.Thread(target=scan_stale_regulars, daemon=True).start()
+    threading.Thread(target=crawler_loop, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
 
 
