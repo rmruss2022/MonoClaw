@@ -29,5 +29,15 @@ Roll back that night's commit and redeploy the affected apps.
 Matthew wants to discuss the changes. Open `nightsweep/reports/<date>.md`, and
 ask him what he'd like to know / change, then act on his answer.
 
-Note: the buttons are a convenience layer. If a callback tap ever fails to route,
+## Typed-reply fallback (works even without inline-button routing)
+Inline-button taps only reach the agent when `channels.telegram.capabilities.
+inlineButtons` is enabled (owner-only, protected config). Until it is, the quiz
+message also tells Matthew to **reply** `approve` / `revert` / `ask`. Treat a
+bare reply of one of those words (in reply to, or right after, a Night Sweep
+quiz) the same as the matching button for that night's latest report:
+- `approve` → acknowledge, keep.
+- `revert`  → roll back the night's commit + redeploy (see above).
+- `ask`     → open the report and discuss.
+
+Note: the buttons are a convenience layer. If a tap/reply ever fails to route,
 the report's `## How to revert` command still lets Matthew (or you) undo it by hand.

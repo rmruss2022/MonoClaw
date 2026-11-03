@@ -309,8 +309,11 @@ print(json.dumps({"blocks": [
 PY
 )
   if [ "$DRY" = "1" ]; then echo "── DRY QUIZ ──"; echo "$pres"; return 0; fi
+  # Belt-and-suspenders: buttons only route if channels.telegram.capabilities.
+  # inlineButtons is enabled (owner-only). The reply line always works.
+  local ask="Approve tonight's Night Sweep (commit ${sha:0:7})? Tap a button below, or just reply: approve · revert · ask"
   openclaw message send --channel telegram --target "$TG" \
-    --message "Approve tonight's Night Sweep?" --presentation "$pres" >/dev/null 2>&1 \
+    --message "$ask" --presentation "$pres" >/dev/null 2>&1 \
     && echo "approval quiz sent" || echo "WARN: approval quiz failed to send"
 }
 
