@@ -2564,6 +2564,36 @@ a{color:var(--purple)}
 .trk-head{margin:20px 2px 10px;padding-left:11px;border-left:3px solid var(--a)}
 .trk-name{font-weight:800;font-size:16px;color:#f1ecff}
 .trk-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+/* Journeys tab — journey cards + journey-detail lesson rows */
+.jrny-grid{display:flex;flex-direction:column;gap:12px}
+.jrny-card{display:flex;align-items:stretch;gap:0;text-align:left;background:#140f24;border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;padding:0;position:relative}
+.jrny-card:active{transform:scale(.995)}
+.jrny-art{flex:none;width:84px;display:grid;place-items:center;background:linear-gradient(160deg,color-mix(in srgb,var(--a) 26%,#140f24),#140f24);border-right:1px solid var(--line)}
+.jrny-art .i,.jrny-art svg{width:40px;height:40px}
+.jrny-body{flex:1;min-width:0;padding:13px 6px 13px 14px}
+.jrny-name{font-weight:800;font-size:16px;color:#f1ecff}
+.jrny-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px}
+.jrny-bar{height:5px;border-radius:99px;background:#241c3a;overflow:hidden;margin:10px 0 6px}
+.jrny-bar>i{display:block;height:100%;background:var(--a);border-radius:99px}
+.jrny-meta{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.jrny-next{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#efe6ff;margin-top:7px}
+.jrny-next .i{width:14px;height:14px}
+.jrny-go{flex:none;display:grid;place-items:center;width:40px;color:var(--a);opacity:.8}
+.jrny-go .i{width:16px;height:16px}
+.lj-list{display:flex;flex-direction:column;gap:8px}
+.lj-row{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:#140f24;border:1px solid var(--line);border-radius:13px;padding:12px 13px;cursor:pointer}
+.lj-row:active{transform:scale(.995)}
+.lj-row.next{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 16px -6px var(--gold)}
+.lj-row.done{opacity:.82}
+.lj-row.soon{opacity:.6;cursor:default}
+.lj-num{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#201839;border:1px solid var(--line);color:var(--a);font-weight:800;font-size:13px}
+.lj-row.done .lj-num{color:#7ee0b0}
+.lj-num .i{width:15px;height:15px}
+.lj-main{flex:1;min-width:0}
+.lj-title{display:block;font-weight:700;font-size:14.5px;color:#f1ecff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lj-sub{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.lj-badge{flex:none;background:var(--gold);color:#15101f;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:4px 9px;border-radius:99px}
+.lj-go{flex:none;color:var(--a);opacity:.7}.lj-go .i{width:16px;height:16px}
 .lesson-bg{position:fixed;inset:0;z-index:0;background-size:cover;background-position:center 30%;opacity:.26;filter:blur(2px) saturate(1.15);pointer-events:none;-webkit-mask-image:radial-gradient(ellipse 120% 85% at center 38%,#000 42%,transparent 82%);mask-image:radial-gradient(ellipse 120% 85% at center 38%,#000 42%,transparent 82%)}
 .lesson-bg:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent,#0b0a12cc 72%,#0b0a12)}
 .lesson-top{margin:6px 2px 2px;position:relative;z-index:1;text-align:center}
@@ -3232,35 +3262,81 @@ async function renderMeditate(){
 }
 
 /* ---- guided journeys library ---- */
+// Journeys tab — a card per journey (track). Tap a card to open the journey and
+// pick your next lesson. Each card shows how far you've walked it + what's next.
+function _journeyNext(ls){
+  return ls.find(l=>{const p=lessonProg(l.code);return !(p&&p.count>0);})
+    || ls.find(l=>lessonResumeSi(l)>0) || null;
+}
 async function renderLessons(){
   try{const r=await api('me');ME=r.profile;}catch(e){}
-  const totalMin=LESSONS.reduce((s,l)=>s+lessonMins(l),0);
-  const doneCount=LESSONS.filter(l=>lessonProg(l.code)).length;
-  $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Guided Journeys</b></div>
-  <button class="btn ghost" id="lesback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
-  <div class="card" style="padding:14px">
-    <div style="font-family:var(--serif);font-size:16px;line-height:1.5">A growing library of narrated, meditative lessons — each researched, spoken aloud, and woven into Lumen so every sit still earns Light, streaks, and achievements.</div>
-    <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap;font-size:12px" class="muted">
-      <span>${ic('lotus','g')} ${LESSONS.length} lessons</span>
-      <span>${ic('check','g')} ${doneCount} completed</span>
-      <span>${ic('target','g')} ~${totalMin} min total</span>
-    </div>
-  </div>
-  ${TRACKS.map(t=>{
+  const card=(t)=>{
     const ls=LESSONS.filter(l=>l.track===t.key);
-    if(!ls.length&&!(ROADMAP[t.key]||[]).length)return '';
-    return `<div class="trk-head" style="--a:${t.accent}"><div class="trk-name">${esc(t.name)}</div><div class="trk-sub">${esc(t.sub)}</div></div>
-      ${ls.map(l=>lessonCardHTML(l)).join('')}
-      ${(ROADMAP[t.key]||[]).map(r=>`<div class="lesson-card soon" style="--a:${t.accent}">
-        <div class="lesson-img"><span class="lesson-imic">${ic('lock')}</span></div>
-        <div class="lesson-meta"><div class="lesson-name">${esc(r.title)}</div>
-        <div class="lesson-sub">${esc(r.sub)}</div>
-        <div class="lesson-go soon-tag">${ic('lock')} Coming soon</div></div></div>`).join('')}`;
-  }).join('')}
-  <p class="muted center" style="font-size:12px;margin:16px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
+    const soon=(ROADMAP[t.key]||[]).length;
+    const total=ls.length;
+    const done=ls.filter(l=>{const p=lessonProg(l.code);return p&&p.count>0;}).length;
+    const pct=total?Math.round(100*done/total):0;
+    const mins=ls.reduce((s,l)=>s+lessonMins(l),0);
+    const next=_journeyNext(ls);
+    const allDone=total&&done>=total;
+    const nextLbl=allDone?'✦ Journey complete · revisit'
+      :(next?('Next · '+next.title+' · '+next.subtitle):(soon?'Coming soon':'Start'));
+    return `<button class="jrny-card" data-k="${t.key}" style="--a:${t.accent}">
+      <div class="jrny-art">${ls[0]?deityEmblem(ls[0]):ic('lotus','g')}</div>
+      <div class="jrny-body">
+        <div class="jrny-name">${esc(t.name)}</div>
+        <div class="jrny-sub">${esc(t.sub)}</div>
+        <div class="jrny-bar"><i style="width:${pct}%"></i></div>
+        <div class="jrny-meta">${done} of ${total} lessons${soon?' · '+soon+' coming':''} · ~${mins} min</div>
+        <div class="jrny-next">${ic(allDone?'check':'play','g')} ${esc(nextLbl)}</div>
+      </div>
+      <span class="jrny-go">${ic('play','g')}</span>
+    </button>`;
+  };
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journeys</b></div>
+  <button class="btn ghost" id="lesback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
+  <p class="muted" style="font-size:13px;margin:0 2px 14px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
+  <div class="jrny-grid">${TRACKS.map(card).join('')}</div>
+  <p class="muted center" style="font-size:12px;margin:18px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
   $('#lesback').onclick=()=>go('meditate');
-  document.querySelectorAll('.lesson-card:not(.soon)').forEach(c=>c.onclick=()=>{lessonFrom='lessons';lessonDetail(c.dataset.l);});
+  document.querySelectorAll('.jrny-card').forEach(c=>c.onclick=()=>renderJourney(c.dataset.k));
+}
+
+// A single journey — its lessons in order, your next lesson highlighted, tap to open.
+function renderJourney(key){
+  const t=TRACKS.find(x=>x.key===key);if(!t)return;
+  if(window.speechSynthesis)speechSynthesis.cancel();try{Sound.stop();}catch(e){}
+  curJourney=key;
+  const ls=LESSONS.filter(l=>l.track===key);
+  const total=ls.length;
+  const done=ls.filter(l=>{const p=lessonProg(l.code);return p&&p.count>0;}).length;
+  const pct=total?Math.round(100*done/total):0;
+  const next=_journeyNext(ls);
+  const row=(l,i)=>{
+    const p=lessonProg(l.code);const isDone=p&&p.count>0;const rs=lessonResumeSi(l);
+    const isNext=next&&l.code===next.code;
+    const meta=lessonMins(l)+' min · '+l.segments.length+' steps'
+      +(isDone?(' · done '+p.count+'×'):(rs>0?' · resume · step '+(rs+1):''));
+    return `<button class="lj-row${isDone?' done':''}${isNext?' next':''}" data-l="${l.code}" style="--a:${l.accent}">
+      <span class="lj-num">${isDone?ic('check'):(i+1)}</span>
+      <span class="lj-main"><span class="lj-title">${esc(l.title)} · ${esc(l.subtitle)}</span>
+      <span class="lj-sub">${esc(meta)}</span></span>
+      ${isNext?`<span class="lj-badge">Next up</span>`:`<span class="lj-go">${ic('play')}</span>`}
+    </button>`;
+  };
+  const soonRows=(ROADMAP[key]||[]).map(r=>`<div class="lj-row soon"><span class="lj-num">${ic('lock')}</span>`
+    +`<span class="lj-main"><span class="lj-title">${esc(r.title)}</span><span class="lj-sub">${esc(r.sub)}</span></span></div>`).join('');
+  $('#app').innerHTML=`
+  <div class="brand"><button class="back-btn" id="jrback" title="All journeys">‹</button><span class="mark">${ic('lumen','mark')}</span><b>${esc(t.name)}</b></div>
+  <p class="muted" style="font-size:13px;margin:0 2px 12px">${esc(t.sub)}</p>
+  <div class="pp-top"><div class="pp-count">${done} of ${total} lessons complete</div><div class="pp-bar"><i style="width:${pct}%"></i></div></div>
+  ${next?`<button class="btn gold" id="jrnext" style="margin:14px 0 6px">${ic('play')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:14px 0">✦ You've completed this journey. Revisit any lesson below.</div>`}
+  <div class="lj-list">${ls.map(row).join('')}</div>
+  ${soonRows?`<div class="trk-head" style="--a:${t.accent};margin-top:18px"><div class="trk-name">Coming soon</div></div>${soonRows}`:''}`;
+  $('#jrback').onclick=()=>go('lessons');
+  const nb=$('#jrnext');if(nb&&next)nb.onclick=()=>{lessonFrom='journey';lessonDetail(next.code);};
+  document.querySelectorAll('.lj-row:not(.soon)').forEach(c=>c.onclick=()=>{lessonFrom='journey';lessonDetail(c.dataset.l);});
 }
 
 let timerInt=null;
@@ -3459,6 +3535,7 @@ const SERIES_ART={Vishnu:'art/lesson_vishnu.png?v=2',Shiva:'art/lesson_shiva.png
 function deityEmblem(l,cls){const art=SERIES_ART[l.series]||l.img;
   return `<div class="deity-emblem ${cls||''}"><span class="deity-glyph">${ic('lotus','grad-gold')}</span>${art?`<img src="${art}" alt="" onerror="this.remove()">`:''}</div>`;}
 let lessonFrom='lessons';
+let curJourney=null;       // which journey (track key) the open lesson belongs to
 let lessonSoundPick=null;  // background soundscape chosen in the journey detail modal
 function lessonCardHTML(l){
   const pr=lessonProg(l.code);
@@ -3511,7 +3588,7 @@ function lessonDetail(code){
     <p class="muted center" style="font-size:12px;margin-top:12px">Earns Light · builds your streak</p>
   </div>`;
   lessonSoundPick=l.soundscape;
-  $('#dback').onclick=()=>go(lessonFrom);
+  $('#dback').onclick=()=>{if(lessonFrom==='journey'&&curJourney)renderJourney(curJourney);else go(lessonFrom);};
   $('#dbegin').onclick=()=>lessonPlay(l, rs);
   document.querySelectorAll('#lsnds .snd-chip').forEach(c=>c.onclick=()=>{lessonSoundPick=c.dataset.s;
     document.querySelectorAll('#lsnds .snd-chip').forEach(x=>x.classList.toggle('sel',x.dataset.s===lessonSoundPick));});
