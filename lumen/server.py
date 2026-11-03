@@ -4573,11 +4573,25 @@ async function renderJournalHome(){
     +`</div>`
     +`<div class="jfeed-h">${ic('globe','g')} From the community</div>`
     +`<div id="jbody"></div>`;
+  // The pillar to drop straight into when Deep is tapped: the server's deep
+  // recommendation, else a focus pillar with the fewest sittings, else the least-
+  // worked pillar overall. So "Deep" takes you right to the next suggested sitting.
+  const nextDeepPillar=()=>{
+    if(jRec&&jRec.mode==='deep'&&jRec.pillar)return jRec.pillar;
+    const ps=(pp&&pp.pillars)||[];const focus=(pp&&pp.focus)||[];
+    if(!ps.length)return focus[0]||null;
+    const byLeast=(arr)=>arr.slice().sort((a,b)=>((a.sittings||0)-(b.sittings||0)))[0];
+    const fps=ps.filter(p=>focus.includes(p.name));
+    const pick=byLeast(fps.length?fps:ps);
+    return pick?pick.name:null;
+  };
   $('#talkbtn').onclick=renderChat;
   $('#pill-link').onclick=()=>{jScreen='pillars';renderJournal();};
   document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>{const k=b.dataset.m;
     journalMode=k;journalPillar=null;if(k==='season')jSeason='';
-    if(k==='deep'){jScreen='pillars';}else{jScreen='compose';}renderJournal();});
+    if(k==='deep'){const pil=nextDeepPillar();if(pil){journalPillar=pil;jScreen='compose';}else{jScreen='pillars';}}
+    else{jScreen='compose';}
+    renderJournal();});
   journalView='feed';renderJournalBody();
 }
 
@@ -4615,21 +4629,16 @@ async function renderJournalCompose(){
   }
   listening=false;rec=null;
   const lbl={deep:'Deep',daily:'Daily',season:'Season'}[journalMode]||'Journal';
-  if(journalView==='feed')journalView='mine';
   const backTo=(journalMode==='deep')?'pillars':'home';
   $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="jback" title="Back">‹</button><span class="mark">${ic('lumen','mark')}</span><b>${lbl}</b>`
     +`<button class="lo-btn" id="jhome" style="margin-left:auto">${ic('book')} Journal</button></div>`
     +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
-    +`<div id="jcompose"></div>`
-    +`<div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='insights'?'on':''}" data-v="insights">Insights</button></div>`
-    +`<div id="jbody"></div>`;
+    +`<div id="jcompose"></div>`;
   $('#jback').onclick=()=>{jScreen=backTo;journalPillar=null;renderJournal();};
   $('#jhome').onclick=()=>{jScreen='home';journalPillar=null;renderJournal();};
   if(journalMode==='deep')renderDeepCompose();
   else if(journalMode==='season')renderSeasonCompose();
   else renderDailyCompose();
-  $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournalBody();});
-  renderJournalBody();
 }
 function updateMic(){const m=$('#jmic');if(!m)return;m.classList.toggle('live',listening);
   const h=$('#michint');if(h)h.textContent=listening?'Listening… speak softly, I’m writing it down.':'';
