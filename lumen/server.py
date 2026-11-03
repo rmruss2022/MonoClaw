@@ -4337,7 +4337,7 @@ function composerHTML(o){
   return `<div class="letter">`
     +(o.topHTML||'')
     +`<div class="letter-head"><span>${niceDate(Date.now())}</span>`
-    +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Speak the prompt">${ic(speakOn?'sound':'mute')}</button></div>`
+    +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Read this aloud">${ic(speakOn?'sound':'mute')}</button></div>`
     +`<div class="letter-prompt"><span class="lp-q">“${esc(o.prompt||'')}”</span>`
     +(o.shuffle?`<button class="lp-shuffle" id="jshuf" title="Another prompt">${ic('spark')} another prompt</button>`:'')
     +`</div>`
@@ -4355,6 +4355,18 @@ function composerHTML(o){
 // Speak a journal prompt through Lumen's ElevenLabs voice (narrate), not the
 // on-device Web Speech voice, so the journal matches the rest of the app.
 function sayPrompt(t){try{stopNarration();}catch(e){}if(t)narrate(t);}
+// Full-page narration for a guided sitting — reads the Keeper's opening, the
+// invitation, and every step, not just the prompt line.
+function composeSpeech(ex){
+  if(!ex)return '';
+  const strip=(s)=>(s||'').replace(/[“”"]/g,'').trim();
+  const parts=[];
+  if(ex.title)parts.push(strip(ex.title)+'.');
+  if(ex.opening)parts.push(strip(ex.opening));
+  if(ex.invitation)parts.push(strip(ex.invitation));
+  (ex.steps||[]).forEach((s,i)=>parts.push('Step '+(i+1)+'. '+strip(s)));
+  return parts.filter(Boolean).join(' ');
+}
 function wireComposerCommon(getPrompt){
   $('#jspeak').onclick=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
     $('#jspeak').classList.toggle('on',speakOn);$('#jspeak').innerHTML=ic(speakOn?'sound':'mute');
@@ -4421,7 +4433,7 @@ async function renderSeasonCompose(){
     +(steps?`<ol class="deep-steps">${steps}</ol>`:'');
   const prompt=ex.invitation||ex.title||'';
   $('#jcompose').innerHTML=composerHTML({prompt,shuffle:false,topHTML:top,placeholder:'The chapter I’m in, what it asks of me, what it gives…'});
-  wireComposerCommon(()=>prompt);
+  wireComposerCommon(()=>composeSpeech(ex));
   const pl=$('#jplace');if(pl)pl.oninput=(e)=>{jSeason=e.target.value;};
   $('#jsave').onclick=sealHandler(()=>{const place=(($('#jplace')||{}).value||'').trim();jSeason=place;return{kind:'season',place,prompt};});
 }
@@ -4455,7 +4467,7 @@ async function renderDeepCompose(){
     +(steps?`<ol class="deep-steps">${steps}</ol>`:'');
   const prompt=ex.invitation||ex.title||journalPillar;
   $('#jcompose').innerHTML=composerHTML({prompt,shuffle:false,topHTML:top,placeholder:'Take it one step at a time…'});
-  wireComposerCommon(()=>prompt);
+  wireComposerCommon(()=>composeSpeech(ex));
   const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;jScreen='pillars';renderJournal();};
   $('#jsave').onclick=sealHandler(()=>({kind:'deep',pillar:journalPillar,prompt}));
 }
