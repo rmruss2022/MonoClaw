@@ -465,6 +465,11 @@ PAGE = r'''<!DOCTYPE html>
   .fm-chev{font-size:16px;line-height:1;margin-left:4px;transition:opacity .15s,transform .15s;opacity:.4;
     background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#c7cedb));-webkit-background-clip:text;background-clip:text;color:transparent}
   .fm-job:hover .fm-chev{opacity:1;transform:translateX(3px)}
+  /* running/all filter toggle */
+  .fm-filter{display:inline-flex;gap:2px;padding:3px;border-radius:10px;background:#f1f3f8;border:1px solid #e6eaf1}
+  .fm-filter button{border:0;background:none;cursor:pointer;font:inherit;font-size:11.5px;font-weight:650;letter-spacing:.01em;
+    color:#64748b;padding:5px 12px;border-radius:7px;transition:background .15s,color .15s,box-shadow .15s}
+  .fm-filter button.on{background:#fff;color:#0f172a;box-shadow:0 1px 3px -1px rgba(20,23,30,.2)}
   /* card layout (sketch): avatar + title, status chip, progress bar */
   .fm-head{display:flex;align-items:center;gap:12px}
   .fm-avatar{width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
@@ -570,6 +575,10 @@ PAGE = r'''<!DOCTYPE html>
         <h2 class="fm-title">Subagents at work</h2>
       </div>
       <div class="fm-stats" id="fmStats"></div>
+      <div class="fm-filter" id="fmFilter">
+        <button type="button" data-view="running" class="on">Running</button>
+        <button type="button" data-view="all">All</button>
+      </div>
     </div>
     <div id="fmBoard" class="fm-board"></div>
   </div>
@@ -620,6 +629,7 @@ PAGE = r'''<!DOCTYPE html>
   if(!boardEl)return;
   var rank={running:0,queued:1,failed:2,done:3};
   var byId={}, openId=null;   // latest job snapshots + which one the modal shows
+  var view='running', lastD=null;   // board filter: show only running by default
   function fmt(s){s=s||0;if(s<60)return s+'s';var m=Math.floor(s/60);if(m<60)return m+'m '+(s%60)+'s';var h=Math.floor(m/60);return h+'h '+(m%60)+'m';}
   function esc(s){return (s||'').replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
   function when(ms){if(!ms)return '—';try{return new Date(ms).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});}catch(e){return '—';}}
@@ -652,14 +662,16 @@ PAGE = r'''<!DOCTYPE html>
       +'</div>';
   }
   function draw(d){
+    lastD=d;
     var jobs=d.jobs||[],s=d.stats||{};
     byId={};jobs.forEach(function(j){byId[j.id]=j;});
     function metric(n,lbl,fail){return '<div class="fm-metric'+(fail?' fail':'')+'"><b>'+(n||0)+'</b><span>'+lbl+'</span></div>';}
     statsEl.innerHTML=metric(s.running,'running')+metric(s.queued,'queued')+metric(s.done,'done')+((s.failed||0)?metric(s.failed,'failed',1):'');
-    if(!jobs.length){boardEl.innerHTML='<div class="fm-empty">No subagents yet — send a task in Telegram and watch them light up here.</div>';}
+    var shown=(view==='running')?jobs.filter(function(j){return j.status==='running';}):jobs;
+    if(!shown.length){boardEl.innerHTML='<div class="fm-empty">'+(view==='running'?'Nothing running right now — switch to <b>All</b> to see recent jobs.':'No subagents yet — send a task in Telegram and watch them light up here.')+'</div>';}
     else{
       var groups={},colors={};
-      jobs.forEach(function(j){(groups[j.project]=groups[j.project]||[]).push(j);colors[j.project]=j.color||'#94a3b8';});
+      shown.forEach(function(j){(groups[j.project]=groups[j.project]||[]).push(j);colors[j.project]=j.color||'#94a3b8';});
       var order=[],seen={};
       (d.roster||[]).forEach(function(p){if(groups[p.name]&&!seen[p.name]){order.push(p.name);seen[p.name]=1;colors[p.name]=colors[p.name]||p.color;}});
       Object.keys(groups).forEach(function(n){if(!seen[n]){order.push(n);seen[n]=1;}});
@@ -708,6 +720,13 @@ PAGE = r'''<!DOCTYPE html>
   }
   function closeModal(){openId=null;modalEl.hidden=true;}
   function openFromEl(c){if(!c)return;openId=c.getAttribute('data-id');if(byId[openId])renderModal(byId[openId]);}
+  var filterEl=document.getElementById('fmFilter');
+  if(filterEl)filterEl.addEventListener('click',function(ev){
+    var b=ev.target.closest('button[data-view]');if(!b)return;
+    view=b.getAttribute('data-view');
+    Array.prototype.forEach.call(filterEl.children,function(c){c.classList.toggle('on',c===b);});
+    if(lastD)draw(lastD);
+  });
   boardEl.addEventListener('click',function(ev){openFromEl(ev.target.closest('.fm-job'));});
   boardEl.addEventListener('keydown',function(ev){
     if(ev.key!=='Enter'&&ev.key!==' ')return;
