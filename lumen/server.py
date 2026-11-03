@@ -135,6 +135,9 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS horoscopes(
       sign TEXT, day TEXT, text TEXT, theme TEXT, soundscape TEXT, created TEXT,
       PRIMARY KEY(sign, day))""")
+    # pre-launch waitlist for the physical Lumen Journal (the anchor product)
+    c.execute("""CREATE TABLE IF NOT EXISTS journal_waitlist(
+      email TEXT PRIMARY KEY, created TEXT)""")
     scols = [r[1] for r in c.execute("PRAGMA table_info(sessions)").fetchall()]
     if "lesson" not in scols:
         c.execute("ALTER TABLE sessions ADD COLUMN lesson TEXT")
@@ -5853,6 +5856,17 @@ class H(BaseHTTPRequestHandler):
 
     # -- POST api ----------------------------------------------------------
     def _post_api(self, p, q, c):
+        if p == "/api/waitlist":
+            email = (self._body().get("email") or "").strip().lower()
+            if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+                self._send(400, {"error": "Enter a valid email."}); return
+            try:
+                c.execute("INSERT OR IGNORE INTO journal_waitlist(email,created) VALUES(?,?)",
+                          (email, now_iso())); c.commit()
+            except Exception:
+                pass
+            self._send(200, {"ok": True}); return
+
         if p == "/api/feed/report":
             u = self._me(c)
             if not u:
@@ -7377,16 +7391,55 @@ h2.sec{text-align:center;font-size:clamp(22px,4vw,32px);margin:60px 0 6px}
 .cta2{text-align:center;padding:70px 0 20px}.cta2 h2{font-size:clamp(24px,4vw,34px);margin:0 0 20px}
 footer{text-align:center;color:var(--mut);font-size:13px;padding:44px 0 64px;border-top:1px solid var(--line);margin-top:50px}
 footer a{color:var(--gold);text-decoration:none}
+.anchor{margin:30px 0 8px}
+.anchor-wrap{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;
+ background:linear-gradient(160deg,rgba(245,201,119,.11),rgba(168,85,247,.09));border:1px solid var(--line);border-radius:26px;padding:28px}
+.anchor-art img{width:100%;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);border:1px solid var(--line);display:block}
+.abadge{display:inline-block;border:1px solid var(--line);background:rgba(22,19,38,.7);color:var(--gold);border-radius:999px;padding:5px 13px;font-size:12.5px;margin-bottom:12px}
+.anchor-copy h2{font-size:clamp(26px,4vw,38px);margin:0 0 12px;line-height:1.1;
+ background:linear-gradient(90deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.anchor-copy>p{color:var(--mut);margin:0 0 16px;font-size:16px}
+.alist{list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:9px}
+.alist li{color:var(--ink);font-size:14.5px;padding-left:24px;position:relative}
+.alist li:before{content:'\2726';position:absolute;left:0;color:var(--gold)}
+.anchor-cta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0}
+.anchor-cta .price{font-size:26px;font-weight:800;color:var(--ink)}
+.anchor-cta input{flex:1;min-width:160px;background:rgba(11,10,18,.6);border:1px solid var(--line);
+ border-radius:999px;padding:12px 18px;color:var(--ink);font-size:15px;font-family:inherit}
+.anchor-cta input:focus{outline:none;border-color:var(--gold)}
+@media(max-width:720px){.anchor-wrap{grid-template-columns:1fr;gap:20px;padding:20px}}
 </style></head><body>
 <header class="wraphd"><div class="wrap" style="display:flex;justify-content:space-between;align-items:center;padding:0">
 <div class="logo"><img src="/icon.svg" alt="Lumen"> Lumen</div>
-<nav class="nav"><a class="navlink" href="#how">How it works</a><a class="navlink" href="#features">Features</a><a class="navlink" href="#faq">FAQ</a><a class="btn" href="__APP__">__CTA__</a></nav>
+<nav class="nav"><a class="navlink" href="#journal">The Journal</a><a class="navlink" href="#how">How it works</a><a class="navlink" href="#features">Features</a><a class="navlink" href="#faq">FAQ</a><a class="btn" href="__APP__">__CTA__</a></nav>
 </div></header>
 <div class="wrap">
 <section class="hero"><img class="orbit" src="/icon.svg" alt="Lumen">
 <div class="badge">Now on the App Store</div>
 <h1>__H__</h1><p>__SUB__</p><a class="btn lg" href="__APP__">__CTA__</a>
 <div class="sub2">Free to start · Your journal stays private</div></section>
+
+<section id="journal" class="anchor">
+<div class="anchor-wrap">
+  <div class="anchor-art"><img src="/art/lumen-journal.png" alt="The Lumen Journal" loading="lazy" onerror="this.closest('.anchor-art').style.display='none'"></div>
+  <div class="anchor-copy">
+    <div class="abadge">★ The anchor · a companion you can hold</div>
+    <h2>The Lumen Journal</h2>
+    <p>The guided practice of the app, in your hands. The eight life pillars, the season you're in, and a year of evening prompts — printed on cream dot-grid paper, bound in a linen hardcover with a gold ribbon and gilded edges.</p>
+    <ul class="alist">
+      <li>The 8 pillar lesson plans — the same guided chapters as in-app</li>
+      <li>The Season program — name and tend the chapter you're living through</li>
+      <li>A year of evening prompts, with open dot-grid pages to go deeper</li>
+      <li>Linen hardcover · gilded edges · gold ribbon · ships worldwide</li>
+    </ul>
+    <form id="wl" class="anchor-cta">
+      <span class="price">$32</span>
+      <input id="wlemail" type="email" placeholder="your@email.com" required>
+      <button class="btn" type="submit">Reserve yours</button>
+    </form>
+    <div class="sub2" id="wlmsg">Printed to order · reserve yours and we'll email you the moment it ships.</div>
+  </div>
+</div></section>
 
 <section id="how"><h2 class="sec">Three minutes a day</h2><p class="lead">A loop simple enough to keep, gratifying enough to miss.</p>
 <div class="steps">__STEPS__</div></section>
@@ -7402,6 +7455,17 @@ footer a{color:var(--gold);text-decoration:none}
 <section class="cta2"><h2>Start your streak tonight.</h2><a class="btn lg" href="__APP__">__CTA__</a></section>
 </div>
 <footer>Lumen · <a href="/privacy">Privacy</a> · <a href="__IG__">Instagram</a> · <a href="__APP__">App Store</a><br>© 2026 Lumen. Light up the world.</footer>
+<script>
+(function(){var f=document.getElementById('wl');if(!f)return;
+ f.addEventListener('submit',function(e){e.preventDefault();
+  var em=(document.getElementById('wlemail').value||'').trim();var m=document.getElementById('wlmsg');
+  fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
+   .then(function(r){return r.json();}).then(function(d){
+     if(d&&d.ok){f.style.display='none';m.textContent='✦ You are on the list — we will email you the moment it ships.';m.style.color='#f5c977';}
+     else{m.textContent=(d&&d.error)||'Something went wrong — please try again.';}
+   }).catch(function(){m.textContent='Something went wrong — please try again.';});
+ });})();
+</script>
 </body></html>"""
             .replace("__H__", w["hero_h"]).replace("__SUB__", w["hero_sub"])
             .replace("__CTA__", w["cta"]).replace("__APP__", APP_STORE_URL)
