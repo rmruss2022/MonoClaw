@@ -195,6 +195,86 @@ def expand_personal(days=32):
     return out
 
 
+# -------------------------------------------------- subscribable iCalendar feed
+def _ics_esc(s):
+    """Escape a TEXT value per RFC 5545 (backslash, comma, semicolon, newline)."""
+    return (str(s or "")
+            .replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;")
+            .replace("\r\n", "\\n").replace("\n", "\\n").replace("\r", "\\n"))
+
+
+def _ics_fold(line):
+    """Fold a content line to <=75 octets per RFC 5545 (continuation = CRLF+space)."""
+    if len(line.encode("utf-8")) <= 75:
+        return line
+    out, cur = [], b""
+    for ch in line:
+        e = ch.encode("utf-8")
+        if len(cur) + len(e) > 75:
+            out.append(cur.decode("utf-8")); cur = b" " + e
+        else:
+            cur += e
+    out.append(cur.decode("utf-8"))
+    return "\r\n".join(out)
+
+
+def _ics_time(t):
+    """Parse a start time ('7:00 PM', '7:30 AM - 9:00 AM') -> (hour, minute) or None."""
+    m = re.match(r"\s*(\d{1,2})(?::(\d{2}))?\s*([AaPp])[Mm]", t or "")
+    if not m:
+        return None
+    h = int(m.group(1)) % 12
+    if m.group(3).lower() == "p":
+        h += 12
+    return (h, int(m.group(2) or 0))
+
+
+def _ics_event(e):
+    """Render one event dict to a VEVENT (list of unfolded content lines)."""
+    d = (e.get("date") or "")
+    p = d.split("-")
+    if len(p) != 3:
+        return []
+    y, mo, da = p
+    base = (e.get("id") or hashlib.sha1((e.get("title", "") + d).encode()).hexdigest()[:10])
+    L = ["BEGIN:VEVENT",
+         "UID:" + base + "-" + d + "@marquee.bedrock.casa",
+         "DTSTAMP:" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())]
+    hm = _ics_time(e.get("time"))
+    if not hm:
+        L.append("DTSTART;VALUE=DATE:" + y + mo + da)
+    else:
+        h, mi = hm
+        L.append("DTSTART:%s%s%sT%02d%02d00" % (y, mo, da, h, mi))
+        L.append("DTEND:%s%s%sT%02d%02d00" % (y, mo, da, (h + 2) % 24, mi))
+    L.append("SUMMARY:" + _ics_esc(e.get("title")))
+    loc = ", ".join([x for x in [e.get("venue"), e.get("neighborhood")] if x])
+    if loc:
+        L.append("LOCATION:" + _ics_esc(loc))
+    desc = "\n".join([x for x in [e.get("blurb"), e.get("url")] if x])
+    if desc:
+        L.append("DESCRIPTION:" + _ics_esc(desc))
+    if e.get("url"):
+        L.append("URL:" + _ics_esc(e.get("url")))
+    L.append("END:VEVENT")
+    return L
+
+
+def build_ics():
+    """Build a subscribable VCALENDAR from the user's regular/saved events so
+    Google and Apple Calendar can auto-sync Marquee."""
+    L = ["BEGIN:VCALENDAR", "VERSION:2.0",
+         "PRODID:-//Marquee//NYC Events//EN", "CALSCALE:GREGORIAN",
+         "METHOD:PUBLISH", "X-WR-CALNAME:Marquee",
+         "X-WR-CALDESC:Your NYC events from Marquee",
+         "X-WR-TIMEZONE:America/New_York",
+         "X-PUBLISHED-TTL:PT6H", "REFRESH-INTERVAL;VALUE=DURATION:PT6H"]
+    for e in expand_personal():
+        L += _ics_event(e)
+    L.append("END:VCALENDAR")
+    return "\r\n".join(_ics_fold(x) for x in L) + "\r\n"
+
+
 # -------------------------------------------------- Firecrawl scan of regulars
 # ---- content cache: scraped pages are cached on disk and served first ----
 def _cache_path(url):
@@ -988,6 +1068,12 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .modal-actions button{flex:1;border:0;border-radius:11px;padding:12px;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
  .m-cancel{background:var(--card2);color:var(--mut)}
  .m-save{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+ .subbtn{display:block;text-align:center;text-decoration:none;margin-top:6px;border-radius:11px;padding:13px;font-weight:700;font-size:14px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 16px -6px rgba(255,92,138,.6)}
+ .subbtn:hover{filter:brightness(1.07)}
+ .subrow{display:flex;gap:8px;margin-top:6px}
+ .subrow input{flex:1;min-width:0;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:10px;padding:11px;font:inherit;font-size:12.5px}
+ .subrow button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:0 15px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+ .subrow button:hover{border-color:#3a3a50}
  .foot{color:var(--mut);font-size:11.5px;text-align:center;margin-top:34px}
  @media(max-width:560px){
   .cell{min-height:66px;padding:3px 3px 2px}
@@ -1011,6 +1097,8 @@ PAGE = r"""<!doctype html><html lang="en"><head>
   </header>
   <div class="actions">
    <button class="refresh add" id="addBtn" title="Add your own event">+ Add event</button>
+   <button class="refresh" id="subBtn" title="Subscribe in Google / Apple Calendar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 12v6M9 15h6"/></svg>Subscribe</button>
    <button class="refresh" id="refresh" title="Refresh events">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>Refresh</button>
   </div>
@@ -1045,6 +1133,16 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  <label>Website / tickets URL</label><input type="text" id="f_url" placeholder="https://…">
  <label class="mnear"><input type="checkbox" id="f_near" checked> Near me (Bushwick)</label>
  <div class="modal-actions"><button class="m-cancel" id="f_cancel">Cancel</button><button class="m-save" id="f_save">Add to calendar</button></div>
+</div></div>
+<div class="modal-bg" id="subModal" hidden><div class="modal">
+ <h3>Subscribe in your calendar</h3>
+ <p class="mh">Your regulars &amp; saved events auto-sync to Google or Apple Calendar — new sessions show up on their own.</p>
+ <label>Apple Calendar / iPhone (one tap)</label>
+ <a class="subbtn" id="sub_webcal" href="#">＋ Add to Apple Calendar</a>
+ <label style="margin-top:14px">Google Calendar → “From URL”</label>
+ <div class="subrow"><input type="text" id="sub_url" readonly><button id="sub_copy">Copy</button></div>
+ <p class="mh" style="margin-top:6px">In Google Calendar: <b>Other calendars → + → From URL</b>, then paste.</p>
+ <div class="modal-actions"><button class="m-cancel" id="sub_cancel">Done</button></div>
 </div></div>
 <div class="modal-bg" id="evModal" hidden><div class="evm-card"></div></div>
 <script>
@@ -1253,6 +1351,21 @@ function openModal(){modal.hidden=false;}
 function closeModal(){modal.hidden=true;}
 document.getElementById('addBtn').onclick=openModal;
 document.getElementById('f_cancel').onclick=closeModal;
+(function(){
+ var sm=document.getElementById('subModal');
+ var httpsUrl=location.protocol+'//'+location.host+'/calendar.ics';
+ document.getElementById('sub_url').value=httpsUrl;
+ document.getElementById('sub_webcal').href='webcal://'+location.host+'/calendar.ics';
+ document.getElementById('subBtn').onclick=function(){sm.hidden=false;};
+ document.getElementById('sub_cancel').onclick=function(){sm.hidden=true;};
+ sm.addEventListener('click',function(ev){if(ev.target===sm)sm.hidden=true;});
+ document.getElementById('sub_copy').onclick=function(){
+  var i=document.getElementById('sub_url'),b=this;i.select();
+  var ok=function(){b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy';},1400);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(i.value).then(ok,function(){try{document.execCommand('copy');ok();}catch(e){}});}
+  else{try{document.execCommand('copy');ok();}catch(e){}}
+ };
+})();
 modal.addEventListener('click',function(ev){if(ev.target===modal)closeModal();});
 document.getElementById('f_save').onclick=function(){
  var title=document.getElementById('f_title').value.trim();if(!title){document.getElementById('f_title').focus();return;}
@@ -1354,6 +1467,8 @@ class H(BaseHTTPRequestHandler):
             self._send(json.dumps({"fetched_at": store.get("fetched_at", 0),
                                    "events": merged, "home": HOME,
                                    "categories": CATEGORIES}))
+        elif p in ("/calendar.ics", "/api/calendar.ics"):
+            self._send(build_ics(), "text/calendar; charset=utf-8")
         elif p == "/api/personal":
             self._send(json.dumps({"personal": load_personal()}))
         elif p == "/api/widget":
