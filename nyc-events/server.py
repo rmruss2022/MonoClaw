@@ -16,7 +16,8 @@ Env:
   MARQUEE_REFRESH_H   cache freshness hours (default 12)
   MARQUEE_DATA        data dir (default ./data)
 """
-import json, os, re, threading, time, html, urllib.request
+import json, os, re, threading, time, html, uuid, urllib.request
+from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("PORT", os.environ.get("MARQUEE_PORT", "18852")))
@@ -29,8 +30,10 @@ DATA = os.environ.get("MARQUEE_DATA", os.path.join(HERE, "data"))
 STORE = os.path.join(DATA, "events.json")
 
 CATEGORIES = ["Music", "Nightlife", "Arts", "Theater", "Comedy", "Sports",
-              "Food", "Festival", "Family", "Film"]
+              "Food", "Festival", "Family", "Film", "Wellness"]
 BOROUGHS = ["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island"]
+STORE_PERSONAL = os.path.join(os.environ.get("MARQUEE_DATA", os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "data")), "personal.json")
 
 _lock = threading.Lock()
 _refreshing = {"on": False}
@@ -55,6 +58,73 @@ def save_store(obj):
 
 def is_stale(store):
     return (time.time() * 1000 - (store.get("fetched_at") or 0)) > REFRESH_H * 3600 * 1000
+
+
+# ------------------------------------------------- personal (user-added) events
+# weekdays use JS getDay(): Sun=0, Mon=1 ... Sat=6.
+WD_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+
+def load_personal():
+    try:
+        with open(STORE_PERSONAL) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_personal(recs):
+    os.makedirs(DATA, exist_ok=True)
+    tmp = STORE_PERSONAL + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(recs, f, indent=1)
+    os.replace(tmp, STORE_PERSONAL)
+
+
+def seed_personal():
+    """One-time seed: Matthew's Baby Cobra Yoga in Bushwick, Thu & Sat ~7pm."""
+    recs = load_personal()
+    if any(r.get("seed") == "babycobra" for r in recs):
+        return
+    recs.append({
+        "id": uuid.uuid4().hex[:12], "seed": "babycobra",
+        "title": "Baby Cobra Yoga", "recurring": True, "weekdays": [4, 6],
+        "time": "7:00 PM", "venue": "Baby Cobra Yoga, 47 Thames St #206",
+        "neighborhood": "Bushwick", "borough": "Brooklyn", "near_home": True,
+        "category": "Wellness", "price": "Donation-based",
+        "url": "https://www.babycobrayoga.com/", "blurb": "Donation-based, baby-friendly flow in a Bushwick loft studio.",
+    })
+    save_personal(recs)
+
+
+def _instance(r, d):
+    return {
+        "id": "p_" + r["id"], "pid": r["id"], "mine": True,
+        "title": r.get("title", ""), "date": d, "time": r.get("time", ""),
+        "venue": r.get("venue", ""), "neighborhood": r.get("neighborhood", ""),
+        "borough": _norm_boro(r.get("borough")), "near_home": bool(r.get("near_home")),
+        "category": _norm_cat(r.get("category")), "price": r.get("price", ""),
+        "url": r.get("url", ""), "blurb": r.get("blurb", ""),
+        "recurring": bool(r.get("recurring")),
+    }
+
+
+def expand_personal(days=32):
+    """Expand recurring + one-off personal events into dated instances in the
+    upcoming window."""
+    out, today = [], date.today()
+    for r in load_personal():
+        if not r.get("id"):
+            continue
+        if r.get("recurring"):
+            wd = set(r.get("weekdays") or [])
+            for i in range(days):
+                d = today + timedelta(days=i)
+                if (d.weekday() + 1) % 7 in wd:   # python Mon=0 -> JS Sun=0
+                    out.append(_instance(r, d.isoformat()))
+        elif r.get("date") and r["date"] >= today.isoformat():
+            out.append(_instance(r, r["date"]))
+    return out
 
 
 # --------------------------------------------------------------- gemini fetch
@@ -203,9 +273,12 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .near-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;
    text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#f59e0b,#ef4444)}
  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
- .refresh{margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--mut);
+ .actions{margin-left:auto;display:flex;gap:8px}
+ .refresh{border:1px solid var(--line);background:var(--card);color:var(--mut);
    border-radius:10px;padding:8px 13px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
  .refresh:hover{color:var(--ink);border-color:#3a3a50}
+ .refresh.add{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 16px -6px rgba(255,92,138,.6)}
+ .refresh.add:hover{filter:brightness(1.07)}
  .refresh.spin svg{animation:spin 1s linear infinite}
  @keyframes spin{to{transform:rotate(360deg)}}
  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
@@ -253,7 +326,33 @@ PAGE = r"""<!doctype html><html lang="en"><head>
    padding:3px 8px;border-radius:6px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2))}
  .ev .go{flex:0 0 auto;align-self:center;color:var(--mut);font-size:19px}
  .ev:hover .go{color:var(--accent)}
+ .ev.mine{background:linear-gradient(135deg,#1a1326,#17121f);border-color:rgba(255,92,138,.4)}
+ .mine-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;
+   text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#ff5c8a,#a855f7)}
+ .ev .del{flex:0 0 auto;align-self:flex-start;border:0;background:rgba(255,255,255,.06);color:var(--mut);
+   width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:12px;line-height:1}
+ .ev .del:hover{background:rgba(239,68,68,.25);color:#fff}
  .empty{color:var(--mut);padding:30px 4px;text-align:center;font-size:14px}
+ /* add-event modal */
+ .modal-bg{position:fixed;inset:0;background:rgba(5,5,10,.7);display:flex;align-items:center;justify-content:center;z-index:60;padding:18px}
+ .modal-bg[hidden]{display:none}
+ .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:440px;width:100%;padding:22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+ .modal h3{margin:0 0 4px;font-size:18px}
+ .modal .mh{color:var(--mut);font-size:12px;margin:0 0 16px}
+ .modal label{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:12px 0 5px}
+ .modal input[type=text],.modal select{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--ink);
+   border-radius:10px;padding:10px 12px;font:inherit;font-size:14px}
+ .modal input::placeholder{color:#6b6980}
+ .wdays{display:flex;gap:5px}
+ .wday{flex:1;text-align:center;border:1px solid var(--line);background:var(--card2);color:var(--mut);border-radius:9px;padding:8px 0;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+ .wday.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+ .mrow{display:flex;gap:10px}.mrow>div{flex:1}
+ .mnear{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px;color:var(--ink);cursor:pointer}
+ .mnear input{width:16px;height:16px;accent-color:var(--accent)}
+ .modal-actions{display:flex;gap:10px;margin-top:20px}
+ .modal-actions button{flex:1;border:0;border-radius:11px;padding:12px;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+ .m-cancel{background:var(--card2);color:var(--mut)}
+ .m-save{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
  .foot{color:var(--mut);font-size:11.5px;text-align:center;margin-top:34px}
  @media(max-width:560px){.cell{min-height:50px}.ev .bl{display:none}}
 </style></head><body>
@@ -267,8 +366,11 @@ PAGE = r"""<!doctype html><html lang="en"><head>
     <g fill="#a855f7"><circle cx="17" cy="27" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="27" r="2"/><circle cx="17" cy="32" r="2"/><circle cx="24" cy="32" r="2"/></g></svg>
    <div><h1>Marquee</h1><p class="sub">What's on in NYC · <span class="home" id="homePill">📍 Bushwick, Brooklyn</span></p></div>
   </header>
-  <button class="refresh" id="refresh" title="Refresh events">
-   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>Refresh</button>
+  <div class="actions">
+   <button class="refresh add" id="addBtn" title="Add your own event">+ Add event</button>
+   <button class="refresh" id="refresh" title="Refresh events">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>Refresh</button>
+  </div>
  </div>
  <div class="chips" id="chips"></div>
  <div class="controls">
@@ -282,10 +384,30 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  <div id="list"></div>
  <div class="foot" id="foot"></div>
 </div>
+<div class="modal-bg" id="addModal" hidden><div class="modal">
+ <h3>Add an event</h3>
+ <p class="mh">Add it to your Marquee calendar — one-off or repeating weekly.</p>
+ <label>Title</label><input type="text" id="f_title" placeholder="e.g. Baby Cobra Yoga">
+ <div class="mrow">
+  <div><label>Category</label><select id="f_cat"></select></div>
+  <div><label>Time</label><input type="text" id="f_time" placeholder="7:00 PM"></div>
+ </div>
+ <label>Repeat weekly on</label>
+ <div class="wdays" id="f_wdays"></div>
+ <div class="mrow" style="margin-top:10px">
+  <div><label>…or one-time date</label><input type="text" id="f_date" placeholder="YYYY-MM-DD"></div>
+ </div>
+ <label>Venue / location</label><input type="text" id="f_venue" placeholder="47 Thames St, Bushwick">
+ <label>Website / tickets URL</label><input type="text" id="f_url" placeholder="https://…">
+ <label class="mnear"><input type="checkbox" id="f_near" checked> Near me (Bushwick)</label>
+ <div class="modal-actions"><button class="m-cancel" id="f_cancel">Cancel</button><button class="m-save" id="f_save">Add to calendar</button></div>
+</div></div>
 <script>
 var CATCOLOR={Music:'#ff5c8a',Nightlife:'#a855f7',Arts:'#38bdf8',Theater:'#f59e0b',Comedy:'#fbbf24',
-  Sports:'#22c55e',Food:'#fb7185',Festival:'#ec4899',Family:'#2dd4bf',Film:'#818cf8'};
-var CATS=['Music','Nightlife','Arts','Theater','Comedy','Sports','Food','Festival','Family','Film'];
+  Sports:'#22c55e',Food:'#fb7185',Festival:'#ec4899',Family:'#2dd4bf',Film:'#818cf8',Wellness:'#34d399'};
+var CATICON={Music:'🎵',Nightlife:'🪩',Arts:'🎨',Theater:'🎭',Comedy:'🎤',Sports:'🏀',Food:'🍽️',
+  Festival:'🎪',Family:'🧸',Film:'🎬',Wellness:'🧘'};
+var CATS=['Music','Nightlife','Arts','Theater','Comedy','Sports','Food','Festival','Family','Film','Wellness'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var all=[],active=new Set(),view='list',curMonth=null,selDay=null,loc='all';
@@ -296,20 +418,21 @@ function filtered(){return all.filter(function(e){return (!active.size||active.h
 function chips(){
  var c=document.getElementById('chips');
  c.innerHTML='<span class="chip'+(!active.size?' on':'')+'" data-c="">All</span>'+
-  CATS.map(function(k){return '<span class="chip'+(active.has(k)?' on':'')+'" data-c="'+k+'" style="'+(active.has(k)?'':'')+'">'+k+'</span>';}).join('');
+  CATS.map(function(k){return '<span class="chip'+(active.has(k)?' on':'')+'" data-c="'+k+'">'+CATICON[k]+' '+k+'</span>';}).join('');
 }
 function evCard(e){
  var d=parseD(e.date);
- return '<a class="ev" href="'+esc(e.url||'#')+'" target="_blank" rel="noopener">'
+ return '<a class="ev'+(e.mine?' mine':'')+'" href="'+esc(e.url||'#')+'" target="_blank" rel="noopener">'
   +'<div class="dte"><div class="mo">'+MON[d.getMonth()]+'</div><div class="dy">'+d.getDate()+'</div><div class="wd">'+WD[d.getDay()]+'</div></div>'
   +'<div class="body"><div class="t">'+esc(e.title)+'</div>'
-  +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+esc(e.category)+'</span>'
-  +(e.near_home?'<span class="near-tag">★ Near you</span>':'')
+  +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+(CATICON[e.category]||'')+' '+esc(e.category)+'</span>'
+  +(e.mine?'<span class="mine-tag">'+(e.recurring?'★ Mine · weekly':'★ Mine')+'</span>':'')
+  +(e.near_home&&!e.mine?'<span class="near-tag">★ Near you</span>':'')
   +(e.time?'<span>🕒 '+esc(e.time)+'</span>':'')
   +(e.venue?'<span>📍 '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):(e.borough?', '+esc(e.borough):''))+'</span>':'')
   +(e.price?'<span>🎟 '+esc(e.price)+'</span>':'')+'</div>'
   +(e.blurb?'<p class="bl">'+esc(e.blurb)+'</p>':'')+'</div>'
-  +'<span class="go">↗</span></a>';
+  +(e.mine?'<button class="del" data-del="'+esc(e.pid||'')+'" title="Remove">✕</button>':'<span class="go">↗</span>')+'</a>';
 }
 function renderList(){
  var evs=filtered(),box=document.getElementById('list');
@@ -375,6 +498,46 @@ document.getElementById('cells').addEventListener('click',function(ev){
 document.getElementById('pm').onclick=function(){curMonth=new Date(curMonth.getFullYear(),curMonth.getMonth()-1,1);selDay=null;renderCal();};
 document.getElementById('nm').onclick=function(){curMonth=new Date(curMonth.getFullYear(),curMonth.getMonth()+1,1);selDay=null;renderCal();};
 document.getElementById('refresh').onclick=function(){load(true);};
+// ---- add-event modal ----
+var modal=document.getElementById('addModal'),selWd=new Set();
+(function initForm(){
+ var cat=document.getElementById('f_cat');
+ cat.innerHTML=CATS.map(function(k){return '<option value="'+k+'">'+CATICON[k]+' '+k+'</option>';}).join('');
+ cat.value='Wellness';
+ var wd=document.getElementById('f_wdays');
+ wd.innerHTML=WD.map(function(w,i){return '<button type="button" class="wday" data-wd="'+i+'">'+w[0]+'</button>';}).join('');
+ wd.addEventListener('click',function(ev){var b=ev.target.closest('.wday');if(!b)return;var i=+b.getAttribute('data-wd');
+  if(selWd.has(i)){selWd.delete(i);b.classList.remove('on');}else{selWd.add(i);b.classList.add('on');}});
+})();
+function openModal(){modal.hidden=false;}
+function closeModal(){modal.hidden=true;}
+document.getElementById('addBtn').onclick=openModal;
+document.getElementById('f_cancel').onclick=closeModal;
+modal.addEventListener('click',function(ev){if(ev.target===modal)closeModal();});
+document.getElementById('f_save').onclick=function(){
+ var title=document.getElementById('f_title').value.trim();if(!title){document.getElementById('f_title').focus();return;}
+ var body={title:title,category:document.getElementById('f_cat').value,
+  time:document.getElementById('f_time').value.trim(),venue:document.getElementById('f_venue').value.trim(),
+  url:document.getElementById('f_url').value.trim(),near_home:document.getElementById('f_near').checked};
+ if(selWd.size)body.weekdays=Array.from(selWd);else body.date=document.getElementById('f_date').value.trim();
+ if(!body.weekdays&&!/^\d{4}-\d{2}-\d{2}$/.test(body.date||'')){alert('Pick weekdays to repeat, or a one-time date (YYYY-MM-DD).');return;}
+ fetch('api/personal/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  .then(function(r){return r.json();}).then(function(d){
+   if(!d.ok){alert(d.error||'Could not add');return;}
+   closeModal();
+   ['f_title','f_time','f_venue','f_url','f_date'].forEach(function(id){document.getElementById(id).value='';});
+   selWd.clear();Array.prototype.forEach.call(document.querySelectorAll('.wday'),function(x){x.classList.remove('on');});
+   load(false);
+  }).catch(function(){alert('Could not add');});
+};
+// delete a personal event (× on mine cards)
+document.getElementById('list').addEventListener('click',function(ev){
+ var b=ev.target.closest('.del');if(!b)return;ev.preventDefault();ev.stopPropagation();
+ var pid=b.getAttribute('data-del');if(!pid)return;
+ if(!confirm('Remove this event from your calendar?'))return;
+ fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})})
+  .then(function(){load(false);});
+});
 load(false);setInterval(function(){load(false);},120000);
 </script></body></html>"""
 
@@ -408,13 +571,24 @@ class H(BaseHTTPRequestHandler):
             self._send(FAVICON, "image/svg+xml")
         elif p == "/api/events":
             store = get_events(force=("force=1" in q))
-            self._send(json.dumps({**store, "home": HOME}))
+            today = time.strftime("%Y-%m-%d")
+            merged = [e for e in (store.get("events") or [])] + expand_personal()
+            merged = [e for e in merged if e.get("date", "") >= today]
+            merged.sort(key=lambda e: (e["date"], e.get("time", "")))
+            self._send(json.dumps({"fetched_at": store.get("fetched_at", 0),
+                                   "events": merged, "home": HOME,
+                                   "categories": CATEGORIES}))
+        elif p == "/api/personal":
+            self._send(json.dumps({"personal": load_personal()}))
         elif p == "/api/widget":
             store = load_store()
             if is_stale(store) or not store.get("events"):
                 get_events(force=False)
                 store = load_store()
-            evs = store.get("events") or []
+            today = time.strftime("%Y-%m-%d")
+            evs = [e for e in ((store.get("events") or []) + expand_personal())
+                   if e.get("date", "") >= today]
+            evs.sort(key=lambda e: (e["date"], e.get("time", "")))
             # bubble near-home events to the top of the widget, keeping date order
             near = [e for e in evs if e.get("near_home")]
             rest = [e for e in evs if not e.get("near_home")]
@@ -428,17 +602,56 @@ class H(BaseHTTPRequestHandler):
         else:
             self._send("not found", "text/plain", 404)
 
+    def _body(self):
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+            return json.loads(self.rfile.read(n) or b"{}")
+        except Exception:
+            return {}
+
     def do_POST(self):
         p = self.path.split("?", 1)[0]
         if p == "/api/refresh":
             refresh_async()
             self._send(json.dumps({"ok": True, "refreshing": True}))
+        elif p == "/api/personal/add":
+            b = self._body()
+            title = (b.get("title") or "").strip()
+            if not title:
+                self._send(json.dumps({"ok": False, "error": "title required"}), code=400); return
+            rec = {"id": uuid.uuid4().hex[:12], "title": title[:140],
+                   "time": (b.get("time") or "").strip()[:40],
+                   "venue": (b.get("venue") or "").strip()[:140],
+                   "neighborhood": (b.get("neighborhood") or "").strip()[:80],
+                   "borough": _norm_boro(b.get("borough")),
+                   "near_home": bool(b.get("near_home")),
+                   "category": _norm_cat(b.get("category")),
+                   "price": (b.get("price") or "").strip()[:60],
+                   "url": (b.get("url") or "").strip()[:400],
+                   "blurb": (b.get("blurb") or "").strip()[:220]}
+            wkd = b.get("weekdays")
+            if isinstance(wkd, list) and wkd:
+                rec["recurring"] = True
+                rec["weekdays"] = sorted({int(x) for x in wkd if 0 <= int(x) <= 6})
+            else:
+                d = (b.get("date") or "").strip()
+                if not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
+                    self._send(json.dumps({"ok": False, "error": "date or weekdays required"}), code=400); return
+                rec["date"] = d
+            recs = load_personal(); recs.append(rec); save_personal(recs)
+            self._send(json.dumps({"ok": True, "id": rec["id"]}))
+        elif p == "/api/personal/delete":
+            pid = (self._body().get("id") or "").strip()
+            recs = [r for r in load_personal() if r.get("id") != pid]
+            save_personal(recs)
+            self._send(json.dumps({"ok": True}))
         else:
             self._send("not found", "text/plain", 404)
 
 
 def main():
     os.makedirs(DATA, exist_ok=True)
+    seed_personal()
     print(f"Marquee on 127.0.0.1:{PORT} (data={DATA}, llm={'on' if GEMINI_KEY else 'off'})", flush=True)
     # warm the cache in the background on boot
     threading.Thread(target=lambda: get_events(force=False), daemon=True).start()
