@@ -535,6 +535,7 @@ PAGE = r'''<!DOCTYPE html>
   .mqw-t{font-size:13.5px;font-weight:650;color:#f4f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mqw-m{font-size:11.5px;color:#9a98ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mqw-cat{flex:0 0 auto;font-size:8.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#ff5c8a,#a855f7)}
+  .mqw-near{font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:#ffcf33;margin-right:2px}
   .todo-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
   .todo-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
     background:linear-gradient(135deg,#6366f1,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -839,7 +840,7 @@ PAGE = r'''<!DOCTYPE html>
     var p=(e.date||'').split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
     var meta=[e.time,e.venue].filter(Boolean).join(' · ');
     return '<div class="mqw-ev"><div class="mqw-dt"><div class="mo">'+MON[d.getMonth()]+'</div><div class="dy">'+d.getDate()+'</div></div>'
-      +'<div class="mqw-b"><div class="mqw-t">'+esc(e.title)+'</div><div class="mqw-m">'+esc(meta)+'</div></div>'
+      +'<div class="mqw-b"><div class="mqw-t">'+(e.near_home?'<span class="mqw-near">★ near you</span> ':'')+esc(e.title)+'</div><div class="mqw-m">'+esc(meta)+'</div></div>'
       +'<span class="mqw-cat">'+esc(e.category||'')+'</span></div>';
   }
   fetch('api/events-widget',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){

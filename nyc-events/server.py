@@ -23,12 +23,14 @@ PORT = int(os.environ.get("PORT", os.environ.get("MARQUEE_PORT", "18852")))
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 REFRESH_H = float(os.environ.get("MARQUEE_REFRESH_H", "12"))
+HOME = os.environ.get("MARQUEE_HOME", "Bushwick, Brooklyn")
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.environ.get("MARQUEE_DATA", os.path.join(HERE, "data"))
 STORE = os.path.join(DATA, "events.json")
 
 CATEGORIES = ["Music", "Nightlife", "Arts", "Theater", "Comedy", "Sports",
               "Food", "Festival", "Family", "Film"]
+BOROUGHS = ["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island"]
 
 _lock = threading.Lock()
 _refreshing = {"on": False}
@@ -66,23 +68,37 @@ def _norm_cat(c):
     return c if c in CATEGORIES else "Arts"
 
 
+def _norm_boro(b):
+    b = (b or "").strip().title()
+    alias = {"Bk": "Brooklyn", "Mn": "Manhattan", "Nyc": "Manhattan",
+             "New York": "Manhattan", "Si": "Staten Island"}
+    b = alias.get(b, b)
+    return b if b in BOROUGHS else ""
+
+
 def fetch_events():
     """Ask Gemini (grounded in Google Search) for real upcoming NYC events."""
     if not GEMINI_KEY:
         raise RuntimeError("GEMINI_API_KEY not set")
     prompt = (
-        "List 16 real, notable upcoming events in New York City over the next ~24 days, "
-        "a diverse mix across music/concerts, nightlife, arts & museums, theater, comedy, "
-        "sports, food, festivals, family, and film. Use Google Search for REAL current "
-        "listings with REAL working links (official venue, ticketing, or org page). "
-        "Spread them across different dates. Reply with ONLY a JSON array, no prose, no "
-        "markdown fences. Each item: {\"title\",\"date\":\"YYYY-MM-DD\",\"time\",\"venue\","
-        "\"neighborhood\",\"category\",\"price\",\"url\",\"blurb\"}. category is one of: "
-        + ", ".join(CATEGORIES) + ". blurb <= 18 words, vivid and specific."
+        f"I live in {HOME}. List 15 real, notable upcoming events in New York City over "
+        "the next ~24 days. Include a strong share of Brooklyn events, especially ones "
+        f"near {HOME} — Bushwick, East Williamsburg, Williamsburg, Bushwick-adjacent "
+        "Ridgewood (Queens), and Bedford-Stuyvesant — alongside the best citywide "
+        "highlights. Diverse mix across music/concerts, nightlife, arts & museums, "
+        "theater, comedy, sports, food, festivals, family, and film. Use Google Search "
+        "for REAL current listings with REAL working links (official venue, ticketing, or "
+        "org page). Spread them across different dates. Reply with ONLY a JSON array, no "
+        "prose, no markdown fences. Each item: {\"title\",\"date\":\"YYYY-MM-DD\",\"time\","
+        "\"venue\",\"neighborhood\",\"borough\",\"near_home\",\"category\",\"price\",\"url\","
+        "\"blurb\"}. category is one of: " + ", ".join(CATEGORIES) + ". borough is one of: "
+        + ", ".join(BOROUGHS) + ". near_home is true ONLY if the venue is within ~2 miles "
+        f"of {HOME} (Bushwick/East Williamsburg/Williamsburg/Ridgewood/Bed-Stuy). "
+        "blurb <= 18 words, vivid and specific."
     )
     body = {"contents": [{"parts": [{"text": prompt}]}],
             "tools": [{"google_search": {}}],
-            "generationConfig": {"temperature": 0.35, "maxOutputTokens": 6000}}
+            "generationConfig": {"temperature": 0.35, "maxOutputTokens": 10000}}
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}")
     req = urllib.request.Request(url, data=json.dumps(body).encode(),
@@ -106,6 +122,8 @@ def fetch_events():
             "title": title[:140], "date": d, "time": (e.get("time") or "").strip()[:40],
             "venue": (e.get("venue") or "").strip()[:120],
             "neighborhood": (e.get("neighborhood") or "").strip()[:80],
+            "borough": _norm_boro(e.get("borough")),
+            "near_home": bool(e.get("near_home")),
             "category": _norm_cat(e.get("category")),
             "price": (e.get("price") or "").strip()[:60],
             "url": (e.get("url") or "").strip()[:400],
@@ -180,6 +198,10 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .mk{width:44px;height:44px;flex:0 0 auto}
  h1{font-size:25px;margin:0;letter-spacing:-.02em;font-weight:800}
  .sub{color:var(--mut);font-size:13px;margin:2px 0 0;font-weight:500}
+ .home{color:#ffb3cb;font-weight:700}
+ .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+ .near-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;
+   text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#f59e0b,#ef4444)}
  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
  .refresh{margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--mut);
    border-radius:10px;padding:8px 13px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
@@ -243,13 +265,16 @@ PAGE = r"""<!doctype html><html lang="en"><head>
     <rect x="11" y="15" width="26" height="20" rx="3" fill="#fff"/><rect x="11" y="15" width="26" height="6" rx="3" fill="#ffd7e4"/>
     <circle cx="16" cy="12" r="2" fill="#fff"/><circle cx="24" cy="11" r="2" fill="#fff"/><circle cx="32" cy="12" r="2" fill="#fff"/>
     <g fill="#a855f7"><circle cx="17" cy="27" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="27" r="2"/><circle cx="17" cy="32" r="2"/><circle cx="24" cy="32" r="2"/></g></svg>
-   <div><h1>Marquee</h1><p class="sub">What's on in NYC — live</p></div>
+   <div><h1>Marquee</h1><p class="sub">What's on in NYC · <span class="home" id="homePill">📍 Bushwick, Brooklyn</span></p></div>
   </header>
   <button class="refresh" id="refresh" title="Refresh events">
    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>Refresh</button>
  </div>
  <div class="chips" id="chips"></div>
- <div style="margin-bottom:16px"><span class="views" id="views"><button data-v="list" class="on">Upcoming</button><button data-v="cal">Calendar</button></span></div>
+ <div class="controls">
+   <span class="views" id="loc"><button data-l="all" class="on">All NYC</button><button data-l="near">★ Near me</button><button data-l="Brooklyn">Brooklyn</button></span>
+   <span class="views" id="views"><button data-v="list" class="on">Upcoming</button><button data-v="cal">Calendar</button></span>
+ </div>
  <div id="calWrap" class="cal" hidden>
   <div class="cal-head"><button class="cal-nav" id="pm">‹</button><b id="monLbl"></b><button class="cal-nav" id="nm">›</button></div>
   <div class="grid" id="dows"></div><div class="grid" id="cells" style="margin-top:6px"></div>
@@ -263,10 +288,11 @@ var CATCOLOR={Music:'#ff5c8a',Nightlife:'#a855f7',Arts:'#38bdf8',Theater:'#f59e0
 var CATS=['Music','Nightlife','Arts','Theater','Comedy','Sports','Food','Festival','Family','Film'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-var all=[],active=new Set(),view='list',curMonth=null,selDay=null;
+var all=[],active=new Set(),view='list',curMonth=null,selDay=null,loc='all';
 function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function parseD(s){var p=(s||'').split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
-function filtered(){return all.filter(function(e){return !active.size||active.has(e.category);});}
+function matchLoc(e){return loc==='all'||(loc==='near'?!!e.near_home:e.borough===loc);}
+function filtered(){return all.filter(function(e){return (!active.size||active.has(e.category))&&matchLoc(e);});}
 function chips(){
  var c=document.getElementById('chips');
  c.innerHTML='<span class="chip'+(!active.size?' on':'')+'" data-c="">All</span>'+
@@ -278,8 +304,9 @@ function evCard(e){
   +'<div class="dte"><div class="mo">'+MON[d.getMonth()]+'</div><div class="dy">'+d.getDate()+'</div><div class="wd">'+WD[d.getDay()]+'</div></div>'
   +'<div class="body"><div class="t">'+esc(e.title)+'</div>'
   +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+esc(e.category)+'</span>'
+  +(e.near_home?'<span class="near-tag">★ Near you</span>':'')
   +(e.time?'<span>🕒 '+esc(e.time)+'</span>':'')
-  +(e.venue?'<span>📍 '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):'')+'</span>':'')
+  +(e.venue?'<span>📍 '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):(e.borough?', '+esc(e.borough):''))+'</span>':'')
   +(e.price?'<span>🎟 '+esc(e.price)+'</span>':'')+'</div>'
   +(e.blurb?'<p class="bl">'+esc(e.blurb)+'</p>':'')+'</div>'
   +'<span class="go">↗</span></a>';
@@ -322,6 +349,7 @@ function load(force){
  var r=document.getElementById('refresh');if(force)r.classList.add('spin');
  fetch('api/events'+(force?'?force=1':''),{cache:'no-store'}).then(function(x){return x.json();}).then(function(d){
   all=d.events||[];
+  if(d.home)document.getElementById('homePill').textContent='📍 '+d.home;
   document.getElementById('foot').textContent=all.length+' events · updated '+(d.fetched_at?new Date(d.fetched_at).toLocaleString():'—')+' · tap any event for tickets';
   render();r.classList.remove('spin');
  }).catch(function(){r.classList.remove('spin');});
@@ -332,6 +360,11 @@ document.getElementById('chips').addEventListener('click',function(ev){
 });
 document.getElementById('views').addEventListener('click',function(ev){
  var b=ev.target.closest('button');if(!b)return;view=b.getAttribute('data-v');
+ Array.prototype.forEach.call(this.children,function(x){x.classList.toggle('on',x===b);});
+ selDay=null;render();
+});
+document.getElementById('loc').addEventListener('click',function(ev){
+ var b=ev.target.closest('button');if(!b)return;loc=b.getAttribute('data-l');
  Array.prototype.forEach.call(this.children,function(x){x.classList.toggle('on',x===b);});
  selDay=null;render();
 });
@@ -375,14 +408,19 @@ class H(BaseHTTPRequestHandler):
             self._send(FAVICON, "image/svg+xml")
         elif p == "/api/events":
             store = get_events(force=("force=1" in q))
-            self._send(json.dumps(store))
+            self._send(json.dumps({**store, "home": HOME}))
         elif p == "/api/widget":
             store = load_store()
             if is_stale(store) or not store.get("events"):
                 get_events(force=False)
                 store = load_store()
-            evs = (store.get("events") or [])[:6]
-            self._send(json.dumps({"events": evs, "fetched_at": store.get("fetched_at", 0)}))
+            evs = store.get("events") or []
+            # bubble near-home events to the top of the widget, keeping date order
+            near = [e for e in evs if e.get("near_home")]
+            rest = [e for e in evs if not e.get("near_home")]
+            picked = (near + rest)[:6]
+            self._send(json.dumps({"events": picked, "home": HOME,
+                                   "fetched_at": store.get("fetched_at", 0)}))
         elif p in ("/health", "/healthz"):
             s = load_store()
             self._send(json.dumps({"ok": True, "events": len(s.get("events") or []),
