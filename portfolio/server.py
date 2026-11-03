@@ -33,6 +33,21 @@ def _avatar_url(slug):
         return "avatars/" + slug + ".png"
     return None
 
+# Foreman project slug -> dash ICONS key. When a slug has no PNG avatar, the board
+# falls back to the app's branded SVG tile (defined in ICONS below) before the
+# coloured-initial avatar — so every lane shows its real app icon.
+_FOREMAN_ICON_KEYS = {
+    "creator-cut": "creatorcut", "recilia": "recilia", "recilia-api": "recilia",
+    "travelog": "travelog", "open-home": "openhome", "rolodex": "rolodex",
+    "ora-health": "ora", "chase": "chase", "croppa": "croppa", "inkling": "inkling",
+    "favorly": "favorly", "lumen": "lumen", "contentforge": "vantage",
+    "foreman": "adminhub", "waypoint": "waypoint", "dropstick": "dropstick",
+}
+
+def _icon_svg(slug):
+    key = _FOREMAN_ICON_KEYS.get(slug or "")
+    return ICONS.get(key, "") if key else ""
+
 
 def _load_titles():
     try:
@@ -229,7 +244,7 @@ def foreman_data():
         out["jobs"].append({
             "id": d.get("run_id"), "project": project, "color": color,
             "title": _title_for(d.get("run_id"), task_full, task),
-            "avatar": _avatar_url(slug),
+            "avatar": _avatar_url(slug), "icon": _icon_svg(slug),
             "status": status, "task": task, "model": d.get("model") or "",
             "mode": d.get("spawn_mode") or "", "elapsed": elapsed,
             "label": d.get("label") or d.get("task_name") or "",
@@ -269,6 +284,7 @@ ICONS = {
  "reports": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_rp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a855f7"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_rp)"/><rect x="13" y="14" width="26" height="24" rx="2.5" fill="#fff"/><rect x="16.5" y="18" width="10" height="7" rx="1" fill="#8b5cf6"/><g fill="#b9a7f0"><rect x="28.5" y="18" width="7" height="2" rx="1"/><rect x="28.5" y="22.5" width="7" height="2" rx="1"/><rect x="16.5" y="28" width="19" height="2" rx="1"/><rect x="16.5" y="32" width="19" height="2" rx="1"/></g></svg>',
  "recilia": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_rc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_rc)"/><circle cx="18" cy="26" r="3.1" fill="#fff"/><g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M24 20a9 9 0 0 1 0 12"/><path d="M29 16a16 16 0 0 1 0 20"/><path d="M34 12.5a23 23 0 0 1 0 27"/></g></svg>',
  "creatorcut": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_cc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b983ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_cc)"/><rect x="12" y="15" width="28" height="22" rx="3" fill="#fff"/><g fill="#7c4dff"><rect x="15" y="18" width="3.4" height="3.4" rx="0.8"/><rect x="15" y="30.6" width="3.4" height="3.4" rx="0.8"/><rect x="33.6" y="18" width="3.4" height="3.4" rx="0.8"/><rect x="33.6" y="30.6" width="3.4" height="3.4" rx="0.8"/></g><path d="M23 21.5l8 4.5-8 4.5z" fill="#7c4dff"/></svg>',
+ "vantage": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f472b6"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_vg)"/><g fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" opacity="0.92"><circle cx="26" cy="26" r="5"/><path d="M26 14 a12 12 0 0 1 12 12"/><path d="M26 9 a17 17 0 0 1 17 17"/></g><line x1="26" y1="26" x2="37.5" y2="14.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="36.5" cy="15.5" r="2.7" fill="#fff"/><circle cx="26" cy="26" r="2.4" fill="#fff"/></svg>',
  "adminhub": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ah" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5c977"/><stop offset="1" stop-color="#7fe3ff"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ah)"/><g fill="#1a2238"><rect x="15" y="18" width="22" height="2.8" rx="1.4"/><rect x="15" y="24.6" width="22" height="2.8" rx="1.4"/><rect x="15" y="31.2" width="22" height="2.8" rx="1.4"/></g><g fill="#fff" stroke="#1a2238" stroke-width="1.6"><circle cx="22" cy="19.4" r="3.1"/><circle cx="31" cy="26" r="3.1"/><circle cx="25" cy="32.6" r="3.1"/></g></svg>',
 }
 
@@ -298,6 +314,8 @@ APPS = [
      "AI video follow-cam — lock onto a car or object and it stays centered as it moves. Built for race footage.", "private"),
     ("creatorcut", "Creator Cut", "https://creator-cut-production.up.railway.app/",
      "AI video editor that cuts your footage to the beat — a music video, or an ad with an AI-written script, voiceover &amp; on-screen text. Every cut lands on the downbeat. (Token required.)", "private"),
+    ("vantage", "Vantage", "https://vantage.bedrock.casa/",
+     "Content intelligence engine — watch any competitor&rsquo;s social posts (Twitter/IG/Reddit via Xpoz), get an AI breakdown of their hooks, beats &amp; formats, then turn the winning angle into a Creator Cut video. Research &rarr; forge &rarr; distribute.", "public"),
     ("dropstick", "Dropstick", None,
      "Peer-to-peer music sharing for DJs — swap tracks &amp; crates device-to-device over local Wi-Fi, no internet. Go · SQLite.", "wip"),
 ]
@@ -568,6 +586,9 @@ PAGE = r'''<!DOCTYPE html>
   .fm-avatar-img{width:36px;height:36px;border-radius:50%;flex:0 0 auto;object-fit:cover;background:#0b0e16;
     box-shadow:0 3px 10px -3px rgba(20,23,30,.45),inset 0 0 0 1px rgba(255,255,255,.08)}
   .fm-avatar-img.running{animation:fmpulse 1.8s infinite}
+  .fm-avatar-svg{width:36px;height:36px;flex:0 0 auto;display:block}
+  .fm-avatar-svg svg{width:36px;height:36px;border-radius:10px;display:block}
+  .fm-avatar-svg.running svg{animation:fmpulse 1.8s infinite}
   .fm-title{flex:1;min-width:0;font-size:15px;font-weight:650;color:var(--ink);line-height:1.4;word-break:break-word;white-space:pre-wrap}
   .fm-meta{display:flex;align-items:center;gap:9px;margin-top:12px;flex-wrap:wrap}
   .fm-meta .fm-doc{margin:0}
@@ -738,6 +759,7 @@ PAGE = r'''<!DOCTYPE html>
             : (j.status==='done'&&j.doctor==='pending')?'<span class="fm-doc pending">· checking…</span>':'';
     var ini=(((j.project||'?').trim().charAt(0))||'?').toUpperCase();
     var av=j.avatar?('<img class="fm-avatar-img '+j.status+'" src="'+esc(j.avatar)+'" alt="" loading="lazy">')
+                   :j.icon?('<span class="fm-avatar-svg '+j.status+'">'+j.icon+'</span>')
                    :('<span class="fm-avatar '+j.status+'">'+esc(ini)+'</span>');
     return '<div class="fm-job" data-id="'+esc(j.id)+'" role="button" tabindex="0" aria-label="Open job details">'
       +'<div class="fm-head">'
