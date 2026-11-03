@@ -440,16 +440,22 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .cal-nav:hover{border-color:#3a3a50}
  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
  .dow{color:var(--mut);font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:4px 0}
- .cell{min-height:62px;border-radius:11px;background:var(--card2);border:1px solid transparent;padding:6px 7px;cursor:default;position:relative;transition:.12s}
+ .cell{min-height:108px;border-radius:11px;background:var(--card2);border:1px solid transparent;padding:5px 5px 4px;cursor:default;position:relative;transition:.12s;overflow:hidden}
  .cell.pad{background:transparent}
  .cell.has{cursor:pointer}.cell.has:hover{border-color:#3a3a50}
  .cell.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
  .cell.sel{border-color:var(--accent);background:#241a26}
- .cell .d{font-size:12px;font-weight:650;color:var(--mut)}
+ .cell .d{font-size:12px;font-weight:650;color:var(--mut);padding:1px 3px}
  .cell.today .d{color:var(--accent)}
- .cell .dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:6px}
- .dot{width:6px;height:6px;border-radius:50%}
- .cell .more{position:absolute;right:7px;bottom:5px;font-size:10px;color:var(--mut);font-weight:700}
+ .cevs{display:flex;flex-direction:column;gap:2px;margin-top:3px}
+ .evchip{display:flex;align-items:baseline;gap:4px;text-decoration:none;font-size:10.5px;line-height:1.35;
+   padding:2px 5px;border-radius:4px;background:rgba(255,255,255,.055);border-left:3px solid var(--c);
+   color:#dcdae8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .evchip:hover{background:color-mix(in srgb,var(--c) 26%,transparent);color:#fff}
+ .evchip .ct{color:var(--c);font-weight:800;flex:0 0 auto}
+ .evchip.mine{background:color-mix(in srgb,var(--c) 20%,transparent)}
+ .cell .more{font-size:9.5px;color:var(--mut);font-weight:700;padding:2px 5px 0}
+ @media(min-width:900px){.cell{min-height:118px}}
  /* list */
  .day-h{font-size:13px;font-weight:750;color:var(--accent);margin:22px 2px 11px;letter-spacing:.01em;
    text-transform:uppercase;display:flex;align-items:center;gap:9px}
@@ -505,7 +511,15 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .m-cancel{background:var(--card2);color:var(--mut)}
  .m-save{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
  .foot{color:var(--mut);font-size:11.5px;text-align:center;margin-top:34px}
- @media(max-width:560px){.cell{min-height:50px}.ev .bl{display:none}}
+ @media(max-width:560px){
+  .cell{min-height:66px;padding:3px 3px 2px}
+  .ev .bl{display:none}
+  .cevs{gap:2px;margin-top:2px}
+  .evchip{font-size:0;line-height:0;height:5px;padding:0;border-left-width:0;border-radius:3px;background:var(--c)}
+  .evchip .ct{display:none}
+  .cell .d{font-size:11px}
+  .cell .more{font-size:9px;padding:1px 3px 0}
+ }
 </style></head><body>
 <div class="wrap">
  <div class="top">
@@ -575,6 +589,7 @@ var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var all=[],active=new Set(),view='list',curMonth=null,selDay=null,loc='all';
 function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function parseD(s){var p=(s||'').split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function chipTime(t){var m=(t||'').match(/(\d{1,2})(?::(\d{2}))?\s*([ap])/i);if(!m)return '';var mm=(m[2]&&m[2]!=='00')?':'+m[2]:'';return m[1]+mm+m[3].toLowerCase();}
 function matchLoc(e){return loc==='all'||(loc==='near'?!!e.near_home:(loc==='mine'?!!e.mine:e.borough===loc));}
 function filtered(){return all.filter(function(e){return (!active.size||active.has(e.category))&&matchLoc(e);});}
 function chips(){
@@ -648,11 +663,18 @@ function renderCal(){
  evs.forEach(function(e){var p=e.date.split('-');if(+p[0]===y&&+p[1]-1===m){(byDay[+p[2]]=byDay[+p[2]]||[]).push(e);}});
  var today=new Date(),tKey=today.getFullYear()+'-'+today.getMonth()+'-'+today.getDate();
  var cells='';for(var i=0;i<first;i++)cells+='<div class="cell pad"></div>';
+ var MAXCHIP=3;
  for(var day=1;day<=days;day++){
   var ds=byDay[day]||[],isT=(y+'-'+m+'-'+day)===tKey,sel=(selDay===day);
-  var dots=ds.slice(0,4).map(function(e){return '<span class="dot" style="background:'+(CATCOLOR[e.category]||'#ff5c8a')+'"></span>';}).join('');
+  var chips=ds.slice(0,MAXCHIP).map(function(e){
+   var c=CATCOLOR[e.category]||'#ff5c8a',tt=chipTime(e.time);
+   return '<a class="evchip'+(e.mine?' mine':'')+'" style="--c:'+c+'" href="'+esc(e.url||'#')+'" target="_blank" rel="noopener" title="'+esc((tt?tt+' ':'')+e.title)+'">'
+    +(tt?'<span class="ct">'+tt+'</span>':'')+esc(e.title)+'</a>';
+  }).join('');
   cells+='<div class="cell'+(ds.length?' has':'')+(isT?' today':'')+(sel?' sel':'')+'" data-day="'+day+'">'
-   +'<div class="d">'+day+'</div><div class="dots">'+dots+'</div>'+(ds.length>4?'<span class="more">+'+(ds.length-4)+'</span>':'')+'</div>';
+   +'<div class="d">'+day+'</div>'
+   +'<div class="cevs">'+chips+'</div>'
+   +(ds.length>MAXCHIP?'<div class="more">+'+(ds.length-MAXCHIP)+' more</div>':'')+'</div>';
  }
  document.getElementById('cells').innerHTML=cells;
  // selected day's events under the calendar (reuse list area)
@@ -686,6 +708,7 @@ document.getElementById('loc').addEventListener('click',function(ev){
  selDay=null;render();
 });
 document.getElementById('cells').addEventListener('click',function(ev){
+ if(ev.target.closest('.evchip'))return;  // let the event link open
  var c=ev.target.closest('.cell.has');if(!c)return;var day=+c.getAttribute('data-day');
  selDay=(selDay===day)?null:day;renderCal();
 });
