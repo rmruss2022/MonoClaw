@@ -989,6 +989,30 @@ def section_payload(c, eid, kind):
 
 # ---- front-end -------------------------------------------------------------
 
+PRIVACY_HTML = r'''<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trip Sync — Privacy Policy</title>
+<style>body{margin:0;background:#14110f;color:#ece6df;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:28px 20px;max-width:720px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:26px 0 6px;color:#e0b56b}a{color:#e0b56b}.muted{color:#9a9088;font-size:13px}</style></head><body>
+<h1>Trip Sync — Privacy Policy</h1>
+<p class="muted">Last updated: November 2026</p>
+<p>Trip Sync (also "Travelog") is a travel journal app. This policy explains what it stores and how it is used. We keep it short and honest.</p>
+<h2>What we store</h2>
+<p>Only what you put into the app: your trips, places, journal entries and notes, photos you add, and a display name you choose. If you turn on location, approximate coordinates are attached to entries/photos so they can appear on your trip map — location is optional and the app works without it. Identity is a device-generated token, not an email/password account.</p>
+<h2>How it is used</h2>
+<p>Your content is used only to provide the app's features — showing your journal, mapping your places, generating optional AI write-ups, and sharing a trip with people you explicitly invite via a share link. We do not sell your data or use it for advertising.</p>
+<h2>Third-party services</h2>
+<p>Content is hosted on our own server (Railway) in an SQLite database. Some optional features send the minimum necessary data to: <b>Google Gemini</b> (AI-generated trip text and transcribing text from photos you choose), <b>ElevenLabs</b> (text-to-speech narration), and <b>Esri/ArcGIS</b> public map tiles (map background). No third-party advertising or analytics SDKs are used.</p>
+<h2>Sharing</h2>
+<p>A trip is private to you unless you create a share link and give it to someone. Anyone with that link can view and contribute to that trip. You can stop sharing at any time.</p>
+<h2>Deleting your data</h2>
+<p>You can delete any trip, entry, note, or photo in the app, which removes it from our server. To delete all of your data, delete your trips or email the address below and we will erase your content.</p>
+<h2>Children</h2>
+<p>Trip Sync is not directed at children under 13 and does not knowingly collect their data.</p>
+<h2>Contact</h2>
+<p>Questions or deletion requests: <a href="mailto:mattrussellc@gmail.com">mattrussellc@gmail.com</a></p>
+</body></html>'''
+
 PAGE = r'''<!doctype html><html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
@@ -3144,6 +3168,8 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, PAGE.replace("__BASE__", BASE).replace("__MARK__", ICON_SVG), "text/html; charset=utf-8")
         if p == "/manifest.webmanifest":
             return self._send(200, MANIFEST, "application/manifest+json")
+        if p == "/privacy":
+            return self._send(200, PRIVACY_HTML, "text/html; charset=utf-8")
         if p == "/sw.js":
             return self._send(200, SW, "application/javascript")
         if p in ("/icon.svg",):
