@@ -919,7 +919,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .day-h .ln{flex:1;height:1px;background:var(--line)}
  .day-h.today{color:#fff}.day-h.today .ln{background:linear-gradient(90deg,var(--accent),transparent)}
  .noday{color:#55536a;font-size:12px;padding:2px 2px 8px}
- .ev{display:flex;gap:14px;padding:14px 15px;border:1px solid var(--line);background:var(--card);border-radius:14px;margin-bottom:10px;transition:.15s;text-decoration:none}
+ .ev{display:flex;gap:14px;padding:14px 15px;border:1px solid var(--line);background:var(--card);border-radius:14px;margin-bottom:10px;transition:.15s;text-decoration:none;cursor:pointer}
  .ev:hover{border-color:#3a3a50;background:var(--card2);transform:translateY(-1px)}
  .ev .dte{flex:0 0 52px;text-align:center}
  .ev .dte .mo{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
@@ -950,6 +950,25 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .scanbtn:disabled{opacity:.7;cursor:default}
  .empty{color:var(--mut);padding:30px 4px;text-align:center;font-size:14px}
  /* add-event modal */
+ /* event detail modal */
+ .evm-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:460px;width:100%;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+ .evm-top{height:6px}
+ .evm-x{position:absolute;top:12px;right:12px;border:0;background:rgba(255,255,255,.08);color:#dcdae8;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;line-height:1}
+ .evm-x:hover{background:rgba(255,255,255,.16)}
+ .evm-body{padding:20px}
+ .evm-cat{font-size:11px;font-weight:700;letter-spacing:.03em;color:#ff9dc0;display:flex;align-items:center;gap:5px}
+ .evm-cat .ci{width:13px;height:13px}
+ .evm-title{margin:8px 0 6px;font-size:21px;line-height:1.25;letter-spacing:-.01em}
+ .evm-when{font-size:14px;font-weight:650;color:#fff;margin-bottom:12px}
+ .evm-row{font-size:13.5px;color:#c8c6d6;margin:5px 0;line-height:1.4}
+ .evm-blurb{font-size:13.5px;color:#9a98ad;line-height:1.5;margin:12px 0}
+ .evm-link{font-size:12px;margin:10px 0 0;word-break:break-all}
+ .evm-link a{color:#c6a6f0}
+ .evm-actions{display:flex;flex-direction:column;gap:9px;margin-top:18px}
+ .evm-btn{display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:11px;padding:13px;font:inherit;font-weight:700;font-size:14px;cursor:pointer}
+ .evm-btn:hover{border-color:#3a3a50}
+ .evm-btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 16px -6px rgba(255,92,138,.6)}
+ .evm-btn.danger:hover{background:rgba(239,68,68,.2);border-color:#5a2730;color:#fff}
  .modal-bg{position:fixed;inset:0;background:rgba(5,5,10,.7);display:flex;align-items:center;justify-content:center;z-index:60;padding:18px}
  .modal-bg[hidden]{display:none}
  .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:440px;width:100%;padding:22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
@@ -1027,6 +1046,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  <label class="mnear"><input type="checkbox" id="f_near" checked> Near me (Bushwick)</label>
  <div class="modal-actions"><button class="m-cancel" id="f_cancel">Cancel</button><button class="m-save" id="f_save">Add to calendar</button></div>
 </div></div>
+<div class="modal-bg" id="evModal" hidden><div class="evm-card"></div></div>
 <script>
 var CATCOLOR={Music:'#ff5c8a',Nightlife:'#a855f7',Arts:'#38bdf8',Theater:'#f59e0b',Comedy:'#fbbf24',
   Sports:'#22c55e',Food:'#fb7185',Festival:'#ec4899',Family:'#2dd4bf',Film:'#818cf8',Wellness:'#34d399'};
@@ -1059,7 +1079,7 @@ function chips(){
 }
 function evCard(e){
  var d=parseD(e.date);
- return '<a class="ev'+(e.mine?' mine':'')+'" href="'+esc(e.url||'#')+'" target="_blank" rel="noopener">'
+ return '<div class="ev'+(e.mine?' mine':'')+'" data-open="'+e._i+'" role="button" tabindex="0">'
   +'<div class="dte"><div class="mo">'+MON[d.getMonth()]+'</div><div class="dy">'+d.getDate()+'</div><div class="wd">'+WD[d.getDay()]+'</div></div>'
   +'<div class="body"><div class="t">'+esc(e.title)+'</div>'
   +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+catIcon(e.category)+' '+esc(e.category)+'</span>'
@@ -1074,7 +1094,31 @@ function evCard(e){
    +'<button class="act" data-ics="'+e._i+'" title="Add to my calendar (.ics)">📅</button>'
    +(e.mine?'<button class="act del" data-del="'+esc(e.pid||'')+'" title="Remove">✕</button>'
            :'<button class="act" data-save="'+e._i+'" title="Save to my events">＋</button>')
-  +'</div></a>';
+  +'</div></div>';
+}
+function openEvent(e){
+ if(!e)return;var d=parseD(e.date);var m=document.getElementById('evModal');
+ var place=[e.venue,e.neighborhood||e.borough].filter(Boolean).join(', ');
+ m.querySelector('.evm-card').innerHTML=
+  '<div class="evm-top" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)"></div>'
+  +'<button class="evm-x" data-close title="Close">✕</button>'
+  +'<div class="evm-body">'
+   +'<div class="evm-cat">'+catIcon(e.category)+' '+esc(e.category)
+     +(e.mine?' · ★ Mine'+(e.recurring?' · weekly':''):'')+(e.near_home&&!e.mine?' · ★ Near you':'')+(e.source&&!e.mine?' · via '+esc(e.source):'')+'</div>'
+   +'<h2 class="evm-title">'+esc(e.title)+'</h2>'
+   +'<div class="evm-when">'+WD[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate()+(e.time?' · '+esc(e.time):'')+'</div>'
+   +(place?'<div class="evm-row">📍 '+esc(place)+'</div>':'')
+   +(e.price?'<div class="evm-row">🎟 '+esc(e.price)+'</div>':'')
+   +(e.blurb?'<p class="evm-blurb">'+esc(e.blurb)+'</p>':'')
+   +(e.url?'<div class="evm-link">🔗 <a href="'+esc(e.url)+'" target="_blank" rel="noopener">'+esc(e.url.replace(/^https?:\/\//,'').slice(0,54))+'…</a></div>':'')
+   +'<div class="evm-actions">'
+    +(e.url?'<a class="evm-btn primary" href="'+esc(e.url)+'" target="_blank" rel="noopener">🎟 Open / Tickets</a>':'')
+    +'<button class="evm-btn" data-mics>📅 Add to calendar</button>'
+    +(e.mine?'<button class="evm-btn danger" data-mdel="'+esc(e.pid||'')+'">✕ Remove</button>'
+            :'<button class="evm-btn" data-msave>＋ Save to my events</button>')
+   +'</div>'
+  +'</div>';
+ m._ev=e;m.hidden=false;
 }
 function pad(n){return (n<10?'0':'')+n;}
 function parseTime(t){var m=(t||'').match(/(\d{1,2}):(\d{2})\s*([ap])m/i);if(!m)return null;var h=(+m[1])%12;if(/p/i.test(m[3]))h+=12;return {h:h,m:+m[2]};}
@@ -1129,8 +1173,8 @@ function renderCal(){
   var ds=byDay[day]||[],isT=(y+'-'+m+'-'+day)===tKey,sel=(selDay===day);
   var chips=ds.slice(0,MAXCHIP).map(function(e){
    var c=CATCOLOR[e.category]||'#ff5c8a',tt=chipTime(e.time);
-   return '<a class="evchip'+(e.mine?' mine':'')+'" style="--c:'+c+'" href="'+esc(e.url||'#')+'" target="_blank" rel="noopener" title="'+esc((tt?tt+' ':'')+e.title)+'">'
-    +(tt?'<span class="ct">'+tt+'</span>':'')+esc(e.title)+'</a>';
+   return '<span class="evchip'+(e.mine?' mine':'')+'" style="--c:'+c+'" data-open="'+e._i+'" title="'+esc((tt?tt+' ':'')+e.title)+'">'
+    +(tt?'<span class="ct">'+tt+'</span>':'')+esc(e.title)+'</span>';
   }).join('');
   cells+='<div class="cell'+(ds.length?' has':'')+(isT?' today':'')+(sel?' sel':'')+'" data-day="'+day+'">'
    +'<div class="d">'+day+'</div>'
@@ -1186,7 +1230,8 @@ document.getElementById('loc').addEventListener('click',function(ev){
  selDay=null;render();
 });
 document.getElementById('cells').addEventListener('click',function(ev){
- if(ev.target.closest('.evchip'))return;  // let the event link open
+ var chip=ev.target.closest('.evchip');
+ if(chip){openEvent(all[+chip.getAttribute('data-open')]);return;}
  var c=ev.target.closest('.cell.has');if(!c)return;var day=+c.getAttribute('data-day');
  selDay=(selDay===day)?null:day;renderCal();
 });
@@ -1225,16 +1270,32 @@ document.getElementById('f_save').onclick=function(){
    load(false);
   }).catch(function(){alert('Could not add');});
 };
-// card action buttons: add-to-calendar (.ics), save-to-mine (＋), delete (✕)
+// card: quick action buttons, else tap opens the detail modal
 document.getElementById('list').addEventListener('click',function(ev){
- var b=ev.target.closest('.act, .scanbtn');if(!b)return;ev.preventDefault();ev.stopPropagation();
- if(b.classList.contains('scanbtn')){scanRegulars(b);return;}
- if(b.hasAttribute('data-ics')){downloadICS(all[+b.getAttribute('data-ics')]);return;}
- if(b.hasAttribute('data-save')){saveMine(all[+b.getAttribute('data-save')]);b.textContent='✓';return;}
- if(b.hasAttribute('data-del')){var pid=b.getAttribute('data-del');
-  if(!pid||!confirm('Remove this event from your calendar?'))return;
-  fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})}).then(function(){load(false);});}
+ var b=ev.target.closest('.act, .scanbtn');
+ if(b){ev.preventDefault();ev.stopPropagation();
+  if(b.classList.contains('scanbtn')){scanRegulars(b);return;}
+  if(b.hasAttribute('data-ics')){downloadICS(all[+b.getAttribute('data-ics')]);return;}
+  if(b.hasAttribute('data-save')){saveMine(all[+b.getAttribute('data-save')]);b.textContent='✓';return;}
+  if(b.hasAttribute('data-del')){var pid=b.getAttribute('data-del');
+   if(!pid||!confirm('Remove this event from your calendar?'))return;
+   fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})}).then(function(){load(false);});}
+  return;}
+ var card=ev.target.closest('.ev[data-open]');if(card)openEvent(all[+card.getAttribute('data-open')]);
 });
+// event detail modal: actions
+var evModal=document.getElementById('evModal');
+function closeEv(){evModal.hidden=true;evModal._ev=null;}
+evModal.addEventListener('click',function(ev){
+ if(ev.target===evModal||ev.target.closest('[data-close]')){closeEv();return;}
+ var e=evModal._ev;if(!e)return;
+ if(ev.target.closest('[data-mics]')){downloadICS(e);return;}
+ if(ev.target.closest('[data-msave]')){saveMine(e);closeEv();return;}
+ var del=ev.target.closest('[data-mdel]');
+ if(del){var pid=del.getAttribute('data-mdel');if(!pid||!confirm('Remove this event from your calendar?'))return;
+  fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})}).then(function(){closeEv();load(false);});}
+});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!evModal.hidden)closeEv();});
 // scan all scannable regulars via the Firecrawl agent, then reload
 function scanRegulars(btn){
  btn.textContent='⟳ Scanning…';btn.disabled=true;
