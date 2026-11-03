@@ -1579,6 +1579,13 @@ width:32px;height:32px;cursor:pointer;flex:none;display:flex;align-items:center;
 .tcarddots{font-size:20px;font-weight:700;letter-spacing:2px;font-variant-numeric:tabular-nums}
 .tcardmeta{font-size:12px;color:var(--muted)}
 .tcard .btn.ghost,.splform .btn{white-space:nowrap}
+/* You / account section in the share sheet */
+.iv-you{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.iv-namerow{display:flex;gap:8px;margin-top:6px}
+.iv-namerow input{flex:1;background:var(--panel2,#1a1a24);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 11px;font:inherit}
+.iv-acct{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.iv-danger{color:#ff6b6b;border-color:#5a2230}
+.iv-danger:hover{background:#2a1419}
 </style></head><body>
 <header id="topbar">
   <div class="headrow">
@@ -2014,7 +2021,36 @@ async function openShareSheet(){
      <a class="iv-chan" href="mailto:?subject=${encodeURIComponent('Join my trip: '+TRIP.title)}&body=${encodeURIComponent('Come travel '+TRIP.title+' with me on Trip Sync — add your photos and journal:\\n\\n'+link)}">${ic('mail')}<span>Email</span></a>
    </div>
    ${crew.length?`<div class="iv-crew"><div class="iv-crewhd">${crewLine}</div>${rows}</div>`:''}
+   <div class="iv-you">
+     <div class="iv-crewhd">You</div>
+     <div class="iv-namerow">
+       <input id="meName" value="${esc(myName())}" placeholder="Your name" maxlength="40">
+       <button class="btn sm" onclick="saveMyName()">Save</button>
+     </div>
+     <div class="iv-acct">
+       <button class="btn ghost sm" onclick="signOut()">${ic('users')} Sign out</button>
+       <button class="btn ghost sm iv-danger" onclick="deleteMyData()">${ic('trash')} Delete my data</button>
+     </div>
+     <div class="muted sm" style="margin-top:6px">Sign out clears your name and identity on this device. Delete my data permanently removes you from your trips and erases the photos and journal entries you added.</div>
+   </div>
  </div>`);
+}
+async function saveMyName(){
+ const v=(el('meName')?el('meName').value:'').trim();
+ setMyName(v);
+ if(TRIP&&v){try{await api('/api/trips/'+TRIP.id+'/join',{method:'POST',body:JSON.stringify({token:deviceToken(),name:v})});}catch(e){}}
+ toast('Saved ✓'); closeSheet&&closeSheet(); if(typeof renderTab==='function')renderTab();
+}
+function signOut(){
+ if(!confirm('Sign out on this device? Your name and identity here will be cleared.'))return;
+ try{localStorage.removeItem('tl_name');localStorage.removeItem('tl_device');}catch(e){}
+ location.reload();
+}
+async function deleteMyData(){
+ if(!confirm('Delete your data? This removes you from your trips and permanently erases the photos and journal entries you added. This cannot be undone.'))return;
+ try{await api('/api/me/delete',{method:'POST',body:JSON.stringify({token:deviceToken(),name:myName()||''})});}catch(e){}
+ try{localStorage.removeItem('tl_name');localStorage.removeItem('tl_device');}catch(e){}
+ location.reload();
 }
 function nativeShare(){
  if(!SHARE_LINK)return;
@@ -3543,6 +3579,21 @@ class H(BaseHTTPRequestHandler):
                 except Exception:
                     pass  # never 500 a webhook; Stripe will retry on non-2xx
                 return self._json(200, {"received": True})
+
+            if p == "/api/me/delete":
+                # Delete-my-data: remove this device's memberships + the content they authored.
+                tok = (b.get("token") or "").strip()
+                name = (b.get("name") or "").strip()
+                if tok:
+                    c.execute("DELETE FROM trip_members WHERE token=?", (tok,))
+                    c.execute("DELETE FROM quiz_progress WHERE device=?", (tok,))
+                if name:
+                    for row in c.execute("SELECT filename FROM photos WHERE member=?", (name,)).fetchall():
+                        _rm(os.path.join(PHOTOS, row["filename"]))
+                    c.execute("DELETE FROM photos WHERE member=?", (name,))
+                    c.execute("DELETE FROM entries WHERE member=?", (name,))
+                c.commit()
+                return self._json(200, {"ok": True})
 
             if p == "/api/entries":
                 eid = b.get("id")
