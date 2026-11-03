@@ -857,19 +857,37 @@ def shop_for(c, u):
 
 PROMPTS = [
     "What are you carrying today that isn't yours to hold?",
-    "Where did you feel most alive this week?",
+    "Where did you feel most alive this week — and what were you doing?",
     "What would you do today if you weren't afraid?",
-    "What is one thing you can let go of right now?",
-    "Who deserves your gratitude today?",
-    "What does your body need that your mind keeps ignoring?",
+    "What is one thing you can set down right now, even for an hour?",
+    "Who deserves your gratitude today — and have you told them?",
+    "What does your body need that your mind keeps overruling?",
     "What story are you telling yourself that may not be true?",
-    "When did you last feel truly at peace?",
-    "What small thing brought you joy recently?",
-    "What are you avoiding, and why?",
+    "When did you last feel truly at peace? Take yourself back there.",
+    "What small, ordinary thing brought you joy recently?",
+    "What are you avoiding — and what's the fear underneath it?",
     "What would 'enough' look like for you today?",
-    "What are you ready to begin?",
-    "Where in your life are you rushing when you could be present?",
-    "What would you say to yourself as a child?",
+    "What are you quietly ready to begin?",
+    "Where are you rushing when you could be present?",
+    "If you could sit with yourself as a child for five minutes, what would you want them to know?",
+    "What did today ask of you — and how did you answer?",
+    "What are you proud of this week that no one else saw?",
+    "Who are you becoming, and did today move you toward them or away?",
+    "What's one thing you'd forgive yourself for, if you let yourself?",
+    "What felt heavy today, and where did you feel it in your body?",
+    "What are you holding on to that was never really yours to fix?",
+    "When did you feel most like yourself lately?",
+    "What would change if you believed you were already enough?",
+    "What's a kindness someone showed you that you've never fully acknowledged?",
+    "What are you pretending not to know?",
+    "What would make tomorrow feel 2% lighter?",
+    "Where did you say yes today when you meant no?",
+    "What's something you're grieving, even quietly, even small?",
+    "What part of today do you want to remember a year from now?",
+    "What are you learning the hard way right now?",
+    "If this feeling could speak, what would it be trying to tell you?",
+    "What do you need to hear tonight that no one has said to you?",
+    "What's one small promise you can keep to yourself this week?",
 ]
 
 def prompt_for_today():
@@ -883,51 +901,270 @@ def prompt_for_today():
 PILLARS = ["Family", "Relationships", "Career", "Finances",
            "Health", "Hobbies", "Inner Growth", "Purpose"]
 
-# Deep journaling exercises — each pillar is a short, guided sitting. The Keeper
-# walks the steps one prompt at a time, then reflects on the whole piece of work.
-# (title, invitation, [step prompts])
-PILLAR_EXERCISES = {
-    "Family": ("The people who made you",
-               "Turn toward where you came from — with honesty and some grace.",
-               ["Picture one family member as a whole person — their younger self, their fears, not just their role in your life. What do you understand about them now that you once couldn't?",
-                "What did you inherit from your family that you're grateful for? What are you choosing to set down?",
-                "Write the one sentence you most want your family to know — whether or not you ever say it aloud."]),
-    "Relationships": ("Honest with the ones you choose",
-                      "Sit with one relationship that's been on your heart.",
-                      ["Bring one relationship to mind. Under the surface of how it looks — what's actually going on there right now?",
-                       "Where have you been holding something back — a truth, a need, an apology? What's the risk you're avoiding?",
-                       "Write what you'd say if there were no risk at all. Then name one small, real step toward it."]),
-    "Career": ("The work that's yours",
-               "Step back from the to-do list and look at the work itself.",
-               ["Name the work you'd still do even if no one paid or noticed. Where did today meet that work — or miss it?",
-                "What are you quietly proud of this season that no one else saw?",
-                "What would 'enough' look like in your work — and where are you chasing past it?"]),
-    "Finances": ("Money, without the shame",
-                 "Look plainly at the thing most of us look away from.",
-                 ["What does money mean to you right now — safety, freedom, pressure, proof? Where did that belief first come from?",
-                  "Write honestly about one money worry you keep only half-looking-at. What's the real fear underneath it?",
-                  "What would 'enough' actually feel like — and what's one quiet step toward more ease with it?"]),
-    "Health": ("Listening to the body",
-               "Give your body the floor for a few minutes.",
-               ["Check in with your body like you would a friend. What has it been asking for that your mind keeps overruling?",
-                "When did you last feel genuinely rested, or strong, or well? What made that possible?",
-                "What's one kind, doable thing your body would thank you for this week?"]),
-    "Hobbies": ("For the love of it",
-                "Remember the things you do for no reason but joy.",
-                ["Describe the last time something you love made you lose track of time. What did that flow give you?",
-                 "What did you love as a kid that you've let quietly slip away? What happened to it?",
-                 "What's one thing you could make a little space for — purely because it lights you up?"]),
-    "Inner Growth": ("Who you're becoming",
-                     "Look at the arc of your own becoming.",
-                     ["Write about who you were a year ago. What would that version of you thank you for?",
-                      "What pattern are you ready to outgrow? What has it been protecting you from?",
-                      "Who are you becoming — and what's one way you can meet that person halfway today?"]),
-    "Purpose": ("The bigger why",
-                "Reach past the daily and ask what it's all for.",
-                ["When did you last feel part of something larger than yourself? What was it?",
-                 "What matters to you enough that you'd stand by it even when it costs you? Where is that showing up in your days — or missing?",
-                 "If this season of your life had a purpose, what would you want it to be?"]),
+# Deep journaling — each pillar is a LESSON PLAN: an ordered series of guided
+# sittings ("chapters"), adapted from Ora Health's structured journey/aspect model.
+# The Keeper walks one chapter per visit and advances as the person returns, so a
+# pillar becomes a path you move through, not a single prompt. Each chapter is a
+# short sitting of three steps.
+#   PILLAR_PLANS[pillar] = (arc_blurb, [ (title, invitation, [step prompts]), ... ])
+PILLAR_PLANS = {
+    "Family": ("Turn toward where you came from — one honest sitting at a time.", [
+        ("Understanding your parents",
+         "See one parent as a whole person, not just the role they played for you.",
+         ["Picture one parent (or the person who raised you) as a whole human — their younger self, their fears, the life they lived before you. What do you understand now that you once couldn't?",
+          "What did they give you that you're genuinely grateful for? And what couldn't they give — through their own limits, not your fault?",
+          "Write one sentence you most want them to know — whether or not you ever say it aloud."]),
+        ("The child you were",
+         "Sit gently with your younger self, and offer what they needed.",
+         ["Bring to mind yourself as a child — a real age, a real room. What did that child need most that they didn't get enough of?",
+          "If you could sit beside them now, what would you tell them? Say it in your own words, as if they could hear you.",
+          "What's one way you could give grown-up you a little of that same thing this week?"]),
+        ("How your upbringing shaped you",
+         "Look at the environment that formed you, with clear eyes.",
+         ["What was the emotional weather of your childhood home — tense, warm, unpredictable, silent? How did you learn to move through it?",
+          "What role did you play back then (the good one, the peacemaker, the invisible one, the strong one)? Where does that role still run you today?",
+          "Name one belief about yourself you absorbed early. Is it still true — and do you still want to keep it?"]),
+        ("What you inherited",
+         "Separate the gifts from the weight you're still carrying.",
+         ["What did you inherit from your family that you're proud to carry forward — a value, a strength, a way of loving?",
+          "What did you inherit that was never yours to carry? What would it feel like to set it down?",
+          "Write the one pattern you most want to keep — and the one you most want to end with you."]),
+        ("Cycles to break",
+         "Face what goes unspoken, and choose what you'll plant instead.",
+         ["What goes unsaid in your family — the thing everyone feels but no one names? What has keeping it quiet cost?",
+          "What cycle do you not want to pass on? Be specific about how it shows up.",
+          "What new pattern do you want to plant in its place? Name the first small, real act of planting it."]),
+    ]),
+    "Relationships": ("Honest work on the people you choose to keep close.", [
+        ("The one on your heart",
+         "Sit with a single relationship that's been asking for your attention.",
+         ["Bring one relationship to mind. Under the surface of how it looks — what's actually going on there right now?",
+          "What do you need from them that you haven't asked for? What's stopped you?",
+          "What do they need from you that you've been slow to give?"]),
+        ("What you hold back",
+         "Find the truth you've been keeping just out of reach.",
+         ["Where have you been holding something back — a truth, a need, an apology? Name it plainly here, where it's safe.",
+          "What's the risk you're actually avoiding by staying quiet? And what's the cost of the silence?",
+          "Write what you'd say if there were no risk at all. Then name one small, real step toward it."]),
+        ("How you love",
+         "Look at your own patterns, not just theirs.",
+         ["How do you tend to show love — and how do you most want to receive it? Do the people close to you know that?",
+          "When you get hurt or scared in a relationship, what do you do — pull away, cling, go cold, overgive? Where did you learn that?",
+          "What's one way you'd like to show up differently in your closest relationship this week?"]),
+        ("Repair",
+         "Tend to something that's frayed, without needing to be right.",
+         ["Think of a rupture that hasn't healed. Set aside who was right — what was each of you actually protecting?",
+          "What would a true repair look like — not winning, but reconnection? What's your part to own?",
+          "Write the first sentence of that repair. The one you could actually say."]),
+        ("Being truly known",
+         "Reach toward the intimacy of being fully seen.",
+         ["Who, if anyone, truly knows you — the unedited version? What makes that safe?",
+          "What part of yourself do you keep hidden even from the people closest to you? What are you afraid would happen if they saw it?",
+          "What's one small thing you could let someone see this week, as an experiment in being known?"]),
+    ]),
+    "Career": ("Step back from the to-do list and look at the work itself.", [
+        ("The work that's yours",
+         "Find the thread of work that's actually yours to do.",
+         ["Name the work you'd still do even if no one paid or noticed. Where did this season meet that work — or miss it?",
+          "When do you feel most like yourself at work? What's present in those moments?",
+          "What's one part of your work you could do more of, and one you could do less of?"]),
+        ("What 'enough' means",
+         "Loosen the grip of 'more' and name your actual target.",
+         ["What would 'enough' look like in your work — in money, status, recognition? Get specific.",
+          "Where are you chasing past enough, and what are you really chasing — safety, worth, someone's approval?",
+          "If you trusted you were already enough, what would you stop doing tomorrow?"]),
+        ("Ambition and fear",
+         "Tell apart the drive that's yours from the fear that drives you.",
+         ["What do you most want to build or become in your work? Say it without hedging.",
+          "What are you afraid of — failing, being seen, being ordinary, being found out? Name the fear precisely.",
+          "Where is fear steering decisions you'd make differently from a place of trust?"]),
+        ("Quiet pride",
+         "Give yourself credit you don't usually say out loud.",
+         ["What are you quietly proud of this season that no one else fully saw?",
+          "What hard thing did you handle better than you would have a few years ago?",
+          "Write the sentence of recognition you wish someone would say to you — then say it to yourself."]),
+        ("The next true step",
+         "Turn all of it toward one honest move.",
+         ["Given everything you've sat with here, what's the work you most want the next chapter to hold?",
+          "What's the smallest real step toward it — one you could take this week?",
+          "What will you need to protect that step from (busyness, doubt, other people's expectations)?"]),
+    ]),
+    "Finances": ("Look plainly at the thing most of us look away from — without shame.", [
+        ("What money means to you",
+         "Name the feeling money carries for you, underneath the numbers.",
+         ["What does money mean to you right now — safety, freedom, pressure, proof of worth? Sit with the honest answer.",
+          "When do you feel most anxious about money, and when most at ease? What's different in those moments?",
+          "If money were simply a tool and not a verdict on you, what would change in how you feel?"]),
+        ("The story you inherited",
+         "Trace your money beliefs back to where they began.",
+         ["What did you learn about money growing up — from what was said, and from what you watched?",
+          "Which of those beliefs still runs you today? Is it serving you, or just familiar?",
+          "What's one money belief you'd like to consciously rewrite?"]),
+        ("The worry you half-look-at",
+         "Turn toward the money fear you keep in your peripheral vision.",
+         ["Write honestly about one money worry you keep only half-looking-at. Say the whole thing.",
+          "What's the real fear underneath it — not the number, but what the number threatens?",
+          "What would it feel like to face it fully, maybe with help? What's the first step?"]),
+        ("Enough",
+         "Find the line where enough actually lives.",
+         ["What would 'enough' actually feel like in your body — not a number, a feeling of ease?",
+          "Where do you already have more than enough, and forget to notice?",
+          "What's one quiet step toward more ease — a conversation, a plan, a boundary, a look at the real numbers?"]),
+        ("Money and your values",
+         "Line your spending up with what you actually care about.",
+         ["Look at where your money actually goes. What does it say you value?",
+          "Where is there a gap between what you spend on and what you say matters most?",
+          "What's one way you could use money this month in service of something you truly care about?"]),
+    ]),
+    "Health": ("Give your body the floor — it's been trying to tell you something.", [
+        ("Listening to the body",
+         "Check in with your body the way you would a friend.",
+         ["Scan through your body slowly. What has it been asking for that your mind keeps overruling?",
+          "Where do you hold stress physically — and what tends to put it there?",
+          "If your body could say one sentence to you right now, what would it be?"]),
+        ("Rest",
+         "Look honestly at how you recover — or don't.",
+         ["When did you last feel genuinely rested? What made that possible?",
+          "What gets in the way of real rest for you — habits, guilt, other people, your own mind?",
+          "What's one kind, doable change that would give you more true rest this week?"]),
+        ("The one habit",
+         "Find the small change that would ripple outward.",
+         ["What's one health habit that, if it were steady, would quietly improve everything else?",
+          "What's made it hard to keep before — and what's one way to make it 2% easier this time?",
+          "Picture yourself a season from now, having kept it. What's different?"]),
+        ("Your body and you",
+         "Tend the relationship, not just the metrics.",
+         ["How do you talk to yourself about your body? Would you talk to someone you love that way?",
+          "What has your body carried you through that you've never thanked it for?",
+          "What would it mean to treat your body as an ally this season, not a project?"]),
+        ("What well feels like",
+         "Define wellness in your own terms, then step toward it.",
+         ["Forget the metrics — what does 'well' actually feel like for you, on a good day?",
+          "What's quietly been draining your energy, and what reliably restores it?",
+          "Name one small, doable thing your body would thank you for this week."]),
+    ]),
+    "Hobbies": ("Remember the things you do for no reason but joy.", [
+        ("For the love of it",
+         "Reconnect with what you do purely because you love it.",
+         ["Describe the last time something you love made you lose track of time. What did that give you?",
+          "What draws you to it — the challenge, the beauty, the quiet, the people, the flow itself?",
+          "When did you last make real space for it? What crowded it out?"]),
+        ("What you let slip",
+         "Go looking for a joy you quietly abandoned.",
+         ["What did you love as a kid or younger adult that you've let slip away? What happened to it?",
+          "What did that thing give you that you might still be missing?",
+          "Is there a small, low-stakes way to taste it again — not to master it, just to touch it?"]),
+        ("Flow",
+         "Study the state where you lose and find yourself at once.",
+         ["When are you most absorbed — so in it that self-consciousness falls away? What are you doing?",
+          "What conditions make that flow possible for you (time, place, no phone, a certain mood)?",
+          "How could you engineer one pocket of flow into this week on purpose?"]),
+        ("Play",
+         "Make room for the part of you that isn't trying to achieve.",
+         ["Where in your life do you get to be playful, silly, unproductive — and is it enough?",
+          "What's something you'd love to try with zero pressure to be good at it?",
+          "Give yourself permission here: what's one playful thing you'll let yourself do soon?"]),
+        ("Making space",
+         "Turn love into a small, protected place on your calendar.",
+         ["If this pursuit mattered as much as you say, what would your week look like?",
+          "What small, repeating pocket of time could you protect for it?",
+          "What's the first tiny step — the gear out, the lesson booked, the hour blocked?"]),
+    ]),
+    "Inner Growth": ("Look at the arc of your own becoming.", [
+        ("Who you were",
+         "Honor the distance you've already travelled.",
+         ["Write about who you were a year or five ago. What would that version of you thank you for?",
+          "What have you survived or outgrown that you don't give yourself enough credit for?",
+          "What's one way you've genuinely changed that you're proud of?"]),
+        ("The pattern you're outgrowing",
+         "Meet an old habit with curiosity instead of judgment.",
+         ["What pattern are you ready to outgrow — a reaction, a fear, a way of hiding?",
+          "What has that pattern been protecting you from? (It started as a kind of help.)",
+          "What could you trust instead of that pattern, in the moment it usually takes over?"]),
+        ("Your inner critic",
+         "Turn toward the harsh voice and learn its shape.",
+         ["Whose voice is your inner critic, really? What does it say when you're down?",
+          "What is it actually trying to do — protect you, push you, keep you safe from shame?",
+          "What would a wiser, kinder voice say instead? Write a few lines in that voice."]),
+        ("Self-compassion",
+         "Practice meeting yourself the way you'd meet a friend.",
+         ["Think of something you're being hard on yourself about. What would you say to a friend in exactly your position?",
+          "What do you need to hear right now that no one has said to you?",
+          "Offer yourself one sentence of real compassion — and let yourself mean it."]),
+        ("Who you're becoming",
+         "Name the person on the horizon and take a step toward them.",
+         ["Who are you becoming? Describe that person — how they move through a day, how they treat themselves.",
+          "What's one value you want that future self to be known for?",
+          "What's one way you can meet that person halfway today?"]),
+    ]),
+    "Purpose": ("Reach past the daily and ask what it's all for.", [
+        ("The bigger why",
+         "Look for the thread of meaning running under your days.",
+         ["When did you last feel part of something larger than yourself? What was it?",
+          "What makes you lose the sense that you're just filling time?",
+          "If your life were quietly about one thing, what might it be?"]),
+        ("What you'd stand for",
+         "Find the commitments that are worth a cost.",
+         ["What matters to you enough that you'd stand by it even when it costs you?",
+          "Where is that showing up in how you actually live — and where is it missing?",
+          "What would it look like to live one degree more in line with it?"]),
+        ("Meaning in the ordinary",
+         "Notice the purpose hiding in small, unglamorous acts.",
+         ["Where does meaning show up in your ordinary days — a person you help, a thing you make, a small faithfulness?",
+          "What small act of yours matters more than you usually let it?",
+          "How could you do a little more of that, on purpose?"]),
+        ("Contribution",
+         "Ask what you want to give, and to whom.",
+         ["What do you most want to give to the people and world around you?",
+          "Whose life is better because you're in it — and do they know?",
+          "What's one way you could contribute this month that would feel genuinely like you?"]),
+        ("The purpose of this season",
+         "Give this particular chapter of your life a reason.",
+         ["If this specific season of your life had a purpose, what would you want it to be?",
+          "What is this time asking you to learn, build, heal, or become?",
+          "Name one thing you want to be true by the time this season ends."]),
+    ]),
 }
+
+# Backward-compatible view: the first chapter of each plan, as the old
+# (title, invitation, steps) shape. Kept so any older reference still works.
+PILLAR_EXERCISES = {k: v[1][0] for k, v in PILLAR_PLANS.items()}
+
+# Season = a guided arc too. An onboarding lesson plan that helps someone name the
+# chapter of life they're in and keep tending it, one sitting at a time.
+#   (title, invitation, [step prompts])
+SEASON_PLAN = [
+    ("Name your season",
+     "Before anything else — give this chapter of your life a name.",
+     ["Step back from today and feel for the larger chapter you're in. If this season of your life had a name — 'rebuilding', 'the long wait', 'blooming', 'holding on' — what would you call it?",
+      "What's been true of this whole stretch of time, not just today?",
+      "How did this season begin? What ended or started to let it in?"]),
+    ("What it's asking of you",
+     "Every season asks something. Listen for what this one wants.",
+     ["What is this season asking of you — patience, courage, rest, letting go, showing up?",
+      "Where are you resisting that ask, and what would it feel like to stop fighting it?",
+      "What would it look like to meet this season on its own terms, just for now?"]),
+    ("What it's giving you",
+     "Even hard seasons give something. Go looking for it.",
+     ["What is this season quietly giving you — a lesson, a strength, a clarity, a person, a kind of growth?",
+      "What have you learned here that you couldn't have learned anywhere else?",
+      "What are you grateful for in this chapter, even if it's hard?"]),
+    ("What's ending, what's beginning",
+     "Honor the turning you're in the middle of.",
+     ["What feels like it's ending in this season? Let yourself name it, and feel it.",
+      "What feels like it's just beginning, even faintly?",
+      "What do you want to carry forward, and what are you ready to leave behind?"]),
+    ("Who you're becoming in it",
+     "See the person this season is shaping.",
+     ["Who are you becoming through this chapter? How are you different from who you were when it started?",
+      "If you looked back on this time in five years, what would you want to remember about who you were?",
+      "What would make you proud of how you moved through it?"]),
+    ("How you'll tend it",
+     "Seasons need tending. Choose how you'll stay with this one.",
+     ["Knowing what this season is, how do you want to tend yourself through it — what do you need more of, and less of?",
+      "What's one small practice or promise that would help you stay steady here?",
+      "Write a short note to the you who's a little further along in this season. What do you want them to know?"]),
+]
 
 # The three journaling modes. Deep = pillar work; Daily = a letter to today;
 # Season = where you are in the larger arc of your life right now.
@@ -1088,13 +1325,21 @@ def journal_reflect(prompt, text, kind="daily", pillar=None, place=None):
             "mood": (r.get("mood") or "").strip().lower()[:24]}
 
 def deep_exercise(c, u, pillar):
-    """The guided steps for a pillar's deep exercise, with an optional AI-written
-    opening that greets the person where their recent work on this pillar left off.
-    Static steps are the backbone; the opening is the agentic, personal touch."""
-    ex = PILLAR_EXERCISES.get(pillar)
-    if not ex:
+    """The next chapter of a pillar's lesson plan, chosen by how far the person has
+    already walked it, plus an optional AI-written opening that greets them where
+    their recent work left off. The plan is the backbone; the opening is the touch."""
+    plan = PILLAR_PLANS.get(pillar)
+    if not plan:
         return None
-    title, invitation, steps = ex
+    arc, chapters = plan
+    # How many deep sittings has this person logged on this pillar? The count
+    # decides which chapter is next; we cycle back through once the plan is done.
+    done = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=? AND kind='deep' "
+                     "AND pillar=?", (u["id"], pillar)).fetchone()["n"]
+    n = len(chapters)
+    idx = done % n if n else 0
+    title, invitation, steps = chapters[idx]
+    titles = [ch[0] for ch in chapters]
     opening = ""
     if ai_enabled():
         prev = c.execute("SELECT text,created FROM journal WHERE user_id=? AND kind='deep' "
@@ -1102,8 +1347,9 @@ def deep_exercise(c, u, pillar):
         hist = "\n\n".join(f"[{(r['created'] or '')[:10]}] {(r['text'] or '')[:300]}" for r in prev)
         name = (u["name"] or "").split()[0] if u["name"] else ""
         p = ("You are the Keeper inside Lumen, opening a deep journaling sitting on the "
-             f"person's '{pillar}' pillar ({invitation}). Write ONE warm, grounding opening "
-             "line (max 22 words, second person, no emoji) that invites them in. "
+             f"person's '{pillar}' pillar. Today's chapter is '{title}' ({invitation}). "
+             "Write ONE warm, grounding opening line (max 22 words, second person, no emoji) "
+             "that invites them into this chapter. "
              + (f"Their name is {name}. " if name else "")
              + ("Here is their recent work on this pillar, newest first — gently acknowledge "
                 "where they've been without repeating it:\n" + hist
@@ -1111,8 +1357,40 @@ def deep_exercise(c, u, pillar):
              + "\n\nReturn ONLY JSON: {\"opening\":\"...\"}")
         r = ai_json(p, timeout=20) or {}
         opening = (r.get("opening") or "").strip()[:200]
-    return {"pillar": pillar, "title": title, "invitation": invitation,
-            "steps": steps, "opening": opening}
+    return {"pillar": pillar, "title": title, "invitation": invitation, "steps": steps,
+            "opening": opening, "arc": arc, "chapter": idx + 1, "chapters": n,
+            "chapter_titles": titles, "looped": done >= n}
+
+def season_exercise(c, u):
+    """The next chapter of the Season onboarding plan — a guided arc that walks a
+    person through naming and tending the chapter of life they're in. Advances by
+    how many season sittings they've logged, then gently cycles."""
+    chapters = SEASON_PLAN
+    done = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=? AND kind='season'",
+                     (u["id"],)).fetchone()["n"]
+    n = len(chapters)
+    idx = done % n if n else 0
+    title, invitation, steps = chapters[idx]
+    opening = ""
+    if ai_enabled():
+        prev = c.execute("SELECT text,place,created FROM journal WHERE user_id=? AND kind='season' "
+                         "ORDER BY id DESC LIMIT 2", (u["id"],)).fetchall()
+        named = next((r["place"] for r in prev if r["place"]), "")
+        hist = "\n\n".join(f"[{(r['created'] or '')[:10]}] {(r['text'] or '')[:300]}" for r in prev)
+        name = (u["name"] or "").split()[0] if u["name"] else ""
+        p = ("You are the Keeper inside Lumen, opening a 'season of life' sitting — part of a "
+             f"guided arc. Today's chapter is '{title}' ({invitation}). Write ONE warm, grounding "
+             "opening line (max 22 words, second person, no emoji) that invites them in. "
+             + (f"Their name is {name}. " if name else "")
+             + (f"They've named this season '{named}'. " if named else "")
+             + ("Their recent season reflections, newest first:\n" + hist
+                if hist else "This is their first season sitting; welcome them to it.")
+             + "\n\nReturn ONLY JSON: {\"opening\":\"...\"}")
+        r = ai_json(p, timeout=20) or {}
+        opening = (r.get("opening") or "").strip()[:200]
+    return {"title": title, "invitation": invitation, "steps": steps, "opening": opening,
+            "chapter": idx + 1, "chapters": n, "chapter_titles": [ch[0] for ch in chapters],
+            "looped": done >= n}
 
 def journal_insights(rows):
     """Find the gentle throughline across a person's recent letters."""
@@ -2030,6 +2308,15 @@ a{color:var(--purple)}
 .deep-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--pc,#a855f7)}
 .deep-pill .i{width:14px;height:14px}
 .deep-title{font-family:var(--serif);font-size:19px;color:#efe9f8;margin-top:2px}
+.season-head{align-items:flex-start}
+.planbar{position:relative;z-index:1;margin:2px 0 12px}
+.pb-arc{font-family:var(--serif);font-size:13.5px;line-height:1.5;color:#b7add2;font-style:italic;margin-bottom:8px}
+.pb-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pb-dots{display:flex;align-items:center;gap:6px}
+.pb-dot{width:9px;height:9px;border-radius:50%;background:#2a2340;border:1px solid var(--line);transition:all .3s}
+.pb-dot.done{background:var(--pc,#a855f7);opacity:.55;border-color:transparent}
+.pb-dot.on{background:var(--gold);border-color:transparent;box-shadow:0 0 8px var(--gold);transform:scale(1.25)}
+.pb-cap{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:#8c82a6;font-weight:600}
 .deep-steps{position:relative;z-index:1;margin:4px 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:9px}
 .deep-steps li{font-family:var(--serif);font-size:14px;line-height:1.55;color:#cdc5e6}
 .deep-steps li::marker{color:var(--pc,#a855f7);font-weight:700}
@@ -3894,17 +4181,37 @@ function estSay(text){const w=(text||'').trim().split(/\s+/).filter(Boolean).len
 function splitSents(text){return (text||'').match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g)||[text];}
 const JPROMPTS=[
   "What are you carrying today that isn't yours to hold?",
-  "Where did you feel most alive this week?",
+  "Where did you feel most alive this week — and what were you doing?",
   "What would you do today if you weren't afraid?",
-  "What is one thing you can let go of right now?",
-  "Who deserves your gratitude today?",
-  "What does your body need that your mind keeps ignoring?",
+  "What is one thing you can set down right now, even for an hour?",
+  "Who deserves your gratitude today — and have you told them?",
+  "What does your body need that your mind keeps overruling?",
   "What story are you telling yourself that may not be true?",
-  "When did you last feel truly at peace?",
-  "What small thing brought you joy recently?",
-  "What are you ready to begin?",
+  "When did you last feel truly at peace? Take yourself back there.",
+  "What small, ordinary thing brought you joy recently?",
+  "What are you avoiding — and what's the fear underneath it?",
+  "What would 'enough' look like for you today?",
+  "What are you quietly ready to begin?",
   "Where are you rushing when you could be present?",
-  "What would you say to your younger self?"];
+  "If you could sit with yourself as a child for five minutes, what would you want them to know?",
+  "What did today ask of you — and how did you answer?",
+  "What are you proud of this week that no one else saw?",
+  "Who are you becoming, and did today move you toward them or away?",
+  "What's one thing you'd forgive yourself for, if you let yourself?",
+  "What felt heavy today, and where did you feel it in your body?",
+  "What are you holding on to that was never really yours to fix?",
+  "When did you feel most like yourself lately?",
+  "What would change if you believed you were already enough?",
+  "What's a kindness someone showed you that you've never fully acknowledged?",
+  "What are you pretending not to know?",
+  "What would make tomorrow feel 2% lighter?",
+  "Where did you say yes today when you meant no?",
+  "What's something you're grieving, even quietly, even small?",
+  "What part of today do you want to remember a year from now?",
+  "What are you learning the hard way right now?",
+  "If this feeling could speak, what would it be trying to tell you?",
+  "What do you need to hear tonight that no one has said to you?",
+  "What's one small promise you can keep to yourself this week?"];
 let jPrompt='';let rec=null;let listening=false;
 const niceDate=(d)=>new Date(d).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
 // ---- journaling modes: Deep (pillar work) · Daily (letter) · Season (life-chapter) ----
@@ -3998,14 +4305,46 @@ function renderDailyCompose(){
   $('#jsave').onclick=sealHandler(()=>({kind:'daily',prompt:jPrompt}));
 }
 
-function renderSeasonCompose(){
-  if(!jSeasonPrompt)jSeasonPrompt=SEASON_PROMPTS[0];
-  const top=`<div class="jplace-wrap">${ic('sunrise','g')}<input id="jplace" class="jplace" maxlength="80" placeholder="Name this season (optional) — e.g. “rebuilding”" value="${esc(jSeason)}"></div>`;
-  $('#jcompose').innerHTML=composerHTML({prompt:jSeasonPrompt,shuffle:true,topHTML:top,placeholder:'The chapter I’m in, what it asks of me, what it gives…'});
-  wireComposerCommon(()=>jSeasonPrompt);
+// Lesson-plan progress bar — a row of chapter dots + caption, used by Deep
+// (per pillar) and Season. ex carries {chapter, chapters, chapter_titles, arc, looped}.
+function planBar(ex){
+  if(!ex||!ex.chapters)return '';
+  const cur=ex.chapter||1, tot=ex.chapters;
+  const dots=Array.from({length:tot},(_,i)=>`<i class="pb-dot${i+1<cur?' done':''}${i+1===cur?' on':''}"></i>`).join('');
+  const arc=ex.arc?`<div class="pb-arc">${esc(ex.arc)}</div>`:'';
+  const loop=ex.looped?' · revisiting':'';
+  return `<div class="planbar">${arc}<div class="pb-row"><div class="pb-dots">${dots}</div>`
+    +`<span class="pb-cap">Chapter ${cur} of ${tot}${loop}</span></div></div>`;
+}
+
+async function renderSeasonCompose(){
+  $('#jcompose').innerHTML=`<div class="card center muted"><span class="spinner"></span> Opening the next chapter of your season…</div>`;
+  let ex;try{ex=await api('journal/season');}catch(e){ex=null;}
+  if(!ex||!ex.ready){
+    // graceful fallback to a single reflective prompt
+    if(!jSeasonPrompt)jSeasonPrompt=SEASON_PROMPTS[0];
+    const top0=`<div class="jplace-wrap">${ic('sunrise','g')}<input id="jplace" class="jplace" maxlength="80" placeholder="Name this season (optional) — e.g. “rebuilding”" value="${esc(jSeason)}"></div>`;
+    $('#jcompose').innerHTML=composerHTML({prompt:jSeasonPrompt,shuffle:true,topHTML:top0,placeholder:'The chapter I’m in, what it asks of me, what it gives…'});
+    wireComposerCommon(()=>jSeasonPrompt);
+    const pl0=$('#jplace');if(pl0)pl0.oninput=(e)=>{jSeason=e.target.value;};
+    $('#jshuf').onclick=()=>{let n;do{n=SEASON_PROMPTS[Math.floor(Math.random()*SEASON_PROMPTS.length)];}while(n===jSeasonPrompt&&SEASON_PROMPTS.length>1);jSeasonPrompt=n;$('.lp-q').textContent='“'+jSeasonPrompt+'”';if(speakOn)sayPrompt(jSeasonPrompt);};
+    $('#jsave').onclick=sealHandler(()=>{const place=(($('#jplace')||{}).value||'').trim();jSeason=place;return{kind:'season',place,prompt:jSeasonPrompt};});
+    return;
+  }
+  jSeasonPrompt=ex.invitation||ex.title||'';
+  const steps=(ex.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+  const top=`<div class="deep-head season-head">`
+    +`<div><div class="deep-pill">${ic('sunrise','g')} ${esc(ex.title||'Season')}</div>`
+    +`<div class="deep-title">${esc(ex.invitation||'')}</div></div></div>`
+    +planBar(ex,'season')
+    +`<div class="jplace-wrap">${ic('sunrise','g')}<input id="jplace" class="jplace" maxlength="80" placeholder="Name this season (optional) — e.g. “rebuilding”" value="${esc(jSeason)}"></div>`
+    +(ex.opening?`<div class="keeper-note"><div class="keeper-lbl">${ic('lumen','g')} The Keeper</div><p class="keeper-refl">“${esc(ex.opening)}”</p></div>`:'')
+    +(steps?`<ol class="deep-steps">${steps}</ol>`:'');
+  const prompt=ex.invitation||ex.title||'';
+  $('#jcompose').innerHTML=composerHTML({prompt,shuffle:false,topHTML:top,placeholder:'The chapter I’m in, what it asks of me, what it gives…'});
+  wireComposerCommon(()=>prompt);
   const pl=$('#jplace');if(pl)pl.oninput=(e)=>{jSeason=e.target.value;};
-  $('#jshuf').onclick=()=>{let n;do{n=SEASON_PROMPTS[Math.floor(Math.random()*SEASON_PROMPTS.length)];}while(n===jSeasonPrompt&&SEASON_PROMPTS.length>1);jSeasonPrompt=n;$('.lp-q').textContent='“'+jSeasonPrompt+'”';if(speakOn)sayPrompt(jSeasonPrompt);};
-  $('#jsave').onclick=sealHandler(()=>{const place=(($('#jplace')||{}).value||'').trim();jSeason=place;return{kind:'season',place,prompt:jSeasonPrompt};});
+  $('#jsave').onclick=sealHandler(()=>{const place=(($('#jplace')||{}).value||'').trim();jSeason=place;return{kind:'season',place,prompt};});
 }
 
 async function renderDeepCompose(){
@@ -4032,6 +4371,7 @@ async function renderDeepCompose(){
     +`<button class="deep-back" id="pback" title="Back to pillars">${ic('compass')}</button>`
     +`<div><div class="deep-pill">${ic(picon(journalPillar),'g')} ${esc(journalPillar)}</div>`
     +`<div class="deep-title">${esc(ex.title||'')}</div></div></div>`
+    +planBar(ex,journalPillar)
     +(ex.opening?`<div class="keeper-note"><div class="keeper-lbl">${ic('lumen','g')} The Keeper</div><p class="keeper-refl">“${esc(ex.opening)}”</p></div>`:'')
     +(steps?`<ol class="deep-steps">${steps}</ol>`:'');
   const prompt=ex.invitation||ex.title||journalPillar;
@@ -5196,6 +5536,13 @@ class H(BaseHTTPRequestHandler):
             ex = deep_exercise(c, u, pillar)
             if not ex:
                 self._send(404, {"error": "no exercise"}); return
+            self._send(200, {"ready": True, **ex}); return
+
+        if p == "/api/journal/season":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            ex = season_exercise(c, u)
             self._send(200, {"ready": True, **ex}); return
 
         if p == "/api/journal/week":
