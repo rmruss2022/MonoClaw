@@ -86,6 +86,7 @@ def save_personal(recs):
 def seed_personal():
     """Seed/upgrade: Matthew's Baby Cobra Yoga in Bushwick (Firecrawl-scannable)."""
     recs = load_personal()
+    changed = False
     existing = next((r for r in recs if r.get("seed") == "babycobra"), None)
     if existing:
         # upgrade: Baby Cobra Bushwick runs DAILY evening classes (ClassPass is the
@@ -100,20 +101,44 @@ def seed_personal():
             existing["location_match"] = "Bushwick"
             existing["blurb"] = "Daily donation-based classes in a Bushwick loft (you go ~7pm)."
             existing["seed_v"] = 3
-            save_personal(recs)
-        return
-    recs.append({
-        "id": uuid.uuid4().hex[:12], "seed": "babycobra",
-        "title": "Baby Cobra Yoga", "recurring": True, "weekdays": [4, 6],
-        "time": "7:00 PM", "venue": "Baby Cobra Yoga, 47 Thames St #206",
-        "neighborhood": "Bushwick", "borough": "Brooklyn", "near_home": True,
-        "category": "Wellness", "price": "Donation-based",
-        "url": "https://www.tickettailor.com/events/babycobrayoga",
-        "scan_url": "https://www.tickettailor.com/events/babycobrayoga",
-        "location_match": "Bushwick",
-        "blurb": "Donation-based, baby-friendly flow in a Bushwick loft studio.",
-    })
-    save_personal(recs)
+            changed = True
+    else:
+        changed = True
+        recs.append({
+            "id": uuid.uuid4().hex[:12], "seed": "babycobra", "seed_v": 3,
+            "title": "Baby Cobra Yoga", "recurring": True,
+            "weekdays": [0, 1, 2, 3, 4, 5, 6], "time": "7:00 PM",
+            "venue": "Baby Cobra Yoga, 47 Thames St #206",
+            "neighborhood": "Bushwick", "borough": "Brooklyn", "near_home": True,
+            "category": "Wellness", "price": "Donation-based",
+            "url": "https://classpass.com/studios/baby-cobra---bushwick-brooklyn",
+            "scan_url": "https://www.tickettailor.com/events/babycobrayoga",
+            "location_match": "Bushwick",
+            "blurb": "Daily donation-based classes in a Bushwick loft (you go ~7pm).",
+        })
+    # Williamsburg founders run — weekly Wednesday 7:30am (Luma, Firecrawl-scannable)
+    if not any(r.get("seed") == "wburgrun" for r in recs):
+        changed = True
+        recs.append({
+            "id": uuid.uuid4().hex[:12], "seed": "wburgrun",
+            "title": "Williamsburg Run: Founders, Creatives & Coffee",
+            "recurring": True, "weekdays": [3], "time": "7:30 AM",
+            "venue": "Padel Haus Williamsburg", "neighborhood": "Williamsburg",
+            "borough": "Brooklyn", "near_home": True,
+            "category": "Wellness", "price": "Free · approval required",
+            "url": "https://luma.com/hhndqkur",
+            "scan_url": "https://luma.com/hhndqkur",
+            "blurb": "Weekly Wed 5K with founders & creatives from Padel Haus; coffee & smoothies after.",
+        })
+    if changed:
+        save_personal(recs)
+
+
+def _start_time(t):
+    """Normalize a time/time-range to its start token for de-duping, e.g.
+    '7:30 AM - 9:00 AM' and '7:30 AM' -> '7:30AM'."""
+    m = re.match(r"\s*(\d{1,2}(?::\d{2})?\s*[AaPp][Mm])", t or "")
+    return (m.group(1).upper().replace(" ", "") if m else (t or "").strip().upper())
 
 
 def _instance(r, d):
@@ -144,7 +169,7 @@ def expand_personal(days=32):
                 d = today + timedelta(days=i)
                 if (d.weekday() + 1) % 7 in wd:   # python Mon=0 -> JS Sun=0
                     inst = _instance(r, d.isoformat())
-                    out.append(inst); seen.add((inst["date"], inst["time"]))
+                    out.append(inst); seen.add((inst["date"], _start_time(inst["time"])))
         # 2) real special sessions from a Firecrawl scan — added on top
         for s in (r.get("sessions") or []):
             d = (s.get("date") or "")
@@ -158,7 +183,7 @@ def expand_personal(days=32):
             if s.get("title") and s["title"].lower() not in r["title"].lower():
                 inst["title"] = r["title"] + " · " + s["title"]
             inst["scanned"] = True
-            if (inst["date"], inst["time"]) in seen:
+            if (inst["date"], _start_time(inst["time"])) in seen:
                 continue   # don't duplicate a regular already on that day/time
             out.append(inst)
         # 3) one-off saved event
