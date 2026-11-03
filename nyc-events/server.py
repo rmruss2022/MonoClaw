@@ -179,6 +179,10 @@ def expand_personal(days=32):
         if not r.get("id"):
             continue
         seen = set()
+        # occurrences the user removed one-by-one (date|starttime keys)
+        excl = set(r.get("excluded") or [])
+        def _skip(inst):
+            return (inst["date"] + "|" + _start_time(inst["time"])) in excl
         # 1) your recurring regulars (the weekly schedule you set) — always shown
         if r.get("recurring"):
             wd = set(r.get("weekdays") or [])
@@ -186,6 +190,8 @@ def expand_personal(days=32):
                 d = today + timedelta(days=i)
                 if (d.weekday() + 1) % 7 in wd:   # python Mon=0 -> JS Sun=0
                     inst = _instance(r, d.isoformat())
+                    if _skip(inst):
+                        continue
                     out.append(inst); seen.add((inst["date"], _start_time(inst["time"])))
         # 2) real special sessions from a Firecrawl scan — added on top
         for s in (r.get("sessions") or []):
@@ -200,12 +206,16 @@ def expand_personal(days=32):
             if s.get("title") and s["title"].lower() not in r["title"].lower():
                 inst["title"] = r["title"] + " · " + s["title"]
             inst["scanned"] = True
+            if _skip(inst):
+                continue
             if (inst["date"], _start_time(inst["time"])) in seen:
                 continue   # don't duplicate a regular already on that day/time
             out.append(inst)
         # 3) one-off saved event
         if not r.get("recurring") and not r.get("sessions") and r.get("date") and r["date"] >= tj:
-            out.append(_instance(r, r["date"]))
+            inst = _instance(r, r["date"])
+            if not _skip(inst):
+                out.append(inst)
     return out
 
 
@@ -1247,7 +1257,7 @@ function evCard(e){
   +(e.blurb?'<p class="bl">'+esc(e.blurb)+'</p>':'')+'</div>'
   +'<div class="acts">'
    +'<button class="act" data-ics="'+e._i+'" title="Add to my calendar (.ics)">📅</button>'
-   +(e.mine?'<button class="act del" data-del="'+esc(e.pid||'')+'" title="Remove">✕</button>'
+   +(e.mine?'<button class="act del" data-rm="'+e._i+'" title="Remove this one">✕</button>'
            :'<button class="act" data-save="'+e._i+'" title="Save to my events">＋</button>')
   +'</div></div>';
 }
@@ -1269,7 +1279,8 @@ function openEvent(e){
    +'<div class="evm-actions">'
     +(e.url?'<a class="evm-btn primary" href="'+esc(e.url)+'" target="_blank" rel="noopener">🎟 Open / Tickets</a>':'')
     +'<button class="evm-btn" data-mics>📅 Add to calendar</button>'
-    +(e.mine?'<button class="evm-btn danger" data-mdel="'+esc(e.pid||'')+'">✕ Remove</button>'
+    +(e.mine?('<button class="evm-btn danger" data-mrm>✕ Remove this class</button>'
+             +(e.recurring?'<button class="evm-btn danger" data-mrmall>Remove the whole series</button>':''))
             :'<button class="evm-btn" data-msave>＋ Save to my events</button>')
    +'</div>'
   +'</div>';
@@ -1447,12 +1458,26 @@ document.getElementById('list').addEventListener('click',function(ev){
   if(b.classList.contains('scanbtn')){scanRegulars(b);return;}
   if(b.hasAttribute('data-ics')){downloadICS(all[+b.getAttribute('data-ics')]);return;}
   if(b.hasAttribute('data-save')){saveMine(all[+b.getAttribute('data-save')]);b.textContent='✓';return;}
-  if(b.hasAttribute('data-del')){var pid=b.getAttribute('data-del');
-   if(!pid||!confirm('Remove this event from your calendar?'))return;
-   fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})}).then(function(){load(false);});}
+  if(b.hasAttribute('data-rm')){removeOccurrence(all[+b.getAttribute('data-rm')]);return;}
   return;}
  var card=ev.target.closest('.ev[data-open]');if(card)openEvent(all[+card.getAttribute('data-open')]);
 });
+// remove ONE occurrence (recurring -> exclude this date/time; one-off -> delete)
+function removeOccurrence(e){
+ if(!e||!e.pid)return;
+ if(e.recurring){
+  if(!confirm('Remove just this class — '+e.date+(e.time?' '+e.time:'')+'? (keeps the rest)'))return;
+  fetch('api/personal/exclude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:e.pid,date:e.date,time:e.time})}).then(function(){load(false);});
+ } else {
+  if(!confirm('Remove this event from your calendar?'))return;
+  fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:e.pid})}).then(function(){load(false);});
+ }
+}
+function removeSeries(e){
+ if(!e||!e.pid)return;
+ if(!confirm('Remove the WHOLE series ('+esc(e.title)+') from your calendar?'))return;
+ fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:e.pid})}).then(function(){load(false);});
+}
 // event detail modal: actions
 var evModal=document.getElementById('evModal');
 function closeEv(){evModal.hidden=true;evModal._ev=null;}
@@ -1461,9 +1486,8 @@ evModal.addEventListener('click',function(ev){
  var e=evModal._ev;if(!e)return;
  if(ev.target.closest('[data-mics]')){downloadICS(e);return;}
  if(ev.target.closest('[data-msave]')){saveMine(e);closeEv();return;}
- var del=ev.target.closest('[data-mdel]');
- if(del){var pid=del.getAttribute('data-mdel');if(!pid||!confirm('Remove this event from your calendar?'))return;
-  fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})}).then(function(){closeEv();load(false);});}
+ if(ev.target.closest('[data-mrm]')){removeOccurrence(e);closeEv();return;}
+ if(ev.target.closest('[data-mrmall]')){removeSeries(e);closeEv();return;}
 });
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!evModal.hidden)closeEv();});
 // scan all scannable regulars via the Firecrawl agent, then reload
@@ -1596,6 +1620,21 @@ class H(BaseHTTPRequestHandler):
         elif p == "/api/personal/delete":
             pid = (self._body().get("id") or "").strip()
             recs = [r for r in load_personal() if r.get("id") != pid]
+            save_personal(recs)
+            self._send(json.dumps({"ok": True}))
+        elif p == "/api/personal/exclude":
+            # hide a single occurrence of a regular (don't delete the series)
+            b = self._body()
+            pid = (b.get("id") or "").strip()
+            d = (b.get("date") or "").strip()
+            key = d + "|" + _start_time(b.get("time") or "")
+            recs = load_personal()
+            for r in recs:
+                if r.get("id") == pid:
+                    ex = r.get("excluded") or []
+                    if key not in ex:
+                        ex.append(key)
+                    r["excluded"] = ex
             save_personal(recs)
             self._send(json.dumps({"ok": True}))
         elif p == "/api/personal/scan":
