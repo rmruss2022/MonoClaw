@@ -17,6 +17,7 @@ Env:
   MARQUEE_DATA        data dir (default ./data)
 """
 import json, os, re, threading, time, html, uuid, urllib.request
+from urllib.parse import urlparse
 from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -151,29 +152,37 @@ def fetch_events():
     if not GEMINI_KEY:
         raise RuntimeError("GEMINI_API_KEY not set")
     prompt = (
-        f"I live in {HOME}. List 15 real, notable upcoming events in New York City over "
-        "the next ~24 days. Include a strong share of Brooklyn events, especially ones "
-        f"near {HOME} — Bushwick, East Williamsburg, Williamsburg, Bushwick-adjacent "
-        "Ridgewood (Queens), and Bedford-Stuyvesant — alongside the best citywide "
-        "highlights. Diverse mix across music/concerts, nightlife, arts & museums, "
-        "theater, comedy, sports, food, festivals, family, and film. Use Google Search "
-        "for REAL current listings with REAL working links (official venue, ticketing, or "
-        "org page). Spread them across different dates. Reply with ONLY a JSON array, no "
-        "prose, no markdown fences. Each item: {\"title\",\"date\":\"YYYY-MM-DD\",\"time\","
-        "\"venue\",\"neighborhood\",\"borough\",\"near_home\",\"category\",\"price\",\"url\","
-        "\"blurb\"}. category is one of: " + ", ".join(CATEGORIES) + ". borough is one of: "
-        + ", ".join(BOROUGHS) + ". near_home is true ONLY if the venue is within ~2 miles "
-        f"of {HOME} (Bushwick/East Williamsburg/Williamsburg/Ridgewood/Bed-Stuy). "
+        f"I live in {HOME}. Use Google Search to find 15 REAL, specific, currently-listed "
+        "events happening in New York City in the next ~24 days. Include a strong share of "
+        f"Brooklyn events near {HOME} (Bushwick, East Williamsburg, Williamsburg, Ridgewood, "
+        "Bed-Stuy) alongside the best citywide highlights, across music, nightlife, arts, "
+        "theater, comedy, sports, food, festivals, family, film.\n\n"
+        "STRICT ACCURACY RULES — getting these wrong is worse than returning fewer events:\n"
+        "- Every event must be a SINGLE real event you actually found on a specific listing "
+        "page (a ticketing page, the venue's event page, RA/Dice/Eventbrite, or an official "
+        "box office). NEVER merge two events, two artists, or two listings into one. NEVER "
+        "invent, guess, or approximate a title, venue, or date.\n"
+        "- \"url\" MUST be that event's OWN specific listing/ticket page (deep link with a "
+        "path), not a homepage or a search page. The \"date\" MUST be the exact date shown "
+        "on that page.\n"
+        "- If you cannot find a specific listing page with an unambiguous date for an event, "
+        "OMIT it. Fewer, fully-verified events is the goal.\n\n"
+        "Reply with ONLY a JSON array, no prose, no markdown fences. Each item: "
+        "{\"title\",\"date\":\"YYYY-MM-DD\",\"time\",\"venue\",\"neighborhood\",\"borough\","
+        "\"near_home\",\"category\",\"price\",\"url\",\"blurb\"}. category is one of: "
+        + ", ".join(CATEGORIES) + ". borough is one of: " + ", ".join(BOROUGHS)
+        + ". near_home is true ONLY if the venue is within ~2 miles of "
+        f"{HOME} (Bushwick/East Williamsburg/Williamsburg/Ridgewood/Bed-Stuy). "
         "blurb <= 18 words, vivid and specific."
     )
     body = {"contents": [{"parts": [{"text": prompt}]}],
             "tools": [{"google_search": {}}],
-            "generationConfig": {"temperature": 0.35, "maxOutputTokens": 10000}}
+            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 10000}}
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}")
     req = urllib.request.Request(url, data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"}, method="POST")
-    j = json.loads(urllib.request.urlopen(req, timeout=150).read())
+    j = json.loads(urllib.request.urlopen(req, timeout=240).read())
     txt = "".join(p.get("text", "") for p in
                   ((j["candidates"][0].get("content") or {}).get("parts") or []))
     a, b = txt.find("["), txt.rfind("]")
@@ -199,11 +208,24 @@ def fetch_events():
             "url": (e.get("url") or "").strip()[:400],
             "blurb": (e.get("blurb") or "").strip()[:220],
         })
-    # keep today-forward, sort by date then time
+    # keep today-forward + only events with a specific listing link (a deep path,
+    # not a bare homepage) — these are the trustworthy, confirmable ones.
     today = time.strftime("%Y-%m-%d")
-    out = [e for e in out if e["date"] >= today]
-    out.sort(key=lambda e: (e["date"], e["time"]))
-    return out
+    def _specific(u):
+        try:
+            p = urlparse(u or "")
+            return p.scheme in ("http", "https") and bool(p.netloc) and len(p.path.strip("/")) > 1
+        except Exception:
+            return False
+    out = [e for e in out if e["date"] >= today and _specific(e["url"])]
+    # de-dupe by (title, date)
+    seen, uniq = set(), []
+    for e in out:
+        k = (e["title"].lower(), e["date"])
+        if k not in seen:
+            seen.add(k); uniq.append(e)
+    uniq.sort(key=lambda e: (e["date"], e["time"]))
+    return uniq
 
 
 def refresh_async():
@@ -269,6 +291,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  h1{font-size:25px;margin:0;letter-spacing:-.02em;font-weight:800}
  .sub{color:var(--mut);font-size:13px;margin:2px 0 0;font-weight:500}
  .home{color:#ffb3cb;font-weight:700}
+ .ci{width:14px;height:14px;display:inline-block;vertical-align:-2px;flex:0 0 auto}
  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
  .near-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;
    text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#f59e0b,#ef4444)}
@@ -405,8 +428,19 @@ PAGE = r"""<!doctype html><html lang="en"><head>
 <script>
 var CATCOLOR={Music:'#ff5c8a',Nightlife:'#a855f7',Arts:'#38bdf8',Theater:'#f59e0b',Comedy:'#fbbf24',
   Sports:'#22c55e',Food:'#fb7185',Festival:'#ec4899',Family:'#2dd4bf',Film:'#818cf8',Wellness:'#34d399'};
-var CATICON={Music:'🎵',Nightlife:'🪩',Arts:'🎨',Theater:'🎭',Comedy:'🎤',Sports:'🏀',Food:'🍽️',
-  Festival:'🎪',Family:'🧸',Film:'🎬',Wellness:'🧘'};
+var CAT_SVG={
+ Music:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.6A4 4 0 1 0 14 17V7.3l5-1.1V3z"/></svg>',
+ Nightlife:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 6.3L20 10l-6.1 1.7L12 18l-1.9-6.3L4 10l6.1-1.7z"/></svg>',
+ Arts:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 0 0 0 18c1.3 0 2-1 1.5-2.2-.5-1.3.4-2.3 1.7-2.3H17A4 4 0 0 0 20.5 9 9 9 0 0 0 12 3zM7 13a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm2-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm6 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>',
+ Theater:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v5a8 8 0 0 1-16 0z"/><path d="M9 9h.01M15 9h.01M9.5 13c1.3 1.1 3.7 1.1 5 0"/></svg>',
+ Comedy:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" stroke="none"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg>',
+ Sports:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3v18M5.6 5.6c3 2.4 3 10.4 0 12.8M18.4 5.6c-3 2.4-3 10.4 0 12.8"/></svg>',
+ Food:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v5a2 2 0 0 0 4 0V3M7 3v18M18.5 3c-1.8 0-2.5 2.6-2.5 5.5s2 3.5 2 3.5V21"/></svg>',
+ Festival:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3M12 6 4 20h16L12 6zM12 6 8.5 20M12 6l3.5 14"/></svg>',
+ Family:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="7" r="3"/><circle cx="16" cy="7" r="3"/><path d="M2 20a6 6 0 0 1 12 0zm8 0a6 6 0 0 1 12 0z"/></svg>',
+ Film:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3.3 4.5 20.4 6.8l-.4 2.7L3 7.2z"/></svg>',
+ Wellness:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2" fill="currentColor" stroke="none"/><path d="M12 9c-1.5 1.4-5 2-5 2 .4 2.8 2.4 4.5 5 4.5s4.6-1.7 5-4.5c0 0-3.5-.6-5-2z" fill="currentColor" stroke="none"/><path d="M4 18c2.6 1.8 13.4 1.8 16 0"/></svg>'};
+function catIcon(k){return CAT_SVG[k]||'';}
 var CATS=['Music','Nightlife','Arts','Theater','Comedy','Sports','Food','Festival','Family','Film','Wellness'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -418,14 +452,14 @@ function filtered(){return all.filter(function(e){return (!active.size||active.h
 function chips(){
  var c=document.getElementById('chips');
  c.innerHTML='<span class="chip'+(!active.size?' on':'')+'" data-c="">All</span>'+
-  CATS.map(function(k){return '<span class="chip'+(active.has(k)?' on':'')+'" data-c="'+k+'">'+CATICON[k]+' '+k+'</span>';}).join('');
+  CATS.map(function(k){return '<span class="chip'+(active.has(k)?' on':'')+'" data-c="'+k+'">'+catIcon(k)+' '+k+'</span>';}).join('');
 }
 function evCard(e){
  var d=parseD(e.date);
  return '<a class="ev'+(e.mine?' mine':'')+'" href="'+esc(e.url||'#')+'" target="_blank" rel="noopener">'
   +'<div class="dte"><div class="mo">'+MON[d.getMonth()]+'</div><div class="dy">'+d.getDate()+'</div><div class="wd">'+WD[d.getDay()]+'</div></div>'
   +'<div class="body"><div class="t">'+esc(e.title)+'</div>'
-  +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+(CATICON[e.category]||'')+' '+esc(e.category)+'</span>'
+  +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+catIcon(e.category)+' '+esc(e.category)+'</span>'
   +(e.mine?'<span class="mine-tag">'+(e.recurring?'★ Mine · weekly':'★ Mine')+'</span>':'')
   +(e.near_home&&!e.mine?'<span class="near-tag">★ Near you</span>':'')
   +(e.time?'<span>🕒 '+esc(e.time)+'</span>':'')
@@ -502,7 +536,7 @@ document.getElementById('refresh').onclick=function(){load(true);};
 var modal=document.getElementById('addModal'),selWd=new Set();
 (function initForm(){
  var cat=document.getElementById('f_cat');
- cat.innerHTML=CATS.map(function(k){return '<option value="'+k+'">'+CATICON[k]+' '+k+'</option>';}).join('');
+ cat.innerHTML=CATS.map(function(k){return '<option value="'+k+'">'+k+'</option>';}).join('');
  cat.value='Wellness';
  var wd=document.getElementById('f_wdays');
  wd.innerHTML=WD.map(function(w,i){return '<button type="button" class="wday" data-wd="'+i+'">'+w[0]+'</button>';}).join('');
