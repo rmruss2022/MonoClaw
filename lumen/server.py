@@ -5430,7 +5430,7 @@ class H(BaseHTTPRequestHandler):
             self._send(200, {"ok": True}); return
         rel = p.lstrip("/")
         if rel in ("icon.png", "icon-192.png", "icon-512.png", "icon.svg") or \
-           (rel.startswith("art/") and re.fullmatch(r"art/[a-z0-9_]+\.(?:png|jpg|jpeg|webp)", rel)):
+           (rel.startswith("art/") and re.fullmatch(r"art/[a-z0-9_-]+\.(?:png|jpg|jpeg|webp)", rel)):
             fp = os.path.join(HERE, rel)
             if os.path.isfile(fp):
                 if fp.endswith(".svg"): ct = "image/svg+xml"
