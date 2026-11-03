@@ -917,10 +917,47 @@ def gemini_json(prompt, timeout=20):
     except Exception:
         return None
 
+# Claude via our ccut-gateway (the signed-in `claude` CLI behind a bearer token).
+# Preferred over Gemini for journal intelligence when configured.
+CLAUDE_URL = os.environ.get("LUMEN_CLAUDE_URL") or os.environ.get("CCUT_CLAUDE_URL")
+CLAUDE_TOKEN = os.environ.get("LUMEN_CLAUDE_TOKEN") or os.environ.get("CCUT_CLAUDE_TOKEN")
+
+def claude_json(prompt, timeout=40):
+    """Ask Claude (ccut-gateway, bearer auth) for a JSON object. Returns dict or None.
+    Same contract as gemini_json so callers can prefer Claude and fall back."""
+    if not (CLAUDE_URL and CLAUDE_TOKEN):
+        return None
+    body = json.dumps({"prompt": prompt, "model": "sonnet"}).encode()
+    try:
+        req = urllib.request.Request(
+            CLAUDE_URL.rstrip("/") + "/v1/claude", data=body,
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + CLAUDE_TOKEN})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            outer = json.loads(r.read().decode("utf-8", "replace"))
+        env = json.loads(outer.get("stdout") or "{}")
+        txt = (env.get("result") or "").strip()
+        if txt.startswith("```"):
+            txt = re.sub(r"^```[a-zA-Z]*\n?", "", txt)
+            txt = re.sub(r"\n?```$", "", txt).strip()
+        try:
+            return json.loads(txt)
+        except Exception:
+            m = re.search(r"\{.*\}", txt, re.S)
+            return json.loads(m.group(0)) if m else None
+    except Exception:
+        return None
+
+def ai_enabled():
+    return bool((CLAUDE_URL and CLAUDE_TOKEN) or GEMINI_KEY)
+
+def ai_json(prompt, timeout=40):
+    """Prefer Claude (ccut-gateway); fall back to Gemini; else None."""
+    return claude_json(prompt, timeout) or gemini_json(prompt, timeout)
+
 def journal_reflect(prompt, text):
     """The Keeper's brief, warm reflection on a sealed letter + an inferred mood word.
     Best-effort: returns empty strings if the companion is unavailable."""
-    if not GEMINI_KEY:
+    if not ai_enabled():
         return {"reflection": "", "mood": ""}
     p = ("You are the Keeper — a warm, grounded meditation companion inside Lumen. "
          "Someone just wrote this private journal letter"
@@ -930,13 +967,13 @@ def journal_reflect(prompt, text):
          "advise, diagnose, or sound clinical. Also infer their overall mood as ONE lowercase "
          "word.\n\nReturn ONLY JSON: {\"reflection\":\"...\",\"mood\":\"<one word>\"}\n\nLetter:\n"
          + text[:1800])
-    r = gemini_json(p, timeout=10) or {}
+    r = ai_json(p, timeout=25) or {}
     return {"reflection": (r.get("reflection") or "").strip()[:400],
             "mood": (r.get("mood") or "").strip().lower()[:24]}
 
 def journal_insights(rows):
     """Find the gentle throughline across a person's recent letters."""
-    if not GEMINI_KEY or len(rows) < 2:
+    if not ai_enabled() or len(rows) < 2:
         return None
     joined = "\n\n".join(
         f"[{(r['created'] or '')[:10]} · felt {r['mood'] or '—'}] {(r['text'] or '')[:400]}"
@@ -947,7 +984,7 @@ def journal_insights(rows):
          "\"arc\":\"one sentence on their emotional arc lately\", \"observation\":\"one warm, "
          "specific observation, 2 sentences max\", \"nudge\":\"one gentle thing to sit with or "
          "write about next\"}\n\n" + joined)
-    r = gemini_json(p, timeout=18)
+    r = ai_json(p, timeout=45)
     if not r:
         return None
     return {"themes": [str(x)[:40] for x in (r.get("themes") or [])][:4],
