@@ -2175,6 +2175,8 @@ a{color:var(--purple)}
 .mini-modbtn:hover{color:var(--text);border-color:var(--muted)}.mini-modbtn .i{width:12px;height:12px}
 /* life os + speaker */
 .lo-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#1a1330;border:1px solid #3a2d5e;color:var(--purple);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.back-btn{flex:none;width:34px;height:34px;border-radius:50%;background:#1a1330;border:1px solid #3a2d5e;color:var(--purple);font-size:22px;line-height:1;font-weight:700;cursor:pointer;display:grid;place-items:center;padding:0 0 3px 0}
+.back-btn:active{transform:scale(.94)}
 .lo-btn .i{width:14px;height:14px}
 /* ---- journal: three modes, weekly ring, pillar grid ---- */
 .jweekbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 2px 12px;flex-wrap:wrap}
@@ -4455,7 +4457,7 @@ function renderJournalWelcome(){
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
   if(jScreen==='compose')return renderJournalCompose();
-  if(jScreen==='pillars')return renderPillarsProgress();
+  if(jScreen==='pillars')return renderLifeOS();
   return renderJournalHome();
 }
 
@@ -4478,18 +4480,13 @@ async function renderJournalHome(){
     +jWeekRing()
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
     +`<div class="jlinks">`
-      +`<button class="jlink" id="lo-link"><span class="jlink-ico">${ic('compass','g')}</span><span class="jlink-txt"><b>Life OS</b><span>Base &amp; focus pillars</span></span></button>`
-      +`<button class="jlink" id="pill-link"><span class="jlink-ico">${ic('lotus','g')}</span><span class="jlink-txt"><b>Pillars &amp; progress</b><span>${doneN} of ${totalP} explored</span></span></button>`
-    +`</div>`
-    +`<div class="jfeed-h">${ic('globe','g')} From the community</div>`
-    +`<div id="jbody"></div>`;
+      +`<button class="jlink" id="pill-link"><span class="jlink-ico">${ic('compass','g')}</span><span class="jlink-txt"><b>Pillars &amp; Life OS</b><span>Your compass, focus &amp; ${doneN} of ${totalP} explored</span></span></button>`
+    +`</div>`;
   $('#talkbtn').onclick=renderChat;
-  $('#lo-link').onclick=renderLifeOS;
   $('#pill-link').onclick=()=>{jScreen='pillars';renderJournal();};
   document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>{const k=b.dataset.m;
     journalMode=k;journalPillar=null;if(k==='season')jSeason='';
     if(k==='deep'){jScreen='pillars';}else{jScreen='compose';}renderJournal();});
-  journalView='feed';renderJournalBody();
 }
 
 // Pillars & progress — the eight life pillars, how far you've worked through them,
@@ -4527,12 +4524,14 @@ async function renderJournalCompose(){
   listening=false;rec=null;
   const lbl={deep:'Deep',daily:'Daily',season:'Season'}[journalMode]||'Journal';
   if(journalView==='feed')journalView='mine';
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>${lbl}</b>`
+  const backTo=(journalMode==='deep')?'pillars':'home';
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="jback" title="Back">‹</button><span class="mark">${ic('lumen','mark')}</span><b>${lbl}</b>`
     +`<button class="lo-btn" id="jhome" style="margin-left:auto">${ic('book')} Journal</button></div>`
     +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
     +`<div id="jcompose"></div>`
     +`<div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='insights'?'on':''}" data-v="insights">Insights</button></div>`
     +`<div id="jbody"></div>`;
+  $('#jback').onclick=()=>{jScreen=backTo;journalPillar=null;renderJournal();};
   $('#jhome').onclick=()=>{jScreen='home';journalPillar=null;renderJournal();};
   if(journalMode==='deep')renderDeepCompose();
   else if(journalMode==='season')renderSeasonCompose();
@@ -4640,8 +4639,7 @@ async function renderLifeOS(){
   let d;try{d=await api('lifeos');LO=d.lifeos;LO_PILLARS=d.pillars;}catch(e){toast(e);return;}
   LO.pillars=LO.pillars||{};LO.focus=LO.focus||[];
   const chosen=DIRS.map(([k])=>LO.pillars[k]).filter(Boolean);
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Life OS</b>
-    <button class="lo-btn" id="loback">${ic('book')} Journal</button></div>
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="loback" title="Back to journal">‹</button><span class="mark">${ic('lumen','mark')}</span><b>Pillars</b></div>
   <p class="muted" style="font-size:13px;margin:0 0 10px">Your base at the center, four pillars at the cardinal directions. Choose two to focus on day to day.</p>
   <div class="compass2" id="compass">
     <svg class="crays" viewBox="0 0 300 300" aria-hidden="true">
@@ -4663,8 +4661,8 @@ async function renderLifeOS(){
     <div id="lofocus" class="lo-focus"></div>
   </div>
   <button class="btn gold" id="losave">Save my Life OS</button>
-  <div id="loprompts"></div>`;
-  $('#loback').onclick=()=>renderJournal();
+  <div id="ppsection" style="margin-top:20px"></div>`;
+  $('#loback').onclick=()=>{jScreen='home';renderJournal();};
   // render the four compass nodes + rays
   function paintDirs(){DIRS.forEach(([k,label])=>{const node=$('.cnode.c'+k);if(!node)return;const p=LO.pillars[k];
     const focus=p&&LO.focus.includes(p);
@@ -4683,8 +4681,32 @@ async function renderLifeOS(){
       paintFocus();});}
   paintFocus();
   $('#losave').onclick=async()=>{LO.base=$('#lobase').value.trim();
-    try{await api('lifeos','POST',{base:LO.base,pillars:LO.pillars,focus:LO.focus});toast('Life OS saved '+ic('spark','g'));loadLoPrompts(true);}catch(e){toast(e);}};
-  loadLoPrompts(false);
+    try{await api('lifeos','POST',{base:LO.base,pillars:LO.pillars,focus:LO.focus});toast('Life OS saved '+ic('spark','g'));}catch(e){toast(e);}};
+  renderPillarsSection();
+}
+
+// The pillars-&-progress list, merged into the Pillars screen below the compass.
+// Each of the eight pillars shows how far you've worked its lesson plan; tap one
+// to open its next guided chapter.
+async function renderPillarsSection(){
+  const box=$('#ppsection');if(!box)return;
+  box.innerHTML=`<div class="card muted center" style="font-size:13px"><span class="spinner"></span> Loading your pillars…</div>`;
+  let pp=null;try{pp=await api('pillars');}catch(e){box.innerHTML='';return;}
+  const pillars=(pp&&pp.pillars)||[];const focus=(pp&&pp.focus)||[];
+  const done=(pp&&pp.done)||0;const total=(pp&&pp.total)||pillars.length||8;
+  const pct=total?Math.round(100*done/total):0;
+  const row=(p)=>{const f=focus.includes(p.name);const n=p.sittings||0;const isDone=n>0;
+    return `<button class="pp-row" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
+      +`<span class="pp-ico">${ic(picon(p.name),'grad-gold')}</span>`
+      +`<span class="pp-main"><span class="pp-name">${esc(p.name)}${f?`<span class="pp-fchip">focus</span>`:''}</span>`
+      +`<span class="pp-desc">${esc(p.title||pdesc(p.name))}</span></span>`
+      +`<span class="pp-stat${isDone?' done':''}"><span class="pp-dot">${isDone?ic('check'):ic(picon(p.name))}</span>`
+      +`<span class="pp-sn">${n?n+(n===1?' sitting':' sittings'):'start'}</span></span></button>`;};
+  box.innerHTML=`<div class="pp-top"><div class="pp-count">You've explored <b>${done}</b> of ${total} pillars</div>`
+      +`<div class="pp-bar"><i style="width:${pct}%"></i></div></div>`
+    +`<div class="pp-list">`+pillars.map(row).join('')+`</div>`
+    +`<div class="muted jgrid-hint" style="margin-top:14px;text-align:center">Each pillar is a guided lesson plan. The Keeper opens the next chapter where you last left off.</div>`;
+  box.querySelectorAll('.pp-row').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
 }
 function pickPillar(dir,paintDirs,paintFocus){openPillarCard(dir,paintDirs,paintFocus);}
 function openPillarCard(dir,paintDirs,paintFocus){
