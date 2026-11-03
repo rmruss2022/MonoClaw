@@ -10,7 +10,7 @@ Env:
   PORTFOLIO_PORT   (default 18824)
   PORTFOLIO_BASE   optional mount path (default "" = root)
 """
-import os, json, sqlite3, time
+import os, json, sqlite3, time, threading, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # ---- Foreman: live subagent activity, read from OpenClaw's state DB ----
@@ -18,6 +18,92 @@ STATE_DB = os.environ.get("OPENCLAW_STATE_DB", "/root/.openclaw/state/openclaw.s
 ROSTER_PATH = os.environ.get("FOREMAN_ROSTER", "/root/MonoClaw/foreman/projects.json")
 _ROSTER_CACHE = {"mtime": 0, "by_slug": {}, "order": []}
 _FALLBACK_COLOR = "#94a3b8"
+
+# ---- Avatars (app icon → circular mark) + smart titles (Gemini, cached) ----
+_AVATAR_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "avatars")
+_TITLES_PATH = os.environ.get("FOREMAN_TITLES", "/root/MonoClaw/foreman/titles.json")
+_GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+_titles_cache = {"mtime": 0, "map": {}}
+_title_inflight = set()
+_title_lock = threading.Lock()
+
+
+def _avatar_url(slug):
+    if slug and os.path.exists(os.path.join(_AVATAR_DIR, slug + ".png")):
+        return "avatars/" + slug + ".png"
+    return None
+
+
+def _load_titles():
+    try:
+        m = os.path.getmtime(_TITLES_PATH)
+        if m != _titles_cache["mtime"]:
+            with open(_TITLES_PATH) as f:
+                _titles_cache["map"] = json.load(f)
+            _titles_cache["mtime"] = m
+    except Exception:
+        pass
+    return _titles_cache["map"]
+
+
+def _title_fallback(task):
+    t = (task or "").strip()
+    if t.startswith("Foreman job "):
+        parts = t.split("—", 1)
+        if len(parts) == 2:
+            t = parts[1].strip()
+    t = t.replace("\n", " ").strip()
+    return (t[:70] + "…") if len(t) > 72 else (t or "(no task)")
+
+
+def _gen_title_async(run_id, task):
+    def work():
+        try:
+            prompt = ("Write a concise 4 to 7 word title for this AI agent task. "
+                      "Imperative mood, plain text, no markdown, no quotes, no trailing period. "
+                      "Output only the title.\n\nTASK:\n" + (task or "")[:1500])
+            url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+                   "gemini-flash-latest:generateContent?key=" + _GEMINI_KEY)
+            body = json.dumps({"contents": [{"parts": [{"text": prompt}]}],
+                               "generationConfig": {"maxOutputTokens": 48, "temperature": 0.3,
+                                                    "thinkingConfig": {"thinkingBudget": 0}}}).encode()
+            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+            j = json.loads(urllib.request.urlopen(req, timeout=25).read())
+            parts = (j["candidates"][0].get("content") or {}).get("parts") or []
+            title = "".join(p.get("text", "") for p in parts).strip()
+            title = title.splitlines()[-1].strip().strip('"').strip("*").strip() if title else ""
+            # drop a dangling "( ..." fragment left by truncation
+            if "(" in title and ")" not in title:
+                title = title.split("(")[0].strip()
+            title = title.rstrip(" -—:(").strip()
+            if not title or len(title) > 90 or "word" in title.lower():
+                return
+            with _title_lock:
+                m = _load_titles()
+                m[run_id] = title
+                tmp = _TITLES_PATH + ".tmp"
+                with open(tmp, "w") as f:
+                    json.dump(m, f)
+                os.replace(tmp, _TITLES_PATH)
+                try:
+                    _titles_cache["mtime"] = os.path.getmtime(_TITLES_PATH)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        finally:
+            _title_inflight.discard(run_id)
+    threading.Thread(target=work, daemon=True).start()
+
+
+def _title_for(run_id, task_full, task_short):
+    m = _load_titles()
+    if run_id in m:
+        return m[run_id]
+    if _GEMINI_KEY and run_id and run_id not in _title_inflight:
+        _title_inflight.add(run_id)
+        _gen_title_async(run_id, task_full)
+    return _title_fallback(task_short or task_full)
 
 def _roster():
     """Load foreman/projects.json (cached by mtime): slug -> {name,color}, plus
@@ -142,6 +228,8 @@ def foreman_data():
             # v.ok is None -> skipped -> leave doctor=None (no badge)
         out["jobs"].append({
             "id": d.get("run_id"), "project": project, "color": color,
+            "title": _title_for(d.get("run_id"), task_full, task),
+            "avatar": _avatar_url(slug),
             "status": status, "task": task, "model": d.get("model") or "",
             "mode": d.get("spawn_mode") or "", "elapsed": elapsed,
             "label": d.get("label") or d.get("task_name") or "",
@@ -477,6 +565,9 @@ PAGE = r'''<!DOCTYPE html>
     background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 45%,#ffffff));
     box-shadow:0 3px 10px -3px color-mix(in srgb,var(--accent) 60%,rgba(20,23,30,.45)),inset 0 1px 0 rgba(255,255,255,.35)}
   .fm-avatar.running{animation:fmpulse 1.8s infinite}
+  .fm-avatar-img{width:36px;height:36px;border-radius:50%;flex:0 0 auto;object-fit:cover;background:#0b0e16;
+    box-shadow:0 3px 10px -3px rgba(20,23,30,.45),inset 0 0 0 1px rgba(255,255,255,.08)}
+  .fm-avatar-img.running{animation:fmpulse 1.8s infinite}
   .fm-title{flex:1;min-width:0;font-size:15px;font-weight:650;color:var(--ink);line-height:1.4;word-break:break-word;white-space:pre-wrap}
   .fm-meta{display:flex;align-items:center;gap:9px;margin-top:12px;flex-wrap:wrap}
   .fm-meta .fm-doc{margin:0}
@@ -646,10 +737,12 @@ PAGE = r'''<!DOCTYPE html>
             : j.doctor===false?'<span class="fm-doc bad">✗ '+esc(j.doctorNote||'doctor failed')+'</span>'
             : (j.status==='done'&&j.doctor==='pending')?'<span class="fm-doc pending">· checking…</span>':'';
     var ini=(((j.project||'?').trim().charAt(0))||'?').toUpperCase();
+    var av=j.avatar?('<img class="fm-avatar-img '+j.status+'" src="'+esc(j.avatar)+'" alt="" loading="lazy">')
+                   :('<span class="fm-avatar '+j.status+'">'+esc(ini)+'</span>');
     return '<div class="fm-job" data-id="'+esc(j.id)+'" role="button" tabindex="0" aria-label="Open job details">'
       +'<div class="fm-head">'
-        +'<span class="fm-avatar '+j.status+'">'+esc(ini)+'</span>'
-        +'<div class="fm-title">'+esc(j.task||j.label||'(no task)')+'</div>'
+        +av
+        +'<div class="fm-title">'+esc(j.title||j.task||j.label||'(no task)')+'</div>'
         +'<span class="fm-chev" aria-hidden="true">›</span>'
       +'</div>'
       +'<div class="fm-meta">'
@@ -779,6 +872,13 @@ class H(BaseHTTPRequestHandler):
         elif p in ('/apple-touch-icon.png', '/icon-192.png', '/icon-512.png'):
             try:
                 with open(os.path.join(HERE, p.lstrip('/')), 'rb') as f:
+                    self._send(f.read(), 'image/png')
+            except OSError:
+                self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+        elif p.startswith('/avatars/') and p.endswith('.png'):
+            name = os.path.basename(p)
+            try:
+                with open(os.path.join(_AVATAR_DIR, name), 'rb') as f:
                     self._send(f.read(), 'image/png')
             except OSError:
                 self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
