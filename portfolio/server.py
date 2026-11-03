@@ -438,7 +438,7 @@ PAGE = r'''<!DOCTYPE html>
   .fm-col-count{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);background:#f3f5f9;border-radius:999px;padding:3px 10px;font-variant-numeric:tabular-nums}
   .fm-col-body{display:flex;flex-direction:column;gap:10px}
   /* each subagent = one full-width row */
-  .fm-job{position:relative;overflow:hidden;display:flex;align-items:flex-start;gap:13px;padding:15px 16px 15px 19px;border-radius:12px;
+  .fm-job{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;gap:0;padding:15px 16px 15px 19px;border-radius:12px;
     background:linear-gradient(135deg,#ffffff,color-mix(in srgb,var(--accent) 5%,#ffffff));
     border:1px solid #e8ecf2;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s,background .2s}
   .fm-job::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
@@ -465,6 +465,25 @@ PAGE = r'''<!DOCTYPE html>
   .fm-chev{font-size:16px;line-height:1;margin-left:4px;transition:opacity .15s,transform .15s;opacity:.4;
     background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#c7cedb));-webkit-background-clip:text;background-clip:text;color:transparent}
   .fm-job:hover .fm-chev{opacity:1;transform:translateX(3px)}
+  /* card layout (sketch): avatar + title, status chip, progress bar */
+  .fm-head{display:flex;align-items:center;gap:12px}
+  .fm-avatar{width:36px;height:36px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    font-size:15px;font-weight:800;color:#fff;letter-spacing:-.01em;
+    background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 45%,#ffffff));
+    box-shadow:0 3px 10px -3px color-mix(in srgb,var(--accent) 60%,rgba(20,23,30,.45)),inset 0 1px 0 rgba(255,255,255,.35)}
+  .fm-avatar.running{animation:fmpulse 1.8s infinite}
+  .fm-title{flex:1;min-width:0;font-size:15px;font-weight:650;color:var(--ink);line-height:1.4;word-break:break-word;white-space:pre-wrap}
+  .fm-meta{display:flex;align-items:center;gap:9px;margin-top:12px;flex-wrap:wrap}
+  .fm-meta .fm-doc{margin:0}
+  .fm-progress{position:relative;height:7px;border-radius:999px;background:#eef1f6;overflow:hidden;margin-top:12px;box-shadow:inset 0 1px 2px rgba(20,23,30,.08)}
+  .fm-progress i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;display:block;width:0}
+  .fm-progress.queued i{width:12%;background:linear-gradient(90deg,#f59e0b,#fb923c)}
+  .fm-progress.done i{width:100%;background:linear-gradient(90deg,#10b981,#14b8a6)}
+  .fm-progress.failed i{width:100%;background:linear-gradient(90deg,#f43f5e,#ef4444)}
+  .fm-progress.running i{width:100%;
+    background:repeating-linear-gradient(45deg,var(--accent) 0,var(--accent) 9px,color-mix(in srgb,var(--accent) 55%,#ffffff) 9px,color-mix(in srgb,var(--accent) 55%,#ffffff) 18px);
+    background-size:25.46px 25.46px;animation:fmstripe .8s linear infinite}
+  @keyframes fmstripe{from{background-position:0 0}to{background-position:25.46px 0}}
   /* the full prompt, always visible and wrapping — no clamp, no side-scroll */
   .fm-task{margin:8px 0 0;font-size:14px;color:var(--ink);line-height:1.5;word-break:break-word;white-space:pre-wrap}
   .fm-result{margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.5;word-break:break-word;
@@ -613,18 +632,24 @@ PAGE = r'''<!DOCTYPE html>
   // --- compact card: the basics + status, click to open the full modal ---
   function card(j){
     var el=(j.status==='running')?fmt(j.elapsed):((j.status==='done'||j.status==='failed')?('took '+fmt(j.elapsed)):'');
-    var doc = j.doctor===true?'<div class="fm-doc ok">✓ verified</div>'
-            : j.doctor===false?'<div class="fm-doc bad">✗ '+esc(j.doctorNote||'doctor failed')+'</div>'
-            : (j.status==='done'&&j.doctor==='pending')?'<div class="fm-doc pending">· checking…</div>':'';
+    var doc = j.doctor===true?'<span class="fm-doc ok">✓ verified</span>'
+            : j.doctor===false?'<span class="fm-doc bad">✗ '+esc(j.doctorNote||'doctor failed')+'</span>'
+            : (j.status==='done'&&j.doctor==='pending')?'<span class="fm-doc pending">· checking…</span>':'';
+    var ini=(((j.project||'?').trim().charAt(0))||'?').toUpperCase();
     return '<div class="fm-job" data-id="'+esc(j.id)+'" role="button" tabindex="0" aria-label="Open job details">'
-      +'<span class="fm-dot '+j.status+'"></span>'
-      +'<div class="fm-main"><div class="fm-row1">'
-      +'<span class="fm-badge '+j.status+'">'+j.status+'</span>'
-      +'<span class="fm-elapsed">'+el+'</span>'
-      +'<span class="fm-chev" aria-hidden="true">›</span></div>'
-      +'<div class="fm-task">'+esc(j.task||j.label||'(no task)')+'</div>'
+      +'<div class="fm-head">'
+        +'<span class="fm-avatar '+j.status+'">'+esc(ini)+'</span>'
+        +'<div class="fm-title">'+esc(j.task||j.label||'(no task)')+'</div>'
+        +'<span class="fm-chev" aria-hidden="true">›</span>'
+      +'</div>'
+      +'<div class="fm-meta">'
+        +'<span class="fm-badge '+j.status+'">'+j.status+'</span>'
+        +doc
+        +'<span class="fm-elapsed">'+el+'</span>'
+      +'</div>'
+      +'<div class="fm-progress '+j.status+'"><i></i></div>'
       +(j.result?'<div class="fm-result">↳ '+esc(j.result)+'</div>':'')
-      +doc+'</div></div>';
+      +'</div>';
   }
   function draw(d){
     var jobs=d.jobs||[],s=d.stats||{};
