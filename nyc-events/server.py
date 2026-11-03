@@ -417,25 +417,128 @@ def fetch_events():
             "price": (e.get("price") or "").strip()[:60],
             "url": (e.get("url") or "").strip()[:400],
             "blurb": (e.get("blurb") or "").strip()[:220],
+            "source": "Search",
         })
-    # keep today-forward + only events with a specific listing link (a deep path,
-    # not a bare homepage) — these are the trustworthy, confirmable ones.
+    return _clean_events(out)
+
+
+def _specific_url(u):
+    try:
+        p = urlparse(u or "")
+        return p.scheme in ("http", "https") and bool(p.netloc) and len(p.path.strip("/")) > 1
+    except Exception:
+        return False
+
+
+def _clean_events(out):
+    """today-forward + only events with a specific deep-link listing URL; sorted."""
     today = time.strftime("%Y-%m-%d")
-    def _specific(u):
+    out = [e for e in out if e.get("date", "") >= today and _specific_url(e.get("url"))]
+    out.sort(key=lambda e: (e["date"], e.get("time", "")))
+    return out
+
+
+# -------------------------------------------------------- event-source platforms
+# Marquee pulls from "our own internet search" (Gemini grounding, source="Search")
+# PLUS these real listing platforms (Firecrawl-scraped, cache-first, Gemini-
+# extracted). Luma city pages are JS-only so Luma is used for specific events /
+# regulars, not a listing source here.
+SOURCES = [
+    {"key": "ra", "name": "Resident Advisor", "url": "https://ra.co/events/us/brooklyn", "hint": "Nightlife", "on": False},
+    {"key": "dice", "name": "DICE", "url": "https://dice.fm/browse/new-york", "hint": "Music", "on": True},
+    {"key": "shotgun", "name": "Shotgun", "url": "https://shotgun.live/en/cities/new-york", "hint": "Nightlife", "on": True},
+    {"key": "eventbrite", "name": "Eventbrite", "url": "https://www.eventbrite.com/d/ny--brooklyn/events/", "hint": "Festival", "on": True},
+    {"key": "bandsintown", "name": "Bandsintown", "url": "https://www.bandsintown.com/c/new-york-ny", "hint": "Music", "on": False},
+    {"key": "songkick", "name": "Songkick", "url": "https://www.songkick.com/metro-areas/7644-us-new-york", "hint": "Music", "on": False},
+    {"key": "fever", "name": "Fever", "url": "https://feverup.com/en/new-york", "hint": "Arts", "on": False},
+    {"key": "posh", "name": "Posh", "url": "https://posh.vip/explore/new-york", "hint": "Nightlife", "on": False},
+]
+
+
+def fetch_from_source(src, limit=6):
+    """Firecrawl-scrape a platform's NYC listing (cache-first) and have Gemini
+    extract its real upcoming events. Returns a list tagged with the source."""
+    md = fc_scrape(src["url"])
+    if not md or not GEMINI_KEY:
+        return []
+    today = date.today().isoformat()
+    prompt = (
+        f"This is a scraped events-listing page from {src['name']} for New York City. "
+        f"Extract up to {limit} REAL upcoming events on or after {today} (next ~24 days), "
+        "preferring Brooklyn / near Bushwick where possible. Dates may appear relative "
+        "(e.g. 'Sat, 7 Nov', 'Tonight', 'Tomorrow') — resolve each to YYYY-MM-DD using "
+        f"today's date {today} and the current year. Use the exact title, date, time, venue, "
+        "and that event's OWN specific listing URL shown on the page — never invent or "
+        "merge. Reply ONLY a JSON array, each item: {\"title\",\"date\":"
+        "\"YYYY-MM-DD\",\"time\",\"venue\",\"neighborhood\",\"borough\",\"near_home\","
+        "\"category\",\"price\",\"url\",\"blurb\"}. category one of: " + ", ".join(CATEGORIES)
+        + ". borough one of: " + ", ".join(BOROUGHS) + ". blurb <=16 words.\n\nPAGE:\n" + md[:16000])
+    try:
+        body = json.dumps({"contents": [{"parts": [{"text": prompt}]}],
+                           "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4000,
+                                                "thinkingConfig": {"thinkingBudget": 0}}}).encode()
+        u = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+             f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}")
+        req = urllib.request.Request(u, data=body, headers={"Content-Type": "application/json"}, method="POST")
+        j = json.loads(urllib.request.urlopen(req, timeout=60).read())
+        txt = "".join(p.get("text", "") for p in
+                      ((j["candidates"][0].get("content") or {}).get("parts") or []))
+        a, b = txt.find("["), txt.rfind("]")
+        arr = json.loads(txt[a:b + 1]) if a >= 0 and b > a else []
+    except Exception as e:
+        print(f"[marquee] source {src['key']} failed:", e, flush=True)
+        return []
+    out = []
+    for e in arr:
+        if not isinstance(e, dict):
+            continue
+        d = str(e.get("date", ""))
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", d):
+            continue
+        t = (e.get("title") or "").strip()
+        if not t:
+            continue
+        out.append({
+            "title": t[:140], "date": d, "time": str(e.get("time", "")).strip()[:40],
+            "venue": str(e.get("venue", "")).strip()[:120],
+            "neighborhood": str(e.get("neighborhood", "")).strip()[:80],
+            "borough": _norm_boro(e.get("borough")), "near_home": bool(e.get("near_home")),
+            "category": _norm_cat(e.get("category")), "price": str(e.get("price", "")).strip()[:60],
+            "url": str(e.get("url", "")).strip()[:400], "blurb": str(e.get("blurb", "")).strip()[:220],
+            "source": src["name"],
+        })
+    return _clean_events(out)
+
+
+def build_all_events():
+    """Combine our internet search (Gemini grounding) with every enabled source
+    platform, in parallel. Merge, de-dupe (title+date), sort."""
+    results, lock = [], threading.Lock()
+
+    def run(fn, tag):
         try:
-            p = urlparse(u or "")
-            return p.scheme in ("http", "https") and bool(p.netloc) and len(p.path.strip("/")) > 1
-        except Exception:
-            return False
-    out = [e for e in out if e["date"] >= today and _specific(e["url"])]
-    # de-dupe by (title, date)
-    seen, uniq = set(), []
-    for e in out:
-        k = (e["title"].lower(), e["date"])
-        if k not in seen:
-            seen.add(k); uniq.append(e)
-    uniq.sort(key=lambda e: (e["date"], e["time"]))
-    return uniq
+            evs = fn()
+            with lock:
+                results.append(evs or [])
+        except Exception as e:
+            print(f"[marquee] {tag} errored:", e, flush=True)
+
+    jobs = [threading.Thread(target=run, args=(fetch_events, "search"))]
+    for src in SOURCES:
+        if src.get("on"):
+            jobs.append(threading.Thread(target=run, args=((lambda s: (lambda: fetch_from_source(s)))(src), src["key"])))
+    for j in jobs:
+        j.start()
+    for j in jobs:
+        j.join(timeout=210)
+    merged, seen = [], set()
+    for evs in results:
+        for e in evs:
+            k = (e["title"].lower(), e["date"])
+            if k not in seen:
+                seen.add(k); merged.append(e)
+    merged.sort(key=lambda e: (e["date"], e.get("time", "")))
+    return merged
 
 
 def refresh_async():
@@ -445,7 +548,7 @@ def refresh_async():
 
     def work():
         try:
-            events = fetch_events()
+            events = build_all_events()
             if events:
                 save_store({"fetched_at": int(time.time() * 1000), "events": events})
                 print(f"[marquee] refreshed {len(events)} events", flush=True)
@@ -466,7 +569,7 @@ def get_events(force=False):
                 store = load_store()
                 if not store.get("events"):
                     try:
-                        events = fetch_events()
+                        events = build_all_events()
                         store = {"fetched_at": int(time.time() * 1000), "events": events}
                         save_store(store)
                     except Exception as e:
@@ -509,11 +612,21 @@ def admin_data():
                                          if r.get("scanned_at") else None),
                          "sessions": len(r.get("sessions") or []),
                          "weekdays": r.get("weekdays") or [], "time": r.get("time", "")})
+    # per-source counts from the current feed
+    from collections import Counter
+    counts = Counter(e.get("source") for e in (s.get("events") or []))
+    sources = [{"name": "Our internet search", "key": "search", "on": True,
+                "url": "Gemini + Google Search grounding", "hint": "All",
+                "count": counts.get("Search", 0)}]
+    for src in SOURCES:
+        sources.append({"name": src["name"], "key": src["key"], "on": bool(src.get("on")),
+                        "url": src["url"], "hint": src.get("hint", ""),
+                        "count": counts.get(src["name"], 0)})
     return {
         "events": {"count": len(s.get("events") or []), "fetched_at": s.get("fetched_at", 0),
                    "ttl_h": REFRESH_H, "stale": is_stale(s), "model": GEMINI_MODEL},
         "cache": {"count": len(pages), "ttl_h": CACHE_H, "pages": pages},
-        "crawl": {"every_h": CRAWL_EVERY_H},
+        "crawl": {"every_h": CRAWL_EVERY_H}, "sources": sources,
         "regulars": regs, "home": HOME,
         "llm": bool(GEMINI_KEY), "firecrawl": bool(FIRECRAWL_KEY), "ts": int(now),
     }
@@ -582,6 +695,9 @@ ADMIN_PAGE = r"""<!doctype html><html lang="en"><head>
  <h2>Agents</h2>
  <div class="grid" id="agents"></div>
 
+ <h2>Event sources <span id="srcHead" class="pill ok"><span class="dot"></span>—</span></h2>
+ <table id="srcTbl"><thead><tr><th>Source</th><th>Type</th><th>In feed</th><th>Listing</th><th></th></tr></thead><tbody></tbody></table>
+
  <h2>Content cache <span id="cacheHead" class="pill ok"><span class="dot"></span>—</span></h2>
  <div class="controls" style="margin-bottom:12px">
    <button class="btn" id="refreshBtn">↻ Refresh events now</button>
@@ -612,6 +728,14 @@ function load(){
     st:'<span class="ok"><span class="dot"></span>'+d.regulars.length+' regulars tracked</span>'}
   ];
   document.getElementById('agents').innerHTML=A.map(function(a){return '<div class="agent"><h3>'+a.n+'</h3><div class="d">'+a.d+'</div><div class="st">'+a.st+'</div></div>';}).join('');
+  // sources
+  var on=(d.sources||[]).filter(function(s){return s.on;}).length;
+  document.getElementById('srcHead').innerHTML='<span class="dot"></span>'+on+' active';
+  document.querySelector('#srcTbl tbody').innerHTML=(d.sources||[]).map(function(s){
+    var pill=s.on?'<span class="ok"><span class="dot"></span>on</span>':'<span style="color:#55536a">off</span>';
+    var link=s.key==='search'?esc(s.url):'<a href="'+esc(s.url)+'" target="_blank" class="u" style="font-size:11px">'+esc(s.url.replace(/^https?:\/\//,''))+'</a>';
+    return '<tr><td>'+esc(s.name)+'</td><td>'+esc(s.hint||'')+'</td><td>'+(s.count||0)+'</td><td>'+link+'</td><td>'+pill+'</td></tr>';
+  }).join('');
   // cache
   document.getElementById('cacheHead').innerHTML='<span class="dot"></span>'+d.cache.count+' pages';
   document.querySelector('#cacheTbl tbody').innerHTML=(d.cache.pages.length?d.cache.pages.map(function(p){
@@ -746,6 +870,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
  .near-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;
    text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#f59e0b,#ef4444)}
+ .src{font-size:10.5px;color:#6f6d85;font-weight:600}
  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
  .actions{margin-left:auto;display:flex;gap:8px}
  .refresh{border:1px solid var(--line);background:var(--card);color:var(--mut);
@@ -942,7 +1067,8 @@ function evCard(e){
   +(e.near_home&&!e.mine?'<span class="near-tag">★ Near you</span>':'')
   +(e.time?'<span>🕒 '+esc(e.time)+'</span>':'')
   +(e.venue?'<span>📍 '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):(e.borough?', '+esc(e.borough):''))+'</span>':'')
-  +(e.price?'<span>🎟 '+esc(e.price)+'</span>':'')+'</div>'
+  +(e.price?'<span>🎟 '+esc(e.price)+'</span>':'')
+  +(e.source&&!e.mine?'<span class="src">via '+esc(e.source)+'</span>':'')+'</div>'
   +(e.blurb?'<p class="bl">'+esc(e.blurb)+'</p>':'')+'</div>'
   +'<div class="acts">'
    +'<button class="act" data-ics="'+e._i+'" title="Add to my calendar (.ics)">📅</button>'
