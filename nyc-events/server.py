@@ -88,14 +88,18 @@ def seed_personal():
     recs = load_personal()
     existing = next((r for r in recs if r.get("seed") == "babycobra"), None)
     if existing:
-        # upgrade older seeds that lack the scan fields
-        changed = False
-        for k, v in {"scan_url": "https://www.tickettailor.com/events/babycobrayoga",
-                     "location_match": "Bushwick",
-                     "url": "https://www.tickettailor.com/events/babycobrayoga"}.items():
-            if not existing.get(k):
-                existing[k] = v; changed = True
-        if changed:
+        # upgrade: Baby Cobra Bushwick runs DAILY evening classes (ClassPass is the
+        # real daily schedule; Tickettailor only lists special workshops). Matthew
+        # goes ~7pm, so show the daily 7pm class + layer specials on top.
+        if existing.get("seed_v") != 3:
+            existing["recurring"] = True
+            existing["weekdays"] = [0, 1, 2, 3, 4, 5, 6]
+            existing["time"] = "7:00 PM"
+            existing["url"] = "https://classpass.com/studios/baby-cobra---bushwick-brooklyn"
+            existing["scan_url"] = "https://www.tickettailor.com/events/babycobrayoga"
+            existing["location_match"] = "Bushwick"
+            existing["blurb"] = "Daily donation-based classes in a Bushwick loft (you go ~7pm)."
+            existing["seed_v"] = 3
             save_personal(recs)
         return
     recs.append({
@@ -466,6 +470,8 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .day-h{font-size:13px;font-weight:750;color:var(--accent);margin:22px 2px 11px;letter-spacing:.01em;
    text-transform:uppercase;display:flex;align-items:center;gap:9px}
  .day-h .ln{flex:1;height:1px;background:var(--line)}
+ .day-h.today{color:#fff}.day-h.today .ln{background:linear-gradient(90deg,var(--accent),transparent)}
+ .noday{color:#55536a;font-size:12px;padding:2px 2px 8px}
  .ev{display:flex;gap:14px;padding:14px 15px;border:1px solid var(--line);background:var(--card);border-radius:14px;margin-bottom:10px;transition:.15s;text-decoration:none}
  .ev:hover{border-color:#3a3a50;background:var(--card2);transform:translateY(-1px)}
  .ev .dte{flex:0 0 52px;text-align:center}
@@ -545,8 +551,8 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  </div>
  <div class="chips" id="chips"></div>
  <div class="controls">
-   <span class="views" id="loc"><button data-l="all" class="on">All NYC</button><button data-l="near">★ Near me</button><button data-l="Brooklyn">Brooklyn</button><button data-l="mine">★ Mine</button></span>
-   <span class="views" id="views"><button data-v="list" class="on">Upcoming</button><button data-v="cal">Calendar</button></span>
+   <span class="views" id="loc"><button data-l="mine" class="on">★ Mine</button><button data-l="all">All NYC</button><button data-l="near">★ Near me</button><button data-l="Brooklyn">Brooklyn</button></span>
+   <span class="views" id="views"><button data-v="week" class="on">This week</button><button data-v="list">Upcoming</button><button data-v="cal">Calendar</button></span>
  </div>
  <div id="calWrap" class="cal" hidden>
   <div class="cal-head"><button class="cal-nav" id="pm">‹</button><b id="monLbl"></b><button class="cal-nav" id="nm">›</button></div>
@@ -592,7 +598,7 @@ function catIcon(k){return CAT_SVG[k]||'';}
 var CATS=['Music','Nightlife','Arts','Theater','Comedy','Sports','Food','Festival','Family','Film','Wellness'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-var all=[],active=new Set(),view='list',curMonth=null,selDay=null,loc='all';
+var all=[],active=new Set(),view='week',curMonth=null,selDay=null,loc='mine';
 function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function parseD(s){var p=(s||'').split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
 function chipTime(t){var m=(t||'').match(/(\d{1,2})(?::(\d{2}))?\s*([ap])/i);if(!m)return '';var mm=(m[2]&&m[2]!=='00')?':'+m[2]:'';return m[1]+mm+m[3].toLowerCase();}
@@ -688,7 +694,24 @@ function renderCal(){
   document.getElementById('list').innerHTML='<div class="day-h">'+MON[m]+' '+selDay+'<span class="ln"></span></div>'+byDay[selDay].map(evCard).join('');
  }else{renderList();}
 }
-function render(){chips();document.getElementById('calWrap').hidden=(view!=='cal');if(view==='cal')renderCal();else renderList();}
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function renderWeek(){
+ var box=document.getElementById('list'),evs=filtered(),byDate={};
+ evs.forEach(function(e){(byDate[e.date]=byDate[e.date]||[]).push(e);});
+ var now=new Date(),tStr=todayStr();
+ var sat=new Date(now.getFullYear(),now.getMonth(),now.getDate()+(6-now.getDay()));
+ var html='',any=false;
+ for(var d=new Date(now.getFullYear(),now.getMonth(),now.getDate());d<=sat;d.setDate(d.getDate()+1)){
+  var ds=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  var isT=(ds===tStr),evsD=byDate[ds]||[];if(evsD.length)any=true;
+  html+='<div class="day-h'+(isT?' today':'')+'">'+WD[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate()+(isT?' · Today':'')+'<span class="ln"></span></div>';
+  html+=evsD.length?evsD.map(evCard).join(''):'<div class="noday">—</div>';
+ }
+ if(!any&&loc==='mine')html='<div class="minebar"><div><b>Your regulars &amp; saved events</b><span>Nothing this week yet — tap ＋ on any event or <b>+ Add event</b>.</span></div><button class="scanbtn">⟳ Scan for real times</button></div>'+html;
+ else if(loc==='mine')html='<div class="minebar"><div><b>Your week</b><span>Your regulars &amp; saved events.</span></div><button class="scanbtn">⟳ Scan for real times</button></div>'+html;
+ box.innerHTML=html;
+}
+function render(){chips();document.getElementById('calWrap').hidden=(view!=='cal');if(view==='cal')renderCal();else if(view==='week')renderWeek();else renderList();}
 function load(force){
  var r=document.getElementById('refresh');if(force)r.classList.add('spin');
  fetch('api/events'+(force?'?force=1':''),{cache:'no-store'}).then(function(x){return x.json();}).then(function(d){
