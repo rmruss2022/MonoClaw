@@ -14,6 +14,7 @@
     { "slug": "favorly", "name": "Favorly", "color": "#c6f24e", "repoDir": "/root/MonoClaw/favorly", "doctorCmd": "python3 -m py_compile app/server.py", "deployCmd": null },
     { "slug": "lumen", "name": "Lumen", "color": "#eab308", "repoDir": "/root/MonoClaw/lumen", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
     { "slug": "foreman", "name": "Foreman", "color": "#0ea5e9", "repoDir": "/root/MonoClaw/foreman", "doctorCmd": "python3 -m py_compile doctor.py job.py", "deployCmd": null },
+    { "slug": "contentforge", "name": "Content Engine", "color": "#fb7185", "repoDir": "/root/MonoClaw/contentforge", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
     { "slug": "MonoClaw", "name": "MonoClaw", "color": "#64748b", "repoDir": "/root/MonoClaw", "doctorCmd": null, "deployCmd": null }
   ]
 }
