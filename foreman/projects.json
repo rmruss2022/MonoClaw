@@ -16,6 +16,7 @@
     { "slug": "foreman", "name": "Foreman", "color": "#0ea5e9", "repoDir": "/root/MonoClaw/foreman", "doctorCmd": "python3 -m py_compile doctor.py job.py", "deployCmd": null, "url": "https://dash.bedrock.casa/" },
     { "slug": "contentforge", "name": "Content Engine", "color": "#fb7185", "repoDir": "/root/MonoClaw/contentforge", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://vantage.bedrock.casa/" },
     { "slug": "marquee", "name": "Marquee", "color": "#ff5c8a", "repoDir": "/root/MonoClaw/nyc-events", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": "systemctl restart nyc-events", "url": "https://marquee.bedrock.casa/" },
+    { "slug": "clawmap", "name": "Claw Map", "color": "#7cc4ff", "repoDir": "/root/MonoClaw/clawmap", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": "systemctl restart clawmap", "url": "https://map.bedrock.casa/" },
     { "slug": "MonoClaw", "name": "MonoClaw", "color": "#64748b", "repoDir": "/root/MonoClaw", "doctorCmd": null, "deployCmd": null, "url": null }
   ]
 }
