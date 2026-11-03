@@ -29,6 +29,9 @@ LIVE_OTHER = [
 ]
 # Claw apps — permanent public URLs on bedrock.casa
 CLAW_APPS = [
+    ("Architecture", "🗺️", "https://map.bedrock.casa/", "Live map of the whole Claw estate — agents, edge, apps, hosts, external services. Roster auto-updates from Foreman.", "claw"),
+    ("Dash", "📊", "https://dash.bedrock.casa/", "The portfolio dashboard — every app, linked, at a glance.", "claw"),
+    ("Marquee", "🎟️", "https://marquee.bedrock.casa/", "NYC events — multi-source feed, your plans, subscribable calendar.", "claw"),
     ("Daily Reports & News", "📰", "https://reports.bedrock.casa/", "Daily NYC news digests + archive, with inline mp3 voice notes.", "claw"),
 ]
 BUILT = [
