@@ -128,31 +128,37 @@ def expand_personal(days=32):
     """Expand personal events into dated instances in the upcoming window.
     Priority: real scanned sessions > weekly recurrence > one-off date."""
     out, today = [], date.today()
-    horizon = (today + timedelta(days=days)).isoformat()
+    tj, horizon = today.isoformat(), (today + timedelta(days=days)).isoformat()
     for r in load_personal():
         if not r.get("id"):
             continue
-        sess = r.get("sessions")
-        if sess:  # real sessions from a Firecrawl scan
-            for s in sess:
-                d = (s.get("date") or "")
-                if today.isoformat() <= d <= horizon:
-                    inst = _instance(r, d)
-                    if s.get("time"):
-                        inst["time"] = s["time"]
-                    if s.get("url"):
-                        inst["url"] = s["url"]
-                    if s.get("title"):
-                        inst["title"] = r["title"] + " · " + s["title"] if s["title"].lower() not in r["title"].lower() else r["title"]
-                    inst["scanned"] = True
-                    out.append(inst)
-        elif r.get("recurring"):
+        seen = set()
+        # 1) your recurring regulars (the weekly schedule you set) — always shown
+        if r.get("recurring"):
             wd = set(r.get("weekdays") or [])
             for i in range(days):
                 d = today + timedelta(days=i)
                 if (d.weekday() + 1) % 7 in wd:   # python Mon=0 -> JS Sun=0
-                    out.append(_instance(r, d.isoformat()))
-        elif r.get("date") and r["date"] >= today.isoformat():
+                    inst = _instance(r, d.isoformat())
+                    out.append(inst); seen.add((inst["date"], inst["time"]))
+        # 2) real special sessions from a Firecrawl scan — added on top
+        for s in (r.get("sessions") or []):
+            d = (s.get("date") or "")
+            if not (tj <= d <= horizon):
+                continue
+            inst = _instance(r, d)
+            if s.get("time"):
+                inst["time"] = s["time"]
+            if s.get("url"):
+                inst["url"] = s["url"]
+            if s.get("title") and s["title"].lower() not in r["title"].lower():
+                inst["title"] = r["title"] + " · " + s["title"]
+            inst["scanned"] = True
+            if (inst["date"], inst["time"]) in seen:
+                continue   # don't duplicate a regular already on that day/time
+            out.append(inst)
+        # 3) one-off saved event
+        if not r.get("recurring") and not r.get("sessions") and r.get("date") and r["date"] >= tj:
             out.append(_instance(r, r["date"]))
     return out
 
