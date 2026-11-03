@@ -285,6 +285,35 @@ deliver() {
   [ -s "$MP3" ] && openclaw message send --channel telegram --target "$TG" --media "$MP3" >/dev/null 2>&1 || true
 }
 
+# Approval quiz: after the night's changes ship (safely, via the doctor), give
+# Matthew one-tap control — Approve (keep), Deny (revert that commit + redeploy),
+# or Ask. Only shown when something actually shipped. Taps route back as
+# "nightsweep:<action>:<date>" callbacks; see nightsweep/NIGHTSWEEP.md for how a
+# session handles them (revert reads reports/<date>.md for the sha + apps).
+quiz() {
+  local sha=""; [ -s "$SWEEP_SHA_FILE" ] && sha=$(cat "$SWEEP_SHA_FILE")
+  [ -z "$sha" ] && { echo "nothing shipped — no approval quiz"; return 0; }
+  [ -f "$SWEEP_SHA_FILE.reverted" ] && { echo "change was auto-reverted — no quiz"; return 0; }
+  local pres
+  pres=$(DATE="$DATE" SHA="$sha" python3 -I - <<'PY'
+import os, json
+d, sha = os.environ["DATE"], os.environ["SHA"]
+print(json.dumps({"blocks": [
+  {"type": "text", "text": f"Tonight's changes shipped as commit {sha}. Your call:"},
+  {"type": "buttons", "buttons": [
+    {"label": "✅ Approve", "action": {"type": "callback", "value": f"nightsweep:approve:{d}"}, "style": "success"},
+    {"label": "↩️ Deny & revert", "action": {"type": "callback", "value": f"nightsweep:revert:{d}"}, "style": "danger"},
+    {"label": "💬 Ask about changes", "action": {"type": "callback", "value": f"nightsweep:ask:{d}"}},
+  ]},
+]}))
+PY
+)
+  if [ "$DRY" = "1" ]; then echo "── DRY QUIZ ──"; echo "$pres"; return 0; fi
+  openclaw message send --channel telegram --target "$TG" \
+    --message "Approve tonight's Night Sweep?" --presentation "$pres" >/dev/null 2>&1 \
+    && echo "approval quiz sent" || echo "WARN: approval quiz failed to send"
+}
+
 finalize_fail() { echo "SWEEP HALTED at gate: $1"; [ "$DRY" != "1" ] && openclaw message send --channel telegram --target "$TG" --message "🌙 Night Sweep $DATE halted at gate: $1 (see logs)" >/dev/null 2>&1 || true; }
 
 # ── run the gated pipeline ───────────────────────────────────────────────────
@@ -297,5 +326,6 @@ gate "push"                0 push
 gate "compose report"      1 compose
 gate "publish + voice note" 0 publish
 gate "deliver"             0 deliver
+gate "approval quiz"       0 quiz
 
 echo "══════════ DONE — pass: ${#GATES_PASS[@]}  fail: ${#GATES_FAIL[@]} ══════════"
