@@ -315,6 +315,7 @@ ICONS = {
  "recilia": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_rc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#6366f1"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_rc)"/><circle cx="18" cy="26" r="3.1" fill="#fff"/><g fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M24 20a9 9 0 0 1 0 12"/><path d="M29 16a16 16 0 0 1 0 20"/><path d="M34 12.5a23 23 0 0 1 0 27"/></g></svg>',
  "creatorcut": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_cc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b983ff"/><stop offset="1" stop-color="#7c4dff"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_cc)"/><rect x="12" y="15" width="28" height="22" rx="3" fill="#fff"/><g fill="#7c4dff"><rect x="15" y="18" width="3.4" height="3.4" rx="0.8"/><rect x="15" y="30.6" width="3.4" height="3.4" rx="0.8"/><rect x="33.6" y="18" width="3.4" height="3.4" rx="0.8"/><rect x="33.6" y="30.6" width="3.4" height="3.4" rx="0.8"/></g><path d="M23 21.5l8 4.5-8 4.5z" fill="#7c4dff"/></svg>',
  "vantage": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f472b6"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_vg)"/><g fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" opacity="0.92"><circle cx="26" cy="26" r="5"/><path d="M26 14 a12 12 0 0 1 12 12"/><path d="M26 9 a17 17 0 0 1 17 17"/></g><line x1="26" y1="26" x2="37.5" y2="14.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="36.5" cy="15.5" r="2.7" fill="#fff"/><circle cx="26" cy="26" r="2.4" fill="#fff"/></svg>',
+ "marquee": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_mq" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5c8a"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_mq)"/><rect x="13" y="17" width="26" height="22" rx="3.2" fill="#fff"/><rect x="13" y="17" width="26" height="6.5" rx="3.2" fill="#ffd7e4"/><g fill="#a855f7"><circle cx="19" cy="30" r="2.1"/><circle cx="26" cy="30" r="2.1"/><circle cx="33" cy="30" r="2.1"/><circle cx="19" cy="35.5" r="2.1"/><circle cx="26" cy="35.5" r="2.1"/></g><g fill="#fff"><circle cx="18" cy="13.5" r="1.8"/><circle cx="26" cy="12.5" r="1.8"/><circle cx="34" cy="13.5" r="1.8"/></g></svg>',
  "adminhub": '<svg class="ai" viewBox="0 0 52 52"><defs><linearGradient id="g_ah" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5c977"/><stop offset="1" stop-color="#7fe3ff"/></linearGradient></defs><rect width="52" height="52" rx="13" fill="url(#g_ah)"/><g fill="#1a2238"><rect x="15" y="18" width="22" height="2.8" rx="1.4"/><rect x="15" y="24.6" width="22" height="2.8" rx="1.4"/><rect x="15" y="31.2" width="22" height="2.8" rx="1.4"/></g><g fill="#fff" stroke="#1a2238" stroke-width="1.6"><circle cx="22" cy="19.4" r="3.1"/><circle cx="31" cy="26" r="3.1"/><circle cx="25" cy="32.6" r="3.1"/></g></svg>',
 }
 
@@ -356,6 +357,8 @@ CLAW_APPS = [
      "Daily NYC news digest &amp; archive — morning briefings with inline mp3 voice notes.", "public"),
     ("adminhub", "Admin Hub", "https://admin.bedrock.casa/",
      "Every app&rsquo;s real admin dashboard, tools &amp; docs in one place — Ora, Recilia, plus the OpenClaw ops dashboards.", "public"),
+    ("marquee", "Marquee", "https://marquee.bedrock.casa/",
+     "What&rsquo;s on in NYC — a live calendar of concerts, shows, nightlife, art, sports &amp; festivals, refreshed daily. Browse by day or category and tap through for tickets.", "public"),
 ]
 
 TAGS = {
@@ -512,6 +515,26 @@ PAGE = r'''<!DOCTYPE html>
   /* Today — daily to-do mini app */
   .todo{position:relative;border-radius:20px;padding:22px;box-shadow:0 1px 2px rgba(20,23,30,.04),0 18px 44px -14px rgba(124,58,237,.22);max-width:720px;
     background:linear-gradient(#fff,#fff) padding-box, linear-gradient(135deg,#6366f1,#a855f7,#ec4899) border-box;border:1.5px solid transparent}
+  /* Marquee — What's on in NYC widget */
+  .mqw{display:block;text-decoration:none;color:inherit;position:relative;border-radius:20px;padding:20px 22px;max-width:720px;
+    background:linear-gradient(135deg,#17121c,#1d1320);border:1.5px solid transparent;
+    background:linear-gradient(#141019,#141019) padding-box,linear-gradient(135deg,#ff5c8a,#a855f7) border-box;
+    box-shadow:0 18px 44px -16px rgba(168,85,247,.4);transition:transform .15s,box-shadow .15s}
+  .mqw:hover{transform:translateY(-2px);box-shadow:0 24px 54px -18px rgba(168,85,247,.55)}
+  .mqw-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .mqw-mk{width:34px;height:34px;flex:0 0 auto;border-radius:9px;background:linear-gradient(135deg,#ff5c8a,#a855f7)}
+  .mqw-eyebrow{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#ff8fb0}
+  .mqw-title{margin:1px 0 0;font-size:19px;color:#fff;font-weight:800;letter-spacing:-.01em}
+  .mqw-all{margin-left:auto;font-size:12px;font-weight:650;color:#c6a6f0}
+  .mqw-list{display:flex;flex-direction:column;gap:8px}
+  .mqw-ev{display:flex;align-items:center;gap:12px;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+  .mqw-dt{flex:0 0 42px;text-align:center}
+  .mqw-dt .mo{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#ff8fb0}
+  .mqw-dt .dy{font-size:19px;font-weight:800;color:#fff;line-height:1}
+  .mqw-b{min-width:0;flex:1}
+  .mqw-t{font-size:13.5px;font-weight:650;color:#f4f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mqw-m{font-size:11.5px;color:#9a98ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mqw-cat{flex:0 0 auto;font-size:8.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#ff5c8a,#a855f7)}
   .todo-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
   .todo-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;
     background:linear-gradient(135deg,#6366f1,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -731,6 +754,17 @@ PAGE = r'''<!DOCTYPE html>
   </div>
 </section>
 
+<section class="wrap" style="margin-bottom:8px">
+  <a class="mqw" id="mqWidget" href="https://marquee.bedrock.casa/" target="_blank" rel="noopener" hidden>
+    <div class="mqw-head">
+      <span class="mqw-mk"></span>
+      <div><div class="mqw-eyebrow">What&rsquo;s on in NYC</div><h2 class="mqw-title">Marquee</h2></div>
+      <span class="mqw-all">Open calendar →</span>
+    </div>
+    <div class="mqw-list" id="mqList"></div>
+  </a>
+</section>
+
 <main class="wrap">
   <h2>Apps</h2>
   <div class="cards">__APPS__</div>
@@ -794,6 +828,26 @@ PAGE = r'''<!DOCTYPE html>
   form.onsubmit=function(ev){ev.preventDefault();var v=input.value.trim();if(!v)return;todos.push({text:v,done:false});input.value='';save();render();};
   clearBtn.onclick=function(){todos=todos.filter(function(t){return !t.done;});save();render();};
   render();
+})();
+// ---- Marquee widget: next few NYC events (same-origin proxy to :18852) ----
+(function(){
+  var wrap=document.getElementById('mqWidget'),list=document.getElementById('mqList');
+  if(!wrap)return;
+  var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function row(e){
+    var p=(e.date||'').split('-'),d=new Date(+p[0],+p[1]-1,+p[2]);
+    var meta=[e.time,e.venue].filter(Boolean).join(' · ');
+    return '<div class="mqw-ev"><div class="mqw-dt"><div class="mo">'+MON[d.getMonth()]+'</div><div class="dy">'+d.getDate()+'</div></div>'
+      +'<div class="mqw-b"><div class="mqw-t">'+esc(e.title)+'</div><div class="mqw-m">'+esc(meta)+'</div></div>'
+      +'<span class="mqw-cat">'+esc(e.category||'')+'</span></div>';
+  }
+  fetch('api/events-widget',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var evs=(d.events||[]).slice(0,5);
+    if(!evs.length)return;
+    list.innerHTML=evs.map(row).join('');
+    wrap.hidden=false;
+  }).catch(function(){});
 })();
 // ---- Foreman mission control: per-project kanban + job detail modal ----
 (function(){
@@ -1017,6 +1071,13 @@ class H(BaseHTTPRequestHandler):
                     self._send(f.read(), 'image/png')
             except OSError:
                 self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+        elif p == '/api/events-widget':
+            # same-origin proxy to Marquee (nyc-events) so the dash widget avoids CORS
+            try:
+                with urllib.request.urlopen('http://127.0.0.1:18852/api/widget', timeout=6) as r:
+                    self._send(r.read(), 'application/json; charset=utf-8')
+            except Exception:
+                self._send('{"events":[]}', 'application/json; charset=utf-8')
         elif p == '/api/foreman':
             self._send(json.dumps(foreman_data()), 'application/json; charset=utf-8')
         elif p in ('/health', '/healthz'):

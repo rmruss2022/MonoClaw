@@ -29,3 +29,4 @@ foreman/jobs.json
 foreman/data/jobs.json
 foreman/data/heartbeat.json
 foreman/data/evidence/
+nyc-events/data/
