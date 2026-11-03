@@ -1966,6 +1966,50 @@ a{color:var(--purple)}
 .mgc.on{background:linear-gradient(160deg,#f5c977,#e0953a);color:#2a1a05;border-color:transparent;box-shadow:0 6px 18px -8px var(--gold)}
 .mgoal-echo{font-size:12px;color:var(--muted);margin-top:14px;font-style:italic;font-family:var(--serif)}
 .mgoal-echo b{color:var(--gold);font-style:normal}
+/* journal home — three full-width doors + links + community feed */
+.jbigs{display:flex;flex-direction:column;gap:11px;margin:4px 2px 14px}
+.jbig{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;background:linear-gradient(135deg,#1a1430,#141021);border:1px solid var(--line);border-radius:18px;padding:18px 16px;transition:.16s;color:var(--text)}
+.jbig:active{transform:scale(.99)}
+.jbig.rec{border-color:rgba(245,201,119,.45);background:linear-gradient(135deg,rgba(245,201,119,.10),#141021);box-shadow:0 8px 26px -16px var(--gold)}
+.jbig-ico{flex:none;width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.24)}
+.jbig-ico .i{width:24px;height:24px}
+.jbig.rec .jbig-ico{background:rgba(245,201,119,.14);border-color:rgba(245,201,119,.3)}
+.jbig-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.jbig-t{font-family:var(--serif);font-size:20px;display:flex;align-items:center;gap:8px}
+.jbig-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#2a1a05;background:linear-gradient(135deg,#f5c977,#e0953a);border-radius:999px;padding:2px 8px}
+.jbig-b{font-size:12.5px;color:var(--muted);line-height:1.35}
+.jbig-go{flex:none;color:#6f6794;font-size:26px;font-weight:300;line-height:1}
+.jlinks{display:flex;gap:10px;margin:0 2px 20px}
+.jlink{flex:1;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:12px;color:var(--text);transition:.15s}
+.jlink:active{transform:scale(.98)}
+.jlink-ico{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(245,201,119,.1);border:1px solid rgba(245,201,119,.2)}
+.jlink-ico .i{width:16px;height:16px}
+.jlink-txt{display:flex;flex-direction:column;min-width:0}
+.jlink-txt b{font-size:13px}
+.jlink-txt span{font-size:11px;color:var(--muted)}
+.jfeed-h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:4px 2px 10px}
+.jfeed-h .i{width:14px;height:14px}
+/* pillars & progress */
+.pp-top{background:#13101f;border:1px solid var(--line);border-radius:16px;padding:16px;margin:4px 2px 14px;text-align:center}
+.pp-count{font-family:var(--serif);font-size:15px;color:var(--text)}
+.pp-count b{color:var(--gold);font-size:17px}
+.pp-bar{height:8px;border-radius:999px;background:#241c3e;overflow:hidden;margin-top:10px}
+.pp-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#e0953a);border-radius:999px;transition:width .4s}
+.pp-list{display:flex;flex-direction:column;gap:10px}
+.pp-row{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-left:3px solid var(--pc,#a855f7);border-radius:14px;padding:13px 14px;color:var(--text);transition:.15s}
+.pp-row:active{transform:scale(.99)}
+.pp-ico{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--pc,#a855f7) 16%,transparent)}
+.pp-ico .i{width:20px;height:20px}
+.pp-main{flex:1;min-width:0}
+.pp-name{font-family:var(--serif);font-size:16px;display:flex;align-items:center;gap:7px}
+.pp-fchip{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--gold);border:1px solid rgba(245,201,119,.4);border-radius:999px;padding:1px 6px}
+.pp-desc{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.3}
+.pp-stat{flex:none;text-align:center;min-width:44px}
+.pp-dot{width:26px;height:26px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;border:1.5px solid #4a4170;color:var(--muted)}
+.pp-stat.done .pp-dot{border-color:var(--gold);background:rgba(245,201,119,.12);color:var(--gold)}
+.pp-dot .i{width:14px;height:14px}
+.pp-sn{font-size:10px;color:var(--muted);margin-top:3px}
+.pp-stat.done .pp-sn{color:var(--gold)}
 .pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .pcard{position:relative;text-align:left;cursor:pointer;color:var(--text);
   background:linear-gradient(165deg,#1c1830,#15112275);border:1px solid var(--line);border-radius:16px;
@@ -2572,7 +2616,7 @@ async function boot(){
 const NAV_ICON={meditate:'meditate',lessons:'lotus',map:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
 const LEAGUE_ICON={Ember:'flame',Spark:'spark',Glow:'glow',Flare:'flare',Beacon:'beacon',Nova:'star',Supernova:'nova'};
 const leagueIcon=(name,cls)=>ic(LEAGUE_ICON[name]||'trophy',cls||'');
-function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>go(b.dataset.tab);const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
+function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>{if(b.dataset.tab==='journal')jScreen='home';go(b.dataset.tab);};const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
 function go(tab){TAB=tab;document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
   if(window.speechSynthesis)speechSynthesis.cancel();try{stopNarration();}catch(e){}try{Sound.stop();}catch(e){}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
@@ -2893,7 +2937,7 @@ async function renderMeditate(){
    const hl=document.querySelector('.horo-listen:not(.pick-listen)');if(hl&&horo&&horo.text)hl.onclick=()=>playHoroscope(hl,horo.text);
    const pl=document.querySelector('.pick-listen');if(pl&&PICK)pl.onclick=()=>playHoroscope(pl,pickInvite(PICK));
    const hn=document.querySelector('.horo-addnatal');if(hn)hn.onclick=addNatal;}
-  document.querySelectorAll('#homeprompts .lo-prompt').forEach(row=>row.onclick=()=>{jPrompt=row.dataset.p;go('journal');});
+  document.querySelectorAll('#homeprompts .lo-prompt').forEach(row=>row.onclick=()=>{openJournalDaily(row.dataset.p);});
   document.querySelectorAll('.lesson-card').forEach(c=>c.onclick=()=>{lessonFrom='meditate';lessonDetail(c.dataset.l);});
   const al=$('#allles');if(al)al.onclick=()=>go('lessons');
 }
@@ -3064,7 +3108,7 @@ function showRewards(res){
     <button class="btn ghost" id="seemap" style="margin-top:9px">See your light on the map ${ic('globe')}</button>
   </div>`;
   const rf=lessonReflect;lessonReflect=null;
-  const rb=$('#reflect');if(rb)rb.onclick=()=>{jPrompt=rf;go('journal');};
+  const rb=$('#reflect');if(rb)rb.onclick=()=>{openJournalDaily(rf);};
   $('#done').onclick=()=>go('meditate');
   $('#seemap').onclick=()=>go('map');
 }
@@ -3870,6 +3914,9 @@ let jSeason='';              // optional "name this season" label
 let jSeasonPrompt=null;      // current Season prompt
 let jRec=null;               // today's recommended mode {mode,pillar,title,reason,why}
 let jWeek=null;              // weekly category coverage {counts:{deep,daily,season}}
+let jScreen='home';          // journal sub-screen: 'home' | 'compose' | 'pillars'
+// Open the Daily composer with a given prompt (used from Life OS / meditate home links).
+function openJournalDaily(p){if(p!=null)jPrompt=p;journalMode='daily';journalPillar=null;jScreen='compose';go('journal');}
 
 const J_MODES=[['deep','Deep','compass'],['daily','Daily','book'],['season','Season','sunrise']];
 const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',season:'What chapter of life are you living through right now?'};
@@ -3974,12 +4021,12 @@ async function renderDeepCompose(){
         +`<span class="pdesc">${esc(pdesc(name))}</span>`
         +(f?`<span class="pfocus">focus</span>`:'')+`</button>`;}).join('')
       +`</div><div class="muted jgrid-hint">Pick a pillar for a short, guided sitting. The Keeper opens where you last left off.</div>`;
-    document.querySelectorAll('.pcard').forEach(b=>b.onclick=()=>{journalPillar=b.dataset.p;renderJournal();});
+    document.querySelectorAll('.pcard').forEach(b=>b.onclick=()=>{journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
     return;
   }
   $('#jcompose').innerHTML=`<div class="card center muted"><span class="spinner"></span> Opening your ${esc(journalPillar)} sitting…</div>`;
   let ex;try{ex=await api('journal/deep?pillar='+encodeURIComponent(journalPillar));}catch(e){ex=null;}
-  if(!ex||!ex.ready){$('#jcompose').innerHTML=`<div class="card center muted">Couldn’t open that pillar right now. <button class="lo-btn" id="pback">${ic('compass')} Back to pillars</button></div>`;const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;renderJournal();};return;}
+  if(!ex||!ex.ready){$('#jcompose').innerHTML=`<div class="card center muted">Couldn’t open that pillar right now. <button class="lo-btn" id="pback">${ic('compass')} Back to pillars</button></div>`;const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;jScreen='pillars';renderJournal();};return;}
   const steps=(ex.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
   const top=`<div class="deep-head" style="--pc:${pcolor(journalPillar)}">`
     +`<button class="deep-back" id="pback" title="Back to pillars">${ic('compass')}</button>`
@@ -3990,7 +4037,7 @@ async function renderDeepCompose(){
   const prompt=ex.invitation||ex.title||journalPillar;
   $('#jcompose').innerHTML=composerHTML({prompt,shuffle:false,topHTML:top,placeholder:'Take it one step at a time…'});
   wireComposerCommon(()=>prompt);
-  const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;renderJournal();};
+  const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;jScreen='pillars';renderJournal();};
   $('#jsave').onclick=sealHandler(()=>({kind:'deep',pillar:journalPillar,prompt}));
 }
 
@@ -4008,7 +4055,7 @@ async function renderJournalBody(){
         ${di.observation?`<div class="ins-block keeper-note"><div class="keeper-lbl">${ic('lumen','g')} The Keeper notices</div><p class="keeper-refl">${esc(di.observation)}</p></div>`:''}
         ${di.nudge?`<div class="ins-block ins-nudge"><div class="ins-lbl">${ic('spark','g')} To sit with next</div><div class="ins-arc">${esc(di.nudge)}</div><button class="lo-btn" id="insWrite" style="margin-top:10px">${ic('book')} Write about this</button></div>`:''}
       </div>`;
-      const iw=$('#insWrite');if(iw)iw.onclick=()=>{jPrompt=di.nudge;journalView='mine';go('journal');};
+      const iw=$('#insWrite');if(iw)iw.onclick=()=>{journalView='mine';openJournalDaily(di.nudge);};
     }
   }else if(journalView==='mine'){
     const d=await api('journal');
@@ -4067,31 +4114,90 @@ function renderJournalWelcome(){
 }
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
-  if(!jPrompt){
+  if(jScreen==='compose')return renderJournalCompose();
+  if(jScreen==='pillars')return renderPillarsProgress();
+  return renderJournalHome();
+}
+
+// Journal HOME — the three modes as full-width doors, then Life OS + pillars
+// links, then the community feed. "Opening your journal into each of these prompts."
+async function renderJournalHome(){
+  try{jWeek=await api('journal/week');}catch(e){}
+  try{jRec=await api('journal/recommend');}catch(e){jRec=null;}
+  let pp=null;try{pp=await api('pillars');}catch(e){}
+  listening=false;rec=null;
+  const recMode=jRec&&jRec.mode;
+  const DOORS=[['deep','Deep','compass'],['daily','Daily','book'],['season','Season','sunrise']];
+  const door=([k,lbl,icn])=>{const isRec=recMode===k;
+    return `<button class="jbig${isRec?' rec':''}" data-m="${k}"><span class="jbig-ico">${ic(icn,'g')}</span>`
+      +`<span class="jbig-txt"><span class="jbig-t">${lbl}${isRec?`<span class="jbig-badge">Today</span>`:''}</span>`
+      +`<span class="jbig-b">${J_MODE_BLURB[k]||''}</span></span><span class="jbig-go">›</span></button>`;};
+  const doneN=(pp&&pp.done)||0;const totalP=(pp&&pp.total)||8;
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b>`
+    +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button></div>`
+    +jWeekRing()
+    +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
+    +`<div class="jlinks">`
+      +`<button class="jlink" id="lo-link"><span class="jlink-ico">${ic('compass','g')}</span><span class="jlink-txt"><b>Life OS</b><span>Base &amp; focus pillars</span></span></button>`
+      +`<button class="jlink" id="pill-link"><span class="jlink-ico">${ic('lotus','g')}</span><span class="jlink-txt"><b>Pillars &amp; progress</b><span>${doneN} of ${totalP} explored</span></span></button>`
+    +`</div>`
+    +`<div class="jfeed-h">${ic('globe','g')} From the community</div>`
+    +`<div id="jbody"></div>`;
+  $('#talkbtn').onclick=renderChat;
+  $('#lo-link').onclick=renderLifeOS;
+  $('#pill-link').onclick=()=>{jScreen='pillars';renderJournal();};
+  document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>{const k=b.dataset.m;
+    journalMode=k;journalPillar=null;if(k==='season')jSeason='';
+    if(k==='deep'){jScreen='pillars';}else{jScreen='compose';}renderJournal();});
+  journalView='feed';renderJournalBody();
+}
+
+// Pillars & progress — the eight life pillars, how far you've worked through them,
+// focus pillars highlighted. Tap one to open its guided Deep sitting.
+async function renderPillarsProgress(){
+  let pp=null;try{pp=await api('pillars');}catch(e){}
+  const pillars=(pp&&pp.pillars)||[];const focus=(pp&&pp.focus)||[];
+  const done=(pp&&pp.done)||0;const total=(pp&&pp.total)||pillars.length||8;
+  const pct=total?Math.round(100*done/total):0;
+  const row=(p)=>{const f=focus.includes(p.name);const n=p.sittings||0;const isDone=n>0;
+    return `<button class="pp-row" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
+      +`<span class="pp-ico">${ic(picon(p.name),'grad-gold')}</span>`
+      +`<span class="pp-main"><span class="pp-name">${esc(p.name)}${f?`<span class="pp-fchip">focus</span>`:''}</span>`
+      +`<span class="pp-desc">${esc(p.title||pdesc(p.name))}</span></span>`
+      +`<span class="pp-stat${isDone?' done':''}"><span class="pp-dot">${isDone?ic('check'):ic(picon(p.name))}</span>`
+      +`<span class="pp-sn">${n?n+(n===1?' sitting':' sittings'):'start'}</span></span></button>`;};
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Pillars</b>`
+    +`<button class="lo-btn" id="ppback" style="margin-left:auto">${ic('book')} Journal</button></div>`
+    +`<div class="pp-top"><div class="pp-count">You've explored <b>${done}</b> of ${total} pillars</div>`
+      +`<div class="pp-bar"><i style="width:${pct}%"></i></div></div>`
+    +`<div class="pp-list">`+pillars.map(row).join('')+`</div>`
+    +`<div class="muted jgrid-hint" style="margin-top:14px;text-align:center">Each pillar is a short, guided sitting. The Keeper opens where you last left off.</div>`;
+  $('#ppback').onclick=()=>{jScreen='home';renderJournal();};
+  document.querySelectorAll('.pp-row').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
+}
+
+// Compose — one door's writing surface, with a back arrow and the writer's own
+// letters / Keeper insights below.
+async function renderJournalCompose(){
+  if(journalMode==='deep'&&!journalPillar){jScreen='pillars';return renderJournal();}
+  if(journalMode!=='deep'&&!jPrompt){
     try{jPrompt=(await api('lifeos/prompts')).prompts.reflection;}catch(e){}
     if(!jPrompt){try{jPrompt=(await api('prompt')).prompt;}catch(e){jPrompt=JPROMPTS[0];}}
   }
-  try{jWeek=await api('journal/week');}catch(e){}
-  try{jRec=await api('journal/recommend');}catch(e){jRec=null;}
   listening=false;rec=null;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b>`
-    +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button>`
-    +`<button class="lo-btn" id="lobtn" style="margin-left:6px">${ic('compass')} Life OS</button></div>`
-    +jRecCard()
-    +jWeekRing()
-    +`<div class="jmodes">`+J_MODES.map(([k,lbl,icn])=>`<button class="jmode${journalMode===k?' on':''}" data-m="${k}">${ic(icn,journalMode===k?'g':'')}<span>${lbl}</span></button>`).join('')+`</div>`
+  const lbl={deep:'Deep',daily:'Daily',season:'Season'}[journalMode]||'Journal';
+  if(journalView==='feed')journalView='mine';
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>${lbl}</b>`
+    +`<button class="lo-btn" id="jhome" style="margin-left:auto">${ic('book')} Journal</button></div>`
     +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
     +`<div id="jcompose"></div>`
-    +`<div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='insights'?'on':''}" data-v="insights">Insights</button><button class="${journalView==='feed'?'on':''}" data-v="feed">The collective</button></div>`
+    +`<div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='insights'?'on':''}" data-v="insights">Insights</button></div>`
     +`<div id="jbody"></div>`;
-  $('#lobtn').onclick=renderLifeOS;
-  $('#talkbtn').onclick=renderChat;
-  const rb=$('#jrecbtn');if(rb)rb.onclick=()=>{journalMode=jRec.mode;journalPillar=(jRec.mode==='deep'?jRec.pillar:null);if(jRec.mode==='season')jSeason='';renderJournal();};
-  document.querySelectorAll('.jmode').forEach(b=>b.onclick=()=>{journalMode=b.dataset.m;journalPillar=null;renderJournal();});
+  $('#jhome').onclick=()=>{jScreen='home';journalPillar=null;renderJournal();};
   if(journalMode==='deep')renderDeepCompose();
   else if(journalMode==='season')renderSeasonCompose();
   else renderDailyCompose();
-  $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournal();});
+  $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournalBody();});
   renderJournalBody();
 }
 function updateMic(){const m=$('#jmic');if(!m)return;m.classList.toggle('live',listening);
@@ -4155,7 +4261,7 @@ function showJournalSealed(res,words,shared){
       ${ach?`<div style="margin-bottom:16px"><div class="muted" style="font-size:12px">Achievement unlocked</div><div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ach}</div></div>`:''}
       <button class="btn gold" id="sdone">Done</button>
     </div></div>`);
-  const close=()=>{ov.remove();renderJournal();};
+  const close=()=>{ov.remove();jScreen='home';renderJournal();};
   ov.querySelector('#sdone').onclick=close;
   ov.addEventListener('click',e=>{if(e.target===ov)close();});
   document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
@@ -4282,7 +4388,7 @@ function openPillarCard(dir,paintDirs,paintFocus){
         <button class="btn ghost" id="premove" style="width:auto;padding:10px 16px;border-color:#5a2e3e;color:#fda4af">Remove</button>
       </div>`;
     wire();
-    ov.querySelector('#plearn').onclick=()=>{jPrompt=plesson(p);ov.remove();go('journal');};
+    ov.querySelector('#plearn').onclick=()=>{ov.remove();openJournalDaily(plesson(p));};
     ov.querySelector('#pchange').onclick=()=>chooser();
     ov.querySelector('#premove').onclick=()=>{clear();chooser();};
   }
@@ -4303,7 +4409,7 @@ async function loadLoPrompts(regen){
       <div style="font-family:var(--serif);font-size:15.5px;margin-top:2px">${esc(p[k])}</div></div>
       <span class="lo-write">${ic('book')}</span></div>`).join('')+
     `<p class="muted center" style="font-size:12px;margin-top:10px">Tap a prompt to carry it into your journal.</p>`;
-  box.querySelectorAll('.lo-prompt').forEach(row=>row.onclick=()=>{jPrompt=row.dataset.p;go('journal');});
+  box.querySelectorAll('.lo-prompt').forEach(row=>row.onclick=()=>{openJournalDaily(row.dataset.p);});
 }
 
 /* ---- the Keeper: voice/text chat with tools ---- */
@@ -5062,12 +5168,23 @@ class H(BaseHTTPRequestHandler):
             u = self._me(c)
             lo = lifeos_get(u) if u else {"focus": []}
             focus = [f for f in (lo.get("focus") or []) if f in PILLARS]
+            counts = {name: 0 for name in PILLARS}
+            last = {}
+            if u:
+                for r in c.execute("SELECT pillar, COUNT(*) n, MAX(created) last FROM journal "
+                                   "WHERE user_id=? AND kind='deep' AND pillar IS NOT NULL "
+                                   "GROUP BY pillar", (u["id"],)).fetchall():
+                    if r["pillar"] in counts:
+                        counts[r["pillar"]] = r["n"]; last[r["pillar"]] = r["last"]
             out = []
             for name in PILLARS:
                 ex = PILLAR_EXERCISES.get(name)
                 out.append({"name": name, "title": ex[0] if ex else name,
-                            "invitation": ex[1] if ex else "", "steps": ex[2] if ex else []})
-            self._send(200, {"pillars": out, "focus": focus}); return
+                            "invitation": ex[1] if ex else "", "steps": ex[2] if ex else [],
+                            "sittings": counts[name], "last": last.get(name)})
+            done = sum(1 for n in PILLARS if counts[n] > 0)
+            self._send(200, {"pillars": out, "focus": focus, "counts": counts,
+                             "done": done, "total": len(PILLARS)}); return
 
         if p == "/api/journal/deep":
             u = self._me(c)
