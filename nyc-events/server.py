@@ -146,6 +146,18 @@ def _start_time(t):
     return (m.group(1).upper().replace(" ", "") if m else (t or "").strip().upper())
 
 
+def _mins(t):
+    """Minutes-since-midnight for chronological sorting of a time string
+    (handles AM/PM so 8:00 AM sorts before 5:30 PM). Unknown -> end of day."""
+    m = re.match(r"\s*(\d{1,2})(?::(\d{2}))?\s*([AaPp])[Mm]", t or "")
+    if not m:
+        return 9999
+    h = int(m.group(1)) % 12
+    if m.group(3).lower() == "p":
+        h += 12
+    return h * 60 + int(m.group(2) or 0)
+
+
 def _instance(r, d):
     return {
         "id": "p_" + r["id"], "pid": r["id"], "mine": True,
@@ -559,7 +571,7 @@ def _clean_events(out):
     """today-forward + only events with a specific deep-link listing URL; sorted."""
     today = time.strftime("%Y-%m-%d")
     out = [e for e in out if e.get("date", "") >= today and _specific_url(e.get("url"))]
-    out.sort(key=lambda e: (e["date"], e.get("time", "")))
+    out.sort(key=lambda e: (e["date"], _mins(e.get("time", ""))))
     return out
 
 
@@ -662,7 +674,7 @@ def build_all_events():
             k = (e["title"].lower(), e["date"])
             if k not in seen:
                 seen.add(k); merged.append(e)
-    merged.sort(key=lambda e: (e["date"], e.get("time", "")))
+    merged.sort(key=lambda e: (e["date"], _mins(e.get("time", ""))))
     return merged
 
 
@@ -1508,7 +1520,7 @@ class H(BaseHTTPRequestHandler):
             today = time.strftime("%Y-%m-%d")
             merged = [e for e in (store.get("events") or [])] + expand_personal()
             merged = [e for e in merged if e.get("date", "") >= today]
-            merged.sort(key=lambda e: (e["date"], e.get("time", "")))
+            merged.sort(key=lambda e: (e["date"], _mins(e.get("time", ""))))
             self._send(json.dumps({"fetched_at": store.get("fetched_at", 0),
                                    "events": merged, "home": HOME,
                                    "categories": CATEGORIES}))
@@ -1524,7 +1536,7 @@ class H(BaseHTTPRequestHandler):
             today = time.strftime("%Y-%m-%d")
             evs = [e for e in ((store.get("events") or []) + expand_personal())
                    if e.get("date", "") >= today]
-            evs.sort(key=lambda e: (e["date"], e.get("time", "")))
+            evs.sort(key=lambda e: (e["date"], _mins(e.get("time", ""))))
             # bubble near-home events to the top of the widget, keeping date order
             near = [e for e in evs if e.get("near_home")]
             rest = [e for e in evs if not e.get("near_home")]
