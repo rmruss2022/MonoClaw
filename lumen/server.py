@@ -1925,6 +1925,37 @@ a{color:var(--purple)}
 .jrec-btn{flex:none;align-self:center;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;border:0;
   border-radius:999px;padding:9px 16px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
 .jrec-btn:active{transform:scale(.97)}
+/* journal first-run welcome + pledge */
+.jwelc-hero{text-align:center;padding:12px 6px 4px}
+.jwelc-halo{width:64px;height:64px;margin:6px auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,rgba(245,201,119,.22),transparent 70%);border:1px solid rgba(245,201,119,.3)}
+.jwelc-halo .i{width:30px;height:30px}
+.jwelc-h{font-family:var(--serif);font-size:24px;margin:0 0 6px;color:var(--text)}
+.jwelc-sub{font-size:13.5px;line-height:1.5;color:var(--muted);margin:0 auto;max-width:36ch}
+.jwelc-cards{display:flex;flex-direction:column;gap:11px;margin:18px 2px}
+.jwc{display:flex;gap:12px;padding:14px;border-radius:16px;background:#13101f;border:1px solid var(--line)}
+.jwc-ico{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.22)}
+.jwc-ico .i{width:19px;height:19px}
+.jwc-body{flex:1;min-width:0}
+.jwc-title{font-family:var(--serif);font-size:17px;color:var(--text)}
+.jwc-desc{font-size:12.5px;color:#c7bfe0;margin-top:2px;line-height:1.4}
+.jwc-stat{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45;border-left:2px solid rgba(245,201,119,.5);padding-left:9px}
+.jwc-stat b{color:var(--gold);font-weight:700}
+.jwc-cite{font-size:10.5px;color:#6f6794;margin-top:5px;font-style:italic}
+.jwelc-note{font-size:11.5px;color:var(--muted);line-height:1.5;background:#15122280;border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin:0 2px 18px;display:flex;gap:8px}
+.jwelc-note .i{width:14px;height:14px;flex:none;margin-top:1px}
+.jwelc-pledge{background:linear-gradient(160deg,rgba(245,201,119,.09),rgba(168,85,247,.06));border:1px solid rgba(245,201,119,.26);border-radius:18px;padding:18px 16px;margin:0 2px 8px;text-align:center}
+.jwelc-pl-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--gold);display:flex;align-items:center;justify-content:center;gap:5px}
+.jwelc-pl-h .i{width:14px;height:14px}
+.jwelc-pl-body{font-family:var(--serif);font-size:16px;line-height:1.5;color:var(--text);font-style:italic;margin:10px auto 14px;max-width:32ch}
+.jwelc-sign{width:100%;box-sizing:border-box;background:#0f0c1a;border:1px solid var(--line);border-radius:12px;padding:13px 14px;
+  font-family:var(--serif);font-size:18px;color:var(--gold);text-align:center;letter-spacing:.02em}
+.jwelc-sign::placeholder{color:#6f6794;font-style:italic;font-size:15px}
+.jwelc-sign.miss{border-color:#e0953a;animation:jwshake .3s}
+.jwelc-seal{width:100%;margin-top:12px}
+.jwelc-skip{display:block;margin:12px auto 0;background:none;border:0;color:var(--muted);font-size:12.5px;cursor:pointer;text-decoration:underline}
+@keyframes jwshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .pcard{position:relative;text-align:left;cursor:pointer;color:var(--text);
   background:linear-gradient(165deg,#1c1830,#15112275);border:1px solid var(--line);border-radius:16px;
@@ -3939,7 +3970,47 @@ async function renderJournalBody(){
   }
 }
 
+// First-run journal welcome: explain the three modes with the research behind
+// each, then a pledge the writer signs before they begin. Shown once (localStorage).
+function _journalPledged(){try{return localStorage.getItem('lumen_journal_pledged')==='1';}catch(e){return true;}}
+function _jwCard(icn,title,desc,stat,cite){
+  return `<div class="jwc"><div class="jwc-ico">${ic(icn,'g')}</div>`
+    +`<div class="jwc-body"><div class="jwc-title">${title}</div>`
+    +`<div class="jwc-desc">${desc}</div>`
+    +`<div class="jwc-stat">${stat}</div>`
+    +`<div class="jwc-cite">${cite}</div></div></div>`;
+}
+function renderJournalWelcome(){
+  const nm=(ME&&ME.name)?esc(ME.name):'';
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b></div>`
+  +`<div class="jwelc">`
+    +`<div class="jwelc-hero"><div class="jwelc-halo">${ic('book','g')}</div>`
+      +`<h2 class="jwelc-h">Three ways to meet yourself</h2>`
+      +`<p class="jwelc-sub">Putting your inner life into words is one of the most studied tools we have for a steadier mind. Here’s how your journal works — and the research behind each part.</p></div>`
+    +`<div class="jwelc-cards">`
+      +_jwCard('book','Daily','A short, honest letter to today.','Just 15 minutes, 3–4 times is enough — a meta-analysis of expressive-writing studies found a <b>0.47 effect-size</b> gain in well-being.','Smyth, 1998 · meta-analysis of 13 studies')
+      +_jwCard('compass','Deep','Guided sittings on your eight life pillars — the things that matter most.','People who wrote each week about what they valued and were grateful for reported <b>~25% higher well-being</b>.','Emmons &amp; McCullough, 2003')
+      +_jwCard('sunrise','Season','Step back and name the chapter of life you’re living through right now.','Writing about your life’s larger arc and goals lifted mood and <b>cut illness-related doctor visits</b> months later.','King, 2001')
+    +`</div>`
+    +`<div class="jwelc-note">${ic('spark','g')} Expressive and reflective writing has 40+ years of evidence behind it (James Pennebaker and others): less stress and rumination, clearer thinking, even better sleep.</div>`
+    +`<div class="jwelc-pledge">`
+      +`<div class="jwelc-pl-h">${ic('seal','g')} My pledge</div>`
+      +`<p class="jwelc-pl-body">“I promise to show up for myself on the page — a few honest lines, most days. Not for anyone else. For the quiet it gives back.”</p>`
+      +`<input id="jpl-name" class="jwelc-sign" maxlength="48" placeholder="Sign your name" value="${nm}">`
+      +`<button class="btn gold jwelc-seal" id="jpl-sign">${ic('seal','seal-ic')} Sign &amp; begin</button>`
+      +`<button class="jwelc-skip" id="jpl-skip">Maybe later</button>`
+    +`</div>`
+  +`</div>`;
+  const sign=()=>{const f=$('#jpl-name');const v=((f&&f.value)||'').trim();
+    if(!v){if(f){f.focus();f.classList.add('miss');}toast('Sign your name to seal it');return;}
+    try{localStorage.setItem('lumen_journal_pledged','1');localStorage.setItem('lumen_journal_pledge_name',v);localStorage.setItem('lumen_journal_pledge_date',new Date().toISOString());}catch(e){}
+    toast('Sealed. Welcome to your journal ✦');renderJournal();};
+  $('#jpl-sign').onclick=sign;
+  $('#jpl-skip').onclick=()=>{try{localStorage.setItem('lumen_journal_pledged','1');}catch(e){}renderJournal();};
+  const nf=$('#jpl-name');if(nf){nf.oninput=()=>nf.classList.remove('miss');nf.onkeydown=(e)=>{if(e.key==='Enter')sign();};}
+}
 async function renderJournal(){
+  if(!_journalPledged()){renderJournalWelcome();return;}
   if(!jPrompt){
     try{jPrompt=(await api('lifeos/prompts')).prompts.reflection;}catch(e){}
     if(!jPrompt){try{jPrompt=(await api('prompt')).prompt;}catch(e){jPrompt=JPROMPTS[0];}}
