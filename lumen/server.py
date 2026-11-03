@@ -4558,12 +4558,15 @@ async function renderJournalHome(){
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
     +`<div class="jlinks">`
       +`<button class="jlink" id="pill-link"><span class="jlink-ico">${ic('compass','g')}</span><span class="jlink-txt"><b>Pillars &amp; Life OS</b><span>Your compass, focus &amp; ${doneN} of ${totalP} explored</span></span></button>`
-    +`</div>`;
+    +`</div>`
+    +`<div class="jfeed-h">${ic('globe','g')} From the community</div>`
+    +`<div id="jbody"></div>`;
   $('#talkbtn').onclick=renderChat;
   $('#pill-link').onclick=()=>{jScreen='pillars';renderJournal();};
   document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>{const k=b.dataset.m;
     journalMode=k;journalPillar=null;if(k==='season')jSeason='';
     if(k==='deep'){jScreen='pillars';}else{jScreen='compose';}renderJournal();});
+  journalView='feed';renderJournalBody();
 }
 
 // Pillars & progress — the eight life pillars, how far you've worked through them,
