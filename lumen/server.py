@@ -507,14 +507,54 @@ def natal_profile(u):
 HORO_SOUNDS = ("rain","forest","ocean","space","silence")
 HORO_MINS = (5, 10, 20, 30)
 
+# Varied fallback readings — used only when the AI companion is unreachable.
+# Rotated by day + sign so consecutive days never read alike, and deliberately
+# retired the old fixed "one unhurried breath" tagline that repeated endlessly.
+_HORO_OPENERS = (
+    "The Moon moves through %(nak)s today, carrying the shakti of %(shakti)s.",
+    "Today the Moon rests in %(nak)s, whose power is %(shakti)s.",
+    "%(nak)s holds the Moon today — its gift is %(shakti)s, watched over by %(deity)s.",
+    "As the Moon crosses %(nak)s, the day leans toward %(shakti)s.",
+    "The Moon's light falls on %(nak)s, the nakshatra of %(deity)s, today.",
+    "Under %(nak)s the Moon asks for %(shakti)s rather than speed.",
+)
+_HORO_BODIES = (
+    "As %(arch)s, ruled by %(ruler)s, you feel this most where your attention already wants to go.",
+    "For %(arch)s under %(ruler)s, it is an invitation to meet the day a little more awake.",
+    "%(ruler)s, your ruler, asks less effort of you today and more presence.",
+    "Being %(arch)s, let %(ruler)s steady you rather than hurry you.",
+    "With %(ruler)s guiding %(arch)s, the work today is noticing, not forcing.",
+)
+_HORO_CLOSERS = (
+    "Sit when you can; let the breath arrive on its own.",
+    "One honest pause today is enough.",
+    "Notice what softens when you stop pushing against it.",
+    "Let awareness rest where it falls, and leave the rest.",
+    "Return to the breath once, without making it a task.",
+    "Carry a little of this quiet into whatever comes next.",
+    "Meet the next hard moment with attention, not force.",
+    "Begin where you are; nothing here needs to be earned.",
+)
+
+def _horo_pick(seq, day, sign, salt):
+    h = 2166136261
+    for ch in (day + "|" + sign):
+        h = ((h ^ ord(ch)) * 16777619) & 0xffffffff
+    return seq[(h + salt * 2654435761) % len(seq)]
+
 def _horo_fallback(sign, day):
     z = ZODIAC_BY_KEY.get(sign)
     _, nak, _ = moon_nakshatra(day)
-    text = ("The Moon travels through %s today — its shakti is %s. As %s, ruled by %s, let that be "
-            "your practice: one unhurried breath, attention resting where it falls, nothing forced."
-            ) % (nak[0], nak[4], (z[3] if z else "a seeker"), (z[4] if z else "the heavens"))
+    d = {"nak": nak[0], "shakti": nak[4], "deity": nak[2],
+         "arch": (z[3] if z else "a seeker"), "ruler": (z[4] if z else "the heavens")}
+    text = " ".join((
+        _horo_pick(_HORO_OPENERS, day, sign, 1) % d,
+        _horo_pick(_HORO_BODIES, day, sign, 2) % d,
+        _horo_pick(_HORO_CLOSERS, day, sign, 3) % d,
+    ))
+    mins = HORO_MINS[(len(nak[0]) + len(sign)) % len(HORO_MINS)]
     return {"text": text, "theme": nak[0], "soundscape": HORO_SOUNDS[len(nak[0]) % len(HORO_SOUNDS)],
-            "minutes": 10, "nakshatra": nak[0], "deity": nak[2], "nak_theme": nak[4], "pada": 1}
+            "minutes": mins, "nakshatra": nak[0], "deity": nak[2], "nak_theme": nak[4], "pada": 1}
 
 def personal_horoscope(c, u, day):
     """Vedic daily reading grounded in the user's rashi (sidereal) and the Moon's
@@ -530,7 +570,10 @@ def personal_horoscope(c, u, day):
             pass
     if u["horo_day"] == day and u["horo"]:
         try:
-            return json.loads(u["horo"])
+            cached = json.loads(u["horo"])
+            # self-heal: regenerate any reading still carrying the retired tagline
+            if "one unhurried breath" not in (cached.get("text") or ""):
+                return cached
         except Exception:
             pass
     z = ZODIAC_BY_KEY[sign]
@@ -569,7 +612,7 @@ def personal_horoscope(c, u, day):
         'minutes. Return JSON {"text":"...","theme":"the nakshatra name",'
         '"soundscape":"one of the five","minutes":10}.'
     ) % (z[3], z[2], z[4], z[5], z[6], nak[0], pada, nak[2], nak[3], nak[4], natal_s, ctx_s)
-    r = gemini_json(prompt)
+    r = ai_json(prompt)
     if not isinstance(r, dict) or not r.get("text"):
         r = _horo_fallback(sign, day)
     snd = (r.get("soundscape") or "silence").lower()
