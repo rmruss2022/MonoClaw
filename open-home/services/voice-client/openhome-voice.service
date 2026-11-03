@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenHome voice client (wake word -> hub /agent/audio -> ElevenLabs)
+After=network-online.target sound.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Create this file from voice.env.example (chmod 600 — it holds your API key).
+EnvironmentFile=/etc/openhome-voice.env
+ExecStart=/opt/openhome-voice/.venv/bin/python /opt/openhome-voice/voice_client.py
+Restart=on-failure
+RestartSec=3
+# Run as a normal user that is in the "audio" group.
+User=pi
+Group=audio
+
+[Install]
+WantedBy=multi-user.target

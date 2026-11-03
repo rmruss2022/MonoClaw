@@ -1,0 +1,6 @@
+openwakeword>=0.6.0
+onnxruntime
+sounddevice
+webrtcvad
+numpy
+requests
