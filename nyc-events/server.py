@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 PORT = int(os.environ.get("PORT", os.environ.get("MARQUEE_PORT", "18852")))
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
+FIRECRAWL_KEY = os.environ.get("FIRECRAWL_API_KEY", "")
 REFRESH_H = float(os.environ.get("MARQUEE_REFRESH_H", "12"))
 HOME = os.environ.get("MARQUEE_HOME", "Bushwick, Brooklyn")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -83,9 +84,19 @@ def save_personal(recs):
 
 
 def seed_personal():
-    """One-time seed: Matthew's Baby Cobra Yoga in Bushwick, Thu & Sat ~7pm."""
+    """Seed/upgrade: Matthew's Baby Cobra Yoga in Bushwick (Firecrawl-scannable)."""
     recs = load_personal()
-    if any(r.get("seed") == "babycobra" for r in recs):
+    existing = next((r for r in recs if r.get("seed") == "babycobra"), None)
+    if existing:
+        # upgrade older seeds that lack the scan fields
+        changed = False
+        for k, v in {"scan_url": "https://www.tickettailor.com/events/babycobrayoga",
+                     "location_match": "Bushwick",
+                     "url": "https://www.tickettailor.com/events/babycobrayoga"}.items():
+            if not existing.get(k):
+                existing[k] = v; changed = True
+        if changed:
+            save_personal(recs)
         return
     recs.append({
         "id": uuid.uuid4().hex[:12], "seed": "babycobra",
@@ -93,7 +104,10 @@ def seed_personal():
         "time": "7:00 PM", "venue": "Baby Cobra Yoga, 47 Thames St #206",
         "neighborhood": "Bushwick", "borough": "Brooklyn", "near_home": True,
         "category": "Wellness", "price": "Donation-based",
-        "url": "https://www.babycobrayoga.com/", "blurb": "Donation-based, baby-friendly flow in a Bushwick loft studio.",
+        "url": "https://www.tickettailor.com/events/babycobrayoga",
+        "scan_url": "https://www.tickettailor.com/events/babycobrayoga",
+        "location_match": "Bushwick",
+        "blurb": "Donation-based, baby-friendly flow in a Bushwick loft studio.",
     })
     save_personal(recs)
 
@@ -111,13 +125,28 @@ def _instance(r, d):
 
 
 def expand_personal(days=32):
-    """Expand recurring + one-off personal events into dated instances in the
-    upcoming window."""
+    """Expand personal events into dated instances in the upcoming window.
+    Priority: real scanned sessions > weekly recurrence > one-off date."""
     out, today = [], date.today()
+    horizon = (today + timedelta(days=days)).isoformat()
     for r in load_personal():
         if not r.get("id"):
             continue
-        if r.get("recurring"):
+        sess = r.get("sessions")
+        if sess:  # real sessions from a Firecrawl scan
+            for s in sess:
+                d = (s.get("date") or "")
+                if today.isoformat() <= d <= horizon:
+                    inst = _instance(r, d)
+                    if s.get("time"):
+                        inst["time"] = s["time"]
+                    if s.get("url"):
+                        inst["url"] = s["url"]
+                    if s.get("title"):
+                        inst["title"] = r["title"] + " · " + s["title"] if s["title"].lower() not in r["title"].lower() else r["title"]
+                    inst["scanned"] = True
+                    out.append(inst)
+        elif r.get("recurring"):
             wd = set(r.get("weekdays") or [])
             for i in range(days):
                 d = today + timedelta(days=i)
@@ -126,6 +155,96 @@ def expand_personal(days=32):
         elif r.get("date") and r["date"] >= today.isoformat():
             out.append(_instance(r, r["date"]))
     return out
+
+
+# -------------------------------------------------- Firecrawl scan of regulars
+def fc_scrape(url):
+    """Scrape a page to markdown via the Firecrawl API. Returns '' on failure."""
+    if not FIRECRAWL_KEY or not url:
+        return ""
+    try:
+        body = json.dumps({"url": url, "formats": ["markdown"],
+                           "onlyMainContent": True}).encode()
+        req = urllib.request.Request("https://api.firecrawl.dev/v2/scrape", data=body,
+                                     headers={"Authorization": "Bearer " + FIRECRAWL_KEY,
+                                              "Content-Type": "application/json"}, method="POST")
+        j = json.loads(urllib.request.urlopen(req, timeout=60).read())
+        return ((j.get("data") or {}).get("markdown") or "")[:18000]
+    except Exception as e:
+        print("[marquee] firecrawl failed:", e, flush=True)
+        return ""
+
+
+def scan_regular(rec):
+    """Firecrawl-scrape a regular's booking page, then have Gemini extract the
+    REAL upcoming sessions (optionally filtered to a location). Returns a list of
+    {date,time,title,url} or [] on failure."""
+    url = rec.get("scan_url") or rec.get("url")
+    md = fc_scrape(url)
+    if not md or not GEMINI_KEY:
+        return []
+    loc = rec.get("location_match") or ""
+    today = date.today().isoformat()
+    prompt = (
+        "From this scraped booking page, extract EVERY upcoming session of \""
+        + rec.get("title", "this event") + f"\" on or after {today}. Use the exact dates, "
+        "times, and booking links shown on the page — do not invent anything. For each, "
+        "include the venue/location text shown. Reply with ONLY a JSON array, each item: "
+        "{\"date\":\"YYYY-MM-DD\",\"time\",\"title\",\"location\",\"url\"}. url is that "
+        "session's own booking link. No prose, no markdown fences.\n\nPAGE:\n" + md)
+    try:
+        body = json.dumps({"contents": [{"parts": [{"text": prompt}]}],
+                           "generationConfig": {"temperature": 0, "maxOutputTokens": 4000,
+                                                "thinkingConfig": {"thinkingBudget": 0}}}).encode()
+        u = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+             f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}")
+        req = urllib.request.Request(u, data=body, headers={"Content-Type": "application/json"}, method="POST")
+        j = json.loads(urllib.request.urlopen(req, timeout=60).read())
+        txt = "".join(p.get("text", "") for p in
+                      ((j["candidates"][0].get("content") or {}).get("parts") or []))
+        a, b = txt.find("["), txt.rfind("]")
+        arr = json.loads(txt[a:b + 1]) if a >= 0 and b > a else []
+    except Exception as e:
+        print("[marquee] scan extract failed:", e, flush=True)
+        return []
+    out = []
+    for s in arr:
+        if not (isinstance(s, dict) and re.match(r"^\d{4}-\d{2}-\d{2}$", str(s.get("date", "")))):
+            continue
+        if s["date"] < today:
+            continue
+        sloc = str(s.get("location", ""))
+        if loc and sloc and loc.lower() not in sloc.lower():
+            continue   # drop other locations when we have a usable location string
+        out.append({"date": s["date"], "time": str(s.get("time", ""))[:40],
+                    "title": str(s.get("title", ""))[:100], "url": str(s.get("url", ""))[:400] or url})
+    out.sort(key=lambda s: (s["date"], s["time"]))
+    return out
+
+
+def scan_stale_regulars(max_age_h=24):
+    """Background: refresh real sessions for any scannable regular not scanned
+    within max_age_h. Keeps the calendar's real times current."""
+    now = time.time() * 1000
+    for r in load_personal():
+        if r.get("scan_url") and (now - (r.get("scanned_at") or 0) > max_age_h * 3600 * 1000):
+            try:
+                scan_regular_by_id(r["id"])
+            except Exception as e:
+                print("[marquee] auto-scan failed:", e, flush=True)
+
+
+def scan_regular_by_id(pid):
+    recs = load_personal()
+    for r in recs:
+        if r.get("id") == pid and (r.get("scan_url") or r.get("url")):
+            sess = scan_regular(r)
+            if sess:
+                r["sessions"] = sess
+                r["scanned_at"] = int(time.time() * 1000)
+                save_personal(recs)
+            return sess
+    return []
 
 
 # --------------------------------------------------------------- gemini fetch
@@ -352,9 +471,18 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .ev.mine{background:linear-gradient(135deg,#1a1326,#17121f);border-color:rgba(255,92,138,.4)}
  .mine-tag{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:800;letter-spacing:.04em;
    text-transform:uppercase;padding:3px 7px;border-radius:6px;color:#fff;background:linear-gradient(135deg,#ff5c8a,#a855f7)}
- .ev .del{flex:0 0 auto;align-self:flex-start;border:0;background:rgba(255,255,255,.06);color:var(--mut);
-   width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:12px;line-height:1}
- .ev .del:hover{background:rgba(239,68,68,.25);color:#fff}
+ .acts{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;align-self:center}
+ .act{border:0;background:rgba(255,255,255,.06);color:var(--mut);width:30px;height:30px;border-radius:8px;
+   cursor:pointer;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+ .act:hover{background:rgba(255,255,255,.14);color:#fff}
+ .act.del:hover{background:rgba(239,68,68,.28);color:#fff}
+ .minebar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 16px;padding:14px 16px;border-radius:14px;
+   background:linear-gradient(135deg,#1a1326,#17121f);border:1px solid rgba(255,92,138,.35)}
+ .minebar b{display:block;font-size:14px;color:#fff}
+ .minebar span{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+ .scanbtn{margin-left:auto;border:0;border-radius:10px;padding:10px 15px;font:inherit;font-weight:700;font-size:13px;
+   cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 16px -6px rgba(255,92,138,.6)}
+ .scanbtn:disabled{opacity:.7;cursor:default}
  .empty{color:var(--mut);padding:30px 4px;text-align:center;font-size:14px}
  /* add-event modal */
  .modal-bg{position:fixed;inset:0;background:rgba(5,5,10,.7);display:flex;align-items:center;justify-content:center;z-index:60;padding:18px}
@@ -397,7 +525,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  </div>
  <div class="chips" id="chips"></div>
  <div class="controls">
-   <span class="views" id="loc"><button data-l="all" class="on">All NYC</button><button data-l="near">★ Near me</button><button data-l="Brooklyn">Brooklyn</button></span>
+   <span class="views" id="loc"><button data-l="all" class="on">All NYC</button><button data-l="near">★ Near me</button><button data-l="Brooklyn">Brooklyn</button><button data-l="mine">★ Mine</button></span>
    <span class="views" id="views"><button data-v="list" class="on">Upcoming</button><button data-v="cal">Calendar</button></span>
  </div>
  <div id="calWrap" class="cal" hidden>
@@ -447,7 +575,7 @@ var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 var all=[],active=new Set(),view='list',curMonth=null,selDay=null,loc='all';
 function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function parseD(s){var p=(s||'').split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
-function matchLoc(e){return loc==='all'||(loc==='near'?!!e.near_home:e.borough===loc);}
+function matchLoc(e){return loc==='all'||(loc==='near'?!!e.near_home:(loc==='mine'?!!e.mine:e.borough===loc));}
 function filtered(){return all.filter(function(e){return (!active.size||active.has(e.category))&&matchLoc(e);});}
 function chips(){
  var c=document.getElementById('chips');
@@ -466,14 +594,45 @@ function evCard(e){
   +(e.venue?'<span>📍 '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):(e.borough?', '+esc(e.borough):''))+'</span>':'')
   +(e.price?'<span>🎟 '+esc(e.price)+'</span>':'')+'</div>'
   +(e.blurb?'<p class="bl">'+esc(e.blurb)+'</p>':'')+'</div>'
-  +(e.mine?'<button class="del" data-del="'+esc(e.pid||'')+'" title="Remove">✕</button>':'<span class="go">↗</span>')+'</a>';
+  +'<div class="acts">'
+   +'<button class="act" data-ics="'+e._i+'" title="Add to my calendar (.ics)">📅</button>'
+   +(e.mine?'<button class="act del" data-del="'+esc(e.pid||'')+'" title="Remove">✕</button>'
+           :'<button class="act" data-save="'+e._i+'" title="Save to my events">＋</button>')
+  +'</div></a>';
+}
+function pad(n){return (n<10?'0':'')+n;}
+function parseTime(t){var m=(t||'').match(/(\d{1,2}):(\d{2})\s*([ap])m/i);if(!m)return null;var h=(+m[1])%12;if(/p/i.test(m[3]))h+=12;return {h:h,m:+m[2]};}
+function icsEsc(s){return (s||'').replace(/([,;\\])/g,'\\$1').replace(/\n/g,'\\n');}
+function icsFor(e){
+ var p=(e.date||'').split('-'),y=p[0],mo=p[1],da=p[2],t=parseTime(e.time);
+ var uid=((e.id||('e'+(e._i||0)))+'-'+(e.date||''))+'@marquee';
+ var L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Marquee//NYC//EN','BEGIN:VEVENT','UID:'+uid];
+ if(!t){L.push('DTSTART;VALUE=DATE:'+y+mo+da);}
+ else{L.push('DTSTART:'+y+mo+da+'T'+pad(t.h)+pad(t.m)+'00');L.push('DTEND:'+y+mo+da+'T'+pad((t.h+2)%24)+pad(t.m)+'00');}
+ L.push('SUMMARY:'+icsEsc(e.title));
+ if(e.venue)L.push('LOCATION:'+icsEsc([e.venue,e.neighborhood].filter(Boolean).join(', ')));
+ var desc=[e.blurb,e.url].filter(Boolean).join('\\n');if(desc)L.push('DESCRIPTION:'+icsEsc(desc));
+ if(e.url)L.push('URL:'+e.url);
+ L.push('END:VEVENT','END:VCALENDAR');return L.join('\r\n');
+}
+function downloadICS(e){
+ var blob=new Blob([icsFor(e)],{type:'text/calendar'});var a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=((e.title||'event').replace(/[^\w]+/g,'-').slice(0,40))+'.ics';
+ document.body.appendChild(a);a.click();setTimeout(function(){a.remove();URL.revokeObjectURL(a.href);},600);
+}
+function saveMine(e){
+ var body={title:e.title,category:e.category,time:e.time,venue:e.venue,neighborhood:e.neighborhood,
+  borough:e.borough,near_home:!!e.near_home,url:e.url,blurb:e.blurb,price:e.price,date:e.date};
+ fetch('api/personal/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+  .then(function(r){return r.json();}).then(function(){load(false);});
 }
 function renderList(){
  var evs=filtered(),box=document.getElementById('list');
- if(!evs.length){box.innerHTML='<div class="empty">No events in that filter yet.</div>';return;}
+ var mineBar=(loc==='mine')?('<div class="minebar"><div><b>Your regulars &amp; saved events</b><span>Pull real class times &amp; sessions straight from the source.</span></div><button class="scanbtn">⟳ Scan for real times</button></div>'):'';
+ if(!evs.length){box.innerHTML=mineBar+'<div class="empty">'+(loc==='mine'?'Nothing saved yet — tap ＋ on any event, or use <b>+ Add event</b>.':'No events in that filter yet.')+'</div>';return;}
  var byDay={},order=[];
  evs.forEach(function(e){if(!byDay[e.date]){byDay[e.date]=[];order.push(e.date);}byDay[e.date].push(e);});
- box.innerHTML=order.map(function(dt){
+ box.innerHTML=mineBar+order.map(function(dt){
   var d=parseD(dt),lbl=WD[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate();
   return '<div class="day-h">'+lbl+'<span class="ln"></span></div>'+byDay[dt].map(evCard).join('');
  }).join('');
@@ -506,6 +665,7 @@ function load(force){
  var r=document.getElementById('refresh');if(force)r.classList.add('spin');
  fetch('api/events'+(force?'?force=1':''),{cache:'no-store'}).then(function(x){return x.json();}).then(function(d){
   all=d.events||[];
+  all.forEach(function(e,i){e._i=i;});
   if(d.home)document.getElementById('homePill').textContent='📍 '+d.home;
   document.getElementById('foot').textContent=all.length+' events · updated '+(d.fetched_at?new Date(d.fetched_at).toLocaleString():'—')+' · tap any event for tickets';
   render();r.classList.remove('spin');
@@ -564,14 +724,30 @@ document.getElementById('f_save').onclick=function(){
    load(false);
   }).catch(function(){alert('Could not add');});
 };
-// delete a personal event (× on mine cards)
+// card action buttons: add-to-calendar (.ics), save-to-mine (＋), delete (✕)
 document.getElementById('list').addEventListener('click',function(ev){
- var b=ev.target.closest('.del');if(!b)return;ev.preventDefault();ev.stopPropagation();
- var pid=b.getAttribute('data-del');if(!pid)return;
- if(!confirm('Remove this event from your calendar?'))return;
- fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})})
-  .then(function(){load(false);});
+ var b=ev.target.closest('.act, .scanbtn');if(!b)return;ev.preventDefault();ev.stopPropagation();
+ if(b.classList.contains('scanbtn')){scanRegulars(b);return;}
+ if(b.hasAttribute('data-ics')){downloadICS(all[+b.getAttribute('data-ics')]);return;}
+ if(b.hasAttribute('data-save')){saveMine(all[+b.getAttribute('data-save')]);b.textContent='✓';return;}
+ if(b.hasAttribute('data-del')){var pid=b.getAttribute('data-del');
+  if(!pid||!confirm('Remove this event from your calendar?'))return;
+  fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:pid})}).then(function(){load(false);});}
 });
+// scan all scannable regulars via the Firecrawl agent, then reload
+function scanRegulars(btn){
+ btn.textContent='⟳ Scanning…';btn.disabled=true;
+ fetch('api/personal',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+  var regs=(d.personal||[]).filter(function(r){return r.scan_url;});
+  if(!regs.length){btn.textContent='No scannable regulars';return;}
+  return Promise.all(regs.map(function(r){
+   return fetch('api/personal/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:r.id})}).then(function(x){return x.json();});
+  })).then(function(res){
+   var n=res.reduce(function(a,x){return a+(x.count||0);},0);
+   btn.textContent='✓ Updated '+n+' real sessions';setTimeout(function(){load(false);},900);
+  });
+ }).catch(function(){btn.textContent='Scan failed';btn.disabled=false;});
+}
 load(false);setInterval(function(){load(false);},120000);
 </script></body></html>"""
 
@@ -679,6 +855,10 @@ class H(BaseHTTPRequestHandler):
             recs = [r for r in load_personal() if r.get("id") != pid]
             save_personal(recs)
             self._send(json.dumps({"ok": True}))
+        elif p == "/api/personal/scan":
+            pid = (self._body().get("id") or "").strip()
+            sess = scan_regular_by_id(pid)
+            self._send(json.dumps({"ok": bool(sess), "sessions": sess, "count": len(sess)}))
         else:
             self._send("not found", "text/plain", 404)
 
@@ -687,8 +867,9 @@ def main():
     os.makedirs(DATA, exist_ok=True)
     seed_personal()
     print(f"Marquee on 127.0.0.1:{PORT} (data={DATA}, llm={'on' if GEMINI_KEY else 'off'})", flush=True)
-    # warm the cache in the background on boot
+    # warm the cache + refresh scannable regulars in the background on boot
     threading.Thread(target=lambda: get_events(force=False), daemon=True).start()
+    threading.Thread(target=scan_stale_regulars, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", PORT), H).serve_forever()
 
 
