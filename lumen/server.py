@@ -149,6 +149,10 @@ def init_db():
     npcols = [r[1] for r in c.execute("PRAGMA table_info(notif_prefs)").fetchall()]
     if "pref_hour" not in npcols:
         c.execute("ALTER TABLE notif_prefs ADD COLUMN pref_hour INTEGER")
+    # the Keeper's AI reflection, written back on each sealed letter
+    jcols = [r[1] for r in c.execute("PRAGMA table_info(journal)").fetchall()]
+    if "reflection" not in jcols:
+        c.execute("ALTER TABLE journal ADD COLUMN reflection TEXT")
     # Pre-check marketing steps that are already true (app is LIVE on the App Store +
     # the marketing site is live). INSERT OR IGNORE so any later owner toggle wins.
     for _k in ("apple_aso#0", "apple_aso#1", "apple_aso#2", "apple_aso#3",
@@ -912,6 +916,44 @@ def gemini_json(prompt, timeout=20):
         return json.loads(txt)
     except Exception:
         return None
+
+def journal_reflect(prompt, text):
+    """The Keeper's brief, warm reflection on a sealed letter + an inferred mood word.
+    Best-effort: returns empty strings if the companion is unavailable."""
+    if not GEMINI_KEY:
+        return {"reflection": "", "mood": ""}
+    p = ("You are the Keeper — a warm, grounded meditation companion inside Lumen. "
+         "Someone just wrote this private journal letter"
+         + (f' responding to the prompt “{prompt}”.' if prompt else ".") +
+         " Reflect back in 1-2 short sentences: name the feeling you hear, mirror one true "
+         "thing with warmth, and leave them lighter. Second person, gentle, human. Do NOT "
+         "advise, diagnose, or sound clinical. Also infer their overall mood as ONE lowercase "
+         "word.\n\nReturn ONLY JSON: {\"reflection\":\"...\",\"mood\":\"<one word>\"}\n\nLetter:\n"
+         + text[:1800])
+    r = gemini_json(p, timeout=10) or {}
+    return {"reflection": (r.get("reflection") or "").strip()[:400],
+            "mood": (r.get("mood") or "").strip().lower()[:24]}
+
+def journal_insights(rows):
+    """Find the gentle throughline across a person's recent letters."""
+    if not GEMINI_KEY or len(rows) < 2:
+        return None
+    joined = "\n\n".join(
+        f"[{(r['created'] or '')[:10]} · felt {r['mood'] or '—'}] {(r['text'] or '')[:400]}"
+        for r in rows)
+    p = ("You are the Keeper inside Lumen. Below are a person's recent private journal letters, "
+         "newest first. Find the gentle throughline — do not advise or diagnose, just notice with "
+         "warmth. Return ONLY JSON: {\"themes\":[\"..\",\"..\",\"..\"] (2-4 short noun phrases), "
+         "\"arc\":\"one sentence on their emotional arc lately\", \"observation\":\"one warm, "
+         "specific observation, 2 sentences max\", \"nudge\":\"one gentle thing to sit with or "
+         "write about next\"}\n\n" + joined)
+    r = gemini_json(p, timeout=18)
+    if not r:
+        return None
+    return {"themes": [str(x)[:40] for x in (r.get("themes") or [])][:4],
+            "arc": (r.get("arc") or "").strip()[:240],
+            "observation": (r.get("observation") or "").strip()[:400],
+            "nudge": (r.get("nudge") or "").strip()[:240]}
 
 def gemini_transcribe(img_b64, mime, timeout=40):
     """OCR/transcribe handwriting or text in a photo via Gemini vision."""
@@ -2007,6 +2049,21 @@ nav button .ic .i{width:22px;height:22px}
 nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple));transform:translateY(-1px) scale(1.1)}
 .ach .e .i{filter:none}
 .ach.on .e .i{filter:drop-shadow(0 0 6px var(--gold))}
+/* journal intelligence: Keeper reflections + insights */
+.keeper-note{margin-top:12px;padding:12px 14px;border:1px solid rgba(245,201,119,.28);border-radius:14px;background:rgba(245,201,119,.06);text-align:left}
+.keeper-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);display:flex;align-items:center;gap:6px}
+.keeper-lbl .i{width:14px;height:14px}
+.keeper-refl{margin:6px 0 0;font-family:var(--serif);font-size:15px;line-height:1.5;color:var(--text)}
+.mini-refl{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(245,201,119,.25);font-family:var(--serif);font-size:13.5px;line-height:1.45;color:#d9cfa0;display:flex;gap:7px;align-items:flex-start}
+.mini-refl .i{width:14px;height:14px;flex:none;margin-top:3px;color:var(--gold)}
+.insights{display:flex;flex-direction:column;gap:12px;margin-top:4px}
+.ins-themes{display:flex;flex-wrap:wrap;gap:7px}
+.ins-chip{font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid rgba(168,85,247,.4);background:rgba(168,85,247,.1);color:#d9c2f7}
+.ins-block{padding:13px 15px;border:1px solid var(--line,#2a2740);border-radius:14px;background:rgba(255,255,255,.02);text-align:left}
+.ins-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.ins-lbl .i{width:14px;height:14px}
+.ins-arc{font-family:var(--serif);font-size:15px;line-height:1.5}
+.ins-nudge{border-color:rgba(245,201,119,.3);background:rgba(245,201,119,.05)}
 </style>
 </head>
 <body>
@@ -3509,7 +3566,7 @@ async function renderJournal(){
     <div class="mic-hint" id="michint"></div>
     <button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button>
   </div>
-  <div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='feed'?'on':''}" data-v="feed">The collective</button></div>
+  <div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='insights'?'on':''}" data-v="insights">Insights</button><button class="${journalView==='feed'?'on':''}" data-v="feed">The collective</button></div>
   <div id="jbody"></div>`;
   $('#jshuf').onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt);jPrompt=n;
     $('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)speak(jPrompt);};
@@ -3525,13 +3582,28 @@ async function renderJournal(){
   $('#jfile').onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
   $('#jsave').onclick=async()=>{if(listening&&rec)rec.stop();const t=$('#jt').value.trim();if(!t){toast('Write a few words first');return;}
     const words=(t.match(/\S+/g)||[]).length;const share=$('#js').checked;
+    const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
     try{const r=await api('journal','POST',{text:t,prompt:jPrompt,share});$('#jt').value='';
-      showJournalSealed(r,words,share);}catch(e){toast(e);}};
+      showJournalSealed(r,words,share);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}};
   $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournal();});
   const body=$('#jbody');
-  if(journalView==='mine'){
+  if(journalView==='insights'){
+    body.innerHTML=`<div class="card center muted"><span class="spinner"></span> The Keeper is reading your letters…</div>`;
+    let di;try{di=await api('journal/insights');}catch(e){di=null;}
+    if(!di||!di.ready){
+      body.innerHTML=`<div class="card center muted"><div style="color:var(--gold);margin-bottom:6px">${ic('lumen','lg')}</div>${(di&&di.reason==='few')?'Write a couple of letters and the Keeper will start noticing the throughline.':'Insights need the companion — try again in a moment.'}</div>`;
+    }else{
+      body.innerHTML=`<div class="insights">
+        ${(di.themes&&di.themes.length)?`<div class="ins-themes">${di.themes.map(t=>`<span class="ins-chip">${esc(t)}</span>`).join('')}</div>`:''}
+        ${di.arc?`<div class="ins-block"><div class="ins-lbl">Where you've been</div><div class="ins-arc">${esc(di.arc)}</div></div>`:''}
+        ${di.observation?`<div class="ins-block keeper-note"><div class="keeper-lbl">${ic('lumen','g')} The Keeper notices</div><p class="keeper-refl">${esc(di.observation)}</p></div>`:''}
+        ${di.nudge?`<div class="ins-block ins-nudge"><div class="ins-lbl">${ic('spark','g')} To sit with next</div><div class="ins-arc">${esc(di.nudge)}</div><button class="lo-btn" id="insWrite" style="margin-top:10px">${ic('book')} Write about this</button></div>`:''}
+      </div>`;
+      const iw=$('#insWrite');if(iw)iw.onclick=()=>{jPrompt=di.nudge;journalView='mine';go('journal');};
+    }
+  }else if(journalView==='mine'){
     const d=await api('journal');
-    body.innerHTML=d.entries.length?d.entries.map(e=>`<div class="letter mini"><div class="letter-head"><span>${niceDate(e.created)}</span>${e.shared?`<span class="letter-tag">${ic('globe')} shared</span>`:`<span class="letter-tag">${ic('lock')} private</span>`}</div>${e.prompt?`<div class="mini-q">“${esc(e.prompt)}”</div>`:''}<div class="mini-body">${esc(e.text)}</div>${e.mood?`<div class="mini-mood">— felt ${esc(e.mood)}</div>`:''}</div>`).join(''):`<div class="card center muted"><div style="color:var(--gold);margin-bottom:6px">${ic('book','lg')}</div>Your letters will gather here. Write your first above.</div>`;
+    body.innerHTML=d.entries.length?d.entries.map(e=>`<div class="letter mini"><div class="letter-head"><span>${niceDate(e.created)}</span>${e.shared?`<span class="letter-tag">${ic('globe')} shared</span>`:`<span class="letter-tag">${ic('lock')} private</span>`}</div>${e.prompt?`<div class="mini-q">“${esc(e.prompt)}”</div>`:''}<div class="mini-body">${esc(e.text)}</div>${e.mood?`<div class="mini-mood">— felt ${esc(e.mood)}</div>`:''}${e.reflection?`<div class="mini-refl">${ic('lumen','g')} ${esc(e.reflection)}</div>`:''}</div>`).join(''):`<div class="card center muted"><div style="color:var(--gold);margin-bottom:6px">${ic('book','lg')}</div>Your letters will gather here. Write your first above.</div>`;
   }else{
     const d=await api('feed');
     const mine=d.me;
@@ -3596,6 +3668,7 @@ function showJournalSealed(res,words,shared){
       <div class="finale-sub">Your letter is kept</div>
       <h1 class="finale-h" style="font-size:42px">Sealed</h1>
       <p class="finale-poem">What you named today, you no longer carry alone.</p>
+      ${res&&res.reflection?`<div class="keeper-note"><div class="keeper-lbl">${ic('lumen','g')} The Keeper</div><p class="keeper-refl">“${esc(res.reflection)}”</p>${res.mood?`<div class="mini-mood">— you sounded ${esc(res.mood)}</div>`:''}</div>`:''}
       <div class="finale-stats">
         <div class="fstat"><div class="fsn">${words}</div><div class="fsl">words</div></div>
         <div class="fstat"><div class="fsn">${n}</div><div class="fsl">${n===1?'letter':'letters'}</div></div>
@@ -4493,7 +4566,7 @@ class H(BaseHTTPRequestHandler):
             u = self._me(c)
             if not u:
                 self._send(401, {"error": "sign in"}); return
-            rows = c.execute("SELECT id,prompt,text,mood,shared,created FROM journal WHERE user_id=? ORDER BY id DESC LIMIT 200", (u["id"],)).fetchall()
+            rows = c.execute("SELECT id,prompt,text,mood,reflection,shared,created FROM journal WHERE user_id=? ORDER BY id DESC LIMIT 200", (u["id"],)).fetchall()
             self._send(200, {"entries": [dict(r) for r in rows]}); return
 
         if p == "/api/feed":
@@ -5019,14 +5092,31 @@ class H(BaseHTTPRequestHandler):
             text = (d.get("text") or "").strip()
             if not text:
                 self._send(400, {"error": "write something first"}); return
-            c.execute("INSERT INTO journal(user_id,prompt,text,mood,shared,created) VALUES(?,?,?,?,?,?)",
-                      (u["id"], (d.get("prompt") or "")[:300], text[:2000], (d.get("mood") or "")[:24],
+            prompt = (d.get("prompt") or "")[:300]
+            # the Keeper reflects back + infers mood (best-effort; never blocks the save)
+            refl = journal_reflect(prompt, text)
+            mood = ((d.get("mood") or refl["mood"] or "")).strip()[:24]
+            c.execute("INSERT INTO journal(user_id,prompt,text,mood,reflection,shared,created) VALUES(?,?,?,?,?,?,?)",
+                      (u["id"], prompt, text[:2000], mood, refl["reflection"],
                        1 if d.get("share") else 0, now_iso()))
             new_ach = award_journal_ach(c, u)
             c.commit()
             total = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=?", (u["id"],)).fetchone()["n"]
-            self._send(200, {"ok": True, "count": total,
+            self._send(200, {"ok": True, "count": total, "reflection": refl["reflection"], "mood": mood,
                              "new_achievements": [{"code": a, "title": ACH_BY_CODE[a][1]} for a in new_ach]}); return
+
+        if p == "/api/journal/insights":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            rows = c.execute("SELECT text,mood,created FROM journal WHERE user_id=? ORDER BY id DESC LIMIT 15",
+                             (u["id"],)).fetchall()
+            if len(rows) < 2:
+                self._send(200, {"ready": False, "reason": "few"}); return
+            ins = journal_insights(rows)
+            if not ins:
+                self._send(200, {"ready": False, "reason": "companion"}); return
+            self._send(200, {"ready": True, **ins}); return
 
         if p == "/api/journal/transcribe":
             u = self._me(c)
