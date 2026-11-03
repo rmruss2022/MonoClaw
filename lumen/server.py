@@ -153,6 +153,12 @@ def init_db():
     jcols = [r[1] for r in c.execute("PRAGMA table_info(journal)").fetchall()]
     if "reflection" not in jcols:
         c.execute("ALTER TABLE journal ADD COLUMN reflection TEXT")
+    # Three journaling categories: 'daily' (default), 'deep' (pillar work), 'travel'.
+    # Deep entries carry their pillar; travel entries carry a place label.
+    for jcol, jddl in (("kind", "kind TEXT DEFAULT 'daily'"),
+                       ("pillar", "pillar TEXT"), ("place", "place TEXT")):
+        if jcol not in jcols:
+            c.execute(f"ALTER TABLE journal ADD COLUMN {jddl}")
     # Pre-check marketing steps that are already true (app is LIVE on the App Store +
     # the marketing site is live). INSERT OR IGNORE so any later owner toggle wins.
     for _k in ("apple_aso#0", "apple_aso#1", "apple_aso#2", "apple_aso#3",
@@ -828,8 +834,67 @@ def prompt_for_today():
 
 # ---- Life OS: pillars, focuses, and AI-generated daily prompts -------------
 
-# Life OS pillars mirror Ora Health's pillar taxonomy
-PILLARS = ["Family", "Hobbies", "Career", "Health", "Relationships", "Inner Growth"]
+# The eight life pillars of Lumen's deep journaling. The first six grew out of
+# Ora Health's taxonomy; Finances and Purpose round it into a full wheel of life.
+PILLARS = ["Family", "Relationships", "Career", "Finances",
+           "Health", "Hobbies", "Inner Growth", "Purpose"]
+
+# Deep journaling exercises — each pillar is a short, guided sitting. The Keeper
+# walks the steps one prompt at a time, then reflects on the whole piece of work.
+# (title, invitation, [step prompts])
+PILLAR_EXERCISES = {
+    "Family": ("The people who made you",
+               "Turn toward where you came from — with honesty and some grace.",
+               ["Picture one family member as a whole person — their younger self, their fears, not just their role in your life. What do you understand about them now that you once couldn't?",
+                "What did you inherit from your family that you're grateful for? What are you choosing to set down?",
+                "Write the one sentence you most want your family to know — whether or not you ever say it aloud."]),
+    "Relationships": ("Honest with the ones you choose",
+                      "Sit with one relationship that's been on your heart.",
+                      ["Bring one relationship to mind. Under the surface of how it looks — what's actually going on there right now?",
+                       "Where have you been holding something back — a truth, a need, an apology? What's the risk you're avoiding?",
+                       "Write what you'd say if there were no risk at all. Then name one small, real step toward it."]),
+    "Career": ("The work that's yours",
+               "Step back from the to-do list and look at the work itself.",
+               ["Name the work you'd still do even if no one paid or noticed. Where did today meet that work — or miss it?",
+                "What are you quietly proud of this season that no one else saw?",
+                "What would 'enough' look like in your work — and where are you chasing past it?"]),
+    "Finances": ("Money, without the shame",
+                 "Look plainly at the thing most of us look away from.",
+                 ["What does money mean to you right now — safety, freedom, pressure, proof? Where did that belief first come from?",
+                  "Write honestly about one money worry you keep only half-looking-at. What's the real fear underneath it?",
+                  "What would 'enough' actually feel like — and what's one quiet step toward more ease with it?"]),
+    "Health": ("Listening to the body",
+               "Give your body the floor for a few minutes.",
+               ["Check in with your body like you would a friend. What has it been asking for that your mind keeps overruling?",
+                "When did you last feel genuinely rested, or strong, or well? What made that possible?",
+                "What's one kind, doable thing your body would thank you for this week?"]),
+    "Hobbies": ("For the love of it",
+                "Remember the things you do for no reason but joy.",
+                ["Describe the last time something you love made you lose track of time. What did that flow give you?",
+                 "What did you love as a kid that you've let quietly slip away? What happened to it?",
+                 "What's one thing you could make a little space for — purely because it lights you up?"]),
+    "Inner Growth": ("Who you're becoming",
+                     "Look at the arc of your own becoming.",
+                     ["Write about who you were a year ago. What would that version of you thank you for?",
+                      "What pattern are you ready to outgrow? What has it been protecting you from?",
+                      "Who are you becoming — and what's one way you can meet that person halfway today?"]),
+    "Purpose": ("The bigger why",
+                "Reach past the daily and ask what it's all for.",
+                ["When did you last feel part of something larger than yourself? What was it?",
+                 "What matters to you enough that you'd stand by it even when it costs you? Where is that showing up in your days — or missing?",
+                 "If this season of your life had a purpose, what would you want it to be?"]),
+}
+
+# The three journaling modes and their rotating prompt sets.
+JOURNAL_KINDS = ("deep", "daily", "travel")
+TRAVEL_PROMPTS = [
+    "Where are you right now, and what does this place stir in you?",
+    "What will you want to remember about today, long after the photos fade?",
+    "Who are you here, in this place, that you aren't quite at home?",
+    "What has this journey asked of you — and what has it given back?",
+    "Describe one small moment from today you'd never have had at home.",
+    "What does being far from the familiar show you about your own life?",
+]
 
 def _gemini_key():
     k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -954,22 +1019,61 @@ def ai_json(prompt, timeout=40):
     """Prefer Claude (ccut-gateway); fall back to Gemini; else None."""
     return claude_json(prompt, timeout) or gemini_json(prompt, timeout)
 
-def journal_reflect(prompt, text):
+def journal_reflect(prompt, text, kind="daily", pillar=None, place=None):
     """The Keeper's brief, warm reflection on a sealed letter + an inferred mood word.
-    Best-effort: returns empty strings if the companion is unavailable."""
+    Mode-aware: deep (pillar work), daily, or travel. Best-effort — returns empty
+    strings if the companion is unavailable, so it never blocks a save."""
     if not ai_enabled():
         return {"reflection": "", "mood": ""}
+    if kind == "deep" and pillar:
+        ctx = (f"This is deep journaling work on their '{pillar}' pillar — a chosen, "
+               "intentional sitting, not a quick note. Honour the depth: reflect on the "
+               "whole piece, name what they're really wrestling with on this pillar, and "
+               "mirror one brave or true thing with warmth.")
+    elif kind == "travel":
+        ctx = (f"This is a travel-journal entry{f' from {place}' if place else ''} — "
+               "about a place and a moment in their life. Reflect on what this place or "
+               "journey is giving them; help them hold the memory.")
+    else:
+        ctx = "This is a daily journal letter — a check-in with themselves."
     p = ("You are the Keeper — a warm, grounded meditation companion inside Lumen. "
-         "Someone just wrote this private journal letter"
-         + (f' responding to the prompt “{prompt}”.' if prompt else ".") +
+         "Someone just wrote this private journal entry"
+         + (f' responding to the prompt “{prompt}”.' if prompt else ".") + " " + ctx +
          " Reflect back in 1-2 short sentences: name the feeling you hear, mirror one true "
          "thing with warmth, and leave them lighter. Second person, gentle, human. Do NOT "
          "advise, diagnose, or sound clinical. Also infer their overall mood as ONE lowercase "
-         "word.\n\nReturn ONLY JSON: {\"reflection\":\"...\",\"mood\":\"<one word>\"}\n\nLetter:\n"
+         "word.\n\nReturn ONLY JSON: {\"reflection\":\"...\",\"mood\":\"<one word>\"}\n\nEntry:\n"
          + text[:1800])
     r = ai_json(p, timeout=25) or {}
     return {"reflection": (r.get("reflection") or "").strip()[:400],
             "mood": (r.get("mood") or "").strip().lower()[:24]}
+
+def deep_exercise(c, u, pillar):
+    """The guided steps for a pillar's deep exercise, with an optional AI-written
+    opening that greets the person where their recent work on this pillar left off.
+    Static steps are the backbone; the opening is the agentic, personal touch."""
+    ex = PILLAR_EXERCISES.get(pillar)
+    if not ex:
+        return None
+    title, invitation, steps = ex
+    opening = ""
+    if ai_enabled():
+        prev = c.execute("SELECT text,created FROM journal WHERE user_id=? AND kind='deep' "
+                         "AND pillar=? ORDER BY id DESC LIMIT 3", (u["id"], pillar)).fetchall()
+        hist = "\n\n".join(f"[{(r['created'] or '')[:10]}] {(r['text'] or '')[:300]}" for r in prev)
+        name = (u["name"] or "").split()[0] if u["name"] else ""
+        p = ("You are the Keeper inside Lumen, opening a deep journaling sitting on the "
+             f"person's '{pillar}' pillar ({invitation}). Write ONE warm, grounding opening "
+             "line (max 22 words, second person, no emoji) that invites them in. "
+             + (f"Their name is {name}. " if name else "")
+             + ("Here is their recent work on this pillar, newest first — gently acknowledge "
+                "where they've been without repeating it:\n" + hist
+                if hist else "This is their first time on this pillar; welcome them to it.")
+             + "\n\nReturn ONLY JSON: {\"opening\":\"...\"}")
+        r = ai_json(p, timeout=20) or {}
+        opening = (r.get("opening") or "").strip()[:200]
+    return {"pillar": pillar, "title": title, "invitation": invitation,
+            "steps": steps, "opening": opening}
 
 def journal_insights(rows):
     """Find the gentle throughline across a person's recent letters."""
@@ -1754,6 +1858,49 @@ a{color:var(--purple)}
 /* life os + speaker */
 .lo-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#1a1330;border:1px solid #3a2d5e;color:var(--purple);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer}
 .lo-btn .i{width:14px;height:14px}
+/* ---- journal: three modes, weekly ring, pillar grid ---- */
+.jweekbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 2px 12px;flex-wrap:wrap}
+.jwk-row{display:flex;gap:7px}
+.jwk{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted);
+  background:#17132690;border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.jwk.on{color:var(--gold);border-color:rgba(245,201,119,.4);background:rgba(245,201,119,.08)}
+.jwk .i{width:12px;height:12px}
+.jwk-o{width:8px;height:8px;border-radius:50%;border:1.5px solid #5b5280;display:inline-block}
+.jwk-cap{font-size:11.5px;color:var(--muted);font-style:italic;font-family:var(--serif)}
+.jmodes{display:flex;gap:7px;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:6px}
+.jmode{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:0;cursor:pointer;
+  color:var(--muted);padding:9px 6px;border-radius:10px;font-size:12px;font-weight:700;transition:.18s}
+.jmode .i{width:18px;height:18px}
+.jmode.on{background:linear-gradient(160deg,#241c3e,#1b1530);color:var(--text);box-shadow:0 0 0 1px #ffffff0c inset}
+.jmode-blurb{font-size:12.5px;font-style:italic;font-family:var(--serif);margin:0 2px 12px;color:var(--muted)}
+.pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.pcard{position:relative;text-align:left;cursor:pointer;color:var(--text);
+  background:linear-gradient(165deg,#1c1830,#15112275);border:1px solid var(--line);border-radius:16px;
+  padding:14px 13px 13px;display:flex;flex-direction:column;gap:5px;overflow:hidden;transition:.18s}
+.pcard:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--pc,#a855f7);opacity:.9}
+.pcard:hover{border-color:var(--pc,#a855f7);transform:translateY(-1px)}
+.pcard.focus{box-shadow:0 0 0 1px var(--pc,#a855f7) inset,0 10px 30px -18px var(--pc,#a855f7)}
+.pcard .pico{width:26px;height:26px}.pcard .pico .i{width:26px;height:26px}
+.pname{font-weight:700;font-size:14px}
+.pdesc{font-size:11.5px;color:var(--muted);line-height:1.4;font-family:var(--serif)}
+.pfocus{position:absolute;top:10px;right:10px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--pc,#a855f7);background:#0e0b18;border:1px solid var(--pc,#a855f7);border-radius:999px;padding:2px 7px}
+.jgrid-hint{font-size:12px;font-style:italic;font-family:var(--serif);text-align:center;margin:13px 4px 2px}
+.deep-head{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.deep-back{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#1b1530;
+  color:var(--pc,#a855f7);display:grid;place-items:center;cursor:pointer}
+.deep-back .i{width:18px;height:18px}
+.deep-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--pc,#a855f7)}
+.deep-pill .i{width:14px;height:14px}
+.deep-title{font-family:var(--serif);font-size:19px;color:#efe9f8;margin-top:2px}
+.deep-steps{position:relative;z-index:1;margin:4px 0 14px;padding-left:20px;display:flex;flex-direction:column;gap:9px}
+.deep-steps li{font-family:var(--serif);font-size:14px;line-height:1.55;color:#cdc5e6}
+.deep-steps li::marker{color:var(--pc,#a855f7);font-weight:700}
+.jplace-wrap{position:relative;z-index:1;display:flex;align-items:center;gap:9px;margin-bottom:12px;
+  background:#15112270;border:1px solid var(--line);border-radius:12px;padding:9px 13px}
+.jplace-wrap .i{width:16px;height:16px;flex:none}
+.jplace{flex:1;background:transparent;border:0;outline:0;color:var(--text);font-size:15px;font-family:var(--serif)}
+.jplace::placeholder{color:#6f6790;font-style:italic}
 .lp-speak{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:2px;display:inline-flex}
 .lp-speak.on{color:var(--gold)}
 .lp-speak .i{width:18px;height:18px}
@@ -2191,6 +2338,8 @@ const SVGP={
   p_growth:'<path d="M12 20.5v-7"/><path d="M12 14c0-3-2.3-5.2-5.3-5.2C6.4 11.8 8.6 14 12 14Z" fill="currentColor" stroke="none"/><path d="M12 12c0-3.2 2.4-5.6 5.6-5.6C17.9 9.6 15.5 12 12 12Z" fill="currentColor" stroke="none"/>',
   p_coin:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M14.4 9.3c-.5-.8-1.4-1.2-2.4-1.2-1.4 0-2.5.8-2.5 2s1.1 1.8 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.4-2.5-1.2"/>',
   p_palette:'<path d="M12 3C6.8 3 3 6.8 3 11.5S6.8 20 12 20c1.1 0 1.8-.9 1.8-2 0-1.4 1-2.1 2.4-2.1 2.7 0 4.8-2 4.8-4.9C21 6.6 17 3 12 3Z"/><circle cx="7.6" cy="10.2" r="1.1" fill="currentColor" stroke="none"/><circle cx="11" cy="7.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.8" r="1.1" fill="currentColor" stroke="none"/>',
+  p_purpose:'<circle cx="12" cy="12" r="8.5"/><path d="M12 5.5 13.7 10.3 18.5 12 13.7 13.7 12 18.5 10.3 13.7 5.5 12 10.3 10.3Z" fill="currentColor" stroke="none"/>',
+  p_compass8:'<circle cx="12" cy="12" r="9"/><path d="M12 3.5 13 11 20.5 12 13 13 12 20.5 11 13 3.5 12 11 11Z" fill="currentColor" stroke="none"/>',
   p_people:'<circle cx="12" cy="7" r="2.6"/><circle cx="5.3" cy="9.5" r="2.1"/><circle cx="18.7" cy="9.5" r="2.1"/><path d="M7.4 18.5c0-2.5 2-4.5 4.6-4.5s4.6 2 4.6 4.5"/><path d="M2.4 17.4c0-1.9 1.3-3.5 3.1-3.6M21.6 17.4c0-1.9-1.3-3.5-3.1-3.6"/>',
   p_mtn:'<path d="M2.4 19 9 7l3.8 6.8L15.2 10 21.6 19Z" fill="currentColor" stroke="none"/><path d="M7.6 11.6 9 9.2l1.3 2.3"/>',
   mic:'<rect x="9" y="2.5" width="6" height="11" rx="3" fill="currentColor" stroke="none"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/>',
@@ -3514,7 +3663,8 @@ async function renderGlobalView(){
 }
 
 /* ---- journal ---- */
-let journalView='feed';
+let journalView='mine';
+const TRAVEL_PROMPTS=["Where are you right now, and what does this place stir in you?","What will you want to remember about today, long after the photos fade?","Who are you here, in this place, that you aren’t quite at home?","What has this journey asked of you — and what has it given back?","Describe one small moment from today you’d never have had at home.","What does being far from the familiar show you about your own life?"];
 let speakOn=(typeof localStorage!=='undefined'&&localStorage.getItem('lumen_speak')==='0')?false:true;
 function _pickVoice(u){try{const vs=speechSynthesis.getVoices();
   const v=vs.find(x=>/Samantha|Serena|Moira|Karen|Google UK English Female|female/i.test(x.name))||vs.find(x=>/en/i.test(x.lang));
@@ -3574,55 +3724,116 @@ const JPROMPTS=[
   "What would you say to your younger self?"];
 let jPrompt='';let rec=null;let listening=false;
 const niceDate=(d)=>new Date(d).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-async function renderJournal(){
-  if(!jPrompt){
-    try{jPrompt=(await api('lifeos/prompts')).prompts.reflection;}catch(e){}
-    if(!jPrompt){try{jPrompt=(await api('prompt')).prompt;}catch(e){jPrompt=JPROMPTS[0];}}
-  }
-  listening=false;rec=null;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b>
-    <button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button>
-    <button class="lo-btn" id="lobtn" style="margin-left:6px">${ic('compass')} Life OS</button></div>
-  <div class="letter">
-    <div class="letter-head">
-      <span>${niceDate(Date.now())}</span>
-      <button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Speak the prompt">${ic(speakOn?'sound':'mute')}</button>
-    </div>
-    <div class="letter-prompt">
-      <span class="lp-q">“${jPrompt}”</span>
-      <button class="lp-shuffle" id="jshuf" title="Another prompt">${ic('spark')} another prompt</button>
-    </div>
-    <textarea id="jt" class="letter-body" rows="7" placeholder="Dear me,&#10;&#10;Today I noticed…"></textarea>
-    <div id="jprev" class="letter-interim"></div>
-    <div class="letter-foot">
-      <button class="mic" id="jmic" title="Speak your letter"><span class="mic-ring"></span>${ic('mic')}</button>
-      <button class="mic" id="jcam" title="Photograph your handwriting">${ic('camera')}</button>
-      <input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">
-      <label class="letter-share"><input type="checkbox" id="js"> <span>Share</span></label>
-    </div>
-    <div class="mic-hint" id="michint"></div>
-    <button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button>
-  </div>
-  <div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='insights'?'on':''}" data-v="insights">Insights</button><button class="${journalView==='feed'?'on':''}" data-v="feed">The collective</button></div>
-  <div id="jbody"></div>`;
-  $('#jshuf').onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt);jPrompt=n;
-    $('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)speak(jPrompt);};
-  $('#lobtn').onclick=renderLifeOS;
-  $('#talkbtn').onclick=renderChat;
+// ---- journaling modes: Deep (pillar work) · Daily (letter) · Travel (place-tagged) ----
+let journalMode='daily';     // 'deep' | 'daily' | 'travel'
+let journalPillar=null;      // chosen pillar when in Deep mode
+let jPlace='';               // place label for Travel mode
+let jTravelPrompt=null;      // current Travel prompt
+let jWeek=null;              // weekly category coverage {counts:{deep,daily,travel}}
+
+const J_MODES=[['deep','Deep','compass'],['daily','Daily','book'],['travel','Travel','pin']];
+const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',travel:'Mark a place while you’re still in it.'};
+
+function jWeekRing(){
+  const cts=(jWeek&&jWeek.counts)||{};
+  const n=['deep','daily','travel'].filter(k=>(cts[k]||0)>0).length;
+  const dot=(k,lbl)=>{const on=(cts[k]||0)>0;return `<span class="jwk ${on?'on':''}">${on?ic('check','g'):'<i class="jwk-o"></i>'}${lbl}</span>`;};
+  return `<div class="jweekbar"><div class="jwk-row">${dot('deep','Deep')}${dot('daily','Daily')}${dot('travel','Travel')}</div>`
+    +`<span class="jwk-cap">${n>=3?'all three tended this week ✦':n+' of 3 this week'}</span></div>`;
+}
+
+function composerHTML(o){
+  return `<div class="letter">`
+    +(o.topHTML||'')
+    +`<div class="letter-head"><span>${niceDate(Date.now())}</span>`
+    +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Speak the prompt">${ic(speakOn?'sound':'mute')}</button></div>`
+    +`<div class="letter-prompt"><span class="lp-q">“${esc(o.prompt||'')}”</span>`
+    +(o.shuffle?`<button class="lp-shuffle" id="jshuf" title="Another prompt">${ic('spark')} another prompt</button>`:'')
+    +`</div>`
+    +`<textarea id="jt" class="letter-body" rows="7" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
+    +`<div id="jprev" class="letter-interim"></div>`
+    +`<div class="letter-foot">`
+    +`<button class="mic" id="jmic" title="Speak your letter"><span class="mic-ring"></span>${ic('mic')}</button>`
+    +`<button class="mic" id="jcam" title="Photograph your handwriting">${ic('camera')}</button>`
+    +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
+    +`<label class="letter-share"><input type="checkbox" id="js"> <span>Share</span></label></div>`
+    +`<div class="mic-hint" id="michint"></div>`
+    +`<button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button></div>`;
+}
+
+function wireComposerCommon(getPrompt){
   $('#jspeak').onclick=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
     $('#jspeak').classList.toggle('on',speakOn);$('#jspeak').innerHTML=ic(speakOn?'sound':'mute');
-    if(speakOn)speak(jPrompt);else if(window.speechSynthesis)speechSynthesis.cancel();};
-  // gently speak the prompt a moment after the page settles
-  if(speakOn){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')speak(jPrompt);},1100);}
+    if(speakOn)speak(getPrompt());else if(window.speechSynthesis)speechSynthesis.cancel();};
+  if(speakOn){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')speak(getPrompt());},1100);}
   $('#jmic').onclick=toggleVoice;
   $('#jcam').onclick=()=>$('#jfile').click();
   $('#jfile').onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
-  $('#jsave').onclick=async()=>{if(listening&&rec)rec.stop();const t=$('#jt').value.trim();if(!t){toast('Write a few words first');return;}
+}
+
+function sealHandler(payload){
+  return async()=>{
+    if(listening&&rec)rec.stop();
+    const t=$('#jt').value.trim();if(!t){toast('Write a few words first');return;}
+    const ex=payload()||{};if(ex.error){toast(ex.error);return;}
     const words=(t.match(/\S+/g)||[]).length;const share=$('#js').checked;
     const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
-    try{const r=await api('journal','POST',{text:t,prompt:jPrompt,share});$('#jt').value='';
-      showJournalSealed(r,words,share);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}};
-  $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournal();});
+    try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||''});
+      $('#jt').value='';if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,share);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
+  };
+}
+
+function renderDailyCompose(){
+  $('#jcompose').innerHTML=composerHTML({prompt:jPrompt,shuffle:true});
+  wireComposerCommon(()=>jPrompt);
+  $('#jshuf').onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt&&JPROMPTS.length>1);jPrompt=n;$('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)speak(jPrompt);};
+  $('#jsave').onclick=sealHandler(()=>({kind:'daily',prompt:jPrompt}));
+}
+
+function renderTravelCompose(){
+  if(!jTravelPrompt)jTravelPrompt=TRAVEL_PROMPTS[0];
+  const top=`<div class="jplace-wrap">${ic('pin','g')}<input id="jplace" class="jplace" maxlength="80" placeholder="Where are you? (city, place…)" value="${esc(jPlace)}"></div>`;
+  $('#jcompose').innerHTML=composerHTML({prompt:jTravelPrompt,shuffle:true,topHTML:top,placeholder:'The light here, the sounds, who I am in this place…'});
+  wireComposerCommon(()=>jTravelPrompt);
+  const pl=$('#jplace');if(pl)pl.oninput=(e)=>{jPlace=e.target.value;};
+  $('#jshuf').onclick=()=>{let n;do{n=TRAVEL_PROMPTS[Math.floor(Math.random()*TRAVEL_PROMPTS.length)];}while(n===jTravelPrompt&&TRAVEL_PROMPTS.length>1);jTravelPrompt=n;$('.lp-q').textContent='“'+jTravelPrompt+'”';if(speakOn)speak(jTravelPrompt);};
+  $('#jsave').onclick=sealHandler(()=>{const place=(($('#jplace')||{}).value||'').trim();if(!place)return{error:'Add where you are first'};jPlace=place;return{kind:'travel',place,prompt:jTravelPrompt};});
+}
+
+async function renderDeepCompose(){
+  if(!journalPillar){
+    let pj;try{pj=await api('pillars');}catch(e){pj=null;}
+    const focus=(pj&&pj.focus)||[];
+    const names=(pj&&pj.pillars&&pj.pillars.map(p=>p.name))||Object.keys(PILLAR_META);
+    $('#jcompose').innerHTML=`<div class="pillar-grid">`+names.map(name=>{
+      const f=focus.includes(name);
+      return `<button class="pcard${f?' focus':''}" data-p="${esc(name)}" style="--pc:${pcolor(name)}">`
+        +`<span class="pico">${ic(picon(name),'grad-gold')}</span>`
+        +`<span class="pname">${esc(name)}</span>`
+        +`<span class="pdesc">${esc(pdesc(name))}</span>`
+        +(f?`<span class="pfocus">focus</span>`:'')+`</button>`;}).join('')
+      +`</div><div class="muted jgrid-hint">Pick a pillar for a short, guided sitting. The Keeper opens where you last left off.</div>`;
+    document.querySelectorAll('.pcard').forEach(b=>b.onclick=()=>{journalPillar=b.dataset.p;renderJournal();});
+    return;
+  }
+  $('#jcompose').innerHTML=`<div class="card center muted"><span class="spinner"></span> Opening your ${esc(journalPillar)} sitting…</div>`;
+  let ex;try{ex=await api('journal/deep?pillar='+encodeURIComponent(journalPillar));}catch(e){ex=null;}
+  if(!ex||!ex.ready){$('#jcompose').innerHTML=`<div class="card center muted">Couldn’t open that pillar right now. <button class="lo-btn" id="pback">${ic('compass')} Back to pillars</button></div>`;const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;renderJournal();};return;}
+  const steps=(ex.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+  const top=`<div class="deep-head" style="--pc:${pcolor(journalPillar)}">`
+    +`<button class="deep-back" id="pback" title="Back to pillars">${ic('compass')}</button>`
+    +`<div><div class="deep-pill">${ic(picon(journalPillar),'g')} ${esc(journalPillar)}</div>`
+    +`<div class="deep-title">${esc(ex.title||'')}</div></div></div>`
+    +(ex.opening?`<div class="keeper-note"><div class="keeper-lbl">${ic('lumen','g')} The Keeper</div><p class="keeper-refl">“${esc(ex.opening)}”</p></div>`:'')
+    +(steps?`<ol class="deep-steps">${steps}</ol>`:'');
+  const prompt=ex.invitation||ex.title||journalPillar;
+  $('#jcompose').innerHTML=composerHTML({prompt,shuffle:false,topHTML:top,placeholder:'Take it one step at a time…'});
+  wireComposerCommon(()=>prompt);
+  const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;renderJournal();};
+  $('#jsave').onclick=sealHandler(()=>({kind:'deep',pillar:journalPillar,prompt}));
+}
+
+async function renderJournalBody(){
   const body=$('#jbody');
   if(journalView==='insights'){
     body.innerHTML=`<div class="card center muted"><span class="spinner"></span> The Keeper is reading your letters…</div>`;
@@ -3652,6 +3863,32 @@ async function renderJournal(){
     body.querySelectorAll('.mini-modbtn[data-report]').forEach(b=>b.onclick=async()=>{await api('feed/report','POST',{id:+b.dataset.report});toast('Reported — thank you. Hidden from your feed.');renderJournal();});
     body.querySelectorAll('.mini-modbtn[data-block]').forEach(b=>b.onclick=async()=>{await api('feed/block','POST',{author_id:+b.dataset.block});toast('Blocked. You will not see their entries.');renderJournal();});
   }
+}
+
+async function renderJournal(){
+  if(!jPrompt){
+    try{jPrompt=(await api('lifeos/prompts')).prompts.reflection;}catch(e){}
+    if(!jPrompt){try{jPrompt=(await api('prompt')).prompt;}catch(e){jPrompt=JPROMPTS[0];}}
+  }
+  try{jWeek=await api('journal/week');}catch(e){}
+  listening=false;rec=null;
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b>`
+    +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button>`
+    +`<button class="lo-btn" id="lobtn" style="margin-left:6px">${ic('compass')} Life OS</button></div>`
+    +jWeekRing()
+    +`<div class="jmodes">`+J_MODES.map(([k,lbl,icn])=>`<button class="jmode${journalMode===k?' on':''}" data-m="${k}">${ic(icn,journalMode===k?'g':'')}<span>${lbl}</span></button>`).join('')+`</div>`
+    +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
+    +`<div id="jcompose"></div>`
+    +`<div class="seg" id="jv" style="margin-top:16px"><button class="${journalView==='mine'?'on':''}" data-v="mine">My letters</button><button class="${journalView==='insights'?'on':''}" data-v="insights">Insights</button><button class="${journalView==='feed'?'on':''}" data-v="feed">The collective</button></div>`
+    +`<div id="jbody"></div>`;
+  $('#lobtn').onclick=renderLifeOS;
+  $('#talkbtn').onclick=renderChat;
+  document.querySelectorAll('.jmode').forEach(b=>b.onclick=()=>{journalMode=b.dataset.m;journalPillar=null;renderJournal();});
+  if(journalMode==='deep')renderDeepCompose();
+  else if(journalMode==='travel')renderTravelCompose();
+  else renderDailyCompose();
+  $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournal();});
+  renderJournalBody();
 }
 function updateMic(){const m=$('#jmic');if(!m)return;m.classList.toggle('live',listening);
   const h=$('#michint');if(h)h.textContent=listening?'Listening… speak softly, I’m writing it down.':'';
@@ -3723,24 +3960,28 @@ function showJournalSealed(res,words,shared){
 /* ---- Life OS: cardinal pillars, daily focuses, AI prompts ---- */
 let LO=null, LO_PILLARS=[];
 const DIRS=[['N','North'],['E','East'],['S','South'],['W','West']];
-const PILLAR_ICON={Family:'p_home',Hobbies:'p_music',Career:'p_career',Health:'p_health',Relationships:'p_rel','Inner Growth':'p_growth'};
+const PILLAR_ICON={Family:'p_home',Relationships:'p_rel',Career:'p_career',Finances:'p_coin',Health:'p_health',Hobbies:'p_music','Inner Growth':'p_growth',Purpose:'p_purpose'};
 const picon=(p)=>PILLAR_ICON[p]||'spark';
-// pillars mirror Ora Health; blurbs are Ora's own
+// the eight life pillars of Lumen's deep journaling
 const PILLAR_META={
   Family:['#e0953a','Where you came from — and how you carry it.'],
-  Hobbies:['#a78bfa','The things you do for the love of doing them.'],
-  Career:['#5fb0fa','The work you’re building, seriously.'],
-  Health:['#34d399','Body, energy, and the basics that hold everything up.'],
   Relationships:['#f472b6','The people you choose and how you show up for them.'],
-  'Inner Growth':['#818cf8','Who you’re becoming.']};
-// a short journaling lesson for each Ora pillar
+  Career:['#5fb0fa','The work you’re building, seriously.'],
+  Finances:['#2dd4bf','Security, freedom, and your relationship with money.'],
+  Health:['#34d399','Body, energy, and the basics that hold everything up.'],
+  Hobbies:['#a78bfa','The things you do for the love of doing them.'],
+  'Inner Growth':['#818cf8','Who you’re becoming.'],
+  Purpose:['#c084fc','Meaning, values, and the bigger why.']};
+// the opening invitation of each pillar's deep exercise (mirrors the server library)
 const PILLAR_LESSON={
-  Family:'Write to one family member as a whole person — their fears, their younger self — not just their role in your life.',
-  Hobbies:'Describe the last time something you love made you lose track of time. What did that flow give you?',
-  Career:'Name the work you’d do even if no one paid or noticed. Where does today meet — or miss — it?',
+  Family:'Turn toward one family member as a whole person — their fears, their younger self — not just their role in your life.',
+  Relationships:'Sit with one relationship on your heart, and write the thing you’ve been meaning to say.',
+  Career:'Name the work you’d do even if no one paid or noticed. Where did today meet — or miss — it?',
+  Finances:'Look plainly at what money means to you — safety, freedom, pressure, proof — and where that belief came from.',
   Health:'Check in with your body like a friend. What has it been asking for that your mind keeps overruling?',
-  Relationships:'Choose one relationship and write the thing you’ve been meaning to say. You don’t have to send it.',
-  'Inner Growth':'Write about who you were a year ago. What would that version of you thank you for?'};
+  Hobbies:'Describe the last time something you love made you lose track of time. What did that flow give you?',
+  'Inner Growth':'Write about who you were a year ago. What would that version of you thank you for?',
+  Purpose:'Reach past the daily: when did you last feel part of something larger than yourself?'};
 const pcolor=(p)=>(PILLAR_META[p]||['#a855f7'])[0];
 const pdesc=(p)=>(PILLAR_META[p]||['','A pillar of your life.'])[1];
 const plesson=(p)=>PILLAR_LESSON[p]||'';
@@ -3916,7 +4157,7 @@ function chatVoice(){
 }
 
 /* ---- profile ---- */
-const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['community','Community activity'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
+const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['journal','Journal rhythm (deep · daily · travel)'],['community','Community activity'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
 function hoursOpts(sel){let h='';for(let i=0;i<24;i++){const lbl=(i===0?'12 AM':i<12?i+' AM':i===12?'12 PM':(i-12)+' PM');h+=`<option value="${i}" ${i===sel?'selected':''}>${lbl}</option>`;}return h;}
 async function renderProfile(){
   const r=await api('me');ME=r.profile;const p=ME;
@@ -4603,8 +4844,56 @@ class H(BaseHTTPRequestHandler):
             u = self._me(c)
             if not u:
                 self._send(401, {"error": "sign in"}); return
-            rows = c.execute("SELECT id,prompt,text,mood,reflection,shared,created FROM journal WHERE user_id=? ORDER BY id DESC LIMIT 200", (u["id"],)).fetchall()
+            kind = (q.get("kind", "") or "").strip()
+            if kind in JOURNAL_KINDS:
+                rows = c.execute("SELECT id,prompt,text,mood,reflection,shared,created,kind,pillar,place "
+                                 "FROM journal WHERE user_id=? AND kind=? ORDER BY id DESC LIMIT 200",
+                                 (u["id"], kind)).fetchall()
+            else:
+                rows = c.execute("SELECT id,prompt,text,mood,reflection,shared,created,kind,pillar,place "
+                                 "FROM journal WHERE user_id=? ORDER BY id DESC LIMIT 200", (u["id"],)).fetchall()
             self._send(200, {"entries": [dict(r) for r in rows]}); return
+
+        if p == "/api/pillars":
+            u = self._me(c)
+            lo = lifeos_get(u) if u else {"focus": []}
+            focus = [f for f in (lo.get("focus") or []) if f in PILLARS]
+            out = []
+            for name in PILLARS:
+                ex = PILLAR_EXERCISES.get(name)
+                out.append({"name": name, "title": ex[0] if ex else name,
+                            "invitation": ex[1] if ex else "", "steps": ex[2] if ex else []})
+            self._send(200, {"pillars": out, "focus": focus}); return
+
+        if p == "/api/journal/deep":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            pillar = (q.get("pillar", "") or "").strip()
+            if pillar not in PILLARS:
+                self._send(400, {"error": "unknown pillar"}); return
+            ex = deep_exercise(c, u, pillar)
+            if not ex:
+                self._send(404, {"error": "no exercise"}); return
+            self._send(200, {"ready": True, **ex}); return
+
+        if p == "/api/journal/week":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            wk = week_str()
+            today = datetime.now(timezone.utc).date()
+            monday = (today - timedelta(days=today.weekday())).isoformat()  # ISO-week start (UTC)
+            counts = {k: 0 for k in JOURNAL_KINDS}
+            for r in c.execute("SELECT COALESCE(kind,'daily') k, COUNT(*) n FROM journal "
+                               "WHERE user_id=? AND substr(created,1,10)>=? GROUP BY k",
+                               (u["id"], monday)).fetchall():
+                if r["k"] in counts:
+                    counts[r["k"]] += r["n"]
+            touched = [k for k in JOURNAL_KINDS if counts[k] > 0]
+            missing = [k for k in JOURNAL_KINDS if counts[k] == 0]
+            self._send(200, {"week": wk, "counts": counts, "touched": touched,
+                             "missing": missing, "complete": not missing}); return
 
         if p == "/api/feed":
             me = self._me(c)
@@ -5130,16 +5419,35 @@ class H(BaseHTTPRequestHandler):
             if not text:
                 self._send(400, {"error": "write something first"}); return
             prompt = (d.get("prompt") or "")[:300]
+            kind = (d.get("kind") or "daily").strip().lower()
+            if kind not in JOURNAL_KINDS:
+                kind = "daily"
+            pillar = (d.get("pillar") or "").strip()[:24]
+            if kind != "deep" or pillar not in PILLARS:
+                pillar = None
+            place = (d.get("place") or "").strip()[:80] if kind == "travel" else None
             # the Keeper reflects back + infers mood (best-effort; never blocks the save)
-            refl = journal_reflect(prompt, text)
+            refl = journal_reflect(prompt, text, kind=kind, pillar=pillar, place=place)
             mood = ((d.get("mood") or refl["mood"] or "")).strip()[:24]
-            c.execute("INSERT INTO journal(user_id,prompt,text,mood,reflection,shared,created) VALUES(?,?,?,?,?,?,?)",
+            c.execute("INSERT INTO journal(user_id,prompt,text,mood,reflection,shared,created,kind,pillar,place) "
+                      "VALUES(?,?,?,?,?,?,?,?,?,?)",
                       (u["id"], prompt, text[:2000], mood, refl["reflection"],
-                       1 if d.get("share") else 0, now_iso()))
+                       1 if d.get("share") else 0, now_iso(), kind, pillar, place))
             new_ach = award_journal_ach(c, u)
             c.commit()
             total = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=?", (u["id"],)).fetchone()["n"]
+            # which journaling categories are still untouched this ISO week?
+            today = datetime.now(timezone.utc).date()
+            monday = (today - timedelta(days=today.weekday())).isoformat()
+            wkc = {k: 0 for k in JOURNAL_KINDS}
+            for r in c.execute("SELECT COALESCE(kind,'daily') k, COUNT(*) n FROM journal "
+                               "WHERE user_id=? AND substr(created,1,10)>=? GROUP BY k",
+                               (u["id"], monday)).fetchall():
+                if r["k"] in wkc:
+                    wkc[r["k"]] += r["n"]
             self._send(200, {"ok": True, "count": total, "reflection": refl["reflection"], "mood": mood,
+                             "kind": kind, "pillar": pillar, "place": place,
+                             "week": {"counts": wkc, "missing": [k for k in JOURNAL_KINDS if wkc[k] == 0]},
                              "new_achievements": [{"code": a, "title": ACH_BY_CODE[a][1]} for a in new_ach]}); return
 
         if p == "/api/journal/insights":
@@ -6263,7 +6571,7 @@ footer a{color:var(--gold);text-decoration:none}
 # ===========================================================================
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
-NOTIF_CATS = ["reminder", "streak", "progress", "community", "discovery", "winback"]
+NOTIF_CATS = ["reminder", "streak", "progress", "journal", "community", "discovery", "winback"]
 DEFAULT_CATS = {k: 1 for k in NOTIF_CATS}
 TIME_CATS = ("daily_reminder", "streak_save", "weekly_recap", "winback")  # count toward daily cap
 DAILY_CAP = 1          # automatic time-based sends per local day
@@ -6355,6 +6663,8 @@ def notif_copy(kind, user, ctx=None, personalize=False):
         "level_up": ("You leveled up ✨", f"Your practice is compounding, {name}. New light unlocked."),
         "achievement": ("Achievement unlocked", ctx.get("desc", "You earned something new.")),
         "milestone": (f"{streak}-day streak 🔥", "That's real consistency. Proud of you."),
+        "journal_nudge": (ctx.get("title", "Your journal is waiting"),
+                          ctx.get("body", "A few honest lines, whenever you're ready.")),
         "broadcast": (ctx.get("title", "Lumen"), ctx.get("body", "")),
     }
     title, body = T.get(kind, ("Lumen", ""))
@@ -6474,6 +6784,26 @@ def _notif_flush_queued(c):
     c.commit()
 
 
+_JOURNAL_NUDGE = {
+    "deep": ("Deep work is waiting", "Pick a pillar and sit with it for a few lines."),
+    "daily": ("A moment for your journal", "A quick daily check-in with yourself tonight?"),
+    "travel": ("Your travel journal", "Capture where you are before the day slips away."),
+}
+
+
+def _journal_week_missing(c, uid):
+    """Which of the three journaling categories haven't been written this ISO week."""
+    today = datetime.now(timezone.utc).date()
+    monday = (today - timedelta(days=today.weekday())).isoformat()
+    counts = {k: 0 for k in JOURNAL_KINDS}
+    for r in c.execute("SELECT COALESCE(kind,'daily') k, COUNT(*) n FROM journal "
+                       "WHERE user_id=? AND substr(created,1,10)>=? GROUP BY k",
+                       (uid, monday)).fetchall():
+        if r["k"] in counts:
+            counts[r["k"]] += r["n"]
+    return [k for k in JOURNAL_KINDS if counts[k] == 0], counts
+
+
 def _notif_candidate(c, u, prefs, lt):
     """Return (category, title, body, dedupe_key) for the top time-based nudge, or None."""
     cats = json.loads(prefs["cats"] or "{}")
@@ -6491,6 +6821,16 @@ def _notif_candidate(c, u, prefs, lt):
         if row["n"] > 0:
             return ("weekly_recap", *notif_copy("weekly_recap", u, {"light": row["s"], "sessions": row["n"]}),
                     f"weekly_recap:{week_str()}")
+    # 2b) journal rhythm — nudge toward a journaling category still untouched this
+    #     week, so Deep / Daily / Travel all get visited. Only for people already
+    #     journaling (never a cold nag); at most once per category per week.
+    if cats.get("journal", 1) and tier in ("new", "habitual", "at_risk") and 2 <= wd <= 5 and h == 18:
+        missing, counts = _journal_week_missing(c, u["id"])
+        if missing and sum(counts.values()) > 0:
+            cat_k = missing[0]
+            title, body = _JOURNAL_NUDGE[cat_k]
+            return ("journal", *notif_copy("journal_nudge", u, {"title": title, "body": body}),
+                    f"journal_week:{week_str()}:{cat_k}")
     # 3) daily reminder — send-time optimized (learned modal hour once we have
     #    history, else the practice time they chose during onboarding, else 7pm)
     if cats.get("reminder", 1) and not sat_today and tier in ("new", "habitual", "at_risk"):
