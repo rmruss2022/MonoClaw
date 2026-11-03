@@ -95,31 +95,31 @@ def seed_personal():
         # upgrade: Baby Cobra Bushwick runs DAILY evening classes (ClassPass is the
         # real daily schedule; Tickettailor only lists special workshops). Matthew
         # goes ~7pm, so show the daily 7pm class + layer specials on top.
-        if existing.get("seed_v") != 4:
+        if existing.get("seed_v") != 5:
             existing["recurring"] = True
-            existing["weekdays"] = [0, 1, 2, 3, 4, 5, 6]
+            # Matthew's standing plan: Thu & Sat 7pm (not the whole studio catalog).
+            # The full daily schedule is scanned + browsable to add more classes.
+            existing["weekdays"] = [4, 6]
             existing["time"] = "7:00 PM"
-            # the Bushwick schedule page is the REAL full daily class list
-            # (parsed deterministically); scan it, not Tickettailor (specials only)
             existing["url"] = "https://babycobrayoga.com/bushwick/"
             existing["scan_url"] = "https://babycobrayoga.com/bushwick/"
             existing["location_match"] = "Bushwick"
-            existing["blurb"] = "Daily donation-based classes in a Bushwick loft (you go ~7pm)."
-            existing["seed_v"] = 4
+            existing["blurb"] = "Donation-based Bushwick loft studio. Your standing class is Thu & Sat 7pm — browse the full schedule to add more."
+            existing["seed_v"] = 5
             changed = True
     else:
         changed = True
         recs.append({
-            "id": uuid.uuid4().hex[:12], "seed": "babycobra", "seed_v": 4,
+            "id": uuid.uuid4().hex[:12], "seed": "babycobra", "seed_v": 5,
             "title": "Baby Cobra Yoga", "recurring": True,
-            "weekdays": [0, 1, 2, 3, 4, 5, 6], "time": "7:00 PM",
+            "weekdays": [4, 6], "time": "7:00 PM",
             "venue": "Baby Cobra Yoga, 47 Thames St #206",
             "neighborhood": "Bushwick", "borough": "Brooklyn", "near_home": True,
             "category": "Wellness", "price": "Donation-based",
             "url": "https://babycobrayoga.com/bushwick/",
             "scan_url": "https://babycobrayoga.com/bushwick/",
             "location_match": "Bushwick",
-            "blurb": "Daily donation-based classes in a Bushwick loft (you go ~7pm).",
+            "blurb": "Donation-based Bushwick loft studio. Your standing class is Thu & Sat 7pm — browse the full schedule to add more.",
         })
     # Williamsburg founders run — weekly Wednesday 7:30am (Luma, Firecrawl-scannable)
     if not any(r.get("seed") == "wburgrun" for r in recs):
@@ -170,47 +170,65 @@ def _instance(r, d):
     }
 
 
+def _session_from(r, s):
+    """Build a dated instance from a scraped session record."""
+    inst = _instance(r, s.get("date", ""))
+    if s.get("time"):
+        inst["time"] = s["time"]
+    if s.get("url"):
+        inst["url"] = s["url"]
+    if s.get("title") and s["title"].lower() not in r["title"].lower():
+        inst["title"] = r["title"] + " · " + s["title"]
+    inst["scanned"] = True
+    return inst
+
+
 def expand_personal(days=32):
-    """Expand personal events into dated instances in the upcoming window.
-    Priority: real scanned sessions > weekly recurrence > one-off date."""
+    """Expand personal events into the events the user actually PLANS to attend:
+    their standing weekly schedule + any specific class they selected. The full
+    scraped studio schedule (r['sessions']) is NOT dumped in here — it's browsable
+    via /api/personal/sessions and added one class at a time."""
     out, today = [], date.today()
     tj, horizon = today.isoformat(), (today + timedelta(days=days)).isoformat()
     for r in load_personal():
         if not r.get("id"):
             continue
-        seen = set()
-        # occurrences the user removed one-by-one (date|starttime keys)
         excl = set(r.get("excluded") or [])
+        selected = set(r.get("selected") or [])
+        sess_by_key = {}
+        for s in (r.get("sessions") or []):
+            sess_by_key[(s.get("date", ""), _start_time(s.get("time", "")))] = s
+
         def _skip(inst):
             return (inst["date"] + "|" + _start_time(inst["time"])) in excl
-        # 1) your recurring regulars (the weekly schedule you set) — always shown
+
+        seen = set()
+        # 1) your standing weekly schedule (what you set when you added it)
         if r.get("recurring"):
             wd = set(r.get("weekdays") or [])
             for i in range(days):
                 d = today + timedelta(days=i)
-                if (d.weekday() + 1) % 7 in wd:   # python Mon=0 -> JS Sun=0
+                if (d.weekday() + 1) % 7 in wd:
                     inst = _instance(r, d.isoformat())
                     if _skip(inst):
                         continue
+                    # enrich with the real class name/link if the scan has it
+                    m = sess_by_key.get((inst["date"], _start_time(inst["time"])))
+                    if m:
+                        inst = _session_from(r, m)
+                        if _skip(inst):
+                            continue
                     out.append(inst); seen.add((inst["date"], _start_time(inst["time"])))
-        # 2) real special sessions from a Firecrawl scan — added on top
-        for s in (r.get("sessions") or []):
-            d = (s.get("date") or "")
-            if not (tj <= d <= horizon):
+        # 2) specific classes you picked from the full schedule
+        for key in selected:
+            dt, _ = (key.split("|", 1) + [""])[:2]
+            s = sess_by_key.get((dt, key.split("|", 1)[1] if "|" in key else ""))
+            if not s or not (tj <= s.get("date", "") <= horizon):
                 continue
-            inst = _instance(r, d)
-            if s.get("time"):
-                inst["time"] = s["time"]
-            if s.get("url"):
-                inst["url"] = s["url"]
-            if s.get("title") and s["title"].lower() not in r["title"].lower():
-                inst["title"] = r["title"] + " · " + s["title"]
-            inst["scanned"] = True
-            if _skip(inst):
+            inst = _session_from(r, s)
+            if _skip(inst) or (inst["date"], _start_time(inst["time"])) in seen:
                 continue
-            if (inst["date"], _start_time(inst["time"])) in seen:
-                continue   # don't duplicate a regular already on that day/time
-            out.append(inst)
+            out.append(inst); seen.add((inst["date"], _start_time(inst["time"])))
         # 3) one-off saved event
         if not r.get("recurring") and not r.get("sessions") and r.get("date") and r["date"] >= tj:
             inst = _instance(r, r["date"])
@@ -1116,6 +1134,14 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .evm-btn:hover{border-color:#3a3a50}
  .evm-btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 4px 16px -6px rgba(255,92,138,.6)}
  .evm-btn.danger:hover{background:rgba(239,68,68,.2);border-color:#5a2730;color:#fff}
+ .sch-list{max-height:52vh;overflow:auto;margin-top:6px}
+ .sch-day{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#ff9dc0;margin:14px 0 6px}
+ .sch-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)}
+ .sch-t{flex:0 0 66px;font-size:12.5px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+ .sch-n{flex:1;min-width:0;font-size:13px;color:#c8c6d6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .sch-go{flex:0 0 auto;border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+ .sch-go.on{color:#fff;border-color:transparent;background:linear-gradient(135deg,#10b981,#0d9488)}
+ .sch-go:disabled{opacity:.6;cursor:default}
  .modal-bg{position:fixed;inset:0;background:rgba(5,5,10,.7);display:flex;align-items:center;justify-content:center;z-index:60;padding:18px}
  .modal-bg[hidden]{display:none}
  .modal{background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:440px;width:100%;padding:22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
@@ -1279,6 +1305,7 @@ function openEvent(e){
    +'<div class="evm-actions">'
     +(e.url?'<a class="evm-btn primary" href="'+esc(e.url)+'" target="_blank" rel="noopener">🎟 Open / Tickets</a>':'')
     +'<button class="evm-btn" data-mics>📅 Add to calendar</button>'
+    +(e.mine&&e.recurring?'<button class="evm-btn" data-mbrowse="'+esc(e.pid||'')+'">📋 Browse full schedule &amp; add classes</button>':'')
     +(e.mine?('<button class="evm-btn danger" data-mrm>✕ Remove this class</button>'
              +(e.recurring?'<button class="evm-btn danger" data-mrmall>Remove the whole series</button>':''))
             :'<button class="evm-btn" data-msave>＋ Save to my events</button>')
@@ -1480,12 +1507,43 @@ function removeSeries(e){
 }
 // event detail modal: actions
 var evModal=document.getElementById('evModal');
-function closeEv(){evModal.hidden=true;evModal._ev=null;}
+function closeEv(){evModal.hidden=true;evModal._ev=null;evModal._sched=null;}
+// browse a regular's full scraped schedule and pick specific classes
+function openSchedule(pid,title){
+ fetch('api/personal/sessions?id='+encodeURIComponent(pid),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+  var byDay={},order=[];
+  (d.sessions||[]).forEach(function(s){if(!byDay[s.date]){byDay[s.date]=[];order.push(s.date);}byDay[s.date].push(s);});
+  var body=order.map(function(dt){
+   var p=dt.split('-'),dd=new Date(+p[0],+p[1]-1,+p[2]);
+   return '<div class="sch-day">'+WD[dd.getDay()]+', '+MON[dd.getMonth()]+' '+dd.getDate()+'</div>'
+    +byDay[dt].map(function(s){
+     var on=s.selected;
+     return '<div class="sch-row"><div class="sch-t">'+esc(s.time||'')+'</div><div class="sch-n">'+esc((s.title||'Class').replace(/ 🌶️/,' 🌶️'))+'</div>'
+      +'<button class="sch-go'+(on?' on':'')+'" data-go="'+esc(dt)+'~'+esc(s.time||'')+'"'+(s.standing?' disabled title="your standing class"':'')+'>'+(on?'✓ Going':'+ Add')+'</button></div>';
+    }).join('');
+  }).join('') || '<div class="empty">No upcoming classes found — try ⟳ Scan.</div>';
+  evModal.querySelector('.evm-card').innerHTML=
+   '<div class="evm-top" style="background:linear-gradient(135deg,#34d399,#a855f7)"></div>'
+   +'<button class="evm-x" data-close>✕</button>'
+   +'<div class="evm-body"><div class="evm-cat">📋 Full schedule</div><h2 class="evm-title">'+esc(title)+'</h2>'
+   +'<p class="evm-blurb">Tap <b>+ Add</b> on any class to put it in your calendar. Your Thu/Sat 7pm is already in.</p>'
+   +'<div class="sch-list">'+body+'</div></div>';
+  evModal._sched=pid;evModal.hidden=false;
+ });
+}
 evModal.addEventListener('click',function(ev){
  if(ev.target===evModal||ev.target.closest('[data-close]')){closeEv();return;}
+ // schedule-browser toggles
+ var go=ev.target.closest('[data-go]');
+ if(go&&evModal._sched){var parts=go.getAttribute('data-go').split('~');var dt=parts[0],tm=parts.slice(1).join('~');
+  var adding=!go.classList.contains('on');
+  fetch('api/personal/'+(adding?'select':'exclude'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:evModal._sched,date:dt,time:tm})})
+   .then(function(){go.classList.toggle('on',adding);go.textContent=adding?'✓ Going':'+ Add';load(false);});
+  return;}
  var e=evModal._ev;if(!e)return;
  if(ev.target.closest('[data-mics]')){downloadICS(e);return;}
  if(ev.target.closest('[data-msave]')){saveMine(e);closeEv();return;}
+ var mb=ev.target.closest('[data-mbrowse]');if(mb){openSchedule(mb.getAttribute('data-mbrowse'),e.title);return;}
  if(ev.target.closest('[data-mrm]')){removeOccurrence(e);closeEv();return;}
  if(ev.target.closest('[data-mrmall]')){removeSeries(e);closeEv();return;}
 });
@@ -1552,6 +1610,31 @@ class H(BaseHTTPRequestHandler):
             self._send(build_ics(), "text/calendar; charset=utf-8")
         elif p == "/api/personal":
             self._send(json.dumps({"personal": load_personal()}))
+        elif p == "/api/personal/sessions":
+            pid = (q.split("id=", 1)[1].split("&")[0] if "id=" in q else "")
+            today = time.strftime("%Y-%m-%d")
+            rec = next((r for r in load_personal() if r.get("id") == pid), None)
+            out = []
+            if rec:
+                sel = set(rec.get("selected") or [])
+                wd = set(rec.get("weekdays") or [])
+                for s in (rec.get("sessions") or []):
+                    d = s.get("date", "")
+                    if d < today:
+                        continue
+                    st = _start_time(s.get("time", ""))
+                    key = d + "|" + st
+                    try:
+                        dd = date.fromisoformat(d)
+                        standing = rec.get("recurring") and ((dd.weekday() + 1) % 7 in wd) and st == _start_time(rec.get("time", ""))
+                    except Exception:
+                        standing = False
+                    out.append({"date": d, "time": s.get("time", ""), "title": s.get("title", ""),
+                                "url": s.get("url", ""), "selected": (key in sel) or bool(standing),
+                                "standing": bool(standing)})
+                out.sort(key=lambda s: (s["date"], _mins(s.get("time", ""))))
+            self._send(json.dumps({"id": pid, "title": (rec or {}).get("title", ""),
+                                   "sessions": out[:120]}))
         elif p == "/api/widget":
             store = load_store()
             if is_stale(store) or not store.get("events"):
@@ -1635,6 +1718,24 @@ class H(BaseHTTPRequestHandler):
                     if key not in ex:
                         ex.append(key)
                     r["excluded"] = ex
+                    # if it was a selected class, drop that selection too
+                    r["selected"] = [k for k in (r.get("selected") or []) if k != key]
+            save_personal(recs)
+            self._send(json.dumps({"ok": True}))
+        elif p == "/api/personal/select":
+            # add ONE specific class from the full schedule to your plans
+            b = self._body()
+            pid = (b.get("id") or "").strip()
+            d = (b.get("date") or "").strip()
+            key = d + "|" + _start_time(b.get("time") or "")
+            recs = load_personal()
+            for r in recs:
+                if r.get("id") == pid:
+                    sel = r.get("selected") or []
+                    if key not in sel:
+                        sel.append(key)
+                    r["selected"] = sel
+                    r["excluded"] = [k for k in (r.get("excluded") or []) if k != key]
             save_personal(recs)
             self._send(json.dumps({"ok": True}))
         elif p == "/api/personal/scan":
