@@ -41,7 +41,7 @@ _FOREMAN_ICON_KEYS = {
     "travelog": "travelog", "open-home": "openhome", "rolodex": "rolodex",
     "ora-health": "ora", "chase": "chase", "croppa": "croppa", "inkling": "inkling",
     "favorly": "favorly", "lumen": "lumen", "contentforge": "vantage",
-    "foreman": "adminhub", "waypoint": "waypoint", "dropstick": "dropstick",
+    "marquee": "marquee", "foreman": "adminhub", "waypoint": "waypoint", "dropstick": "dropstick",
 }
 
 def _icon_svg(slug):
