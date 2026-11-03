@@ -620,6 +620,38 @@ SOURCES = [
 ]
 
 
+_SRC_COLOR = {
+    "Nightlife": ("#a855f7", "#7c3aed"), "Music": ("#ff5c8a", "#be185d"),
+    "Festival": ("#ec4899", "#a855f7"), "Arts": ("#38bdf8", "#2563eb"),
+    "Wellness": ("#34d399", "#059669"), "Tickets": ("#f59e0b", "#d97706"),
+    "Community": ("#2dd4bf", "#0ea5e9"), "Live search": ("#fbbf24", "#f59e0b"),
+}
+
+
+def public_sources():
+    """The connected platforms Marquee's agents pull events from — shown to users
+    so they can see where the calendar comes from. Built from the live SOURCES
+    roster plus the partner platforms used for specific events/regulars."""
+    out = [{"name": "Our internet search", "url": None, "category": "Live search",
+            "active": bool(GEMINI_KEY),
+            "note": "Gemini + Google Search grounding surfaces fresh NYC events"}]
+    for s in SOURCES:
+        out.append({"name": s["name"], "url": s["url"], "category": s["hint"],
+                    "active": bool(s.get("on")),
+                    "note": "Listing platform, scanned via Firecrawl"})
+    for name, url, cat, note in [
+        ("Luma", "https://luma.com/", "Community", "Community & creator event pages"),
+        ("ClassPass", "https://classpass.com/", "Wellness", "Studio class schedules"),
+        ("Tickettailor", "https://www.tickettailor.com/", "Tickets", "Independent event tickets"),
+        ("AXS", "https://www.axs.com/", "Tickets", "Venue & concert tickets"),
+    ]:
+        out.append({"name": name, "url": url, "category": cat, "active": True, "note": note})
+    for o in out:
+        c = _SRC_COLOR.get(o["category"], ("#ff5c8a", "#a855f7"))
+        o["c0"], o["c1"] = c
+    return out
+
+
 def fetch_from_source(src, limit=6):
     """Firecrawl-scrape a platform's NYC listing (cache-first) and have Gemini
     extract its real upcoming events. Returns a list tagged with the source."""
@@ -866,8 +898,8 @@ ADMIN_PAGE = r"""<!doctype html><html lang="en"><head>
  <h2>Content cache <span id="cacheHead" class="pill ok"><span class="dot"></span>—</span></h2>
  <div class="controls" style="margin-bottom:12px">
    <button class="btn" id="refreshBtn">↻ Refresh events now</button>
-   <button class="btn" id="crawlBtn">🕷 Re-crawl &amp; scan regulars</button>
-   <button class="btn ghost" id="clearBtn">🗑 Clear cache</button>
+   <button class="btn" id="crawlBtn"><svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="3.2"/><path d="M12 9.8V7M12 16.2V19M8.8 13H5.5M18.5 13h-3.3M9.6 10.6 7.2 8.6M16.8 8.6l-2.4 2M9.6 15.4l-2.4 2M16.8 17.4l-2.4-2"/></svg> Re-crawl &amp; scan regulars</button>
+   <button class="btn ghost" id="clearBtn"><svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M10 11v6M14 11v6"/></svg> Clear cache</button>
  </div>
  <table id="cacheTbl"><thead><tr><th>Cached source</th><th>Age</th><th>Size</th></tr></thead><tbody></tbody></table>
 
@@ -885,11 +917,11 @@ function load(){
  fetch('api/admin',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
   // agents
   var ev=d.events,A=[
-   {n:'🔭 Discovery Agent',d:'Finds real NYC events via Gemini + Google Search grounding (strict: deep-link listings only). Writes the events cache.',
+   {n:'<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg> Discovery Agent',d:'Finds real NYC events via Gemini + Google Search grounding (strict: deep-link listings only). Writes the events cache.',
     st:(d.llm?'<span class="'+(ev.stale?'warn':'ok')+'"><span class="dot"></span>'+ev.count+' events · updated '+ago(Math.round((d.ts-ev.fetched_at)/60000))+' · TTL '+ev.ttl_h+'h</span>':'<span class="warn"><span class="dot"></span>LLM key missing</span>')},
-   {n:'🕷 Crawl Agent',d:'Every '+d.crawl.every_h+'h, refreshes the content cache for each regular\'s source page (Firecrawl). The app reads cache-first.',
+   {n:'<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:-2px" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="3.2"/><path d="M12 9.8V7M12 16.2V19M8.8 13H5.5M18.5 13h-3.3M9.6 10.6 7.2 8.6M16.8 8.6l-2.4 2M9.6 15.4l-2.4 2M16.8 17.4l-2.4-2"/></svg> Crawl Agent',d:'Every '+d.crawl.every_h+'h, refreshes the content cache for each regular\'s source page (Firecrawl). The app reads cache-first.',
     st:(d.firecrawl?'<span class="ok"><span class="dot"></span>'+d.cache.count+' pages cached · TTL '+d.cache.ttl_h+'h</span>':'<span class="warn"><span class="dot"></span>Firecrawl key missing</span>')},
-   {n:'🧠 Extract Agent',d:'Reads cached pages and extracts the real upcoming sessions (dates/times/links) with Gemini. Writes your regulars\' schedules.',
+   {n:'<svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:-2px" fill="currentColor"><path d="M9 4a2.6 2.6 0 0 0-2.6 2.6c0 .2 0 .3.1.5A2.8 2.8 0 0 0 4.8 12a2.8 2.8 0 0 0 1.5 4.3A2.5 2.5 0 0 0 11 16V5.5A1.5 1.5 0 0 0 9.5 4zm6 0a2.6 2.6 0 0 1 2.6 2.6c0 .2 0 .3-.1.5A2.8 2.8 0 0 1 19.2 12a2.8 2.8 0 0 1-1.5 4.3A2.5 2.5 0 0 1 13 16V5.5A1.5 1.5 0 0 1 14.5 4z"/></svg> Extract Agent',d:'Reads cached pages and extracts the real upcoming sessions (dates/times/links) with Gemini. Writes your regulars\' schedules.',
     st:'<span class="ok"><span class="dot"></span>'+d.regulars.length+' regulars tracked</span>'}
   ];
   document.getElementById('agents').innerHTML=A.map(function(a){return '<div class="agent"><h3>'+a.n+'</h3><div class="d">'+a.d+'</div><div class="st">'+a.st+'</div></div>';}).join('');
@@ -966,23 +998,23 @@ ADMIN_DIAGRAM = r"""<svg viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg
  <text x="504" y="208" class="s">your regulars + saved</text>
  <text x="504" y="224" class="s">real scanned sessions</text>
  <rect class="box" x="714" y="160" width="226" height="80" rx="12" stroke="url(#dg)"/>
- <text x="732" y="188" class="t">content cache ⚡</text>
+ <g transform="translate(728,176) scale(0.62)" fill="none" stroke="#f4f3f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6z" fill="#f4f3f8" stroke="none"/></g><text x="752" y="188" class="t">content cache</text>
  <text x="732" y="208" class="s">data/cache/&lt;sha1(url)&gt;</text>
  <text x="732" y="224" class="s">pull-from-here-first · TTL 12h</text>
 
  <!-- agents -->
  <rect class="box" x="40" y="312" width="270" height="100" rx="12"/>
- <text x="58" y="340" class="t">🔭 Discovery Agent</text>
+ <g transform="translate(56,328) scale(0.62)" fill="none" stroke="#f4f3f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g><text x="80" y="340" class="t">Discovery Agent</text>
  <text x="58" y="360" class="s">Gemini + Google Search grounding</text>
  <text x="58" y="378" class="s">strict: real deep-link listings only</text>
  <text x="58" y="396" class="s">→ writes events.json</text>
  <rect class="box" x="340" y="312" width="270" height="100" rx="12" stroke="url(#dg)"/>
- <text x="358" y="340" class="t">🕷 Crawl Agent · every 6h</text>
+ <g transform="translate(356,328) scale(0.62)" fill="none" stroke="#f4f3f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="3.2"/><path d="M12 9.8V7M12 16.2V19M8.8 13H5.5M18.5 13h-3.3M9.6 10.6 7.2 8.6M16.8 8.6l-2.4 2M9.6 15.4l-2.4 2M16.8 17.4l-2.4-2"/></g><text x="380" y="340" class="t">Crawl Agent · every 6h</text>
  <text x="358" y="360" class="s">Firecrawl scrape of each source</text>
  <text x="358" y="378" class="s">refreshes the content cache</text>
  <text x="358" y="396" class="s">→ writes content cache</text>
  <rect class="box" x="640" y="312" width="300" height="100" rx="12"/>
- <text x="658" y="340" class="t">🧠 Extract Agent</text>
+ <g transform="translate(656,328) scale(0.62)" fill="none" stroke="#f4f3f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a2.6 2.6 0 0 0-2.6 2.6c0 .2 0 .3.1.5A2.8 2.8 0 0 0 4.8 12a2.8 2.8 0 0 0 1.5 4.3A2.5 2.5 0 0 0 11 16V5.5A1.5 1.5 0 0 0 9.5 4zm6 0a2.6 2.6 0 0 1 2.6 2.6c0 .2 0 .3-.1.5A2.8 2.8 0 0 1 19.2 12a2.8 2.8 0 0 1-1.5 4.3A2.5 2.5 0 0 1 13 16V5.5A1.5 1.5 0 0 1 14.5 4z" fill="#f4f3f8" stroke="none"/></g><text x="680" y="340" class="t">Extract Agent</text>
  <text x="658" y="360" class="s">reads cache → Gemini extracts</text>
  <text x="658" y="378" class="s">real dates/times/links</text>
  <text x="658" y="396" class="s">→ writes personal.json sessions</text>
@@ -1117,6 +1149,22 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  /* add-event modal */
  /* event detail modal */
  .evm-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:460px;width:100%;overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+ .apps-sheet{position:relative;background:var(--card);border:1px solid var(--line);border-radius:18px;max-width:460px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);padding:18px 16px}
+ .apps-head{display:flex;align-items:center;justify-content:space-between}
+ .apps-head b{font-size:18px}
+ .apps-sub{color:#9a98ad;font-size:12.5px;margin:3px 0 14px}
+ .apps-grid{display:flex;flex-direction:column;gap:9px}
+ .app-link{text-decoration:none;color:inherit;display:block}
+ .app-card{display:flex;gap:12px;align-items:center;background:#15151f;border:1px solid var(--line);border-radius:14px;padding:11px 12px;transition:.14s}
+ .app-card:hover{border-color:#3a3a50;transform:translateY(-1px)}
+ .app-ico{flex:0 0 auto;width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:18px}
+ .app-main{min-width:0}
+ .app-n{font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:7px}
+ .app-d{color:#9a98ad;font-size:12px;margin-top:2px;line-height:1.35}
+ .app-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:999px;flex:0 0 auto}
+ .app-tag.public{background:rgba(52,211,153,.16);color:#34d399}
+ .app-tag.private{background:rgba(148,148,170,.18);color:#bdbccb}
+ .app-tag.soon{background:rgba(245,201,119,.16);color:#f5c977}
  .evm-top{height:6px}
  .evm-x{position:absolute;top:12px;right:12px;border:0;background:rgba(255,255,255,.08);color:#dcdae8;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;line-height:1}
  .evm-x:hover{background:rgba(255,255,255,.16)}
@@ -1186,7 +1234,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
     <rect x="11" y="15" width="26" height="20" rx="3" fill="#fff"/><rect x="11" y="15" width="26" height="6" rx="3" fill="#ffd7e4"/>
     <circle cx="16" cy="12" r="2" fill="#fff"/><circle cx="24" cy="11" r="2" fill="#fff"/><circle cx="32" cy="12" r="2" fill="#fff"/>
     <g fill="#a855f7"><circle cx="17" cy="27" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="27" r="2"/><circle cx="17" cy="32" r="2"/><circle cx="24" cy="32" r="2"/></g></svg>
-   <div><h1>Marquee</h1><p class="sub">What's on in NYC · <span class="home" id="homePill">📍 Bushwick, Brooklyn</span></p></div>
+   <div><h1>Marquee</h1><p class="sub">What's on in NYC · <span class="home" id="homePill"><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg> Bushwick, Brooklyn</span></p></div>
   </header>
   <div class="actions">
    <button class="refresh add" id="addBtn" title="Add your own event">+ Add event</button>
@@ -1194,12 +1242,13 @@ PAGE = r"""<!doctype html><html lang="en"><head>
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M12 12v6M9 15h6"/></svg>Subscribe</button>
    <button class="refresh" id="refresh" title="Refresh events">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>Refresh</button>
+   <button class="refresh" id="appsBtn" title="Where our events come from"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18.5" r="1.6"/><path d="M8 15a5.5 5.5 0 0 1 8 0M5 11.5a10 10 0 0 1 14 0M2 8a14.5 14.5 0 0 1 20 0"/></svg>Sources</button>
   </div>
  </div>
  <div class="chips" id="chips"></div>
  <div class="controls">
    <span class="views" id="loc"><button data-l="mine" class="on">★ Mine</button><button data-l="all">All NYC</button><button data-l="near">★ Near me</button><button data-l="Brooklyn">Brooklyn</button></span>
-   <span class="views" id="views"><button data-v="week" class="on">This week</button><button data-v="list">Upcoming</button><button data-v="cal">Calendar</button></span>
+   <span class="views" id="views"><button data-v="cal" class="on">Calendar</button><button data-v="week">This week</button><button data-v="list">Upcoming</button></span>
  </div>
  <div id="calWrap" class="cal" hidden>
   <div class="cal-head"><button class="cal-nav" id="pm">‹</button><b id="monLbl"></b><button class="cal-nav" id="nm">›</button></div>
@@ -1207,7 +1256,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  </div>
  <div id="list"></div>
  <div class="foot" id="foot"></div>
- <div class="foot" style="margin-top:6px"><a href="/admin" style="color:#8f8da3;text-decoration:none">⚙ Admin &amp; systems</a></div>
+ <div class="foot" style="margin-top:6px"><a href="/admin" style="color:#8f8da3;text-decoration:none"><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5l1.6 2.3 2.7-.6.6 2.7 2.3 1.6-1 2.6 1 2.6-2.3 1.6-.6 2.7-2.7-.6L12 21.5l-1.6-2.3-2.7.6-.6-2.7L4.8 15.5l1-2.6-1-2.6 2.3-1.6.6-2.7 2.7.6z"/></svg> Admin &amp; systems</a></div>
 </div>
 <div class="modal-bg" id="addModal" hidden><div class="modal">
  <h3>Add an event</h3>
@@ -1238,6 +1287,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  <div class="modal-actions"><button class="m-cancel" id="sub_cancel">Done</button></div>
 </div></div>
 <div class="modal-bg" id="evModal" hidden><div class="evm-card"></div></div>
+<div class="modal-bg" id="appsModal" hidden><div class="apps-sheet"><div class="apps-head"><b>Where events come from</b><button class="evm-x" data-close title="Close">✕</button></div><p class="apps-sub">Marquee pulls live events from these platforms — scanned &amp; refreshed daily.</p><div class="apps-grid" id="appsGrid"></div></div></div>
 <script>
 var CATCOLOR={Music:'#ff5c8a',Nightlife:'#a855f7',Arts:'#38bdf8',Theater:'#f59e0b',Comedy:'#fbbf24',
   Sports:'#22c55e',Food:'#fb7185',Festival:'#ec4899',Family:'#2dd4bf',Film:'#818cf8',Wellness:'#34d399'};
@@ -1254,10 +1304,20 @@ var CAT_SVG={
  Film:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3.3 4.5 20.4 6.8l-.4 2.7L3 7.2z"/></svg>',
  Wellness:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2" fill="currentColor" stroke="none"/><path d="M12 9c-1.5 1.4-5 2-5 2 .4 2.8 2.4 4.5 5 4.5s4.6-1.7 5-4.5c0 0-3.5-.6-5-2z" fill="currentColor" stroke="none"/><path d="M4 18c2.6 1.8 13.4 1.8 16 0"/></svg>'};
 function catIcon(k){return CAT_SVG[k]||'';}
+var IC={
+ pin:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg>',
+ clock:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+ ticket:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 2 2 0 0 0 0-4z"/><path d="M15 6.5v11" stroke-dasharray="1.6 2.4"/></svg>',
+ cal:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+ link:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.5 13.2a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7l-1.3 1.3"/><path d="M13.5 10.8a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1.3-1.3"/></svg>',
+ list:'<svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9.5 3h5v3h-5zM8.5 11h7M8.5 15h7"/></svg>',
+ pepper:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M14 7c.4-2 2-3.3 4-3.3.4 0 .5.5.2.7-.8.5-1.2 1.1-1.3 2 .7.5 1.1 1.3 1.1 2.3 0 5.5-4.5 11-10.5 11A4.5 4.5 0 0 1 3 15.2c0-.5.6-.7 1-.4a3 3 0 0 0 4.3-.8C6 13.4 5 11.8 5 10c0-.4.5-.6.8-.3A5 5 0 0 0 14 7z"/></svg>'};
+function schName(t){t=t||'Class';var hot=/\uD83C\uDF36/.test(t);return esc(t.replace(/\s*\uD83C\uDF36\uFE0F?/g,''))+(hot?' '+IC.pepper:'');}
+
 var CATS=['Music','Nightlife','Arts','Theater','Comedy','Sports','Food','Festival','Family','Film','Wellness'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-var all=[],active=new Set(),view='week',curMonth=null,selDay=null,loc='mine';
+var all=[],active=new Set(),view='cal',curMonth=null,selDay=null,loc='mine';
 function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function parseD(s){var p=(s||'').split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
 function chipTime(t){var m=(t||'').match(/(\d{1,2})(?::(\d{2}))?\s*([ap])/i);if(!m)return '';var mm=(m[2]&&m[2]!=='00')?':'+m[2]:'';return m[1]+mm+m[3].toLowerCase();}
@@ -1276,13 +1336,13 @@ function evCard(e){
   +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+catIcon(e.category)+' '+esc(e.category)+'</span>'
   +(e.mine?'<span class="mine-tag">'+(e.recurring?'★ Mine · weekly':'★ Mine')+'</span>':'')
   +(e.near_home&&!e.mine?'<span class="near-tag">★ Near you</span>':'')
-  +(e.time?'<span>🕒 '+esc(e.time)+'</span>':'')
-  +(e.venue?'<span>📍 '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):(e.borough?', '+esc(e.borough):''))+'</span>':'')
-  +(e.price?'<span>🎟 '+esc(e.price)+'</span>':'')
+  +(e.time?'<span>'+IC.clock+' '+esc(e.time)+'</span>':'')
+  +(e.venue?'<span>'+IC.pin+' '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):(e.borough?', '+esc(e.borough):''))+'</span>':'')
+  +(e.price?'<span>'+IC.ticket+' '+esc(e.price)+'</span>':'')
   +(e.source&&!e.mine?'<span class="src">via '+esc(e.source)+'</span>':'')+'</div>'
   +(e.blurb?'<p class="bl">'+esc(e.blurb)+'</p>':'')+'</div>'
   +'<div class="acts">'
-   +'<button class="act" data-ics="'+e._i+'" title="Add to my calendar (.ics)">📅</button>'
+   +'<button class="act" data-ics="'+e._i+'" title="Add to my calendar (.ics)">'+IC.cal+'</button>'
    +(e.mine?'<button class="act del" data-rm="'+e._i+'" title="Remove this one">✕</button>'
            :'<button class="act" data-save="'+e._i+'" title="Save to my events">＋</button>')
   +'</div></div>';
@@ -1298,14 +1358,14 @@ function openEvent(e){
      +(e.mine?' · ★ Mine'+(e.recurring?' · weekly':''):'')+(e.near_home&&!e.mine?' · ★ Near you':'')+(e.source&&!e.mine?' · via '+esc(e.source):'')+'</div>'
    +'<h2 class="evm-title">'+esc(e.title)+'</h2>'
    +'<div class="evm-when">'+WD[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate()+(e.time?' · '+esc(e.time):'')+'</div>'
-   +(place?'<div class="evm-row">📍 '+esc(place)+'</div>':'')
-   +(e.price?'<div class="evm-row">🎟 '+esc(e.price)+'</div>':'')
+   +(place?'<div class="evm-row">'+IC.pin+' '+esc(place)+'</div>':'')
+   +(e.price?'<div class="evm-row">'+IC.ticket+' '+esc(e.price)+'</div>':'')
    +(e.blurb?'<p class="evm-blurb">'+esc(e.blurb)+'</p>':'')
-   +(e.url?'<div class="evm-link">🔗 <a href="'+esc(e.url)+'" target="_blank" rel="noopener">'+esc(e.url.replace(/^https?:\/\//,'').slice(0,54))+'…</a></div>':'')
+   +(e.url?'<div class="evm-link">'+IC.link+' <a href="'+esc(e.url)+'" target="_blank" rel="noopener">'+esc(e.url.replace(/^https?:\/\//,'').slice(0,54))+'…</a></div>':'')
    +'<div class="evm-actions">'
-    +(e.url?'<a class="evm-btn primary" href="'+esc(e.url)+'" target="_blank" rel="noopener">🎟 Open / Tickets</a>':'')
-    +'<button class="evm-btn" data-mics>📅 Add to calendar</button>'
-    +(e.mine&&e.recurring?'<button class="evm-btn" data-mbrowse="'+esc(e.pid||'')+'">📋 Browse full schedule &amp; add classes</button>':'')
+    +(e.url?'<a class="evm-btn primary" href="'+esc(e.url)+'" target="_blank" rel="noopener">'+IC.ticket+' Open / Tickets</a>':'')
+    +'<button class="evm-btn" data-mics>'+IC.cal+' Add to calendar</button>'
+    +(e.mine&&e.recurring?'<button class="evm-btn" data-mbrowse="'+esc(e.pid||'')+'">'+IC.list+' Browse full schedule &amp; add classes</button>':'')
     +(e.mine?('<button class="evm-btn danger" data-mrm>✕ Remove this class</button>'
              +(e.recurring?'<button class="evm-btn danger" data-mrmall>Remove the whole series</button>':''))
             :'<button class="evm-btn" data-msave>＋ Save to my events</button>')
@@ -1403,7 +1463,7 @@ function load(force){
  fetch('api/events'+(force?'?force=1':''),{cache:'no-store'}).then(function(x){return x.json();}).then(function(d){
   all=d.events||[];
   all.forEach(function(e,i){e._i=i;});
-  if(d.home)document.getElementById('homePill').textContent='📍 '+d.home;
+  if(d.home)document.getElementById('homePill').innerHTML=IC.pin+' '+esc(d.home);
   document.getElementById('foot').textContent=all.length+' events · updated '+(d.fetched_at?new Date(d.fetched_at).toLocaleString():'—')+' · tap any event for tickets';
   render();r.classList.remove('spin');
  }).catch(function(){r.classList.remove('spin');});
@@ -1444,6 +1504,22 @@ var modal=document.getElementById('addModal'),selWd=new Set();
 })();
 function openModal(){modal.hidden=false;}
 function closeModal(){modal.hidden=true;}
+var SRC_CACHE=null;
+function srcTag(active){return '<span class="app-tag '+(active?'public':'soon')+'">'+(active?'Active':'Standby')+'</span>';}
+async function renderApps(){
+ var g=document.getElementById('appsGrid');
+ document.getElementById('appsModal').hidden=false;
+ if(!SRC_CACHE){
+  g.innerHTML='<div class="app-d" style="padding:18px 4px;text-align:center">Loading sources…</div>';
+  try{SRC_CACHE=(await (await fetch('api/sources')).json()).sources||[];}catch(e){SRC_CACHE=[];}
+ }
+ g.innerHTML=SRC_CACHE.map(function(a){
+  var ico='<span class="app-ico" style="background:linear-gradient(135deg,'+(a.c0||'#ff5c8a')+','+(a.c1||'#a855f7')+')">'+esc((a.name||'?')[0])+'</span>';
+  var meta=esc(a.note||'')+(a.category?' · '+esc(a.category):'');
+  var inner='<div class="app-card">'+ico+'<div class="app-main"><div class="app-n">'+esc(a.name)+srcTag(a.active)+'</div><div class="app-d">'+meta+'</div></div></div>';
+  return a.url?'<a class="app-link" href="'+esc(a.url)+'" target="_blank" rel="noopener">'+inner+'</a>':'<div class="app-link">'+inner+'</div>';
+ }).join('');
+}
 document.getElementById('addBtn').onclick=openModal;
 document.getElementById('f_cancel').onclick=closeModal;
 (function(){
@@ -1452,6 +1528,9 @@ document.getElementById('f_cancel').onclick=closeModal;
  document.getElementById('sub_url').value=httpsUrl;
  document.getElementById('sub_webcal').href='webcal://'+location.host+'/calendar.ics';
  document.getElementById('subBtn').onclick=function(){sm.hidden=false;};
+ document.getElementById('appsBtn').onclick=renderApps;
+ var appsM=document.getElementById('appsModal');
+ appsM.addEventListener('click',function(ev){if(ev.target===appsM||ev.target.closest('[data-close]'))appsM.hidden=true;});
  document.getElementById('sub_cancel').onclick=function(){sm.hidden=true;};
  sm.addEventListener('click',function(ev){if(ev.target===sm)sm.hidden=true;});
  document.getElementById('sub_copy').onclick=function(){
@@ -1518,14 +1597,14 @@ function openSchedule(pid,title){
    return '<div class="sch-day">'+WD[dd.getDay()]+', '+MON[dd.getMonth()]+' '+dd.getDate()+'</div>'
     +byDay[dt].map(function(s){
      var on=s.selected;
-     return '<div class="sch-row"><div class="sch-t">'+esc(s.time||'')+'</div><div class="sch-n">'+esc((s.title||'Class').replace(/ 🌶️/,' 🌶️'))+'</div>'
+     return '<div class="sch-row"><div class="sch-t">'+esc(s.time||'')+'</div><div class="sch-n">'+schName(s.title)+'</div>'
       +'<button class="sch-go'+(on?' on':'')+'" data-go="'+esc(dt)+'~'+esc(s.time||'')+'"'+(s.standing?' disabled title="your standing class"':'')+'>'+(on?'✓ Going':'+ Add')+'</button></div>';
     }).join('');
   }).join('') || '<div class="empty">No upcoming classes found — try ⟳ Scan.</div>';
   evModal.querySelector('.evm-card').innerHTML=
    '<div class="evm-top" style="background:linear-gradient(135deg,#34d399,#a855f7)"></div>'
    +'<button class="evm-x" data-close>✕</button>'
-   +'<div class="evm-body"><div class="evm-cat">📋 Full schedule</div><h2 class="evm-title">'+esc(title)+'</h2>'
+   +'<div class="evm-body"><div class="evm-cat">'+IC.list+' Full schedule</div><h2 class="evm-title">'+esc(title)+'</h2>'
    +'<p class="evm-blurb">Tap <b>+ Add</b> on any class to put it in your calendar. Your Thu/Sat 7pm is already in.</p>'
    +'<div class="sch-list">'+body+'</div></div>';
   evModal._sched=pid;evModal.hidden=false;
@@ -1595,6 +1674,8 @@ class H(BaseHTTPRequestHandler):
             self._send(ADMIN_PAGE.replace("__DIAGRAM__", ADMIN_DIAGRAM), "text/html; charset=utf-8")
         elif p == "/api/admin":
             self._send(json.dumps(admin_data()))
+        elif p == "/api/sources":
+            self._send(json.dumps({"sources": public_sources()}))
         elif p == "/favicon.svg":
             self._send(FAVICON, "image/svg+xml")
         elif p == "/api/events":
