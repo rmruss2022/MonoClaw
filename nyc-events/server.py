@@ -479,6 +479,247 @@ def get_events(force=False):
     return store
 
 
+# ------------------------------------------------------------------- admin
+def admin_data():
+    """Operational snapshot for the admin panel: agents, content cache, sources."""
+    s = load_store()
+    now = time.time() * 1000
+    pages = []
+    try:
+        for fn in os.listdir(CACHE_DIR):
+            if not fn.endswith(".json"):
+                continue
+            fp = os.path.join(CACHE_DIR, fn)
+            try:
+                c = json.load(open(fp))
+                pages.append({"url": c.get("url", ""),
+                              "age_min": int((now - (c.get("ts") or 0)) / 60000),
+                              "kb": round(os.path.getsize(fp) / 1024, 1)})
+            except Exception:
+                pass
+    except Exception:
+        pass
+    pages.sort(key=lambda p: p["age_min"])
+    regs = []
+    for r in load_personal():
+        if r.get("recurring") or r.get("scan_url") or r.get("seed"):
+            regs.append({"id": r.get("id"), "title": r.get("title"),
+                         "scan_url": r.get("scan_url") or "", "venue": r.get("venue", ""),
+                         "scanned_min": (int((now - r["scanned_at"]) / 60000)
+                                         if r.get("scanned_at") else None),
+                         "sessions": len(r.get("sessions") or []),
+                         "weekdays": r.get("weekdays") or [], "time": r.get("time", "")})
+    return {
+        "events": {"count": len(s.get("events") or []), "fetched_at": s.get("fetched_at", 0),
+                   "ttl_h": REFRESH_H, "stale": is_stale(s), "model": GEMINI_MODEL},
+        "cache": {"count": len(pages), "ttl_h": CACHE_H, "pages": pages},
+        "crawl": {"every_h": CRAWL_EVERY_H},
+        "regulars": regs, "home": HOME,
+        "llm": bool(GEMINI_KEY), "firecrawl": bool(FIRECRAWL_KEY), "ts": int(now),
+    }
+
+
+def clear_cache():
+    n = 0
+    try:
+        for fn in os.listdir(CACHE_DIR):
+            if fn.endswith(".json"):
+                os.remove(os.path.join(CACHE_DIR, fn)); n += 1
+    except Exception:
+        pass
+    return n
+
+
+ADMIN_PAGE = r"""<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Marquee · Admin & Systems</title>
+<style>
+ :root{--bg:#0b0b12;--card:#15151f;--card2:#1b1b27;--ink:#f4f3f8;--mut:#9a98ad;--line:#262636;--accent:#ff5c8a;--accent2:#a855f7}
+ *{box-sizing:border-box}
+ html,body{margin:0;background:radial-gradient(1100px 520px at 82% -8%,rgba(168,85,247,.2),transparent 60%),radial-gradient(900px 480px at 8% 4%,rgba(255,92,138,.16),transparent 58%),var(--bg);
+   color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+ a{color:#c6a6f0}
+ .wrap{max-width:1060px;margin:0 auto;padding:24px 18px 70px}
+ header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+ h1{font-size:23px;margin:0;letter-spacing:-.02em}
+ .sub{color:var(--mut);font-size:13px;margin:2px 0 0}
+ .back{margin-left:auto;font-size:13px;font-weight:650;text-decoration:none}
+ h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:30px 0 12px}
+ .diagram{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px;overflow-x:auto}
+ .diagram svg{display:block;min-width:720px;width:100%;height:auto}
+ .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+ .agent{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+ .agent::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+ .agent h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+ .agent .d{color:var(--mut);font-size:12.5px;line-height:1.5}
+ .agent .st{margin-top:10px;font-size:12px;font-weight:650}
+ .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+ .ok{color:#34d399}.ok .dot,.pill.ok .dot{background:#34d399}
+ .warn{color:#fbbf24}.warn .dot{background:#fbbf24}
+ .pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--mut)}
+ table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+ th,td{text-align:left;padding:10px 13px;font-size:12.5px;border-bottom:1px solid var(--line)}
+ th{color:var(--mut);font-weight:700;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+ td.u{font-family:ui-monospace,Menlo,monospace;color:#b7b4c8;word-break:break-all;max-width:360px}
+ tr:last-child td{border-bottom:0}
+ .controls{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 0}
+ .btn{border:0;border-radius:10px;padding:10px 15px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2))}
+ .btn.ghost{background:var(--card2);color:var(--ink);border:1px solid var(--line)}
+ .btn:disabled{opacity:.6;cursor:default}
+ .mini{border:0;background:var(--card2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+ .scanbtn{border:0;background:#2a1830;color:#ff9dc0;border:1px solid #4a2740;border-radius:8px;padding:6px 10px;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+</style></head><body>
+<div class="wrap">
+ <header>
+  <svg width="40" height="40" viewBox="0 0 48 48"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5c8a"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs><rect width="48" height="48" rx="12" fill="url(#g)"/><rect x="11" y="15" width="26" height="20" rx="3" fill="#fff"/><g fill="#a855f7"><circle cx="17" cy="27" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="27" r="2"/></g></svg>
+  <div><h1>Marquee · Admin &amp; Systems</h1><p class="sub">Agents, content cache, and how it all fits together.</p></div>
+  <a class="back" href="/">← App</a>
+ </header>
+
+ <h2>How Marquee works</h2>
+ <div class="diagram">__DIAGRAM__</div>
+
+ <h2>Agents</h2>
+ <div class="grid" id="agents"></div>
+
+ <h2>Content cache <span id="cacheHead" class="pill ok"><span class="dot"></span>—</span></h2>
+ <div class="controls" style="margin-bottom:12px">
+   <button class="btn" id="refreshBtn">↻ Refresh events now</button>
+   <button class="btn" id="crawlBtn">🕷 Re-crawl &amp; scan regulars</button>
+   <button class="btn ghost" id="clearBtn">🗑 Clear cache</button>
+ </div>
+ <table id="cacheTbl"><thead><tr><th>Cached source</th><th>Age</th><th>Size</th></tr></thead><tbody></tbody></table>
+
+ <h2>Regulars (crawled &amp; scanned)</h2>
+ <table id="regTbl"><thead><tr><th>Event</th><th>Schedule</th><th>Scanned</th><th>Sessions</th><th></th></tr></thead><tbody></tbody></table>
+
+ <p class="sub" id="foot" style="margin-top:22px"></p>
+</div>
+<script>
+function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function ago(min){if(min==null)return 'never';if(min<60)return min+'m ago';var h=Math.floor(min/60);if(h<24)return h+'h ago';return Math.floor(h/24)+'d ago';}
+var WD=['Su','Mo','Tu','We','Th','Fr','Sa'];
+function sched(r){if(!r.weekdays||!r.weekdays.length)return r.time||'—';if(r.weekdays.length===7)return 'Daily · '+(r.time||'');return r.weekdays.map(function(i){return WD[i];}).join(' ')+' · '+(r.time||'');}
+function load(){
+ fetch('api/admin',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+  // agents
+  var ev=d.events,A=[
+   {n:'🔭 Discovery Agent',d:'Finds real NYC events via Gemini + Google Search grounding (strict: deep-link listings only). Writes the events cache.',
+    st:(d.llm?'<span class="'+(ev.stale?'warn':'ok')+'"><span class="dot"></span>'+ev.count+' events · updated '+ago(Math.round((d.ts-ev.fetched_at)/60000))+' · TTL '+ev.ttl_h+'h</span>':'<span class="warn"><span class="dot"></span>LLM key missing</span>')},
+   {n:'🕷 Crawl Agent',d:'Every '+d.crawl.every_h+'h, refreshes the content cache for each regular\'s source page (Firecrawl). The app reads cache-first.',
+    st:(d.firecrawl?'<span class="ok"><span class="dot"></span>'+d.cache.count+' pages cached · TTL '+d.cache.ttl_h+'h</span>':'<span class="warn"><span class="dot"></span>Firecrawl key missing</span>')},
+   {n:'🧠 Extract Agent',d:'Reads cached pages and extracts the real upcoming sessions (dates/times/links) with Gemini. Writes your regulars\' schedules.',
+    st:'<span class="ok"><span class="dot"></span>'+d.regulars.length+' regulars tracked</span>'}
+  ];
+  document.getElementById('agents').innerHTML=A.map(function(a){return '<div class="agent"><h3>'+a.n+'</h3><div class="d">'+a.d+'</div><div class="st">'+a.st+'</div></div>';}).join('');
+  // cache
+  document.getElementById('cacheHead').innerHTML='<span class="dot"></span>'+d.cache.count+' pages';
+  document.querySelector('#cacheTbl tbody').innerHTML=(d.cache.pages.length?d.cache.pages.map(function(p){
+    return '<tr><td class="u">'+esc(p.url)+'</td><td>'+ago(p.age_min)+'</td><td>'+p.kb+' KB</td></tr>';}).join(''):'<tr><td colspan="3" style="color:#55536a">Cache empty — crawl runs on boot and every '+d.crawl.every_h+'h.</td></tr>');
+  // regulars
+  document.querySelector('#regTbl tbody').innerHTML=d.regulars.map(function(r){
+    return '<tr><td>'+esc(r.title)+'<div class="u" style="font-size:11px">'+esc(r.scan_url||'(no scan source)')+'</div></td><td>'+esc(sched(r))+'</td><td>'+ago(r.scanned_min)+'</td><td>'+r.sessions+'</td><td>'+(r.scan_url?'<button class="scanbtn" data-scan="'+r.id+'">⟳ Scan</button>':'')+'</td></tr>';
+  }).join('');
+  document.getElementById('foot').textContent='Home: '+d.home+' · LLM '+(d.llm?'on':'off')+' · Firecrawl '+(d.firecrawl?'on':'off')+' · '+new Date(d.ts).toLocaleString();
+ });
+}
+document.getElementById('refreshBtn').onclick=function(){this.disabled=true;this.textContent='Refreshing…';fetch('api/refresh',{method:'POST'}).then(function(){setTimeout(function(){location.reload();},1500);});};
+document.getElementById('clearBtn').onclick=function(){if(!confirm('Clear all cached pages?'))return;fetch('api/admin/clear-cache',{method:'POST'}).then(function(){load();});};
+document.getElementById('crawlBtn').onclick=function(){var b=this;b.disabled=true;b.textContent='Crawling…';
+ fetch('api/admin',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+  var regs=d.regulars.filter(function(r){return r.scan_url;});
+  return Promise.all(regs.map(function(r){return fetch('api/personal/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:r.id})});}));
+ }).then(function(){b.textContent='✓ Done';setTimeout(function(){location.reload();},800);});};
+document.getElementById('regTbl').addEventListener('click',function(ev){var b=ev.target.closest('[data-scan]');if(!b)return;b.textContent='⟳ …';b.disabled=true;
+ fetch('api/personal/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.getAttribute('data-scan')})}).then(function(r){return r.json();}).then(function(x){b.textContent='✓ '+(x.count||0);setTimeout(load,700);});});
+load();setInterval(load,30000);
+</script></body></html>"""
+
+# hand-built architecture diagram (SVG)
+ADMIN_DIAGRAM = r"""<svg viewBox="0 0 980 560" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,Segoe UI,Inter,sans-serif">
+ <defs>
+  <linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5c8a"/><stop offset="1" stop-color="#a855f7"/></linearGradient>
+  <marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9z" fill="#6b6980"/></marker>
+  <marker id="arwp" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9z" fill="#ff5c8a"/></marker>
+ </defs>
+ <style>
+  .box{fill:#15151f;stroke:#2c2c3e;stroke-width:1.5;rx:12}
+  .lane{fill:#10101a;stroke:#20202e;stroke-width:1;rx:14}
+  .lbl{fill:#9a98ad;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+  .t{fill:#f4f3f8;font-size:13.5px;font-weight:700}
+  .s{fill:#9a98ad;font-size:11px}
+  .edge{stroke:#6b6980;stroke-width:1.6;fill:none}
+  .edgep{stroke:#ff5c8a;stroke-width:2;fill:none}
+ </style>
+ <!-- lanes -->
+ <text x="20" y="34" class="lbl">Client</text>
+ <text x="20" y="128" class="lbl">Marquee server · :18852</text>
+ <text x="20" y="300" class="lbl">Background agents</text>
+ <text x="20" y="494" class="lbl">External</text>
+
+ <!-- client -->
+ <rect class="box" x="20" y="44" width="200" height="60" rx="12"/>
+ <text x="40" y="72" class="t">You · Browser / PWA</text>
+ <text x="40" y="92" class="s">Week · Calendar · Mine · .ics</text>
+
+ <!-- server -->
+ <rect class="lane" x="20" y="140" width="940" height="120" rx="14"/>
+ <rect class="box" x="40" y="160" width="190" height="80" rx="12"/>
+ <text x="58" y="188" class="t">SPA + API</text>
+ <text x="58" y="208" class="s">/api/events ·/widget</text>
+ <text x="58" y="224" class="s">reads CACHE-FIRST</text>
+ <rect class="box" x="258" y="160" width="200" height="80" rx="12"/>
+ <text x="276" y="188" class="t">events.json</text>
+ <text x="276" y="208" class="s">discovered NYC events</text>
+ <text x="276" y="224" class="s">TTL 12h</text>
+ <rect class="box" x="486" y="160" width="200" height="80" rx="12"/>
+ <text x="504" y="188" class="t">personal.json</text>
+ <text x="504" y="208" class="s">your regulars + saved</text>
+ <text x="504" y="224" class="s">real scanned sessions</text>
+ <rect class="box" x="714" y="160" width="226" height="80" rx="12" stroke="url(#dg)"/>
+ <text x="732" y="188" class="t">content cache ⚡</text>
+ <text x="732" y="208" class="s">data/cache/&lt;sha1(url)&gt;</text>
+ <text x="732" y="224" class="s">pull-from-here-first · TTL 12h</text>
+
+ <!-- agents -->
+ <rect class="box" x="40" y="312" width="270" height="100" rx="12"/>
+ <text x="58" y="340" class="t">🔭 Discovery Agent</text>
+ <text x="58" y="360" class="s">Gemini + Google Search grounding</text>
+ <text x="58" y="378" class="s">strict: real deep-link listings only</text>
+ <text x="58" y="396" class="s">→ writes events.json</text>
+ <rect class="box" x="340" y="312" width="270" height="100" rx="12" stroke="url(#dg)"/>
+ <text x="358" y="340" class="t">🕷 Crawl Agent · every 6h</text>
+ <text x="358" y="360" class="s">Firecrawl scrape of each source</text>
+ <text x="358" y="378" class="s">refreshes the content cache</text>
+ <text x="358" y="396" class="s">→ writes content cache</text>
+ <rect class="box" x="640" y="312" width="300" height="100" rx="12"/>
+ <text x="658" y="340" class="t">🧠 Extract Agent</text>
+ <text x="658" y="360" class="s">reads cache → Gemini extracts</text>
+ <text x="658" y="378" class="s">real dates/times/links</text>
+ <text x="658" y="396" class="s">→ writes personal.json sessions</text>
+
+ <!-- external -->
+ <rect class="box" x="40" y="506" width="180" height="44" rx="10"/>
+ <text x="58" y="533" class="t">Gemini API</text>
+ <rect class="box" x="240" y="506" width="180" height="44" rx="10"/>
+ <text x="258" y="533" class="t">Firecrawl API</text>
+ <rect class="box" x="440" y="506" width="500" height="44" rx="10"/>
+ <text x="458" y="527" class="t">Event sources</text>
+ <text x="458" y="543" class="s">ClassPass · Tickettailor · Luma · AXS · venue &amp; org pages</text>
+
+ <!-- edges -->
+ <line class="edgep" x1="120" y1="104" x2="120" y2="158" marker-end="url(#arwp)"/>
+ <text x="235" y="52" class="s" fill="#ff9dc0">↙ cache-first reads · serves instantly</text>
+ <path class="edge" d="M175 312 C175 285 150 268 140 242" marker-end="url(#arw)"/>
+ <path class="edge" d="M475 312 C475 285 400 262 360 242" marker-end="url(#arw)"/>
+ <path class="edge" d="M790 312 C790 280 800 262 810 242" marker-end="url(#arw)"/>
+ <path class="edgep" d="M560 360 C650 360 760 300 820 242" marker-end="url(#arwp)"/>
+ <line class="edge" x1="130" y1="412" x2="130" y2="504" marker-end="url(#arw)"/>
+ <line class="edge" x1="420" y1="412" x2="330" y2="504" marker-end="url(#arw)"/>
+ <line class="edge" x1="760" y1="412" x2="150" y2="506" stroke-dasharray="4 4" opacity="0.4"/>
+ <line class="edge" x1="475" y1="412" x2="520" y2="504" marker-end="url(#arw)" stroke-dasharray="4 4" opacity="0.6"/>
+</svg>"""
+
 # ------------------------------------------------------------------- page
 PAGE = r"""<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -641,6 +882,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  </div>
  <div id="list"></div>
  <div class="foot" id="foot"></div>
+ <div class="foot" style="margin-top:6px"><a href="/admin" style="color:#8f8da3;text-decoration:none">⚙ Admin &amp; systems</a></div>
 </div>
 <div class="modal-bg" id="addModal" hidden><div class="modal">
  <h3>Add an event</h3>
@@ -910,6 +1152,10 @@ class H(BaseHTTPRequestHandler):
         q = self.path.split("?", 1)[1] if "?" in self.path else ""
         if p in ("/", "/index.html"):
             self._send(PAGE, "text/html; charset=utf-8")
+        elif p == "/admin":
+            self._send(ADMIN_PAGE.replace("__DIAGRAM__", ADMIN_DIAGRAM), "text/html; charset=utf-8")
+        elif p == "/api/admin":
+            self._send(json.dumps(admin_data()))
         elif p == "/favicon.svg":
             self._send(FAVICON, "image/svg+xml")
         elif p == "/api/events":
@@ -997,6 +1243,8 @@ class H(BaseHTTPRequestHandler):
             pid = (self._body().get("id") or "").strip()
             sess = scan_regular_by_id(pid)
             self._send(json.dumps({"ok": bool(sess), "sessions": sess, "count": len(sess)}))
+        elif p == "/api/admin/clear-cache":
+            self._send(json.dumps({"ok": True, "cleared": clear_cache()}))
         else:
             self._send("not found", "text/plain", 404)
 
