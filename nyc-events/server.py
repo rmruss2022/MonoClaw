@@ -18,7 +18,7 @@ Env:
 """
 import json, os, re, threading, time, html, uuid, hashlib, urllib.request
 from urllib.parse import urlparse
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("PORT", os.environ.get("MARQUEE_PORT", "18852")))
@@ -95,27 +95,29 @@ def seed_personal():
         # upgrade: Baby Cobra Bushwick runs DAILY evening classes (ClassPass is the
         # real daily schedule; Tickettailor only lists special workshops). Matthew
         # goes ~7pm, so show the daily 7pm class + layer specials on top.
-        if existing.get("seed_v") != 3:
+        if existing.get("seed_v") != 4:
             existing["recurring"] = True
             existing["weekdays"] = [0, 1, 2, 3, 4, 5, 6]
             existing["time"] = "7:00 PM"
-            existing["url"] = "https://classpass.com/studios/baby-cobra---bushwick-brooklyn"
-            existing["scan_url"] = "https://www.tickettailor.com/events/babycobrayoga"
+            # the Bushwick schedule page is the REAL full daily class list
+            # (parsed deterministically); scan it, not Tickettailor (specials only)
+            existing["url"] = "https://babycobrayoga.com/bushwick/"
+            existing["scan_url"] = "https://babycobrayoga.com/bushwick/"
             existing["location_match"] = "Bushwick"
             existing["blurb"] = "Daily donation-based classes in a Bushwick loft (you go ~7pm)."
-            existing["seed_v"] = 3
+            existing["seed_v"] = 4
             changed = True
     else:
         changed = True
         recs.append({
-            "id": uuid.uuid4().hex[:12], "seed": "babycobra", "seed_v": 3,
+            "id": uuid.uuid4().hex[:12], "seed": "babycobra", "seed_v": 4,
             "title": "Baby Cobra Yoga", "recurring": True,
             "weekdays": [0, 1, 2, 3, 4, 5, 6], "time": "7:00 PM",
             "venue": "Baby Cobra Yoga, 47 Thames St #206",
             "neighborhood": "Bushwick", "borough": "Brooklyn", "near_home": True,
             "category": "Wellness", "price": "Donation-based",
-            "url": "https://classpass.com/studios/baby-cobra---bushwick-brooklyn",
-            "scan_url": "https://www.tickettailor.com/events/babycobrayoga",
+            "url": "https://babycobrayoga.com/bushwick/",
+            "scan_url": "https://babycobrayoga.com/bushwick/",
             "location_match": "Bushwick",
             "blurb": "Daily donation-based classes in a Bushwick loft (you go ~7pm).",
         })
@@ -303,10 +305,11 @@ def cache_put(url, md):
         print("[marquee] cache write failed:", e, flush=True)
 
 
-def fc_scrape(url, max_age_h=CACHE_H, force=False):
+def fc_scrape(url, max_age_h=CACHE_H, force=False, wait=0):
     """Scrape a page to markdown, CACHE-FIRST: serve fresh cached content when
     available, otherwise crawl via Firecrawl and cache it. Returns '' on failure
-    (but will fall back to stale cache if the live crawl fails)."""
+    (but will fall back to stale cache if the live crawl fails). `wait` (ms) lets
+    JS-rendered pages (e.g. the Baby Cobra schedule widget) hydrate before scrape."""
     if not url:
         return ""
     if not force:
@@ -316,8 +319,11 @@ def fc_scrape(url, max_age_h=CACHE_H, force=False):
     if not FIRECRAWL_KEY:
         return cache_get(url, 1e9) or ""   # no key -> any cached copy
     try:
-        body = json.dumps({"url": url, "formats": ["markdown"],
-                           "onlyMainContent": True}).encode()
+        opts = {"url": url, "formats": ["markdown"],
+                "onlyMainContent": not wait}   # keep widget markup for JS pages
+        if wait:
+            opts["waitFor"] = int(wait)
+        body = json.dumps(opts).encode()
         req = urllib.request.Request("https://api.firecrawl.dev/v2/scrape", data=body,
                                      headers={"Authorization": "Bearer " + FIRECRAWL_KEY,
                                               "Content-Type": "application/json"}, method="POST")
@@ -331,11 +337,50 @@ def fc_scrape(url, max_age_h=CACHE_H, force=False):
         return cache_get(url, 1e9) or ""   # fall back to any stale cache
 
 
+def parse_babycobra(md, book_url):
+    """Deterministically parse the Baby Cobra Bushwick schedule widget. Each
+    class renders as: 'Ddd MM/DD/YYYY \\n H:MM am/pm \\n Bushwick \\n ## Name \\n
+    (dur)'. The widget renders in UTC (headless-browser TZ), so convert to
+    America/New_York (EST = UTC-5 on/after the first Sunday of Nov). Returns a
+    list of {date,time,title,url}."""
+    pat = re.compile(
+        r"([A-Z][a-z][a-z])\s+(\d{2})/(\d{2})/(\d{4})\s*\n+\s*"
+        r"(\d{1,2}:\d{2}\s*[ap]m)\s*\n+\s*"
+        r"([A-Za-z ]+?)\s*\n+\s*"
+        r"##\s*(.+?)\s*\n+\s*\(([^)]*)\)", re.MULTILINE)
+    today = date.today().isoformat()
+    out = []
+    for m in pat.finditer(md):
+        _, mm, dd, yyyy, tstr, _loc, name, _dur = m.groups()
+        try:
+            utc = datetime.strptime(
+                f"{yyyy}-{mm}-{dd} {tstr.upper().replace(' ', '')}",
+                "%Y-%m-%d %I:%M%p")
+        except ValueError:
+            continue
+        est = utc - timedelta(hours=5)   # UTC -> NY (EST)
+        d = est.strftime("%Y-%m-%d")
+        if d < today:
+            continue
+        h = est.hour % 12 or 12
+        t = f"{h}:{est.minute:02d} {'AM' if est.hour < 12 else 'PM'}"
+        out.append({"date": d, "time": t,
+                    "title": name.strip().strip("🎟").strip()[:100],
+                    "url": book_url})
+    out.sort(key=lambda s: (s["date"], datetime.strptime(s["time"], "%I:%M %p")))
+    return out
+
+
 def scan_regular(rec):
     """Firecrawl-scrape a regular's booking page, then have Gemini extract the
     REAL upcoming sessions (optionally filtered to a location). Returns a list of
     {date,time,title,url} or [] on failure."""
     url = rec.get("scan_url") or rec.get("url")
+    # Baby Cobra's Bushwick schedule is a JS widget with a clean, structured
+    # layout — parse it deterministically (no LLM guesswork, gets EVERY class).
+    if rec.get("seed") == "babycobra" or "babycobrayoga.com" in (url or ""):
+        md = fc_scrape(url, wait=6000)
+        return parse_babycobra(md, rec.get("url") or url) if md else []
     md = fc_scrape(url)
     if not md or not GEMINI_KEY:
         return []
