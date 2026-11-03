@@ -121,7 +121,8 @@ def init_db():
                      ("birth_place", "birth_place TEXT"),
                      ("birth_tz", "birth_tz INTEGER"),
                      ("horo", "horo TEXT"),
-                     ("horo_day", "horo_day TEXT")):
+                     ("horo_day", "horo_day TEXT"),
+                     ("goal_days", "goal_days INTEGER DEFAULT 0")):  # meditation days/week pledge (0=unset)
         if col not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
     # Daily "Morning Pilgrimage" challenge: sit in the morning, at a new place, with a photo.
@@ -1498,6 +1499,7 @@ def profile_dict(c, u):
         "equipped": u["equipped"],
         "companion": u["companion"],
         "motes": u["motes"] or 0,
+        "goal_days": u["goal_days"] or 0,   # meditation days/week the user pledged (0 = not set yet)
         "items_owned": c.execute("SELECT COUNT(*) n FROM items WHERE user_id=?", (u["id"],)).fetchone()["n"],
     }
 
@@ -1956,6 +1958,14 @@ a{color:var(--purple)}
 .jwelc-seal{width:100%;margin-top:12px}
 .jwelc-skip{display:block;margin:12px auto 0;background:none;border:0;color:var(--muted);font-size:12.5px;cursor:pointer;text-decoration:underline}
 @keyframes jwshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.jwelc-h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 4px 2px;text-align:left}
+.mgoal{background:#13101f;border:1px solid var(--line);border-radius:16px;padding:16px 14px;margin:4px 2px 18px;text-align:center}
+.mgoal-q{font-size:14px;color:var(--text);font-weight:600;margin-bottom:12px}
+.mgoal-chips{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}
+.mgc{width:38px;height:44px;border-radius:12px;background:#1a1530;border:1px solid var(--line);color:var(--muted);font-size:16px;font-weight:700;cursor:pointer;transition:.15s}
+.mgc.on{background:linear-gradient(160deg,#f5c977,#e0953a);color:#2a1a05;border-color:transparent;box-shadow:0 6px 18px -8px var(--gold)}
+.mgoal-echo{font-size:12px;color:var(--muted);margin-top:14px;font-style:italic;font-family:var(--serif)}
+.mgoal-echo b{color:var(--gold);font-style:normal}
 .pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .pcard{position:relative;text-align:left;cursor:pointer;color:var(--text);
   background:linear-gradient(165deg,#1c1830,#15112275);border:1px solid var(--line);border-radius:16px;
@@ -2784,7 +2794,53 @@ function speakLocal(btn,text,orig,done){
     speechSynthesis.speak(u);
   }catch(e){done&&done();toast('Voice unavailable right now');}
 }
+// First-run meditation onboarding: a pledge + how many days/week they want to
+// sit (saved server-side via /api/goal for reminders + record-keeping), then a
+// nudge toward the three ways to practice. Shown once (localStorage gate).
+let mediGoal=5;
+let mediGoal_touched=false;
+function _mediPledged(){try{return localStorage.getItem('lumen_medi_pledged')==='1';}catch(e){return true;}}
+function _medEx(icn,title,desc){
+  return `<div class="jwc"><div class="jwc-ico">${ic(icn,'g')}</div>`
+    +`<div class="jwc-body"><div class="jwc-title">${title}</div>`
+    +`<div class="jwc-desc">${desc}</div></div></div>`;
+}
+function renderMeditatePledge(){
+  if(ME&&ME.goal_days&&!mediGoal_touched)mediGoal=ME.goal_days;
+  const dayword=mediGoal===1?'day':'days';
+  const chips=[1,2,3,4,5,6,7].map(n=>`<button class="mgc${n===mediGoal?' on':''}" data-d="${n}">${n}</button>`).join('');
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>`
+  +`<div class="jwelc">`
+    +`<div class="jwelc-hero"><div class="jwelc-halo">${ic('lotus','g')}</div>`
+      +`<h2 class="jwelc-h">A promise to your practice</h2>`
+      +`<p class="jwelc-sub">Meditation works the way exercise does — not from one big effort, but from showing up. Even 10–13 minutes a day has been shown to sharpen focus, memory and mood in about 8 weeks.</p>`
+      +`<div class="jwc-cite" style="text-align:center;margin-top:6px">Basso et al., 2019</div></div>`
+    +`<div class="mgoal">`
+      +`<div class="mgoal-q">How many days a week do you want to sit?</div>`
+      +`<div class="mgoal-chips">${chips}</div>`
+      +`<div class="mgoal-echo">${ic('flame','g')} <b>${mediGoal}</b> ${dayword} a week — we’ll keep your streak and gently remind you.</div>`
+    +`</div>`
+    +`<div class="jwelc-h3">Three ways to practice</div>`
+    +`<div class="jwelc-cards">`
+      +_medEx('spark','A daily exercise','A short guided practice, picked fresh for you each day.')
+      +_medEx('compass','Lessons & journeys','Guided voice journeys and courses that build the skill over time.')
+      +_medEx('lotus','Free-form meditation','Choose a soundscape and a length, and simply sit.')
+    +`</div>`
+    +`<div class="jwelc-pledge">`
+      +`<div class="jwelc-pl-h">${ic('seal','g')} My pledge</div>`
+      +`<p class="jwelc-pl-body">“I’ll sit ${mediGoal} ${dayword} a week — showing up for my own mind, one breath at a time.”</p>`
+      +`<button class="btn gold jwelc-seal" id="mpl-sign">${ic('seal','seal-ic')} Set my rhythm &amp; begin</button>`
+      +`<button class="jwelc-skip" id="mpl-skip">Maybe later</button>`
+    +`</div>`
+  +`</div>`;
+  document.querySelectorAll('.mgc').forEach(b=>b.onclick=()=>{mediGoal=+b.dataset.d;mediGoal_touched=true;renderMeditatePledge();});
+  $('#mpl-sign').onclick=async()=>{try{await api('goal','POST',{days:mediGoal});if(ME)ME.goal_days=mediGoal;}catch(e){}
+    try{localStorage.setItem('lumen_medi_pledged','1');localStorage.setItem('lumen_medi_goal',String(mediGoal));}catch(e){}
+    toast('Your rhythm is set ✦');renderMeditate();};
+  $('#mpl-skip').onclick=()=>{try{localStorage.setItem('lumen_medi_pledged','1');}catch(e){}renderMeditate();};
+}
 async function renderMeditate(){
+  if(!_mediPledged()){renderMeditatePledge();return;}
   let pres={now:0,today_sessions:0};try{pres=await api('presence');}catch(e){}
   let dp=null;try{dp=(await api('lifeos/prompts')).prompts;}catch(e){}
   let chal=null;try{chal=await api('challenge?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
@@ -5492,6 +5548,21 @@ class H(BaseHTTPRequestHandler):
                       (bd, bt, bp, btz, sign, u["id"]))
             c.commit()
             self._send(200, {"ok": True}); return
+
+        if p == "/api/goal":
+            # The meditation pledge: how many days/week the user commits to.
+            # Recorded on the profile for the notification system + record-keeping.
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            try:
+                days = int(self._body().get("days"))
+            except Exception:
+                days = 0
+            days = max(1, min(7, days))
+            c.execute("UPDATE users SET goal_days=? WHERE id=?", (days, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "goal_days": days}); return
 
         if p == "/api/session/start":
             u = self._me(c)
