@@ -153,8 +153,8 @@ def init_db():
     jcols = [r[1] for r in c.execute("PRAGMA table_info(journal)").fetchall()]
     if "reflection" not in jcols:
         c.execute("ALTER TABLE journal ADD COLUMN reflection TEXT")
-    # Three journaling categories: 'daily' (default), 'deep' (pillar work), 'travel'.
-    # Deep entries carry their pillar; travel entries carry a place label.
+    # Three journaling categories: 'daily' (default), 'deep' (pillar work), 'season'.
+    # Deep entries carry their pillar; season entries carry an optional season label (in `place`).
     for jcol, jddl in (("kind", "kind TEXT DEFAULT 'daily'"),
                        ("pillar", "pillar TEXT"), ("place", "place TEXT")):
         if jcol not in jcols:
@@ -928,16 +928,9 @@ PILLAR_EXERCISES = {
                  "If this season of your life had a purpose, what would you want it to be?"]),
 }
 
-# The three journaling modes and their rotating prompt sets.
-JOURNAL_KINDS = ("deep", "daily", "travel")
-TRAVEL_PROMPTS = [
-    "Where are you right now, and what does this place stir in you?",
-    "What will you want to remember about today, long after the photos fade?",
-    "Who are you here, in this place, that you aren't quite at home?",
-    "What has this journey asked of you — and what has it given back?",
-    "Describe one small moment from today you'd never have had at home.",
-    "What does being far from the familiar show you about your own life?",
-]
+# The three journaling modes. Deep = pillar work; Daily = a letter to today;
+# Season = where you are in the larger arc of your life right now.
+JOURNAL_KINDS = ("deep", "daily", "season")
 
 def _gemini_key():
     k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -1073,10 +1066,12 @@ def journal_reflect(prompt, text, kind="daily", pillar=None, place=None):
                "intentional sitting, not a quick note. Honour the depth: reflect on the "
                "whole piece, name what they're really wrestling with on this pillar, and "
                "mirror one brave or true thing with warmth.")
-    elif kind == "travel":
-        ctx = (f"This is a travel-journal entry{f' from {place}' if place else ''} — "
-               "about a place and a moment in their life. Reflect on what this place or "
-               "journey is giving them; help them hold the memory.")
+    elif kind == "season":
+        named = (" they named '%s'" % place) if place else ""
+        ctx = ("This is a 'season of life' reflection%s — about the larger chapter they are "
+               "living through right now, not just today. Reflect on the season itself with "
+               "warmth: what it is asking of them, what it is giving, and honour where they "
+               "are in the arc without rushing them past it." % named)
     else:
         ctx = "This is a daily journal letter — a check-in with themselves."
     p = ("You are the Keeper — a warm, grounded meditation companion inside Lumen. "
@@ -1916,6 +1911,20 @@ a{color:var(--purple)}
 .jmode .i{width:18px;height:18px}
 .jmode.on{background:linear-gradient(160deg,#241c3e,#1b1530);color:var(--text);box-shadow:0 0 0 1px #ffffff0c inset}
 .jmode-blurb{font-size:12.5px;font-style:italic;font-family:var(--serif);margin:0 2px 12px;color:var(--muted)}
+.jrec{display:flex;align-items:center;gap:12px;margin:2px 2px 12px;padding:13px 14px;border-radius:16px;
+  background:linear-gradient(135deg,rgba(245,201,119,.10),rgba(168,85,247,.07));
+  border:1px solid rgba(245,201,119,.28);box-shadow:0 8px 28px -16px var(--gold)}
+.jrec-ico{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:rgba(245,201,119,.12);border:1px solid rgba(245,201,119,.25)}
+.jrec-ico .i{width:20px;height:20px}
+.jrec-main{flex:1;min-width:0}
+.jrec-kick{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--gold);display:flex;align-items:center;gap:4px}
+.jrec-kick .i{width:12px;height:12px}
+.jrec-title{font-family:var(--serif);font-size:16px;color:var(--text);margin-top:3px}
+.jrec-reason{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+.jrec-btn{flex:none;align-self:center;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;border:0;
+  border-radius:999px;padding:9px 16px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+.jrec-btn:active{transform:scale(.97)}
 .pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .pcard{position:relative;text-align:left;cursor:pointer;color:var(--text);
   background:linear-gradient(165deg,#1c1830,#15112275);border:1px solid var(--line);border-radius:16px;
@@ -3707,7 +3716,7 @@ async function renderGlobalView(){
 
 /* ---- journal ---- */
 let journalView='mine';
-const TRAVEL_PROMPTS=["Where are you right now, and what does this place stir in you?","What will you want to remember about today, long after the photos fade?","Who are you here, in this place, that you aren’t quite at home?","What has this journey asked of you — and what has it given back?","Describe one small moment from today you’d never have had at home.","What does being far from the familiar show you about your own life?"];
+const SEASON_PROMPTS=["What season of your life are you in right now — and what would you name it?","What is this chapter asking of you, and what is it quietly giving back?","What are you growing toward in this season? What are you ready to let fall away?","If you looked back on this time in five years, what would you want to remember about who you were?","What feels like it’s ending, and what feels like it’s just beginning?","Where are you being asked to be patient with yourself right now?"];
 let speakOn=(typeof localStorage!=='undefined'&&localStorage.getItem('lumen_speak')==='0')?false:true;
 function _pickVoice(u){try{const vs=speechSynthesis.getVoices();
   const v=vs.find(x=>/Samantha|Serena|Moira|Karen|Google UK English Female|female/i.test(x.name))||vs.find(x=>/en/i.test(x.lang));
@@ -3767,22 +3776,41 @@ const JPROMPTS=[
   "What would you say to your younger self?"];
 let jPrompt='';let rec=null;let listening=false;
 const niceDate=(d)=>new Date(d).toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-// ---- journaling modes: Deep (pillar work) · Daily (letter) · Travel (place-tagged) ----
-let journalMode='daily';     // 'deep' | 'daily' | 'travel'
+// ---- journaling modes: Deep (pillar work) · Daily (letter) · Season (life-chapter) ----
+let journalMode='daily';     // 'deep' | 'daily' | 'season'
 let journalPillar=null;      // chosen pillar when in Deep mode
-let jPlace='';               // place label for Travel mode
-let jTravelPrompt=null;      // current Travel prompt
-let jWeek=null;              // weekly category coverage {counts:{deep,daily,travel}}
+let jSeason='';              // optional "name this season" label
+let jSeasonPrompt=null;      // current Season prompt
+let jRec=null;               // today's recommended mode {mode,pillar,title,reason,why}
+let jWeek=null;              // weekly category coverage {counts:{deep,daily,season}}
 
-const J_MODES=[['deep','Deep','compass'],['daily','Daily','book'],['travel','Travel','pin']];
-const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',travel:'Mark a place while you’re still in it.'};
+const J_MODES=[['deep','Deep','compass'],['daily','Daily','book'],['season','Season','sunrise']];
+const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',season:'What chapter of life are you living through right now?'};
 
 function jWeekRing(){
   const cts=(jWeek&&jWeek.counts)||{};
-  const n=['deep','daily','travel'].filter(k=>(cts[k]||0)>0).length;
+  const n=['deep','daily','season'].filter(k=>(cts[k]||0)>0).length;
   const dot=(k,lbl)=>{const on=(cts[k]||0)>0;return `<span class="jwk ${on?'on':''}">${on?ic('check','g'):'<i class="jwk-o"></i>'}${lbl}</span>`;};
-  return `<div class="jweekbar"><div class="jwk-row">${dot('deep','Deep')}${dot('daily','Daily')}${dot('travel','Travel')}</div>`
+  return `<div class="jweekbar"><div class="jwk-row">${dot('deep','Deep')}${dot('daily','Daily')}${dot('season','Season')}</div>`
     +`<span class="jwk-cap">${n>=3?'all three tended this week ✦':n+' of 3 this week'}</span></div>`;
+}
+
+// Today's recommended journaling — one pick (Deep · Daily · Season) chosen by the
+// server, shown as a gold hero card at the top of the journal. Tapping Begin jumps
+// straight into that mode (and that pillar, for Deep). Wired in renderJournal.
+const J_MODE_ICON={deep:'compass',daily:'book',season:'sunrise'};
+function jRecCard(){
+  if(!jRec||!jRec.mode)return '';
+  const icn=J_MODE_ICON[jRec.mode]||'spark';
+  return `<div class="jrec">`
+    +`<div class="jrec-ico">${ic(icn,'g')}</div>`
+    +`<div class="jrec-main">`
+      +`<div class="jrec-kick">${ic('spark','g')} Recommended today</div>`
+      +`<div class="jrec-title">${esc(jRec.title||'')}</div>`
+      +`<div class="jrec-reason">${esc(jRec.reason||'')}</div>`
+    +`</div>`
+    +`<button class="jrec-btn" id="jrecbtn">Begin</button>`
+  +`</div>`;
 }
 
 function composerHTML(o){
@@ -3804,11 +3832,14 @@ function composerHTML(o){
     +`<button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button></div>`;
 }
 
+// Speak a journal prompt through Lumen's ElevenLabs voice (narrate), not the
+// on-device Web Speech voice, so the journal matches the rest of the app.
+function sayPrompt(t){try{stopNarration();}catch(e){}if(t)narrate(t);}
 function wireComposerCommon(getPrompt){
   $('#jspeak').onclick=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
     $('#jspeak').classList.toggle('on',speakOn);$('#jspeak').innerHTML=ic(speakOn?'sound':'mute');
-    if(speakOn)speak(getPrompt());else if(window.speechSynthesis)speechSynthesis.cancel();};
-  if(speakOn){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')speak(getPrompt());},1100);}
+    if(speakOn)sayPrompt(getPrompt());else{try{stopNarration();}catch(e){}}};
+  if(speakOn){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')sayPrompt(getPrompt());},1100);}
   $('#jmic').onclick=toggleVoice;
   $('#jcam').onclick=()=>$('#jfile').click();
   $('#jfile').onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
@@ -3829,18 +3860,18 @@ function sealHandler(payload){
 function renderDailyCompose(){
   $('#jcompose').innerHTML=composerHTML({prompt:jPrompt,shuffle:true});
   wireComposerCommon(()=>jPrompt);
-  $('#jshuf').onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt&&JPROMPTS.length>1);jPrompt=n;$('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)speak(jPrompt);};
+  $('#jshuf').onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt&&JPROMPTS.length>1);jPrompt=n;$('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)sayPrompt(jPrompt);};
   $('#jsave').onclick=sealHandler(()=>({kind:'daily',prompt:jPrompt}));
 }
 
-function renderTravelCompose(){
-  if(!jTravelPrompt)jTravelPrompt=TRAVEL_PROMPTS[0];
-  const top=`<div class="jplace-wrap">${ic('pin','g')}<input id="jplace" class="jplace" maxlength="80" placeholder="Where are you? (city, place…)" value="${esc(jPlace)}"></div>`;
-  $('#jcompose').innerHTML=composerHTML({prompt:jTravelPrompt,shuffle:true,topHTML:top,placeholder:'The light here, the sounds, who I am in this place…'});
-  wireComposerCommon(()=>jTravelPrompt);
-  const pl=$('#jplace');if(pl)pl.oninput=(e)=>{jPlace=e.target.value;};
-  $('#jshuf').onclick=()=>{let n;do{n=TRAVEL_PROMPTS[Math.floor(Math.random()*TRAVEL_PROMPTS.length)];}while(n===jTravelPrompt&&TRAVEL_PROMPTS.length>1);jTravelPrompt=n;$('.lp-q').textContent='“'+jTravelPrompt+'”';if(speakOn)speak(jTravelPrompt);};
-  $('#jsave').onclick=sealHandler(()=>{const place=(($('#jplace')||{}).value||'').trim();if(!place)return{error:'Add where you are first'};jPlace=place;return{kind:'travel',place,prompt:jTravelPrompt};});
+function renderSeasonCompose(){
+  if(!jSeasonPrompt)jSeasonPrompt=SEASON_PROMPTS[0];
+  const top=`<div class="jplace-wrap">${ic('sunrise','g')}<input id="jplace" class="jplace" maxlength="80" placeholder="Name this season (optional) — e.g. “rebuilding”" value="${esc(jSeason)}"></div>`;
+  $('#jcompose').innerHTML=composerHTML({prompt:jSeasonPrompt,shuffle:true,topHTML:top,placeholder:'The chapter I’m in, what it asks of me, what it gives…'});
+  wireComposerCommon(()=>jSeasonPrompt);
+  const pl=$('#jplace');if(pl)pl.oninput=(e)=>{jSeason=e.target.value;};
+  $('#jshuf').onclick=()=>{let n;do{n=SEASON_PROMPTS[Math.floor(Math.random()*SEASON_PROMPTS.length)];}while(n===jSeasonPrompt&&SEASON_PROMPTS.length>1);jSeasonPrompt=n;$('.lp-q').textContent='“'+jSeasonPrompt+'”';if(speakOn)sayPrompt(jSeasonPrompt);};
+  $('#jsave').onclick=sealHandler(()=>{const place=(($('#jplace')||{}).value||'').trim();jSeason=place;return{kind:'season',place,prompt:jSeasonPrompt};});
 }
 
 async function renderDeepCompose(){
@@ -3914,10 +3945,12 @@ async function renderJournal(){
     if(!jPrompt){try{jPrompt=(await api('prompt')).prompt;}catch(e){jPrompt=JPROMPTS[0];}}
   }
   try{jWeek=await api('journal/week');}catch(e){}
+  try{jRec=await api('journal/recommend');}catch(e){jRec=null;}
   listening=false;rec=null;
   $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b>`
     +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button>`
     +`<button class="lo-btn" id="lobtn" style="margin-left:6px">${ic('compass')} Life OS</button></div>`
+    +jRecCard()
     +jWeekRing()
     +`<div class="jmodes">`+J_MODES.map(([k,lbl,icn])=>`<button class="jmode${journalMode===k?' on':''}" data-m="${k}">${ic(icn,journalMode===k?'g':'')}<span>${lbl}</span></button>`).join('')+`</div>`
     +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
@@ -3926,9 +3959,10 @@ async function renderJournal(){
     +`<div id="jbody"></div>`;
   $('#lobtn').onclick=renderLifeOS;
   $('#talkbtn').onclick=renderChat;
+  const rb=$('#jrecbtn');if(rb)rb.onclick=()=>{journalMode=jRec.mode;journalPillar=(jRec.mode==='deep'?jRec.pillar:null);if(jRec.mode==='season')jSeason='';renderJournal();};
   document.querySelectorAll('.jmode').forEach(b=>b.onclick=()=>{journalMode=b.dataset.m;journalPillar=null;renderJournal();});
   if(journalMode==='deep')renderDeepCompose();
-  else if(journalMode==='travel')renderTravelCompose();
+  else if(journalMode==='season')renderSeasonCompose();
   else renderDailyCompose();
   $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournal();});
   renderJournalBody();
@@ -4181,7 +4215,7 @@ async function sendChat(text){
   chatMsgs.push({role:'user',text:t});chatBusy=true;paintChat(true);
   try{const r=await api('chat','POST',{messages:chatMsgs.map(m=>({role:m.role,text:m.text}))});
     chatBusy=false;const reply=r.reply||'…';chatMsgs.push({role:'model',text:reply});paintChat(true);
-    if(speakOn)speak(reply);
+    if(speakOn){try{stopNarration();}catch(e){}narrate(reply);}
     if((r.tools||[]).some(x=>['write_journal','set_lifeos_pillar','set_focus'].includes(x))){try{const me=await api('me');ME=me.profile;}catch(e){}}
   }catch(e){chatBusy=false;chatMsgs.push({role:'model',text:'I lost that thread for a moment — try again?'});paintChat(true);}
 }
@@ -4200,7 +4234,7 @@ function chatVoice(){
 }
 
 /* ---- profile ---- */
-const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['journal','Journal rhythm (deep · daily · travel)'],['community','Community activity'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
+const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['journal','Journal rhythm (deep · daily · season)'],['community','Community activity'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
 function hoursOpts(sel){let h='';for(let i=0;i<24;i++){const lbl=(i===0?'12 AM':i<12?i+' AM':i===12?'12 PM':(i-12)+' PM');h+=`<option value="${i}" ${i===sel?'selected':''}>${lbl}</option>`;}return h;}
 async function renderProfile(){
   const r=await api('me');ME=r.profile;const p=ME;
@@ -4938,6 +4972,45 @@ class H(BaseHTTPRequestHandler):
             self._send(200, {"week": wk, "counts": counts, "touched": touched,
                              "missing": missing, "complete": not missing}); return
 
+        if p == "/api/journal/recommend":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            today = datetime.now(timezone.utc).date()
+            monday = (today - timedelta(days=today.weekday())).isoformat()
+            counts = {k: 0 for k in JOURNAL_KINDS}
+            for r in c.execute("SELECT COALESCE(kind,'daily') k, COUNT(*) n FROM journal "
+                               "WHERE user_id=? AND substr(created,1,10)>=? GROUP BY k",
+                               (u["id"], monday)).fetchall():
+                if r["k"] in counts:
+                    counts[r["k"]] += r["n"]
+            di = today.toordinal()
+            # prefer a category still untouched this week (depth-first); else rotate by day
+            order = ["deep", "season", "daily"]
+            missing = [k for k in order if counts.get(k, 0) == 0]
+            mode = missing[di % len(missing)] if missing else order[di % len(order)]
+            lo = lifeos_get(u) or {}
+            focus = [f for f in (lo.get("focus") or []) if f in PILLARS]
+            pillar = None
+            if mode == "deep":
+                pool = focus or list(PILLARS)
+                pillar = pool[di % len(pool)]
+            titles = {"deep": (f"Go deep on {pillar}" if pillar else "Go deep on a pillar"),
+                      "daily": "Write today's letter",
+                      "season": "Name the season you're in"}
+            reasons = {
+                "deep": ((f"A guided sitting on your {pillar} pillar"
+                          + (" — one of your focuses right now." if pillar in focus else "."))
+                         if pillar else "A guided sitting on one of your life pillars."),
+                "daily": "A few honest lines about today — the simplest way to keep the habit alive.",
+                "season": "Step back from the day and reflect on the larger chapter you're living through.",
+            }
+            why = ("You haven't tended this one yet this week." if mode in missing
+                   else "A gentle rotation, to keep all three alive.")
+            self._send(200, {"mode": mode, "pillar": pillar, "title": titles[mode],
+                             "reason": reasons[mode], "why": why,
+                             "counts": counts, "missing": missing}); return
+
         if p == "/api/feed":
             me = self._me(c)
             uid = me["id"] if me else 0
@@ -5468,7 +5541,7 @@ class H(BaseHTTPRequestHandler):
             pillar = (d.get("pillar") or "").strip()[:24]
             if kind != "deep" or pillar not in PILLARS:
                 pillar = None
-            place = (d.get("place") or "").strip()[:80] if kind == "travel" else None
+            place = (d.get("place") or "").strip()[:80] if kind == "season" else None
             # the Keeper reflects back + infers mood (best-effort; never blocks the save)
             refl = journal_reflect(prompt, text, kind=kind, pillar=pillar, place=place)
             mood = ((d.get("mood") or refl["mood"] or "")).strip()[:24]
@@ -6830,7 +6903,7 @@ def _notif_flush_queued(c):
 _JOURNAL_NUDGE = {
     "deep": ("Deep work is waiting", "Pick a pillar and sit with it for a few lines."),
     "daily": ("A moment for your journal", "A quick daily check-in with yourself tonight?"),
-    "travel": ("Your travel journal", "Capture where you are before the day slips away."),
+    "season": ("The season you're in", "What chapter of life are you living through right now?"),
 }
 
 
@@ -6865,7 +6938,7 @@ def _notif_candidate(c, u, prefs, lt):
             return ("weekly_recap", *notif_copy("weekly_recap", u, {"light": row["s"], "sessions": row["n"]}),
                     f"weekly_recap:{week_str()}")
     # 2b) journal rhythm — nudge toward a journaling category still untouched this
-    #     week, so Deep / Daily / Travel all get visited. Only for people already
+    #     week, so Deep / Daily / Season all get visited. Only for people already
     #     journaling (never a cold nag); at most once per category per week.
     if cats.get("journal", 1) and tier in ("new", "habitual", "at_risk") and 2 <= wd <= 5 and h == 18:
         missing, counts = _journal_week_missing(c, u["id"])
