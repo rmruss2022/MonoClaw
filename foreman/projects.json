@@ -1,20 +1,20 @@
 {
-  "_comment": "Foreman roster — the single source of truth for project lanes. 'slug' is the label prefix (project:task) and/or the repo folder name. Dash reads name+color for the board; the doctor (Phase 2) reads repoDir+doctorCmd to verify a finished job; deployCmd is the ship step.",
+  "_comment": "Foreman roster — the single source of truth for project lanes. 'slug' is the label prefix (project:task) and/or the repo folder name. Dash reads name+color for the board; the doctor (Phase 2) reads repoDir+doctorCmd to verify a finished job + url to capture photo evidence; deployCmd is the ship step.",
   "projects": [
-    { "slug": "creator-cut", "name": "Creator Cut", "color": "#2563eb", "repoDir": "/tmp/creator-cut", "doctorCmd": "npm -w server run check", "deployCmd": "railway up --service creator-cut" },
-    { "slug": "recilia", "name": "Recilia", "color": "#22c55e", "repoDir": "/root/MonoClaw/recilia", "doctorCmd": "npx tsc --noEmit", "deployCmd": "npx expo export -p web && systemctl restart recilia-web" },
-    { "slug": "recilia-api", "name": "Recilia API", "color": "#16a34a", "repoDir": "/root/MonoClaw/recilia-api", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "travelog", "name": "Trip Sync", "color": "#f59e0b", "repoDir": "/root/MonoClaw/travelog", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "open-home", "name": "openhome", "color": "#f5c977", "repoDir": "/root/MonoClaw/open-home", "doctorCmd": "node --experimental-strip-types --check services/hub/src/index.ts", "deployCmd": null },
-    { "slug": "rolodex", "name": "Rolodex", "color": "#a855f7", "repoDir": "/root/MonoClaw/rolodex", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "ora-health", "name": "Ora", "color": "#ec4899", "repoDir": "/root/MonoClaw/ora-health/ora-health", "doctorCmd": "npx tsc --noEmit", "deployCmd": null },
-    { "slug": "chase", "name": "Slipstream", "color": "#06b6d4", "repoDir": "/root/MonoClaw/chase", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "croppa", "name": "Croppa", "color": "#14b8a6", "repoDir": "/root/MonoClaw/croppa", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "inkling", "name": "Inkling", "color": "#8b5cf6", "repoDir": "/root/MonoClaw/inkling", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "favorly", "name": "Favorly", "color": "#c6f24e", "repoDir": "/root/MonoClaw/favorly", "doctorCmd": "python3 -m py_compile app/server.py", "deployCmd": null },
-    { "slug": "lumen", "name": "Lumen", "color": "#eab308", "repoDir": "/root/MonoClaw/lumen", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "foreman", "name": "Foreman", "color": "#0ea5e9", "repoDir": "/root/MonoClaw/foreman", "doctorCmd": "python3 -m py_compile doctor.py job.py", "deployCmd": null },
-    { "slug": "contentforge", "name": "Content Engine", "color": "#fb7185", "repoDir": "/root/MonoClaw/contentforge", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null },
-    { "slug": "MonoClaw", "name": "MonoClaw", "color": "#64748b", "repoDir": "/root/MonoClaw", "doctorCmd": null, "deployCmd": null }
+    { "slug": "creator-cut", "name": "Creator Cut", "color": "#2563eb", "repoDir": "/tmp/creator-cut", "doctorCmd": "npm -w server run check", "deployCmd": "railway up --service creator-cut", "url": "https://creator-cut-production.up.railway.app/" },
+    { "slug": "recilia", "name": "Recilia", "color": "#22c55e", "repoDir": "/root/MonoClaw/recilia", "doctorCmd": "npx tsc --noEmit", "deployCmd": "npx expo export -p web && systemctl restart recilia-web", "url": "https://recilia.bedrock.casa/" },
+    { "slug": "recilia-api", "name": "Recilia API", "color": "#16a34a", "repoDir": "/root/MonoClaw/recilia-api", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": null },
+    { "slug": "travelog", "name": "Trip Sync", "color": "#f59e0b", "repoDir": "/root/MonoClaw/travelog", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://travelog.bedrock.casa/" },
+    { "slug": "open-home", "name": "openhome", "color": "#f5c977", "repoDir": "/root/MonoClaw/open-home", "doctorCmd": "node --experimental-strip-types --check services/hub/src/index.ts", "deployCmd": null, "url": "https://home.bedrock.casa/" },
+    { "slug": "rolodex", "name": "Rolodex", "color": "#a855f7", "repoDir": "/root/MonoClaw/rolodex", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://rolodex.bedrock.casa/" },
+    { "slug": "ora-health", "name": "Ora", "color": "#ec4899", "repoDir": "/root/MonoClaw/ora-health/ora-health", "doctorCmd": "npx tsc --noEmit", "deployCmd": null, "url": "https://ora-health-26.vercel.app" },
+    { "slug": "chase", "name": "Slipstream", "color": "#06b6d4", "repoDir": "/root/MonoClaw/chase", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://slipstream.bedrock.casa/" },
+    { "slug": "croppa", "name": "Croppa", "color": "#14b8a6", "repoDir": "/root/MonoClaw/croppa", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://croppa.bedrock.casa/" },
+    { "slug": "inkling", "name": "Inkling", "color": "#8b5cf6", "repoDir": "/root/MonoClaw/inkling", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://inkling.bedrock.casa/" },
+    { "slug": "favorly", "name": "Favorly", "color": "#c6f24e", "repoDir": "/root/MonoClaw/favorly", "doctorCmd": "python3 -m py_compile app/server.py", "deployCmd": null, "url": "https://dist-pi-rouge-27.vercel.app" },
+    { "slug": "lumen", "name": "Lumen", "color": "#eab308", "repoDir": "/root/MonoClaw/lumen", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://lumen-production-a8c6.up.railway.app/" },
+    { "slug": "foreman", "name": "Foreman", "color": "#0ea5e9", "repoDir": "/root/MonoClaw/foreman", "doctorCmd": "python3 -m py_compile doctor.py job.py", "deployCmd": null, "url": "https://dash.bedrock.casa/" },
+    { "slug": "contentforge", "name": "Content Engine", "color": "#fb7185", "repoDir": "/root/MonoClaw/contentforge", "doctorCmd": "python3 -m py_compile server.py", "deployCmd": null, "url": "https://vantage.bedrock.casa/" },
+    { "slug": "MonoClaw", "name": "MonoClaw", "color": "#64748b", "repoDir": "/root/MonoClaw", "doctorCmd": null, "deployCmd": null, "url": null }
   ]
 }

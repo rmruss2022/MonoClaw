@@ -118,6 +118,33 @@ threads:
     validates the project against the roster, mints the canonical
     `slug:jobid` label + repo cwd, and the agent spawns the subagent
     (`mode=run, cleanup=keep`). Drive everything from one chat; watch lanes light up.
+## Phase 2.5 (built Nov 3): heartbeat + evidence-backed acceptance
+The doctor is now a **heartbeat + verification engine**. A finished job is no
+longer "done" just because the agent stopped — it must clear three gates, and the
+heartbeat watches them all:
+- **Pipeline test** — the project `doctorCmd` (tsc / npm run check / py_compile)
+  must pass. Red = not done.
+- **Photo evidence** — `evidence_shot.js` screenshots the project's live `url`
+  (new field in `projects.json`) → `data/evidence/<run_id>.png`, served by the
+  dash at `/evidence/<run_id>.png`. Proof the app actually runs.
+- **Acceptance criteria** — defined at intake (`job.py --accept "…"`, repeatable;
+  or inline `accept: a; b; c`), stored in `data/jobs.json` keyed by label, and
+  embedded in the subagent brief as the definition of done. On completion the
+  doctor verifies **each** criterion with **Gemini vision** against the evidence
+  screenshot + test output, producing a per-criterion ✓/✗ + one-line reason.
+- Overall verdict = tests pass **AND** every criterion holds. `data/verdicts.json`
+  now carries `{ok, tests:{ok,note,cmd}, evidence, acceptance:[{text,ok,why}],
+  acceptance_ok, …}`.
+- **Heartbeat** — every poll the doctor writes `data/heartbeat.json`: running /
+  verifying / healthy / failing counts + **stuck-job detection** (running longer
+  than `FOREMAN_STUCK_MIN`, default 30m). The dash shows a live pulsing heartbeat
+  bar; each card shows a tests pill, an "N/M criteria" pill, and the evidence
+  thumbnail; the modal shows the full checklist, the test command→PASS/FAIL, and
+  the full-size evidence photo.
+- Env: `foreman-doctor.service` needs `GEMINI_API_KEY` (systemd drop-in
+  `env.conf`) + `node` on PATH (for the screenshotter). Runtime stores
+  (`jobs.json`, `heartbeat.json`, `evidence/`) are gitignored.
+
 - **Phase 3 (next):** SLAs/stall-nudging, retries + "re-run/nudge/cancel" controls
   on the cards, auth on the dashboard, optional per-project deploy hooks, metrics,
   and a Telegram-topic-per-project intake (the supergroup option above).

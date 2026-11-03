@@ -160,14 +160,26 @@ def _project_of(label, workspace_dir):
     return (key or "—"), _FALLBACK_COLOR, None
 
 
-def _verdicts():
-    """run_id -> {ok,note,...} written by foreman/doctor.py (read each call;
-    tiny file). Missing/absent -> {}."""
+def _fdata(name):
+    """Read a foreman/data/<name>.json store (written by doctor.py / job.py).
+    Tiny files, read each call. Missing/absent -> {}."""
     try:
-        with open(os.path.join(os.path.dirname(ROSTER_PATH), "data", "verdicts.json")) as f:
+        with open(os.path.join(os.path.dirname(ROSTER_PATH), "data", name)) as f:
             return json.load(f)
     except Exception:
         return {}
+
+def _verdicts():
+    """run_id -> rich verdict {ok,tests,acceptance,evidence,...} from doctor.py."""
+    return _fdata("verdicts.json")
+
+def _jobs():
+    """label -> {task, acceptance:[...]} registered at intake by job.py."""
+    return _fdata("jobs.json")
+
+def _heartbeat():
+    """Latest Foreman heartbeat summary written by doctor.py each pass."""
+    return _fdata("heartbeat.json")
 
 def foreman_data():
     """Snapshot of subagent runs from OpenClaw's state DB, newest first."""
@@ -187,6 +199,7 @@ def foreman_data():
     now = out["ts"]
     counts = {"running": 0, "queued": 0, "done": 0, "failed": 0}
     verdicts = _verdicts()
+    jobs = _jobs()
     by_slug = _roster()["by_slug"]
     for r in rows:
         d = dict(r)
@@ -241,6 +254,19 @@ def foreman_data():
             elif v.get("ok") is False:
                 doctor, doctor_note = False, v.get("note") or "doctor failed"
             # v.ok is None -> skipped -> leave doctor=None (no badge)
+        # rich verification: pipeline test, photo evidence, acceptance checklist.
+        v = verdicts.get(d.get("run_id")) or {}
+        jobrec = jobs.get(d.get("label") or "") or {}
+        criteria = jobrec.get("acceptance") or []
+        # verified checklist if present, else the raw criteria as "pending".
+        if v.get("acceptance"):
+            acceptance = v["acceptance"]
+        elif criteria:
+            acceptance = [{"text": c, "ok": None, "why": ""} for c in criteria]
+        else:
+            acceptance = []
+        tests = v.get("tests") or ({"ok": v.get("ok"), "note": v.get("note"),
+                                    "cmd": v.get("cmd")} if v else None)
         out["jobs"].append({
             "id": d.get("run_id"), "project": project, "color": color,
             "title": _title_for(d.get("run_id"), task_full, task),
@@ -252,9 +278,13 @@ def foreman_data():
             "taskFull": task_full, "resultFull": result_full,
             "created": d.get("created_at"), "started": started, "ended": ended,
             "doctor": doctor, "doctorNote": doctor_note,
+            "tests": tests, "acceptance": acceptance,
+            "acceptanceOk": v.get("acceptance_ok"),
+            "evidence": v.get("evidence"),
         })
     out["stats"] = counts
     out["roster"] = _roster()["order"]  # column order for the board
+    out["heartbeat"] = _heartbeat()
     return out
 
 PORT = int(os.environ.get("PORTFOLIO_PORT", "18824"))
@@ -609,6 +639,36 @@ PAGE = r'''<!DOCTYPE html>
   .fm-doc.ok{background:linear-gradient(135deg,#059669,#0d9488);box-shadow:0 2px 6px -2px rgba(5,150,105,.5)}
   .fm-doc.bad{background:linear-gradient(135deg,#be123c,#b91c1c);box-shadow:0 2px 6px -2px rgba(190,18,60,.5)}
   .fm-doc.pending{background:linear-gradient(135deg,#eef1f6,#f3f5f9);color:#64748b}
+  /* heartbeat bar — live Foreman vitals over every job */
+  .fm-heart{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:2px 0 20px;padding:11px 15px;border-radius:12px;
+    background:linear-gradient(135deg,#fff,#fdf2f6);border:1px solid #f4d9e4;box-shadow:0 2px 10px -6px rgba(190,24,93,.35)}
+  .fm-heart .hb{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#be185d}
+  .fm-heart .hb svg{width:16px;height:16px;display:block;animation:hbeat 1.4s ease-in-out infinite;transform-origin:center}
+  @keyframes hbeat{0%,100%{transform:scale(1)}15%{transform:scale(1.28)}30%{transform:scale(1)}45%{transform:scale(1.18)}}
+  .fm-heart .hbv{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:650;color:#475569}
+  .fm-heart .hbv i{width:8px;height:8px;border-radius:50%;display:block}
+  .fm-heart .hbv.ok i{background:#10b981}.fm-heart .hbv.bad i{background:#ef4444}
+  .fm-heart .hbv.run i{background:#6366f1;animation:fmpulse 1.6s infinite}.fm-heart .hbv.ver i{background:#f59e0b}
+  .fm-heart .hbv b{font-variant-numeric:tabular-nums;color:#0f172a}
+  .fm-heart .hbt{margin-left:auto;font-size:10.5px;color:#94a3b8;font-variant-numeric:tabular-nums}
+  .fm-heart .hbstuck{color:#b91c1c;font-weight:650}
+  /* per-card verification: test + acceptance pills, evidence thumb */
+  .fm-checks{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .fm-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.03em;padding:3px 8px;border-radius:7px;line-height:1.3}
+  .fm-pill.ok{background:#e7f8f0;color:#047857;box-shadow:inset 0 0 0 1px #bfe9d6}
+  .fm-pill.bad{background:#fdeaec;color:#be123c;box-shadow:inset 0 0 0 1px #f6c9d1}
+  .fm-pill.pending{background:#f1f3f8;color:#64748b;box-shadow:inset 0 0 0 1px #e3e8f0}
+  .fm-pill.ev{background:#eef0ff;color:#4f46e5;box-shadow:inset 0 0 0 1px #d7dcfb;cursor:pointer}
+  .fm-ev-thumb{margin-top:10px;border-radius:9px;overflow:hidden;border:1px solid #e8ecf2;max-width:220px;cursor:pointer;
+    box-shadow:0 3px 10px -5px rgba(20,23,30,.3);transition:transform .15s,box-shadow .15s}
+  .fm-ev-thumb:hover{transform:translateY(-1px);box-shadow:0 8px 18px -8px rgba(20,23,30,.4)}
+  .fm-ev-thumb img{display:block;width:100%;height:auto}
+  /* acceptance checklist (card mini + modal full) */
+  .fm-acc{margin-top:10px;display:flex;flex-direction:column;gap:5px}
+  .fm-acc-item{display:flex;align-items:flex-start;gap:7px;font-size:12.5px;line-height:1.4;color:#2b3340}
+  .fm-acc-item .mk{flex:0 0 auto;width:16px;height:16px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;margin-top:1px}
+  .fm-acc-item .mk.ok{background:#10b981}.fm-acc-item .mk.bad{background:#ef4444}.fm-acc-item .mk.pending{background:#cbd5e1;color:#64748b}
+  .fm-acc-item .why{color:#94a3b8;font-size:11px}
   /* job detail modal */
   .fm-modal-backdrop{position:fixed;inset:0;background:rgba(20,23,30,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
   .fm-modal-backdrop[hidden]{display:none}
@@ -692,6 +752,7 @@ PAGE = r'''<!DOCTYPE html>
         <button type="button" data-view="all">All</button>
       </div>
     </div>
+    <div id="fmHeart" class="fm-heart" hidden></div>
     <div id="fmBoard" class="fm-board"></div>
   </div>
 </section>
@@ -737,7 +798,7 @@ PAGE = r'''<!DOCTYPE html>
 // ---- Foreman mission control: per-project kanban + job detail modal ----
 (function(){
   var boardEl=document.getElementById('fmBoard'),statsEl=document.getElementById('fmStats'),
-      modalEl=document.getElementById('fmModal');
+      modalEl=document.getElementById('fmModal'),heartEl=document.getElementById('fmHeart');
   if(!boardEl)return;
   var rank={running:0,queued:1,failed:2,done:3};
   var byId={}, openId=null;   // latest job snapshots + which one the modal shows
@@ -750,6 +811,33 @@ PAGE = r'''<!DOCTYPE html>
     if(j.doctor===false)return '<span class="'+cls+' bad">✗ '+esc(j.doctorNote||'failed')+'</span>';
     if(j.status==='done'&&j.doctor==='pending')return '<span class="'+cls+' pending">· checking…</span>';
     return '';
+  }
+  var HEART='<svg viewBox="0 0 24 24" fill="#ec4899"><path d="M12 21s-7.5-4.6-10-9.3C.3 8.4 2 5 5.3 5c2 0 3.4 1.1 4.2 2.3C10.3 6.1 11.7 5 13.7 5 17 5 18.7 8.4 17 11.7 14.5 16.4 12 21 12 21z"/></svg>';
+  function ago(ms){if(!ms)return '—';var s=Math.max(0,Math.round((Date.now()-ms)/1000));return s<60?s+'s ago':Math.floor(s/60)+'m ago';}
+  function drawHeart(hb){
+    if(!heartEl)return;
+    if(!hb||!hb.ts){heartEl.hidden=true;return;}
+    heartEl.hidden=false;
+    function v(cls,n,lbl){return '<span class="hbv '+cls+'"><i></i><b>'+(n||0)+'</b> '+lbl+'</span>';}
+    var stuck=(hb.stuck&&hb.stuck.length)?'<span class="hbstuck">⚠ '+hb.stuck.length+' stuck</span>':'';
+    heartEl.innerHTML='<span class="hb">'+HEART+'Heartbeat</span>'
+      +v('run',hb.running,'running')
+      +v('ver',hb.verifying,'verifying')
+      +v('ok',hb.healthy,'healthy')
+      +v('bad',hb.failing,'failing')
+      +stuck
+      +'<span class="hbt">beat #'+(hb.beats||0)+' · '+ago(hb.ts)+'</span>';
+  }
+  function accSummary(j){
+    var a=j.acceptance||[];if(!a.length)return null;
+    var met=0,bad=0;a.forEach(function(x){if(x.ok===true)met++;else if(x.ok===false)bad++;});
+    return {cls:bad?'bad':(met===a.length?'ok':'pending'),met:met,total:a.length};
+  }
+  function accList(a){
+    return '<div class="fm-acc">'+a.map(function(x){
+      var mk=x.ok===true?'<span class="mk ok">✓</span>':(x.ok===false?'<span class="mk bad">✗</span>':'<span class="mk pending">·</span>');
+      return '<div class="fm-acc-item">'+mk+'<div>'+esc(x.text)+(x.why?' <span class="why">— '+esc(x.why)+'</span>':'')+'</div></div>';
+    }).join('')+'</div>';
   }
   // --- compact card: the basics + status, click to open the full modal ---
   function card(j){
@@ -773,12 +861,28 @@ PAGE = r'''<!DOCTYPE html>
         +'<span class="fm-elapsed">'+el+'</span>'
       +'</div>'
       +'<div class="fm-progress '+j.status+'"><i></i></div>'
+      +checksRow(j)
+      +(j.evidence?'<div class="fm-ev-thumb" data-ev="'+esc(j.id)+'"><img src="'+esc(j.evidence)+'" alt="evidence" loading="lazy"></div>':'')
       +(j.result?'<div class="fm-result">↳ '+esc(j.result)+'</div>':'')
       +'</div>';
+  }
+  function checksRow(j){
+    var out='';
+    if(j.tests&&j.tests.cmd){
+      var tk=j.tests.ok===true?'ok':(j.tests.ok===false?'bad':'pending');
+      var tm=j.tests.ok===true?'✓ tests pass':(j.tests.ok===false?'✗ tests fail':'· tests');
+      out+='<span class="fm-pill '+tk+'" title="'+esc(j.tests.cmd||'')+'">'+tm+'</span>';
+    }
+    var as=accSummary(j);
+    if(as){var am=as.cls==='ok'?'✓':(as.cls==='bad'?'✗':'·');
+      out+='<span class="fm-pill '+as.cls+'">'+am+' '+as.met+'/'+as.total+' criteria</span>';}
+    if(j.evidence)out+='<span class="fm-pill ev" data-ev="'+esc(j.id)+'">📷 evidence</span>';
+    return out?'<div class="fm-checks">'+out+'</div>':'';
   }
   function draw(d){
     lastD=d;
     var jobs=d.jobs||[],s=d.stats||{};
+    drawHeart(d.heartbeat);
     byId={};jobs.forEach(function(j){byId[j.id]=j;});
     function metric(n,lbl,fail){return '<div class="fm-metric'+(fail?' fail':'')+'"><b>'+(n||0)+'</b><span>'+lbl+'</span></div>';}
     statsEl.innerHTML=metric(s.running,'running')+metric(s.queued,'queued')+metric(s.done,'done')+((s.failed||0)?metric(s.failed,'failed',1):'');
@@ -828,9 +932,11 @@ PAGE = r'''<!DOCTYPE html>
         +kv('Ended',when(j.ended))
       +'</div>'
       +'<div class="fm-m-section"><h4>Query</h4><pre>'+esc(j.taskFull||j.task||'—')+'</pre></div>'
+      +((j.acceptance&&j.acceptance.length)?'<div class="fm-m-section"><h4>Acceptance criteria'+(accSummary(j)?' · '+accSummary(j).met+'/'+accSummary(j).total+' met':'')+'</h4>'+accList(j.acceptance)+'</div>':'')
+      +((j.tests&&j.tests.cmd)?'<div class="fm-m-section"><h4>Pipeline test</h4><pre>'+esc(j.tests.cmd)+'\n→ '+(j.tests.ok===true?'PASS':(j.tests.ok===false?'FAIL — '+esc(j.tests.note||''):'skipped'))+'</pre></div>':'')
+      +(j.evidence?'<div class="fm-m-section"><h4>Photo evidence</h4><a href="'+esc(j.evidence)+'" target="_blank" rel="noopener" class="fm-ev-thumb" style="max-width:100%"><img src="'+esc(j.evidence)+'" alt="evidence"></a></div>':'')
       +((j.resultFull||j.result)?'<div class="fm-m-section"><h4>Result</h4><pre>'+esc(j.resultFull||j.result)+'</pre></div>'
-         :(j.status==='running'?'<div class="fm-m-section"><h4>Result</h4><pre>· still running…</pre></div>':''))
-      +(j.doctor===false&&j.doctorNote?'<div class="fm-m-section"><h4>Doctor</h4><pre>'+esc(j.doctorNote)+'</pre></div>':'');
+         :(j.status==='running'?'<div class="fm-m-section"><h4>Result</h4><pre>· still running…</pre></div>':''));
     modalEl.hidden=false;
   }
   function closeModal(){openId=null;modalEl.hidden=true;}
@@ -901,6 +1007,13 @@ class H(BaseHTTPRequestHandler):
             name = os.path.basename(p)
             try:
                 with open(os.path.join(_AVATAR_DIR, name), 'rb') as f:
+                    self._send(f.read(), 'image/png')
+            except OSError:
+                self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+        elif p.startswith('/evidence/') and p.endswith('.png'):
+            name = os.path.basename(p)
+            try:
+                with open(os.path.join(os.path.dirname(ROSTER_PATH), 'data', 'evidence', name), 'rb') as f:
                     self._send(f.read(), 'image/png')
             except OSError:
                 self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
