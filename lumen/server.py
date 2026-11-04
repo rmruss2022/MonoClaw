@@ -388,10 +388,10 @@ def seed_demo_account(c):
                   (uid, code, ts.isoformat()))
 
     best = max(streak_run, 21)
-    c.execute("""UPDATE users SET light=?, streak=?, best_streak=?, last_day=?,
+    c.execute("""UPDATE users SET name=?, light=?, streak=?, best_streak=?, last_day=?,
                  total_minutes=?, total_sessions=?, lat=?, lon=?, city=?,
                  motes=COALESCE(motes,0)+420 WHERE id=?""",
-              (total_light, streak_run, best, now.date().isoformat(),
+              (name, total_light, streak_run, best, now.date().isoformat(),
                total_min, len(offsets), home[1], home[2], home[0], uid))
     c.commit()
     lvl = level_for(total_light)[0]
