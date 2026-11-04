@@ -5863,8 +5863,9 @@ class H(BaseHTTPRequestHandler):
             try:
                 c.execute("INSERT OR IGNORE INTO journal_waitlist(email,created) VALUES(?,?)",
                           (email, now_iso())); c.commit()
-            except Exception:
-                pass
+            except Exception as e:
+                print('[lumen] waitlist insert failed:', e, flush=True)
+                self._send(500, {"error": "Could not save — please try again."}); return
             self._send(200, {"ok": True}); return
 
         if p == "/api/feed/report":
