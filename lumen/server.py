@@ -289,6 +289,129 @@ def distinct_places(c, uid):
             pks.add(k)
     return len(pks)
 
+
+def seed_demo_account(c):
+    """Fill the App Review demo account (appreview@lumen.app) with believable,
+    backdated history so the app films full: a real streak, weeks of sessions, a
+    traveled map, a tended journal, achievements and a collection. Idempotent."""
+    import random
+    from datetime import datetime, timedelta, timezone
+    rnd = random.Random(7)
+    email, name, pw = "appreview@lumen.app", "Ava Rowe", "LumenReview!2026"
+    u = user_by_email(c, email)
+    if not u:
+        salt = secrets.token_hex(16)
+        c.execute("INSERT INTO users(email,name,salt,hash,created) VALUES(?,?,?,?,?)",
+                  (email, name, salt, _hash_pw(pw, salt), now_iso()))
+        c.commit(); u = user_by_email(c, email)
+    uid = u["id"]
+    for t in ("sessions", "journal", "achievements", "items", "companions"):
+        c.execute("DELETE FROM %s WHERE user_id=?" % t, (uid,))
+
+    home = ("Brooklyn", 40.68, -73.94)
+    places = [home, home, home, ("Manhattan", 40.78, -73.97), ("Jersey City", 40.73, -74.07),
+              ("Boston", 42.36, -71.06), ("Los Angeles", 34.05, -118.24), ("Lisbon", 38.72, -9.14),
+              ("Reykjavik", 64.15, -21.94)]
+    lessons = ["foundations_breath_1", "foundations_breath_2", "vishnu", "vishnu_avatars"]
+    now = datetime.now(timezone.utc)
+    # current streak of 18 consecutive days, plus scattered earlier history
+    offsets = list(range(0, 18)) + [19, 20, 22, 24, 25, 28, 30, 33, 37, 41, 44]
+    offsets = sorted(set(offsets))
+    total_min = total_light = 0
+    streak_run = 18
+    for off in offsets:
+        d = now - timedelta(days=off)
+        hour = rnd.choice([6, 7, 7, 8, 8, 9, 18, 20, 21])
+        if off == 6:
+            hour = 23      # moon_child
+        if off == 9:
+            hour = 5       # dawn_patrol
+        ts = d.replace(hour=hour, minute=rnd.randint(0, 55), second=0, microsecond=0)
+        minutes = rnd.choice([5, 8, 10, 10, 12, 15, 15, 20, 25])
+        pl = places[off % len(places)]
+        lg = compute_light(minutes, max(1, 18 - (off % 18)), ts)
+        total_min += minutes; total_light += lg
+        les = lessons[off % len(lessons)] if off % 5 == 0 else None
+        pk = place_key(pl[1], pl[2])
+        c.execute("""INSERT INTO sessions(user_id,minutes,soundscape,light,lat,lon,city,mood,note,
+                     started,ended,day,week,lesson,pk) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                  (uid, minutes, rnd.choice(SOUNDSCAPES), lg, pl[1], pl[2], pl[0],
+                   rnd.choice(["calm", "clear", "tender", "steady", "grateful", "light", "tired"]),
+                   "", ts.isoformat(), (ts + timedelta(minutes=minutes)).isoformat(),
+                   ts.date().isoformat(), week_str(ts.date()), les, pk))
+        # give a few sessions a photo so the Atlas/passport + globetrotter fill in
+        if off % len(places) in (3, 5, 6, 7, 8) or off in (0, 2):
+            c.execute("UPDATE sessions SET photo=?, photo_share=? WHERE id=last_insert_rowid()",
+                      ("", 0))
+
+    # journal: a tended mix of daily / deep / season, backdated
+    jentries = []
+    pil_names = list(PILLARS)
+    for i, off in enumerate([0, 1, 3, 4, 6, 8, 10, 13, 16, 19, 23, 28, 34, 41]):
+        ts = (now - timedelta(days=off)).replace(hour=rnd.choice([7, 21]), minute=rnd.randint(0, 55))
+        kind = ["daily", "deep", "daily", "season", "daily", "deep", "daily", "deep",
+                "daily", "season", "daily", "deep", "daily", "daily"][i]
+        if kind == "deep":
+            pil = pil_names[i % len(pil_names)]
+            ch = PILLAR_PLANS[pil][1][0]
+            prompt, text = ch[1], _demo_text(kind, pil)
+            pillar, place = pil, None
+        elif kind == "season":
+            prompt, text = SEASON_PLAN[0][1], _demo_text(kind, None)
+            pillar, place = None, rnd.choice(["rebuilding", "the long spring", "beginning again"])
+        else:
+            prompt, text = PROMPTS[i % len(PROMPTS)], _demo_text(kind, None)
+            pillar, place = None, None
+        mood = rnd.choice(["calm", "tender", "hopeful", "clear", "grateful", "heavy", "steady"])
+        refl = rnd.choice([
+            "There's real honesty here — you named the thing instead of circling it.",
+            "I hear some tenderness toward yourself in this. Stay with it.",
+            "You're further along than the worry suggests. Keep returning.",
+            "", ""])
+        shared = 1 if i in (2, 7) else 0
+        c.execute("INSERT INTO journal(user_id,prompt,text,mood,reflection,shared,created,kind,pillar,place) "
+                  "VALUES(?,?,?,?,?,?,?,?,?,?)",
+                  (uid, prompt, text, mood, refl, shared, ts.isoformat(), kind, pillar, place))
+
+    # achievements that match the seeded history
+    for code, off in [("first_light", 44), ("week_warrior", 30), ("scribe", 20),
+                      ("pilgrim", 41), ("globetrotter", 25), ("moon_child", 6),
+                      ("dawn_patrol", 9), ("chronicler", 2)]:
+        ts = now - timedelta(days=off)
+        c.execute("INSERT OR IGNORE INTO achievements(user_id,code,created) VALUES(?,?,?)",
+                  (uid, code, ts.isoformat()))
+    # collection pieces
+    for code, off in [("zafu", 44), ("incense", 40), ("candle", 33), ("mala", 30),
+                      ("bell", 24), ("flags", 25), ("crystal", 16), ("bonsai", 8)]:
+        ts = now - timedelta(days=off)
+        c.execute("INSERT OR IGNORE INTO items(user_id,code,created) VALUES(?,?,?)",
+                  (uid, code, ts.isoformat()))
+
+    best = max(streak_run, 21)
+    c.execute("""UPDATE users SET light=?, streak=?, best_streak=?, last_day=?,
+                 total_minutes=?, total_sessions=?, lat=?, lon=?, city=?,
+                 motes=COALESCE(motes,0)+420 WHERE id=?""",
+              (total_light, streak_run, best, now.date().isoformat(),
+               total_min, len(offsets), home[1], home[2], home[0], uid))
+    c.commit()
+    lvl = level_for(total_light)[0]
+    return {"sessions": len(offsets), "minutes": total_min, "light": total_light,
+            "level": lvl, "streak": streak_run, "journal": 14}
+
+
+def _demo_text(kind, pillar):
+    if kind == "deep" and pillar:
+        return ("Sat with my %s pillar tonight. It's easier to see the pattern than to "
+                "forgive it, but I'm trying. Naming what I inherited — and what I want to "
+                "set down — made it feel less heavy, more like a choice I actually get to make." % pillar.lower())
+    if kind == "season":
+        return ("Naming this season helped. It's not a detour, it's the road. What it's "
+                "asking of me is patience, and what it's giving back is a slower, steadier "
+                "kind of clarity I didn't have a year ago.")
+    return ("A quiet day. I noticed I kept bracing for something that never came. Writing it "
+            "down loosened it. Grateful for ten minutes of actual stillness, and for noticing "
+            "the light change in the kitchen before anyone else was up.")
+
 def eval_pilgrimage(c, u, local_day, pk, has_photo):
     """Fold a just-completed session into the photo pilgrimage. Advances the photo
     streak the first time a spot photo is kept today, and rewards brand-new places
@@ -5478,6 +5601,15 @@ class H(BaseHTTPRequestHandler):
 
         if p == "/api/prompt":
             self._send(200, {"prompt": prompt_for_today(), "date": today_str()}); return
+
+        if p == "/api/admin/seed-demo":
+            if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
+                self._send(403, {"error": "nope"}); return
+            try:
+                out = seed_demo_account(c)
+                self._send(200, {"ok": True, **out}); return
+            except Exception as e:
+                self._send(500, {"error": repr(e)}); return
 
         if p == "/api/challenge":
             u = self._me(c)
