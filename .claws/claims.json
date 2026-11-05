@@ -1,1 +1,7 @@
-{}
+{
+  "lumen": {
+    "host": "Bushwick-V16",
+    "since": "2026-11-05T16:26Z",
+    "note": "FROZEN: in App Store review since 2026-11-05 16:22 UTC \u2014 do NOT upload builds, edit version/metadata/notes, or resubmit until Apple finishes reviewing"
+  }
+}
