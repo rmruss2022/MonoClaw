@@ -24,8 +24,27 @@ DB   = os.environ.get("ROLODEX_DB", os.path.join(os.path.dirname(os.path.abspath
 # ---------- auth (only enforced when ROLODEX_AUTH=1, i.e. the public instance) ----------
 AUTH = os.environ.get("ROLODEX_AUTH") == "1"
 USERS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "users.json")
+SESS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sessions.json")
 SESSION_TTL = 60 * 60 * 24 * 30
-SESSIONS = {}  # token -> (email, expires_epoch)
+
+def _load_sessions():
+    # Persisted to the data dir (a Railway volume) so a restart/redeploy doesn't
+    # log everyone out — which showed up in the app as a spurious "auth" error.
+    try:
+        raw = json.load(open(SESS_DB))
+        now = time.time()
+        return {t: (v[0], v[1]) for t, v in raw.items() if v[1] > now}
+    except Exception:
+        return {}
+
+SESSIONS = _load_sessions()  # token -> (email, expires_epoch)
+
+def _save_sessions():
+    try:
+        os.makedirs(os.path.dirname(SESS_DB), exist_ok=True)
+        json.dump(SESSIONS, open(SESS_DB, "w")); os.chmod(SESS_DB, 0o600)
+    except Exception:
+        pass
 
 def _users():
     try:
@@ -49,6 +68,7 @@ def verify_login(email, pw):
 def new_session(email):
     tok = secrets.token_urlsafe(32)
     SESSIONS[tok] = (email, time.time() + SESSION_TTL)
+    _save_sessions()
     return tok
 
 def session_ok(tok):
@@ -56,7 +76,7 @@ def session_ok(tok):
     if not v:
         return False
     if v[1] < time.time():
-        SESSIONS.pop(tok, None)
+        SESSIONS.pop(tok, None); _save_sessions()
         return False
     return True
 
@@ -408,7 +428,7 @@ class H(BaseHTTPRequestHandler):
             self._send(401, {"error": "invalid credentials"}); return
         if p == "/api/logout":
             tok = self._cookie("rolo_sess")
-            if tok: SESSIONS.pop(tok, None)
+            if tok: SESSIONS.pop(tok, None); _save_sessions()
             self._send(200, {"ok": True}); return
         if p == "/api/signup":
             try: d = json.loads(self._body() or b"{}")
