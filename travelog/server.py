@@ -1449,6 +1449,19 @@ border-radius:14px;padding:10px 12px;font:inherit;font-size:15px;line-height:1.4
 font-size:12px;font-weight:700;cursor:pointer}
 .fil.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+/* Map tab segmented toggle + Apple-Photos-style grid */
+.seg2{display:flex;gap:6px;margin:2px 0 10px}
+.seg2 button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);color:var(--muted);font-weight:700;font-size:13.5px;cursor:pointer}
+.seg2 button svg{width:16px;height:16px}
+.seg2 button.on{color:var(--accent);border-color:var(--accent);background:rgba(139,124,246,.12)}
+.pgtop{display:flex;align-items:center;gap:8px;margin:2px 2px 10px}
+.pgtop .muted{margin-right:auto}
+.iphoto-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;border-radius:12px;overflow:hidden}
+.iphoto{position:relative;aspect-ratio:1;padding:0;border:0;background:var(--panel2);overflow:hidden;cursor:pointer}
+.iphoto img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+.iphoto:active img{transform:scale(.96)}
+.iphoto-av{position:absolute;right:3px;bottom:3px}
+@media(min-width:620px){.iphoto-grid{grid-template-columns:repeat(6,1fr)}}
 .pthumb{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);cursor:pointer;background:var(--panel2)}
 .pthumb img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
 .pthumb .lab{position:absolute;left:0;right:0;bottom:0;padding:10px 6px 4px;font-size:10px;font-weight:700;color:#fff;
@@ -1660,7 +1673,6 @@ width:32px;height:32px;cursor:pointer;flex:none;display:flex;align-items:center;
 <main id="app"></main>
 <nav class="tabs" id="tabs" style="display:none">
   <button class="tab" data-t="home" data-ic="compass" onclick="goTab('home')">Trip</button>
-  <button class="tab" data-t="places" data-ic="pin" onclick="goTab('places')">Places</button>
   <button class="tab" data-t="plan" data-ic="sparkle" onclick="goTab('plan')">Plan</button>
   <button class="tab" data-t="map" data-ic="map" onclick="goTab('map')">Map</button>
   <button class="tab" data-t="memories" data-ic="film" onclick="goTab('memories')">Memories</button>
@@ -2263,7 +2275,7 @@ function renderHome(){const t=TRIP;if(!t)return;
  const ranked=photos.slice().sort((a,b)=>((b.people||0)-(a.people||0))||((a.category==='Journal')-(b.category==='Journal')));
  const highlights=ranked.slice(0,9);
  const mosaic=highlights.length?`<div class="gh"><h2>${ic('camera')} Highlights</h2><span class="sub">tap to see them all</span></div>
-   <div class="hmosaic" onclick="goTab('map')">${highlights.map(p=>`<div class="hm"><img src="${BASE}/photo/${p.filename}" loading="lazy"></div>`).join('')}</div>`:'';
+   <div class="hmosaic" onclick="mapView='grid';goTab('map')">${highlights.map(p=>`<div class="hm"><img src="${BASE}/photo/${p.filename}" loading="lazy"></div>`).join('')}</div>`:'';
  // places strip
  const strip=entries.length?`<div class="gh"><h2>${ic('pin')} The route</h2><span class="sub">${entries.length} stop${entries.length===1?'':'s'}</span></div>
    <div class="pstrip">${entries.map(e=>{const ph=(photos.find(p=>p.entry_id===e.id&&p.filename===e.cover)||photos.find(p=>p.entry_id===e.id)||{}).filename;
@@ -2355,7 +2367,7 @@ async function pickCover(id,fn){const e=(TRIP.entries||[]).find(x=>x.id===id);if
  try{await api('/api/entries/cover',{method:'POST',body:JSON.stringify({entry_id:id,filename:fn})});}catch(_){}
  closeSheet();renderTab();}
 function openPlace(id){PLACE=id;window.scrollTo(0,0);renderTab();}
-function backToPlaces(){PLACE=null;renderTab();}
+function backToPlaces(){PLACE=null;TAB='home';renderTab();}
 
 // ---- a single destination: About-here guide (sectioned) + journal + photos ----
 function bookingUI(e){
@@ -2459,7 +2471,7 @@ async function finishQuiz(){
 function closeQuiz(refresh){closeSheet();const eid=QZ?QZ.eid:null;QZ=null;if(refresh&&eid!=null)renderGame(eid);}
 function renderPlaceDetail(e){const t=TRIP;
  const photos=(t.photos||[]).filter(p=>p.entry_id===e.id);
- let h=`<button class="btn ghost sm" onclick="backToPlaces()" style="margin-bottom:12px">‹ All places</button>
+ let h=`<button class="btn ghost sm" onclick="backToPlaces()" style="margin-bottom:12px">‹ Trip</button>
   <div class="tabhead"><h2>${esc(e.place)}</h2></div>
   <div class="muted sm" style="margin:-2px 0 2px">${esc(e.date||'')}${e.companions?' · with '+esc(e.companions):''}</div>`;
  // 0) The game — learn this place, unlock a hidden piece of the trip
@@ -2751,9 +2763,18 @@ const MAP_STYLE={version:8,sources:{
 // a custom-HTML marker; the content lives in a child so MapLibre's transform never fights our CSS animations
 function mkMarker(contentEl,lnglat){const w=document.createElement('div');w.appendChild(contentEl);
  return new maplibregl.Marker({element:w,anchor:'center'}).setLngLat(lnglat).addTo(MAPOBJ);}
+let mapView='map';
+function setMapView(v){mapView=v;openMap();}
 async function openMap(){
- el('app').innerHTML=`<div class="tabhead"><h2>${ic('map')} Map</h2></div>
-  <div class="muted sm" id="mapnote">Plotting your journey…</div>
+ el('app').innerHTML=`<div class="seg2" style="margin-top:4px">`
+   +`<button class="${mapView==='map'?'on':''}" onclick="setMapView('map')">${ic('map')} Map</button>`
+   +`<button class="${mapView==='grid'?'on':''}" onclick="setMapView('grid')">${ic('camera')} Photos</button></div>`
+   +`<div id="mapview"></div>`;
+ if(mapView==='grid')return renderPhotoGrid();
+ return renderGeoMap();
+}
+async function renderGeoMap(){
+ el('mapview').innerHTML=`<div class="muted sm" id="mapnote">Plotting your journey…</div>
   <div id="mapwrap" style="position:relative;margin-top:10px">
    <div id="map"></div>
    <button id="mapfs" class="mapfs" onclick="toggleMapFull()" title="Full screen">⛶</button>
@@ -2764,6 +2785,17 @@ async function openMap(){
   </div>`;
  const data=await api('/api/map/'+TRIP.id);
  loadMapLibre(()=>renderMap(data));
+}
+// Apple-Photos-style grid under the Map tab
+function renderPhotoGrid(){const t=TRIP;const photos=t.photos||[];
+ const box=el('mapview');if(!box)return;
+ const top=`<div class="pgtop"><span class="muted sm">${photos.length} photo${photos.length===1?'':'s'}</span>
+   <label class="btn sm" style="cursor:pointer;width:auto">${ic('plus')} Add<input type="file" accept="image/*" multiple style="display:none" onchange="uploadPhotos(null,this)"></label>
+   <button class="btn sm ghost" style="width:auto" onclick="importICloud()">☁️ iCloud</button></div>`;
+ if(!photos.length){box.innerHTML=top+`<div class="empty">No photos yet. Tap <b>Add</b> — or drag &amp; drop images anywhere to upload.</div>`;return;}
+ SHOWN=photos.map(p=>p.id);
+ const grid=photos.map(p=>`<button class="iphoto" onclick="openPhoto(${p.id})"><img loading="lazy" src="${BASE}/photo/${p.filename}">${p.member?`<span class="iphoto-av">${avatarHTML(p.member,memberColor(p.member),16)}</span>`:''}</button>`).join('');
+ box.innerHTML=top+`<div class="iphoto-grid">${grid}</div>`;
 }
 async function placePhotos(){
  const btn=el('placeBtn');if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Scanning photos…';}
