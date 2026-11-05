@@ -35,6 +35,8 @@ nyc-events/data/
 *.p8
 *.pem
 portal/.token
+rolodex-deploy/data/
+**/sessions.json
 
 # Nested repos (own their own git history — tracked separately)
 /contentforge/

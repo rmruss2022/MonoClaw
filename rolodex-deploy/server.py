@@ -12,7 +12,7 @@ Env:
   ROLODEX_BASE   base path when mounted under the command hub, e.g. "/rolodex"
   ROLODEX_DB     sqlite path (default ./data/rolodex.db)
 """
-import json, os, re, sqlite3, urllib.parse, hashlib, hmac, secrets, time
+import json, os, re, sqlite3, urllib.parse, hashlib, hmac, secrets, time, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime, timezone, date
 
@@ -25,13 +25,15 @@ DB   = os.environ.get("ROLODEX_DB", os.path.join(os.path.dirname(os.path.abspath
 AUTH = os.environ.get("ROLODEX_AUTH") == "1"
 USERS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "users.json")
 SESS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sessions.json")
+_SESS_LOCK = threading.Lock()
 SESSION_TTL = 60 * 60 * 24 * 30
 
 def _load_sessions():
     # Persisted to the data dir (a Railway volume) so a restart/redeploy doesn't
     # log everyone out — which showed up in the app as a spurious "auth" error.
     try:
-        raw = json.load(open(SESS_DB))
+        with open(SESS_DB) as f:
+            raw = json.load(f)
         now = time.time()
         return {t: (v[0], v[1]) for t, v in raw.items() if v[1] > now}
     except Exception:
@@ -41,8 +43,14 @@ SESSIONS = _load_sessions()  # token -> (email, expires_epoch)
 
 def _save_sessions():
     try:
-        os.makedirs(os.path.dirname(SESS_DB), exist_ok=True)
-        json.dump(SESSIONS, open(SESS_DB, "w")); os.chmod(SESS_DB, 0o600)
+        with _SESS_LOCK:
+            os.makedirs(os.path.dirname(SESS_DB), exist_ok=True)
+            snap = dict(SESSIONS)
+            tmp = SESS_DB + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(snap, f)
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, SESS_DB)
     except Exception:
         pass
 
