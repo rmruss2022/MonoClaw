@@ -1104,6 +1104,36 @@ display:flex;align-items:center;justify-content:center;font-size:20px;border:1px
 .tripdd{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;background:var(--panel);border:1px solid var(--line);
 border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.55);max-height:68vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px;animation:appin .16s ease}
 .tripdd .triprow{margin-bottom:6px}
+/* ---- Trip home (summary) ---- */
+.thero{position:relative;border-radius:22px;overflow:hidden;background-size:cover;background-position:center;
+  min-height:188px;display:flex;align-items:flex-end;border:1px solid var(--line);box-shadow:var(--shadow);margin-bottom:14px}
+.thero-plain{background:linear-gradient(140deg,#2a2350,#171331)}
+.thero-in{padding:16px 16px 15px}
+.thero-ttl{margin:0;font-size:25px;font-weight:800;color:#fff;letter-spacing:-.3px;line-height:1.08;text-shadow:0 2px 14px rgba(0,0,0,.5)}
+.thero-sub{margin-top:5px;font-size:13.5px;color:#e7e2f6;display:flex;align-items:center;gap:4px;flex-wrap:wrap;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.thero-sub svg{width:14px;height:14px;vertical-align:-2px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:9px;margin-bottom:16px}
+.stile{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--panel);border:1px solid var(--line);
+  border-radius:15px;padding:13px 6px;box-shadow:var(--shadow)}
+.stile .sti{color:var(--accent)}.stile .sti svg{width:18px;height:18px}
+.stv{font-size:20px;font-weight:800;color:var(--ink);line-height:1.1}
+.stl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.gh{display:flex;align-items:baseline;gap:8px;margin:18px 0 10px}
+.gh h2{font-size:16px;margin:0;display:flex;align-items:center;gap:7px}
+.gh h2 svg{width:17px;height:17px;color:var(--accent)}
+.gh .sub{font-size:12px;color:var(--muted)}
+.people{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.pchip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:5px;width:66px}
+.pchip span{font-size:12px;color:var(--ink);max-width:66px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.hmosaic{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;border-radius:16px;overflow:hidden;cursor:pointer}
+.hmosaic .hm{aspect-ratio:1;overflow:hidden;background:var(--panel2)}
+.hmosaic .hm img{width:100%;height:100%;object-fit:cover;display:block}
+.pstrip{display:flex;gap:11px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.pcardmini{flex:0 0 auto;width:134px;border:1px solid var(--line);border-radius:15px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);cursor:pointer}
+.pcardmini img{width:100%;height:92px;object-fit:cover;display:block}
+.pcardmini .novc{height:92px;display:flex;align-items:center;justify-content:center;color:var(--muted);background:var(--panel2)}
+.pcm-nm{display:block;font-size:13px;font-weight:700;color:var(--ink);padding:7px 9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcm-dt{display:block;font-size:11px;color:var(--muted);padding:1px 9px 8px}
 /* place cards (single column, big cover) */
 .placecard{position:relative;border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:15px;background:var(--panel);box-shadow:var(--shadow);
 -webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);transition:transform .18s cubic-bezier(.22,.61,.36,1),box-shadow .18s ease,border-color .18s ease}
@@ -1603,6 +1633,7 @@ width:32px;height:32px;cursor:pointer;flex:none;display:flex;align-items:center;
 </header>
 <main id="app"></main>
 <nav class="tabs" id="tabs" style="display:none">
+  <button class="tab" data-t="home" data-ic="compass" onclick="goTab('home')">Trip</button>
   <button class="tab" data-t="places" data-ic="pin" onclick="goTab('places')">Places</button>
   <button class="tab" data-t="photos" data-ic="camera" onclick="goTab('photos')">Photos</button>
   <button class="tab" data-t="map" data-ic="map" onclick="goTab('map')">Map</button>
@@ -1654,7 +1685,7 @@ const ICONS={
 function ic(n,size){const s=size?` width="${size}" height="${size}"`:'';
  return `<svg class="ic"${s} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`;}
 function paintStaticIcons(){document.querySelectorAll('[data-ic]').forEach(e=>{e.insertAdjacentHTML('afterbegin',ic(e.dataset.ic,e.dataset.icsize));});}
-let TRIP=null, TRIPS=[], TAB='places', SHARE_LINK='';
+let TRIP=null, TRIPS=[], TAB='home', SHARE_LINK='';
 let PLACE=null;          // entry id when viewing a single destination
 let MAPOBJ=null,RAD=null,COLLAGES=[],MAPCENTER=null,MAPPLACES=[],PLACEMARKERS={};   // map + active radiate burst
 let CLUSMARKERS={},REPCACHE={};   // geolocation-first photo clustering: live HTML markers + per-cluster representative-thumb cache
@@ -1813,7 +1844,7 @@ async function showJoin(token){
   if(!name){el('joinErr').textContent='Enter your name to join.';return;}
   const btn=el('joinBtn');btn.disabled=true;btn.textContent='Joining…';
   try{await api('/api/trips/'+info.trip_id+'/join',{method:'POST',body:JSON.stringify({token:deviceToken(),name})});
-   setMyName(name);clearJoinUrl();TAB='places';openTrip(info.trip_id);toast('Welcome to '+info.title+' 🎉');
+   setMyName(name);clearJoinUrl();TAB='home';openTrip(info.trip_id);toast('Welcome to '+info.title+' 🎉');
   }catch(e){btn.disabled=false;btn.textContent='Join trip';el('joinErr').textContent='Could not join — try again.';}
  };
 }
@@ -1852,7 +1883,7 @@ function openSelector(){const dd=el('tripdd');if(!dd)return;
 }
 function selOutside(e){const w=el('tripselwrap');if(w&&!w.contains(e.target))closeSelector();}
 function closeSelector(){const dd=el('tripdd');if(dd)dd.style.display='none';const ts=el('tripsel');if(ts)ts.classList.remove('open');document.removeEventListener('click',selOutside);}
-function pickTrip(id){closeSelector();TAB='places';openTrip(id);}
+function pickTrip(id){closeSelector();TAB='home';openTrip(id);}
 
 function newTrip(){closeSelector();sheet(`<h2>New trip</h2>
  <label>Title</label><input id="f_title" placeholder="Summer in Portugal">
@@ -1885,8 +1916,9 @@ function renderTab(){
  if(!TRIP)return;
  [...document.querySelectorAll('nav.tabs .tab')].forEach(b=>b.classList.toggle('on',b.dataset.t===TAB));
  // trip selector only on the trip home (the places list) — hidden on other tabs & place detail
- const ts=el('tripsel');if(ts)ts.style.display=(TAB==='places'&&!PLACE)?'':'none';
+ const ts=el('tripsel');if(ts)ts.style.display=((TAB==='home'||TAB==='places')&&!PLACE)?'':'none';
  const ap=el('app');if(ap){ap.classList.remove('fadein');void ap.offsetWidth;ap.classList.add('fadein');}
+ if(TAB==='home')return renderHome();
  if(TAB==='places')return renderPlaces();
  if(TAB==='photos')return renderPhotos();
  if(TAB==='map')return openMap();
@@ -2121,6 +2153,63 @@ async function shareTripCard(){
  downloadTripCard();}
 
 // ---- Places tab: a compact list of destinations; tap one to open its sections ----
+// ---- Trip HOME: a summary of the whole trip — hero, stats, people, photos ----
+function _haversine(a,b){const R=6371,toR=x=>x*Math.PI/180;
+ const dLat=toR(b.lat-a.lat),dLon=toR(b.lon-a.lon);
+ const s=Math.sin(dLat/2)**2+Math.cos(toR(a.lat))*Math.cos(toR(b.lat))*Math.sin(dLon/2)**2;
+ return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));}
+function tripDays(t){
+ if(t.start_date&&t.end_date){const a=new Date(t.start_date),b=new Date(t.end_date);
+   if(!isNaN(a)&&!isNaN(b)){return Math.max(1,Math.round((b-a)/864e5)+1);}}
+ const ds=new Set((t.entries||[]).map(e=>e.date).filter(Boolean));return ds.size||((t.entries||[]).length?1:0);}
+function tripDistance(t){
+ const pts=(t.entries||[]).filter(e=>e.lat&&e.lon);let km=0;
+ for(let i=1;i<pts.length;i++)km+=_haversine(pts[i-1],pts[i]);return km;}
+function fmtDateRange(t){
+ const o={month:'short',day:'numeric'};
+ try{if(t.start_date&&t.end_date){const a=new Date(t.start_date),b=new Date(t.end_date);
+   if(!isNaN(a)&&!isNaN(b))return a.toLocaleDateString(undefined,o)+' – '+b.toLocaleDateString(undefined,{...o,year:'numeric'});}}catch(e){}
+ return t.destination||'';}
+function statTile(icn,val,lbl){return `<div class="stile"><span class="sti">${ic(icn)}</span><span class="stv">${val}</span><span class="stl">${lbl}</span></div>`;}
+function goPlaceFromHome(id){PLACE=id;TAB='places';window.scrollTo(0,0);renderTab();}
+function renderHome(){const t=TRIP;if(!t)return;
+ const entries=t.entries||[],photos=t.photos||[],members=t.members||[];
+ // hero cover: a nice non-journal photo, else the first photo (t.cover is a collage, not a photo)
+ const heroFn=(photos.find(p=>p.category&&p.category!=='Journal')||photos[0]||{}).filename;
+ const hero=heroFn
+   ?`<div class="thero" style="background-image:linear-gradient(180deg,rgba(14,11,26,.15),rgba(14,11,26,.88)),url('${BASE}/photo/${heroFn}')">`
+   :`<div class="thero thero-plain">`;
+ const days=tripDays(t), dist=tripDistance(t);
+ const distTxt=dist>=1?(dist>=1000?(Math.round(dist/100)/10)+'k':Math.round(dist))+' km':'';
+ // stat tiles
+ let tiles=statTile('pin',entries.length,entries.length===1?'place':'places')
+   +statTile('camera',photos.length,'photos')
+   +statTile('clock',days,days===1?'day':'days')
+   +statTile('users',members.length||1,members.length===1?'traveler':'travelers');
+ if(distTxt)tiles+=statTile('send',distTxt,'traveled');
+ // people
+ const people=members.length?members.map(m=>`<div class="pchip">${avatarHTML(m.name,m.color,40)}<span>${esc(m.name)}</span></div>`).join('')
+   :`<div class="pchip">${avatarHTML(myName()||'You',memberColor(myName()||'You'),40)}<span>${esc(myName()||'You')}</span></div>`;
+ // photo highlights: prefer people/non-journal, up to 9
+ const ranked=photos.slice().sort((a,b)=>((b.people||0)-(a.people||0))||((a.category==='Journal')-(b.category==='Journal')));
+ const highlights=ranked.slice(0,9);
+ const mosaic=highlights.length?`<div class="gh"><h2>${ic('camera')} Highlights</h2><span class="sub">tap to see them all</span></div>
+   <div class="hmosaic" onclick="goTab('photos')">${highlights.map(p=>`<div class="hm"><img src="${BASE}/photo/${p.filename}" loading="lazy"></div>`).join('')}</div>`:'';
+ // places strip
+ const strip=entries.length?`<div class="gh"><h2>${ic('pin')} The route</h2><span class="sub">${entries.length} stop${entries.length===1?'':'s'}</span></div>
+   <div class="pstrip">${entries.map(e=>{const ph=(photos.find(p=>p.entry_id===e.id&&p.filename===e.cover)||photos.find(p=>p.entry_id===e.id)||{}).filename;
+     return `<div class="pcardmini" onclick="goPlaceFromHome(${e.id})">${ph?`<img src="${BASE}/photo/${ph}">`:`<div class="novc">${ic('pin',24)}</div>`}<span class="pcm-nm">${esc(e.place)}</span>${e.date?`<span class="pcm-dt">${esc(e.date)}</span>`:''}</div>`;}).join('')}</div>`:'';
+ const emptyNote=(!entries.length&&!photos.length)?`<div class="empty">Your trip summary will fill in as you add places and photos.<br>Tap <b>Places</b> to log your first stop.</div>`:'';
+ el('app').innerHTML=hero
+   +`<div class="thero-in"><h1 class="thero-ttl">${esc(t.title||t.destination||'Your trip')}</h1>`
+   +`<div class="thero-sub">${t.destination?ic('pin')+' '+esc(t.destination)+' · ':''}${esc(fmtDateRange(t))}</div></div></div>`
+   +`<div class="sgrid">${tiles}</div>`
+   +`<div class="gh"><h2>${ic('users')} The crew</h2><span class="btn sm ghost" style="width:auto" onclick="openShareSheet()">${ic('users')} Invite</span></div>`
+   +`<div class="people">${people}</div>`
+   +mosaic
+   +strip
+   +emptyNote;
+}
 function renderPlaces(){const t=TRIP;
  if(PLACE){const e=(t.entries||[]).find(x=>x.id===PLACE);if(e)return renderPlaceDetail(e);PLACE=null;}
  let h=crewBar(t);
