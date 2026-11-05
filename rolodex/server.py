@@ -24,8 +24,27 @@ DB   = os.environ.get("ROLODEX_DB", os.path.join(os.path.dirname(os.path.abspath
 # ---------- auth (only enforced when ROLODEX_AUTH=1, i.e. the public instance) ----------
 AUTH = os.environ.get("ROLODEX_AUTH") == "1"
 USERS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "users.json")
+SESS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sessions.json")
 SESSION_TTL = 60 * 60 * 24 * 30
-SESSIONS = {}  # token -> (email, expires_epoch)
+
+def _load_sessions():
+    # Persist sessions to disk so a server restart doesn't log everyone out
+    # (which surfaces as a spurious "auth" error on the next request).
+    try:
+        raw = json.load(open(SESS_DB))
+        now = time.time()
+        return {t: (v[0], v[1]) for t, v in raw.items() if v[1] > now}
+    except Exception:
+        return {}
+
+SESSIONS = _load_sessions()  # token -> (email, expires_epoch)
+
+def _save_sessions():
+    try:
+        os.makedirs(os.path.dirname(SESS_DB), exist_ok=True)
+        json.dump(SESSIONS, open(SESS_DB, "w")); os.chmod(SESS_DB, 0o600)
+    except Exception:
+        pass
 
 def _users():
     try:
@@ -49,6 +68,7 @@ def verify_login(email, pw):
 def new_session(email):
     tok = secrets.token_urlsafe(32)
     SESSIONS[tok] = (email, time.time() + SESSION_TTL)
+    _save_sessions()
     return tok
 
 def session_ok(tok):
@@ -56,7 +76,7 @@ def session_ok(tok):
     if not v:
         return False
     if v[1] < time.time():
-        SESSIONS.pop(tok, None)
+        SESSIONS.pop(tok, None); _save_sessions()
         return False
     return True
 
@@ -434,20 +454,38 @@ def list_connections(owner):
     return {"connected": connected, "incoming": incoming, "outgoing": outgoing}
 
 # ---------- Apple Contacts: iCloud CardDAV sync (beta) ----------
-def _dav(method, url, user, pw, body=None, depth=None, ctype="application/xml; charset=utf-8"):
+def _dav(method, url, user, pw, body=None, depth=None, ctype="application/xml; charset=utf-8", _hops=0):
+    """One CardDAV request. iCloud redirects contacts.icloud.com to a per-user
+    partition host (e.g. p123-contacts.icloud.com); urllib strips the Authorization
+    header across a host change, which iCloud answers with 401 — so we follow
+    redirects ourselves and re-attach Basic auth each hop. iCloud also rejects
+    requests with no User-Agent, so we always send one."""
     import base64, urllib.request, urllib.error
-    req = urllib.request.Request(url, data=(body.encode() if isinstance(body, str) else body), method=method)
-    auth = base64.b64encode(f"{user}:{pw}".encode()).decode()
-    req.add_header("Authorization", "Basic " + auth)
+    data = body.encode() if isinstance(body, str) else body
+    req = urllib.request.Request(url, data=data, method=method)
+    req.add_header("Authorization", "Basic " + base64.b64encode(f"{user}:{pw}".encode()).decode())
+    req.add_header("User-Agent", "Rolodex/1.0 (CardDAV sync)")
+    req.add_header("Accept", "*/*")
     if depth is not None:
         req.add_header("Depth", str(depth))
     if body is not None:
         req.add_header("Content-Type", ctype)
+
+    class _NoAutoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *a, **k):
+            return None  # we handle redirects manually, re-adding auth
+    opener = urllib.request.build_opener(_NoAutoRedirect)
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
+        with opener.open(req, timeout=30) as r:
             return r.status, r.read().decode("utf-8", "ignore")
     except urllib.error.HTTPError as e:
+        if e.code in (301, 302, 303, 307, 308) and _hops < 5:
+            loc = e.headers.get("Location")
+            if loc:
+                return _dav(method, urllib.parse.urljoin(url, loc), user, pw, body, depth, ctype, _hops + 1)
         return e.code, e.read().decode("utf-8", "ignore")
+    except Exception as e:
+        return 0, str(e)
 
 def carddav_sync(owner, icloud_email, app_password):
     """Pull contacts from iCloud over CardDAV and import them as vCards.
@@ -458,15 +496,23 @@ def carddav_sync(owner, icloud_email, app_password):
     principal → addressbook-home-set → the addressbooks → every .vcf.
     """
     import re as _re
+    icloud_email = (icloud_email or "").strip()
+    # Apple shows app-specific passwords as "abcd-efgh-ijkl-mnop"; users often paste
+    # them with spaces or in the wrong case. Keep the dashes, drop stray whitespace.
+    app_password = (app_password or "").strip().replace(" ", "")
+    if "@" not in icloud_email or len(app_password) < 8:
+        raise ValueError("Enter your iCloud email and an app-specific password (appleid.apple.com → Sign-In & Security → App-Specific Passwords).")
     base = "https://contacts.icloud.com"
     # 1) current-user-principal
     st, body = _dav("PROPFIND", base + "/", icloud_email, app_password, depth=0,
                     body='<d:propfind xmlns:d="DAV:"><d:prop><d:current-user-principal/></d:prop></d:propfind>')
     if st in (401, 403):
-        raise ValueError("iCloud rejected those credentials — use an app-specific password from appleid.apple.com")
+        raise ValueError("iCloud rejected those credentials. Use an app-specific password (not your Apple ID password) from appleid.apple.com → Sign-In & Security → App-Specific Passwords, and make sure 2-factor auth is on.")
+    if st == 0 or st >= 500:
+        raise ValueError("Couldn't reach iCloud right now — try again in a moment.")
     m = _re.search(r"<[^>]*current-user-principal>.*?<[^>]*href>([^<]+)</", body, _re.S | _re.I)
     if not m:
-        raise ValueError(f"could not find the iCloud principal (HTTP {st})")
+        raise ValueError(f"Connected to iCloud but couldn't read the account principal (HTTP {st}). Double-check the email.")
     principal = urllib.parse.urljoin(base + "/", m.group(1).strip())
     # 2) addressbook-home-set
     st, body = _dav("PROPFIND", principal, icloud_email, app_password, depth=0,
@@ -694,7 +740,7 @@ class H(BaseHTTPRequestHandler):
             self._send(401, {"error": "invalid credentials"}); return
         if p == "/api/logout":
             tok = self._cookie("rolo_sess")
-            if tok: SESSIONS.pop(tok, None)
+            if tok: SESSIONS.pop(tok, None); _save_sessions()
             self._send(200, {"ok": True}); return
         if p == "/api/signup":
             try: d = json.loads(self._body() or b"{}")
