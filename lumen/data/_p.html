@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0b0a12">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Lumen — light up the world, one breath at a time</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{
+  --bg:#0b0a12; --bg2:#13111d; --panel:#181527cc; --line:#2a2540;
+  --text:#ece9f5; --muted:#9a93b8; --gold:#f5c977; --purple:#a855f7;
+  --purple2:#7c3aed; --pink:#ec4899; --good:#6ee7b7;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(1200px 700px at 70% -10%, #1b1430 0%, transparent 60%),
+    radial-gradient(900px 600px at 10% 110%, #231436 0%, transparent 55%),
+    var(--bg);
+  color:var(--text); font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;
+  overscroll-behavior:none;
+}
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5}
+#app{position:relative;z-index:1;max-width:620px;margin:0 auto;padding:0 16px 96px;min-height:100%}
+h1,h2,h3{font-weight:700;letter-spacing:-.02em}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 2px 8px}
+.brand .mark{font-size:26px;filter:drop-shadow(0 0 10px var(--gold))}
+.brand b{font-size:20px}
+.brand small{color:var(--muted);font-weight:500;margin-left:auto;font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;backdrop-filter:blur(8px);margin:12px 0}
+.muted{color:var(--muted)}
+.btn{appearance:none;border:0;border-radius:14px;padding:14px 18px;font-size:16px;font-weight:700;
+  background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;cursor:pointer;width:100%;
+  box-shadow:0 6px 24px -8px var(--purple)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);box-shadow:none}
+.btn.gold{background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;box-shadow:0 6px 24px -8px var(--gold)}
+.row{display:flex;gap:10px}.row>*{flex:1}
+input,textarea,select{width:100%;background:#0f0d18;border:1px solid var(--line);border-radius:12px;
+  color:var(--text);padding:12px 14px;font-size:16px;font-family:inherit}
+label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
+.err{color:#fda4af;font-size:13px;min-height:18px;margin-top:6px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:#201a33;border:1px solid var(--line);font-size:12px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.chip{border:1px solid var(--line);background:#13101f;border-radius:14px;padding:12px;text-align:center;cursor:pointer;font-weight:600}
+.chip.sel{border-color:var(--purple);background:linear-gradient(135deg,#241a3e,#1a1430);box-shadow:0 0 0 1px var(--purple) inset}
+.chip .big{font-size:20px}
+.stat{text-align:center}.stat .n{font-size:26px;font-weight:800}.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.bar{height:9px;border-radius:999px;background:#241d3a;overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink))}
+/* bottom nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;
+  background:linear-gradient(0deg,#0b0a12 60%,transparent);padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
+nav .inner{display:flex;gap:4px;background:#14111f;border:1px solid var(--line);border-radius:20px;padding:5px;max-width:560px;width:100%}
+nav button{flex:1;background:transparent;border:0;color:var(--muted);font-size:11px;font-weight:600;padding:7px 2px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+nav button .ic{font-size:19px}
+nav button.on{color:var(--text);background:#211a37}
+/* meditate / breathing */
+.orb-wrap{position:relative;height:300px;display:grid;place-items:center;margin:8px 0}
+.orb{width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle at 50% 40%, #f7d99a, #c084fc 55%, #6d28d9 100%);
+  box-shadow:0 0 70px 10px #a855f788, 0 0 140px 30px #7c3aed44;
+  display:grid;place-items:center;animation:breathe 10s ease-in-out infinite}
+.orb .t{font-size:34px;font-weight:800;color:#1a0b2e;text-shadow:0 1px 0 #ffffff55}
+@keyframes breathe{0%,100%{transform:scale(.72)}45%,55%{transform:scale(1.08)}}
+.ring{position:absolute;width:260px;height:260px;border-radius:50%;border:1px solid #a855f755;animation:breathe 10s ease-in-out infinite}
+.breath-label{position:absolute;bottom:6px;color:var(--muted);font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+/* map */
+#map{height:56vh;min-height:360px;border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+.leaflet-container{background:#0a0912}
+/* custom glowing map markers */
+.mkr-wrap{background:none!important;border:none!important}
+.mkr{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,#241a3e,#140f24);border:1.6px solid var(--c);color:var(--c);
+  box-shadow:0 0 8px var(--c),0 0 16px -3px var(--c);transition:transform .15s}
+.mkr:hover{transform:scale(1.15);z-index:999}
+.mkr .mkri{width:15px;height:15px;filter:drop-shadow(0 0 3px var(--c))}
+.mkr.me{animation:mkrpulse 2.2s ease-in-out infinite}
+.mkr.me .mkri{width:18px;height:18px}
+@keyframes mkrpulse{0%,100%{box-shadow:0 0 8px var(--c),0 0 14px -4px var(--c)}50%{box-shadow:0 0 16px var(--c),0 0 30px var(--c)}}
+.dotleg{width:13px;height:13px;border-radius:50%;background:radial-gradient(circle,#241a3e,#140f24);border:1.5px solid var(--c);box-shadow:0 0 7px var(--c);display:inline-block}
+/* dark popups */
+.leaflet-popup-content-wrapper{background:#181527;color:var(--text);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 40px -10px #000}
+.leaflet-popup-tip{background:#181527;border:1px solid var(--line)}
+.leaflet-popup-content{margin:11px 14px;font-family:inherit}
+.pop-h{display:flex;align-items:center;gap:7px;font-size:15px}
+.pop-ic .i{width:17px;height:17px;filter:drop-shadow(0 0 4px currentColor)}
+.pop-you{font-size:10px;background:#3a2d14;color:var(--gold);padding:1px 7px;border-radius:999px;font-weight:700}
+.pop-b{margin-top:4px;font-size:13px;color:#cbb5e8}
+.pop-m{margin-top:2px;font-size:11px;color:var(--muted)}
+.toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:50;background:#1c1630;border:1px solid var(--purple);
+  padding:12px 16px;border-radius:14px;box-shadow:0 10px 40px -10px #000;max-width:92%;text-align:center;font-weight:600}
+.hidden{display:none!important}
+.center{text-align:center}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.lb-row .rk{min-width:34px;display:flex;align-items:center;justify-content:center;gap:1px;color:var(--muted);font-weight:800;text-align:center}
+.lb-row .rk.g{color:var(--gold)}
+.lb-row .rk .medal{width:20px;height:20px}
+.lb-row .nm{flex:1;font-weight:600}.lb-row .vl{font-weight:800;color:var(--gold)}
+.lb-row.you{background:#1c1636;border-radius:12px;border-bottom-color:transparent}
+.ach{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin:8px 0}
+.ach .e{color:var(--muted);opacity:.5;display:flex}
+.ach .e .i{width:26px;height:26px}
+.ach.on .e{color:var(--gold);opacity:1}
+.ach.on{border-color:#4b3a6e;background:#160f26}
+.seg{display:flex;background:#13101f;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:8px;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px}
+.seg button.on{background:#271f42;color:var(--text)}
+.feed-item{border-left:2px solid var(--purple);padding:4px 0 4px 12px;margin:12px 0}
+.feed-item .who{font-size:12px;color:var(--muted)}
+a{color:var(--purple)}
+/* achievement collectible card */
+.ach-ov{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:24px;
+  background:rgba(6,5,12,.72);backdrop-filter:blur(6px);opacity:0;transition:opacity .22s}
+.ach-ov.show{opacity:1}
+.ach-card{position:relative;width:min(320px,86vw);border-radius:24px;padding:30px 24px 22px;text-align:center;overflow:hidden;
+  background:linear-gradient(170deg,#1d1733,#140f24 60%,#0f0b1c);
+  border:1.5px solid var(--rc);box-shadow:0 0 0 1px #ffffff08 inset,0 24px 70px -20px #000,0 0 40px -12px var(--rc);
+  transform:translateY(16px) scale(.94);opacity:0;transition:transform .35s cubic-bezier(.2,.9,.25,1.2),opacity .3s}
+.ach-ov.show .ach-card{transform:translateY(0) scale(1);opacity:1}
+.ach-card.locked{filter:saturate(.5)}
+.ach-foil{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;opacity:.5;
+  background:linear-gradient(115deg,transparent 30%,#a855f766 45%,#f5c97766 50%,#ec489966 55%,transparent 70%);
+  background-size:280% 280%;animation:foil 3.4s linear infinite}
+@keyframes foil{0%{background-position:160% 0}100%{background-position:-60% 0}}
+.ach-x{position:absolute;top:12px;right:12px;z-index:3;background:#ffffff12;border:0;color:var(--muted);
+  width:30px;height:30px;border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.ach-x .i{width:16px;height:16px}
+.ach-rare{position:relative;z-index:2;display:inline-block;font-size:11px;font-weight:800;letter-spacing:.14em;
+  text-transform:uppercase;border:1px solid;border-radius:999px;padding:3px 12px;margin-bottom:16px}
+.ach-badge{position:relative;z-index:2;height:128px;display:grid;place-items:center;margin-bottom:6px}
+.ach-ring{position:absolute;width:118px;height:118px;border-radius:50%;
+  background:radial-gradient(circle,var(--rc) 0%,transparent 62%);opacity:.28;animation:ringpulse 2.6s ease-in-out infinite}
+@keyframes ringpulse{0%,100%{transform:scale(.9);opacity:.22}50%{transform:scale(1.08);opacity:.4}}
+.ach-ic .achbig{width:82px;height:82px;filter:drop-shadow(0 0 14px var(--rc))}
+.ach-card.locked .ach-ic .achbig{filter:none;color:var(--muted);opacity:.7}
+.ach-title{position:relative;z-index:2;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.ach-desc{position:relative;z-index:2;color:var(--muted);font-size:14px;margin:6px 12px 16px}
+.ach-meta{position:relative;z-index:2;display:flex;flex-direction:column;gap:7px;align-items:center}
+.ach-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+  background:#ffffff0a;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.ach-chip .i{width:14px;height:14px}
+.rtag{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--c);
+  border:1px solid var(--c);border-radius:999px;padding:2px 9px;align-self:center;opacity:.9}
+/* icons */
+.i{width:1.15em;height:1.15em;display:inline-block;vertical-align:-.2em;flex:none;transition:transform .2s ease,filter .2s ease}
+.i.g{color:var(--gold)}.i.p{color:var(--purple)}.i.pink{color:var(--pink)}.i.flame{color:#fb923c}
+/* gradient-filled variants (stroke + fill follow the gradient) */
+.i.grad-gold{stroke:url(#gGold)}.i.grad-gold [fill="currentColor"]{fill:url(#gGold)}
+.i.grad-aur{stroke:url(#gAur)}.i.grad-aur [fill="currentColor"]{fill:url(#gAur)}
+.i.grad-pur{stroke:url(#gPur)}.i.grad-pur [fill="currentColor"]{fill:url(#gPur)}
+.i.grad-flame{stroke:url(#gFlame)}.i.grad-flame [fill="currentColor"]{fill:url(#gFlame)}
+/* glow */
+.i.glow{filter:drop-shadow(0 0 4px currentColor)}
+.i.glow2{filter:drop-shadow(0 0 7px currentColor) drop-shadow(0 0 14px currentColor)}
+.i.mark{width:27px;height:27px;color:var(--gold);stroke:url(#gGold);filter:drop-shadow(0 0 7px #f5c977cc);animation:markpulse 4s ease-in-out infinite}
+.i.mark circle{fill:url(#gGold)}
+.i.nav{width:22px;height:22px}
+.i.lg{width:46px;height:46px;filter:drop-shadow(0 0 16px currentColor)}
+@keyframes markpulse{0%,100%{filter:drop-shadow(0 0 5px #f5c97799)}50%{filter:drop-shadow(0 0 12px #f5c977ee)}}
+.brand .mark{display:inline-flex}
+.chip .big .i{width:26px;height:26px;color:#cbb5e8;transition:transform .2s ease,filter .2s ease}
+.chip.sel .big .i{color:#f0e6ff;filter:drop-shadow(0 0 7px var(--purple));transform:scale(1.12)}
+.lb-row .rk .i{width:18px;height:18px}
+.lb-row .rk .medal{width:20px;height:20px;filter:drop-shadow(0 0 5px currentColor)}
+.pill .i{width:15px;height:15px;filter:drop-shadow(0 0 4px currentColor)}
+nav button .ic .i{width:22px;height:22px}
+nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple));transform:translateY(-1px) scale(1.1)}
+.ach .e .i{filter:none}
+.ach.on .e .i{filter:drop-shadow(0 0 6px var(--gold))}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9b8"/><stop offset="1" stop-color="#e0953a"/></linearGradient>
+  <linearGradient id="gAur" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f7d99a"/><stop offset=".5" stop-color="#c084fc"/><stop offset="1" stop-color="#ec4899"/></linearGradient>
+  <linearGradient id="gPur" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8b4fe"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+  <linearGradient id="gFlame" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#fde047"/></linearGradient>
+</defs></svg>
+<canvas class="stars"></canvas>
+<div id="app"></div>
+<nav class="hidden" id="nav"><div class="inner">
+  <button data-tab="meditate" class="on"><span class="ic"></span>Meditate</button>
+  <button data-tab="map"><span class="ic"></span>Map</button>
+  <button data-tab="leagues"><span class="ic"></span>Leagues</button>
+  <button data-tab="journal"><span class="ic"></span>Journal</button>
+  <button data-tab="profile"><span class="ic"></span>You</button>
+</div></nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const el=(h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
+async function api(path,method='GET',body){
+  const o={method,headers:{}};
+  if(body){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body);}
+  const r=await fetch('api/'+path,o);
+  let j={};try{j=await r.json();}catch(e){}
+  if(!r.ok) throw (j.error||'Something went wrong');
+  return j;
+}
+function toast(html,ms=2600){const t=el(`<div class="toast">${html}</div>`);document.body.appendChild(t);setTimeout(()=>t.remove(),ms);}
+const fmt=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':''+n;
+
+/* ---- inline SVG icon set (no asset files; currentColor-driven) ---- */
+const SVGP={
+  lumen:'<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/><g><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.6" y1="5.6" x2="7.3" y2="7.3"/><line x1="16.7" y1="16.7" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="16.7" y2="7.3"/><line x1="7.3" y1="16.7" x2="5.6" y2="18.4"/></g>',
+  meditate:'<circle cx="12" cy="5.4" r="2.6" fill="currentColor" stroke="none"/><path d="M12 9c-2 0-3.3 1.4-3.8 3.2C6.5 12.5 5 13.8 5 15.5 5 16.3 5.6 17 6.5 17h11c.9 0 1.5-.7 1.5-1.5 0-1.7-1.5-3-3.2-3.3C15.3 10.4 14 9 12 9Z" fill="currentColor" stroke="none"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18"/>',
+  trophy:'<path d="M8 4h8v4.5a4 4 0 0 1-8 0V4Z"/><path d="M8 5.2H5a2 2 0 0 0 0 4h1.2M16 5.2h3a2 2 0 0 1 0 4h-1.2"/><path d="M12 12.5V16M9.2 20h5.6M10 20c0-1.4 .9-2 2-2s2 .6 2 2"/>',
+  book:'<path d="M5 4.5h10.5a2 2 0 0 1 2 2V20H7a2 2 0 0 1-2-2V4.5Z"/><path d="M17.5 17H7a2 2 0 0 0-2 2"/><path d="M8.5 8.5h6M8.5 11.5h5"/>',
+  spark:'<path d="M12 3c.7 5 3 7.3 8 8-5 .7-7.3 3-8 8-.7-5-3-7.3-8-8 5-.7 7.3-3 8-8Z" fill="currentColor" stroke="none"/>',
+  flame:'<path d="M12 3c3 3 5 5.5 5 9a5 5 0 0 1-10 0c0-1.9.7-3.1 1.9-4.3C9 9.2 9.6 10 10.1 10.6 10.6 8 11 5.5 12 3Z" fill="currentColor" stroke="none"/>',
+  live:'<circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="7" opacity=".55"/>',
+  rain:'<path d="M7.2 14.5a4.3 4.3 0 0 1-.4-8.6 5.8 5.8 0 0 1 11.1 1.4A3.4 3.4 0 0 1 17 14.5"/><line x1="8.5" y1="17.5" x2="7.5" y2="20"/><line x1="12" y1="17.5" x2="11" y2="21"/><line x1="15.5" y1="17.5" x2="14.5" y2="20"/>',
+  forest:'<path d="M12 3 7 11h3l-3 5h10l-3-5h3L12 3Z" fill="currentColor" stroke="none"/><line x1="12" y1="16" x2="12" y2="21"/>',
+  ocean:'<path d="M3 9c2 0 2.2-2 4.5-2S10 9 12 9s2.2-2 4.5-2S19 9 21 9"/><path d="M3 14c2 0 2.2-2 4.5-2S10 14 12 14s2.2-2 4.5-2S19 14 21 14"/><path d="M3 19c2 0 2.2-2 4.5-2S10 19 12 19s2.2-2 4.5-2S19 19 21 19"/>',
+  space:'<circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/>',
+  silence:'<circle cx="12" cy="12" r="8.5" opacity=".5"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/>',
+  calm:'<path d="M3 12c2 0 2.4-3 4.5-3S10 12 12 12s2.4-3 4.5-3S19 12 21 12"/><path d="M3 17c2 0 2.4-3 4.5-3S10 17 12 17s2.4-3 4.5-3S19 17 21 17"/>',
+  bolt:'<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" fill="currentColor" stroke="none"/>',
+  fog:'<path d="M4 8c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/><path d="M5 12c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/><path d="M4 16c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/>',
+  moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z" fill="currentColor" stroke="none"/>',
+  sunrise:'<line x1="3" y1="19" x2="21" y2="19"/><path d="M7.5 19a4.5 4.5 0 0 1 9 0"/><line x1="12" y1="4" x2="12" y2="8"/><line x1="4.8" y1="10.8" x2="6.2" y2="12.2"/><line x1="19.2" y1="10.8" x2="17.8" y2="12.2"/>',
+  flag:'<line x1="6" y1="3" x2="6" y2="21"/><path d="M6 4h11l-2 3 2 3H6Z" fill="currentColor" stroke="none"/>',
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>',
+  pin:'<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>',
+  up:'<line x1="12" y1="19" x2="12" y2="6"/><path d="M6 11l6-6 6 6"/>',
+  check:'<path d="M5 12l5 5 9-11"/>',
+  star:'<path d="M12 3l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6 6.7 19.3l1.1-5.9L3.4 9.3l6-.8L12 3Z" fill="currentColor" stroke="none"/>',
+  lotus:'<path d="M12 20c-4.2 0-7.5-2.6-7.5-5.2 2 0 3.2.5 4.2 1.3C8 13 9.6 10.2 12 7.5c2.4 2.7 4 5.5 3.3 8.6 1-.8 2.2-1.3 4.2-1.3C19.5 17.4 16.2 20 12 20Z" fill="currentColor" stroke="none"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/>',
+  close:'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+};
+const RARITY=[['Common','#9a93b8'],['Rare','#60a5fa'],['Epic','#c084fc'],['Legendary','#f5c977']];
+function rarityOf(pct){pct=pct==null?60:pct;return pct<=10?3:pct<=25?2:pct<=55?1:0;}
+function ic(name,cls){return `<svg class="i ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SVGP[name]||''}</svg>`;}
+const ACH_ICON={first_light:'lumen',marathoner:'flag',week_warrior:'flame',constellation:'spark',moon_child:'moon',dawn_patrol:'sunrise',globetrotter:'globe',centurion:'target',deep_diver:'ocean',luminary:'spark'};
+
+/* starfield */
+(function(){const c=$('.stars'),x=c.getContext('2d');function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+  const st=[...Array(90)].map(()=>({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.3+.2,a:Math.random()}));
+  (function loop(){x.clearRect(0,0,c.width,c.height);for(const s of st){s.a+=0.02;const o=.3+.3*Math.sin(s.a);x.fillStyle=`rgba(220,210,255,${o})`;x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();
+})();
+
+/* ---- Web Audio soundscapes (no asset files) ---- */
+const Sound=(function(){
+  let ac=null,nodes=[],master=null;
+  function ctx(){if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();}return ac;}
+  function noiseBuf(a){const b=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
+  function stopAll(){nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}});nodes=[];}
+  function start(kind){
+    const a=ctx();if(a.state==='suspended')a.resume();
+    stopAll();
+    master=a.createGain();master.gain.value=0;master.connect(a.destination);
+    master.gain.linearRampToValueAtTime(0.5,a.currentTime+2);
+    nodes.push(master);
+    if(kind==='silence')return;
+    if(kind==='rain'||kind==='ocean'){
+      const src=a.createBufferSource();src.buffer=noiseBuf(a);src.loop=true;
+      const lp=a.createBiquadFilter();lp.type='lowpass';lp.frequency.value=kind==='rain'?1600:500;
+      const g=a.createGain();g.gain.value=kind==='rain'?0.5:0.6;
+      if(kind==='ocean'){const lfo=a.createOscillator();lfo.frequency.value=0.12;const lg=a.createGain();lg.gain.value=0.35;lfo.connect(lg);lg.connect(g.gain);lfo.start();nodes.push(lfo);}
+      src.connect(lp);lp.connect(g);g.connect(master);src.start();nodes.push(src,lp,g);
+    }
+    if(kind==='forest'){
+      const src=a.createBufferSource();src.buffer=noiseBuf(a);src.loop=true;
+      const bp=a.createBiquadFilter();bp.type='bandpass';bp.frequency.value=900;bp.Q.value=0.6;
+      const g=a.createGain();g.gain.value=0.18;src.connect(bp);bp.connect(g);g.connect(master);src.start();nodes.push(src,bp,g);
+      // occasional bird chirps
+      const timer=setInterval(()=>{if(!ac)return;const o=a.createOscillator();o.type='sine';const f=1400+Math.random()*1600;o.frequency.setValueAtTime(f,a.currentTime);o.frequency.linearRampToValueAtTime(f*1.3,a.currentTime+0.08);const bg=a.createGain();bg.gain.value=0.0;bg.gain.linearRampToValueAtTime(0.12,a.currentTime+0.02);bg.gain.linearRampToValueAtTime(0,a.currentTime+0.18);o.connect(bg);bg.connect(master);o.start();o.stop(a.currentTime+0.2);},1400+Math.random()*1500);
+      nodes.push({stop:()=>clearInterval(timer),disconnect:()=>{}});
+    }
+    if(kind==='space'){
+      [110,110.4,164.8,220].forEach((f,i)=>{const o=a.createOscillator();o.type='sine';o.frequency.value=f;const g=a.createGain();g.gain.value=0.0;g.gain.linearRampToValueAtTime(0.12,a.currentTime+3);
+        const lfo=a.createOscillator();lfo.frequency.value=0.05+i*0.02;const lg=a.createGain();lg.gain.value=0.05;lfo.connect(lg);lg.connect(g.gain);lfo.start();
+        o.connect(g);g.connect(master);o.start();nodes.push(o,g,lfo);});
+    }
+  }
+  function bell(){const a=ctx();if(a.state==='suspended')a.resume();const o=a.createOscillator();o.type='sine';o.frequency.value=528;const g=a.createGain();g.gain.value=0.0;g.gain.linearRampToValueAtTime(0.5,a.currentTime+0.01);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+3.5);const o2=a.createOscillator();o2.type='sine';o2.frequency.value=1056;const g2=a.createGain();g2.gain.value=0;g2.gain.linearRampToValueAtTime(0.18,a.currentTime+0.01);g2.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+2.5);o.connect(g);o2.connect(g2);g.connect(a.destination);g2.connect(a.destination);o.start();o2.start();o.stop(a.currentTime+3.6);o2.stop(a.currentTime+2.6);}
+  function stop(){if(master){try{master.gain.linearRampToValueAtTime(0,ac.currentTime+1.2);}catch(e){}}setTimeout(stopAll,1300);}
+  return {start,stop,bell};
+})();
+
+/* ---- app state ---- */
+let ME=null, TAB='meditate', map=null, mapLayer=null;
+const SOUNDS=[['rain','rain','Rain'],['forest','forest','Forest'],['ocean','ocean','Ocean'],['space','space','Deep Space'],['silence','silence','Silence']];
+let pick={minutes:10,sound:'rain'};
+
+async function boot(){
+  try{const r=await api('me');if(r.authed){ME=r.profile;}}catch(e){}
+  if(!ME){renderAuth();return;}
+  $('#nav').classList.remove('hidden');
+  bindNav();
+  go('meditate');
+}
+const NAV_ICON={meditate:'meditate',map:'globe',leagues:'trophy',journal:'book',profile:'spark'};
+function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>go(b.dataset.tab);const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
+function go(tab){TAB=tab;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  ({meditate:renderMeditate,map:renderMap,leagues:renderLeagues,journal:renderJournal,profile:renderProfile}[tab])();}
+
+/* ---- auth ---- */
+function renderAuth(){
+  $('#nav').classList.add('hidden');
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <div class="center" style="margin:26px 0 10px">
+    <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${ic('lumen','lg grad-gold')}</div>
+    <h1 style="margin:14px 0 4px">Light up the world</h1>
+    <p class="muted" style="margin:0 28px">Meditate, earn Light, and watch the planet glow with everyone practicing today.</p>
+  </div>
+  <div class="card">
+    <label>Email</label><input id="em" type="email" autocomplete="email" placeholder="you@example.com">
+    <label>Password</label><input id="pw" type="password" autocomplete="current-password" placeholder="at least 6 characters">
+    <div id="nameWrap" class="hidden"><label>Display name (shown on the map & leagues)</label><input id="nm" placeholder="e.g. Matthew"></div>
+    <div class="err" id="er"></div>
+    <button class="btn" id="go">Sign in</button>
+    <button class="btn ghost" id="sw" style="margin-top:9px">Create an account</button>
+  </div>`;
+  let mode='login';
+  $('#sw').onclick=()=>{mode=mode==='login'?'signup':'login';
+    $('#nameWrap').classList.toggle('hidden',mode!=='signup');
+    $('#go').textContent=mode==='login'?'Sign in':'Create account & begin';
+    $('#sw').textContent=mode==='login'?'Create an account':'I already have an account';};
+  $('#go').onclick=async()=>{const er=$('#er');er.textContent='';
+    const email=$('#em').value.trim(),password=$('#pw').value;
+    if(!email||!password){er.textContent='Enter your email and password.';return;}
+    try{if(mode==='signup'){await api('signup','POST',{email,password,name:$('#nm').value});}else{await api('login','POST',{email,password});}
+      const r=await api('me');ME=r.profile;$('#nav').classList.remove('hidden');bindNav();go('meditate');
+    }catch(e){er.textContent=e;}};
+}
+
+/* ---- meditate ---- */
+async function renderMeditate(){
+  let pres={now:0,today_sessions:0};try{pres=await api('presence');}catch(e){}
+  let prompt='';try{prompt=(await api('prompt')).prompt;}catch(e){}
+  const durs=[5,10,20,30];
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b><small>Lv ${ME.level} · ${fmt(ME.light)} light</small></div>
+  <div class="card center" style="padding:14px">
+    <div class="pill" style="background:#1a1330;border-color:#3a2d5e"><span class="i p" style="width:12px;height:12px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px var(--purple)"></span> <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 10px">Duration</h3>
+    <div class="grid3" id="durs">${durs.map(d=>`<div class="chip ${d===pick.minutes?'sel':''}" data-d="${d}"><div class="big">${d}</div>min</div>`).join('')}</div>
+    <h3 style="margin:16px 0 10px">Soundscape</h3>
+    <div class="grid3" id="snds">${SOUNDS.map(s=>`<div class="chip ${s[0]===pick.sound?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
+    <button class="btn gold" id="start" style="margin-top:18px">Begin session &rarr;</button>
+    <p class="muted center" style="font-size:12px;margin:10px 0 0">${ic('flame','flame grad-flame glow')} ${ME.streak}-day streak · ${ME.league.name} league</p>
+  </div>
+  <div class="card">
+    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Today's reflection</div>
+    <div style="font-size:17px;margin-top:6px">${prompt||'Breathe.'}</div>
+  </div>`;
+  $('#durs').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.minutes=+c.dataset.d;renderMeditate();});
+  $('#snds').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s;renderMeditate();});
+  $('#start').onclick=startSession;
+}
+
+let timerInt=null;
+async function startSession(){
+  try{await api('session/start','POST',{});}catch(e){}
+  Sound.bell();Sound.start(pick.sound);
+  const total=pick.minutes*60;let left=total;let ended=false;
+  $('#nav').classList.add('hidden');
+  $('#app').innerHTML=`
+  <div class="orb-wrap">
+    <div class="ring"></div>
+    <div class="orb"><div class="t" id="clock">${mm(left)}</div></div>
+    <div class="breath-label" id="bl">breathe in</div>
+  </div>
+  <div class="center muted" style="margin-top:-10px">${SOUNDS.find(s=>s[0]===pick.sound)[2]} · ${pick.minutes} min</div>
+  <div style="padding:0 24px;margin-top:22px"><button class="btn ghost" id="end">End session</button></div>`;
+  const bl=$('#bl');let phase=0;
+  const breath=setInterval(()=>{phase=(phase+1)%2;bl.textContent=phase?'breathe out':'breathe in';},5000);
+  timerInt=setInterval(()=>{left--;$('#clock')&&($('#clock').textContent=mm(left));if(left<=0){finish(true);}},1000);
+  function stopTimers(){clearInterval(timerInt);clearInterval(breath);}
+  async function finish(complete){
+    if(ended)return;ended=true;stopTimers();Sound.stop();if(complete)Sound.bell();
+    const done=complete?pick.minutes:Math.max(1,Math.round((total-left)/60));
+    completeFlow(done);
+  }
+  $('#end').onclick=()=>finish(false);
+  window._finishEarly=finish;
+}
+const mm=(s)=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+function completeFlow(minutes){
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Session complete</b></div>
+  <div class="card center"><div style="color:var(--gold)">${ic('lotus','lg grad-gold')}</div>
+    <h2 style="margin:8px 0 2px">${minutes} minutes</h2>
+    <p class="muted" style="margin:0">How do you feel?</p>
+    <div class="grid3" id="mood" style="margin-top:12px">
+      ${[['calm','calm','calm'],['energized','bolt','energized'],['unclear','fog','unclear']].map(m=>`<div class="chip" data-m="${m[0]}"><div class="big">${ic(m[1])}</div>${m[2]}</div>`).join('')}
+    </div>
+    <label style="text-align:left">A note for your journal (optional)</label>
+    <textarea id="note" rows="3" placeholder="What came up?"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;text-align:left"><input type="checkbox" id="share" style="width:auto"> Share this note to the community feed</label>
+    <div id="locnote" class="muted" style="font-size:12px;margin-top:8px"></div>
+    <button class="btn gold" id="save" style="margin-top:14px">Collect your Light ${ic('spark')}</button>
+  </div>`;
+  let mood='';
+  $('#mood').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{mood=c.dataset.m;$('#mood').querySelectorAll('.chip').forEach(x=>x.classList.toggle('sel',x===c));});
+  let coords=null;
+  $('#locnote').textContent='Drop your point of light on the map?';
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      p=>{coords={lat:p.coords.latitude,lon:p.coords.longitude};$('#locnote').innerHTML=ic('pin')+' Your light will appear on the world map.';},
+      ()=>{$('#locnote').innerHTML=ME.lat?ic('pin')+' Using your saved location for the map.':'Location off — set a home city in your profile to appear on the map.';},
+      {timeout:6000});
+  }
+  $('#save').onclick=async()=>{
+    const body={minutes,soundscape:pick.sound,mood,note:$('#note').value,share:$('#share').checked};
+    if(coords){body.lat=coords.lat;body.lon=coords.lon;}
+    let res;try{res=await api('session/complete','POST',body);}catch(e){toast(e);return;}
+    const r=await api('me');ME=r.profile;
+    showRewards(res);
+  };
+}
+
+function showRewards(res){
+  $('#nav').classList.remove('hidden');bindNav();
+  const ach=(res.new_achievements||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'star')} ${a.title}</div>`).join(' ');
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <div class="card center">
+    <div style="color:var(--gold);filter:drop-shadow(0 0 20px var(--gold))">${ic('spark','lg grad-aur')}</div>
+    <div style="font-size:34px;font-weight:800;color:var(--gold)">+${res.light_earned} Light</div>
+    ${res.time_bonus?`<div class="pill" style="margin-top:6px">${res.time_bonus==='night'?ic('moon','p glow')+' night owl +20%':ic('sunrise','g glow')+' dawn +20%'}</div>`:''}
+    ${res.multiplier>1?`<div class="pill" style="margin-top:6px">${ic('flame','flame grad-flame glow')} ${res.streak}-day streak ×${res.multiplier}</div>`:`<div class="muted" style="margin-top:8px">${ic('flame','flame grad-flame glow')} ${res.streak}-day streak</div>`}
+    ${res.leveled_up?`<h2 style="margin:14px 0 0;color:var(--pink)">Level ${res.level} reached!</h2>`:''}
+    ${ach?`<div style="margin-top:14px"><div class="muted" style="font-size:12px">Achievement unlocked</div><div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ach}</div></div>`:''}
+    <button class="btn" id="done" style="margin-top:18px">Done</button>
+    <button class="btn ghost" id="seemap" style="margin-top:9px">See your light on the map ${ic('globe')}</button>
+  </div>`;
+  $('#done').onclick=()=>go('meditate');
+  $('#seemap').onclick=()=>go('map');
+}
+
+/* ---- map ---- */
+let mapScope='today';
+const SS_LABEL={rain:'Rain',forest:'Forest',ocean:'Ocean',space:'Deep Space',silence:'Silence'};
+function ago(iso){const s=(Date.now()-new Date(iso).getTime())/1000;if(s<90)return 'just now';if(s<3600)return Math.round(s/60)+'m ago';if(s<86400)return Math.round(s/3600)+'h ago';return Math.round(s/86400)+'d ago';}
+function mapMarker(pt){
+  const mine=pt.bot===0;const color=mine?'#f5c977':'#c084fc';
+  const icon=L.divIcon({className:'mkr-wrap',iconSize:[mine?34:28,mine?34:28],iconAnchor:[mine?17:14,mine?17:14],
+    html:`<div class="mkr ${mine?'me':''}" style="--c:${color}">${ic(pt.soundscape||'silence','mkri')}</div>`});
+  const m=L.marker([pt.lat,pt.lon],{icon});
+  m.bindPopup(`<div class="pop"><div class="pop-h"><span class="pop-ic" style="color:${color}">${ic(pt.soundscape||'silence')}</span><b>${esc(pt.name)||'Someone'}</b>${mine?' <span class="pop-you">you</span>':''}</div>`+
+    `<div class="pop-b">${pt.minutes} min · ${SS_LABEL[pt.soundscape]||esc(pt.soundscape)}</div>`+
+    `<div class="pop-m">${esc(pt.city)||'Somewhere on Earth'} · ${ago(pt.ended)}</div></div>`,
+    {closeButton:false});
+  return m;
+}
+async function renderMap(){
+  $('#app').innerHTML=`
+  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>World</b></div>
+  <div class="seg" id="scope"><button class="${mapScope==='today'?'on':''}" data-s="today">Today</button><button class="${mapScope==='all'?'on':''}" data-s="all">All time</button></div>
+  <div id="pres" class="muted center" style="margin:10px 0"></div>
+  <div id="map"></div>
+  <div class="card" id="legend" style="padding:12px 14px;margin-top:10px">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12px">
+      <span style="display:flex;align-items:center;gap:7px"><span class="dotleg" style="--c:#f5c977"></span>You</span>
+      <span style="display:flex;align-items:center;gap:7px"><span class="dotleg" style="--c:#c084fc"></span>Community</span>
+    </div>
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:12px">
+      ${['rain','forest','ocean','space','silence'].map(s=>`<span style="display:flex;align-items:center;gap:5px">${ic(s,'p')} ${SS_LABEL[s]}</span>`).join('')}
+    </div>
+  </div>
+  <p class="muted center" style="font-size:12px;margin-top:10px">Each glow is a real session. Locations are blurred for privacy.</p>`;
+  $('#scope').querySelectorAll('button').forEach(b=>b.onclick=()=>{mapScope=b.dataset.s;renderMap();});
+  try{const p=await api('presence');$('#pres').innerHTML=`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--purple);box-shadow:0 0 7px var(--purple);vertical-align:middle"></span> <b>${p.now}</b> meditating now · <b>${p.today_sessions}</b> sessions · <b>${fmt(p.today_light)}</b> light today`;}catch(e){}
+  map=L.map('map',{attributionControl:false,zoomControl:true,worldCopyJump:true}).setView([20,0],2);
+  // Keyless Esri dark-gray basemap (same approach as travelog — no API key needed)
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{maxZoom:16}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{maxZoom:16}).addTo(map);
+  let data={points:[]};try{data=await api('map?scope='+mapScope);}catch(e){}
+  let recentM=null;
+  data.points.forEach((pt,i)=>{const m=mapMarker(pt).addTo(map);if(i===0)recentM=m;});
+  setTimeout(()=>map.invalidateSize(),120);
+  // auto-fly to + open the most recent meditator (points are ordered newest-first)
+  if(recentM){const pt=data.points[0];
+    setTimeout(()=>{map.flyTo([pt.lat,pt.lon],5,{duration:1.8});},400);
+    setTimeout(()=>recentM.openPopup(),2300);}
+}
+
+/* ---- leagues & leaderboards ---- */
+let lbScope='week',lbBy='light',leagueView='league';
+async function renderLeagues(){
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Leagues</b></div>
+    <div class="seg" id="lv"><button class="${leagueView==='league'?'on':''}" data-v="league">My league</button><button class="${leagueView==='global'?'on':''}" data-v="global">Global ranks</button></div>
+    <div id="lbody"></div>`;
+  $('#lv').querySelectorAll('button').forEach(b=>b.onclick=()=>{leagueView=b.dataset.v;renderLeagues();});
+  if(leagueView==='league'){await renderLeagueView();}else{await renderGlobalView();}
+}
+async function renderLeagueView(){
+  let d;try{d=await api('league');}catch(e){$('#lbody').innerHTML=`<div class="card muted">${e}</div>`;return;}
+  const lg=d.league;const toNext=lg.next_at?Math.max(0,lg.next_at-d.weekly_light):0;
+  const prog=lg.next_at?Math.min(100,100*(d.weekly_light-lg.at)/(lg.next_at-lg.at)):100;
+  $('#lbody').innerHTML=`
+  <div class="card center" style="border-color:${lg.color}">
+    <div class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase">Current league</div>
+    <h1 style="margin:6px 0;color:${lg.color}">${lg.name}</h1>
+    <div class="muted">${fmt(d.weekly_light)} light this week</div>
+    ${lg.next?`<div class="bar" style="margin:14px 0 6px"><i style="width:${prog}%"></i></div><div class="muted" style="font-size:13px">${toNext} light to <b style="color:var(--text)">${lg.next}</b></div>`:`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Top league — keep it lit</div>`}
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 6px">${lg.name} league · this week</h3>
+    <p class="muted" style="font-size:12px;margin:0 0 8px">Top 5 promote ${ic('up','g')} · resets every week</p>
+    ${d.members.map(m=>`<div class="lb-row ${m.you?'you':''}"><div class="rk ${m.rank<=5?'g':''}">${m.rank<=5?ic('up','g'):''}${m.rank}</div><div class="nm">${esc(m.name)}${m.you?' (you)':''}</div><div class="vl">${fmt(m.weekly_light)}</div></div>`).join('')||'<div class="muted">No one here yet.</div>'}
+  </div>`;
+}
+async function renderGlobalView(){
+  $('#lbody').innerHTML=`
+  <div class="seg" id="sc" style="margin-bottom:8px"><button class="${lbScope==='today'?'on':''}" data-s="today">Today</button><button class="${lbScope==='week'?'on':''}" data-s="week">This week</button><button class="${lbScope==='all'?'on':''}" data-s="all">All time</button></div>
+  <div class="seg" id="by"><button class="${lbBy==='light'?'on':''}" data-b="light">Light</button><button class="${lbBy==='minutes'?'on':''}" data-b="minutes">Minutes</button></div>
+  <div class="card" id="rows"></div>`;
+  $('#sc').querySelectorAll('button').forEach(b=>b.onclick=()=>{lbScope=b.dataset.s;renderGlobalView();});
+  $('#by').querySelectorAll('button').forEach(b=>b.onclick=()=>{lbBy=b.dataset.b;renderGlobalView();});
+  let d;try{d=await api(`leaderboard?scope=${lbScope}&by=${lbBy}`);}catch(e){return;}
+  const unit=lbBy==='light'?'light':'min';
+  const medal=['#f5c977','#cbd5e1','#d9915b'];
+  $('#rows').innerHTML=d.rows.map(r=>`<div class="lb-row ${r.you?'you':''}"><div class="rk">${r.rank<=3?`<span style="color:${medal[r.rank-1]}">${ic('star','medal')}</span>`:r.rank}</div><div class="nm">${esc(r.name)}${r.you?' (you)':''}</div><div class="vl">${fmt(r.value)} <span class="muted" style="font-size:11px">${unit}</span></div></div>`).join('')||'<div class="muted">No sessions yet.</div>';
+}
+
+/* ---- journal ---- */
+let journalView='mine';
+async function renderJournal(){
+  let prompt='';try{prompt=(await api('prompt')).prompt;}catch(e){}
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b></div>
+  <div class="card">
+    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Today's reflection</div>
+    <div style="font-size:17px;margin:6px 0 12px">${prompt}</div>
+    <textarea id="jt" rows="4" placeholder="Write freely…"></textarea>
+    <div class="row" style="margin-top:10px"><label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" id="js" style="width:auto"> Share to feed</label><button class="btn" id="jsave" style="flex:0 0 auto;width:auto;padding:12px 20px">Save</button></div>
+  </div>
+  <div class="seg" id="jv"><button class="${journalView==='mine'?'on':''}" data-v="mine">My entries</button><button class="${journalView==='feed'?'on':''}" data-v="feed">Community feed</button></div>
+  <div id="jbody"></div>`;
+  $('#jsave').onclick=async()=>{const t=$('#jt').value.trim();if(!t){toast('Write something first');return;}
+    try{await api('journal','POST',{text:t,prompt,share:$('#js').checked});$('#jt').value='';toast('Saved '+ic('spark','g'));renderJournal();}catch(e){toast(e);}};
+  $('#jv').querySelectorAll('button').forEach(b=>b.onclick=()=>{journalView=b.dataset.v;renderJournal();});
+  const body=$('#jbody');
+  if(journalView==='mine'){
+    const d=await api('journal');
+    body.innerHTML=d.entries.length?d.entries.map(e=>`<div class="card"><div class="muted" style="font-size:12px">${new Date(e.created).toLocaleString()} ${e.mood?'· '+e.mood:''} ${e.shared?'· shared':''}</div>${e.prompt?`<div class="muted" style="font-style:italic;margin:6px 0">${e.prompt}</div>`:''}<div>${esc(e.text)}</div></div>`).join(''):'<div class="card muted">No entries yet. Your first sit awaits.</div>';
+  }else{
+    const d=await api('feed');
+    body.innerHTML=`<div class="card">${d.feed.length?d.feed.map(f=>`<div class="feed-item"><div class="who">${esc(f.name)} ${f.mood?'· '+esc(f.mood):''} · ${new Date(f.created).toLocaleDateString()}</div>${esc(f.text)}</div>`).join(''):'<div class="muted">Be the first to share.</div>'}</div>`;
+  }
+}
+const esc=(s)=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ---- profile ---- */
+async function renderProfile(){
+  const r=await api('me');ME=r.profile;const p=ME;
+  const prog=Math.min(100,100*p.level_into/(p.level_into+p.level_need));
+  let ach={achievements:[]};try{ach=await api('achievements');}catch(e){}
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>${esc(p.name)}</b></div>
+  <div class="card">
+    <div class="row" style="align-items:center"><div><div class="muted" style="font-size:12px">LEVEL</div><div style="font-size:40px;font-weight:800">${p.level}</div></div>
+    <div style="text-align:right"><div class="pill" style="border-color:${p.league.color};color:${p.league.color}">${p.league.name} league</div></div></div>
+    <div class="bar" style="margin:10px 0 6px"><i style="width:${prog}%"></i></div>
+    <div class="muted" style="font-size:12px">${p.level_into} / ${p.level_into+p.level_need} light to level ${p.level+1}</div>
+  </div>
+  <div class="card"><div class="grid3">
+    <div class="stat"><div class="n">${fmt(p.light)}</div><div class="l">Light</div></div>
+    <div class="stat"><div class="n">${p.streak}</div><div class="l">Streak</div></div>
+    <div class="stat"><div class="n">${p.total_sessions}</div><div class="l">Sessions</div></div>
+    <div class="stat"><div class="n">${p.total_minutes}</div><div class="l">Minutes</div></div>
+    <div class="stat"><div class="n">${p.best_streak}</div><div class="l">Best streak</div></div>
+    <div class="stat"><div class="n">${fmt(p.weekly_light)}</div><div class="l">This week</div></div>
+  </div></div>
+  <div class="card">
+    <h3 style="margin:0 0 2px">Achievements</h3>
+    <p class="muted" style="font-size:12px;margin:0 0 10px">Tap a badge to open its card</p>
+    ${ach.achievements.map(a=>{const r=RARITY[rarityOf(a.pct)];return `<div class="ach ${a.unlocked?'on':''}" data-ac="${a.code}"><div class="e">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</div><div style="flex:1"><b>${a.title}</b><div class="muted" style="font-size:13px">${a.unlocked?a.desc:'Locked'}</div></div><span class="rtag" style="--c:${r[1]}">${r[0]}</span></div>`;}).join('')}
+  </div>
+  <div class="card">
+    <h3 style="margin:0 0 6px">Home location</h3>
+    <p class="muted" style="font-size:13px;margin:0 0 10px">${p.city?(ic('pin')+' '+esc(p.city)):'Not set — your sessions are not shown on the map until you set this.'}</p>
+    <button class="btn ghost" id="loc">Use my current location</button>
+  </div>
+  <button class="btn ghost" id="out" style="margin-top:4px">Sign out</button>`;
+  $('#loc').onclick=()=>{if(!navigator.geolocation){toast('Geolocation not available');return;}
+    navigator.geolocation.getCurrentPosition(async pos=>{try{await api('location','POST',{lat:pos.coords.latitude,lon:pos.coords.longitude});toast(ic('pin')+' Location saved');renderProfile();}catch(e){toast(e);}},()=>toast('Could not get location'));};
+  $('#out').onclick=async()=>{await api('logout','POST',{});ME=null;renderAuth();};
+  window._ACH=ach.achievements;
+  document.querySelectorAll('.ach').forEach(x=>x.onclick=()=>openAchCard(x.dataset.ac));
+}
+
+/* ---- achievement collectible card ---- */
+function openAchCard(code){
+  const a=(window._ACH||[]).find(x=>x.code===code);if(!a)return;
+  const r=RARITY[rarityOf(a.pct)];const rname=r[0],rcol=r[1];
+  const locked=!a.unlocked;
+  const date=a.created?new Date(a.created).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'';
+  const grad=locked?'':(rname==='Legendary'?'grad-gold':rname==='Epic'?'grad-aur':'grad-pur');
+  const ov=el(`<div class="ach-ov">
+    <div class="ach-card ${locked?'locked':''}" style="--rc:${rcol}">
+      <button class="ach-x">${ic('close')}</button>
+      <div class="ach-foil"></div>
+      <div class="ach-rare" style="color:${rcol};border-color:${rcol}">${rname}</div>
+      <div class="ach-badge">
+        <div class="ach-ring"></div>
+        <div class="ach-ic" style="${locked?'':'color:'+rcol}">${ic(locked?'lock':(ACH_ICON[code]||'star'),'achbig '+grad)}</div>
+      </div>
+      <div class="ach-title">${locked?'???':a.title}</div>
+      <div class="ach-desc">${a.desc}</div>
+      <div class="ach-meta">
+        ${locked?`<span class="ach-chip">${ic('lock')} Locked</span>`:`<span class="ach-chip" style="color:var(--good)">${ic('check')} Unlocked${date?' · '+date:''}</span>`}
+        <span class="ach-chip">${a.pct}% of lumens have this</span>
+      </div>
+    </div></div>`);
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.ach-x'))ov.remove();});
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>ov.classList.add('show'));
+}
+
+boot();
+</script>
+</body>
+</html>

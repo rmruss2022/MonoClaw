@@ -380,6 +380,53 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     }
     return;
   }
+  // TV content-router, served under this one front door. The browser "TV"
+  // (/mock), the standalone remote (/remote) and every router API they call use
+  // location.origin, so proxying these paths lets the whole TV stack live on
+  // home.bedrock.casa instead of the raw Railway URL. The pages carry their own
+  // router tokens in Authorization (passed through), and the SSE stream is piped
+  // rather than buffered so the mock TV updates live.
+  {
+    const isTvRouter =
+      url === "/mock" || url === "/remote" || url === "/remote/login" ||
+      url === "/sticks" || url === "/trending" || url === "/route" || url === "/search" ||
+      url.startsWith("/stick/") || url.startsWith("/sticks/") || url.startsWith("/title/");
+    if (isTvRouter) {
+      const fullPath = req.url ?? "/"; // keep the query string
+      const method = req.method ?? "GET";
+      const body = method === "POST" ? await readBody(req) : undefined;
+      const isStream = url.startsWith("/stick/") && url.endsWith("/stream");
+      const authz = req.headers["authorization"];
+      try {
+        const r = await fetch(`${TV_ROUTER_URL}${fullPath}`, {
+          method,
+          headers: {
+            Accept: isStream ? "text/event-stream" : "*/*",
+            ...(method === "POST" ? { "Content-Type": "application/json" } : {}),
+            ...(authz ? { Authorization: String(authz) } : {}),
+          },
+          body,
+        });
+        if (isStream && r.body) {
+          res.statusCode = r.status;
+          res.setHeader("Content-Type", "text/event-stream");
+          res.setHeader("Cache-Control", "no-store");
+          res.setHeader("Connection", "keep-alive");
+          const { Readable } = await import("node:stream");
+          Readable.fromWeb(r.body as any).pipe(res);
+          return;
+        }
+        const text = await r.text();
+        res.statusCode = r.status;
+        res.setHeader("Content-Type", r.headers.get("content-type") || "application/json");
+        res.setHeader("Cache-Control", "no-store");
+        res.end(text);
+      } catch {
+        json(res, { error: "tv_router_unreachable" }, 502);
+      }
+      return;
+    }
+  }
   // TV tab proxy: forward /tv/api/* to the content-router with the user's session
   // grant (oh_auth) as the Bearer token — no second login on the TV tab.
   if (url.startsWith("/tv/api/")) {

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ora — App Store Release Pipeline</title>
+<style>
+  :root{
+    --forest:#1d473e; --forest-light:#2d5e52; --lavender:#D4B8E8; --lav-light:#e6d9f2;
+    --golden:#D4A574; --cream:#FAF8F3; --warm:#F0EDE6; --border:#E0DCD3;
+    --text:#2D2D2D; --text2:#5A5A5A; --text3:#8A8A8A; --white:#fff; --done:#2d5e52;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--cream);color:var(--text);line-height:1.45;padding-bottom:60px}
+  header{background:var(--forest);color:#fff;padding:22px 18px 20px}
+  header .kick{font-size:11px;letter-spacing:2px;opacity:.7;font-weight:700}
+  header h1{margin:4px 0 2px;font-size:24px}
+  header p{margin:0;opacity:.85;font-size:13px}
+  .bar{height:10px;background:rgba(255,255,255,.18);border-radius:6px;margin-top:14px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:var(--lavender);width:0;transition:width .3s}
+  .barlabel{font-size:12px;opacity:.9;margin-top:6px;display:flex;justify-content:space-between}
+  .wrap{max-width:760px;margin:0 auto;padding:0 14px}
+
+  .next{background:var(--white);border:2px solid var(--golden);border-radius:16px;
+    padding:16px;margin:16px 0;box-shadow:0 3px 12px rgba(0,0,0,.06)}
+  .next .lbl{font-size:11px;font-weight:800;letter-spacing:1.5px;color:var(--golden);text-transform:uppercase}
+  .next .task{font-size:18px;font-weight:600;margin:6px 0 4px}
+  .next .meta{font-size:12px;color:var(--text3)}
+  .next .btn{margin-top:12px;background:var(--forest);color:#fff;border:0;border-radius:100px;
+    padding:11px 18px;font-size:15px;font-weight:600;cursor:pointer;width:100%}
+  .next .btn:active{background:var(--forest-light)}
+  .allclear{color:var(--forest);font-weight:600}
+
+  .phase{background:var(--white);border:1px solid var(--border);border-radius:14px;
+    margin:12px 0;overflow:hidden}
+  .phead{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;
+    background:var(--warm)}
+  .phead .em{font-size:18px}
+  .phead h2{margin:0;font-size:15px;flex:1}
+  .phead .cnt{font-size:12px;color:var(--text2);font-weight:600}
+  .phead .chev{color:var(--text3);transition:transform .2s}
+  .phase.collapsed .chev{transform:rotate(-90deg)}
+  .phase.collapsed .plist{display:none}
+  .tag{font-size:9px;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:.5px}
+  .tag.app{background:var(--lav-light);color:#6B5B95}
+  .tag.apple{background:#E9E9EC;color:#444}
+
+  .plist{list-style:none;margin:0;padding:6px 6px 4px}
+  li.item{display:flex;align-items:flex-start;gap:11px;padding:9px 8px;border-radius:9px}
+  li.item + li.item{border-top:1px solid #f2efe8}
+  .cb{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);flex:0 0 auto;
+    margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff}
+  .cb.on{background:var(--done);border-color:var(--done)}
+  .txt{flex:1;font-size:14.5px}
+  .item.done .txt{text-decoration:line-through;color:var(--text3)}
+  .del{color:#ccc;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+  .del:active{color:#c87b7b}
+  .add{display:flex;gap:8px;padding:8px 10px 12px}
+  .add input{flex:1;border:1px solid var(--border);border-radius:9px;padding:9px 11px;font-size:14px;background:var(--cream)}
+  .add button{border:0;background:var(--forest);color:#fff;border-radius:9px;padding:0 15px;font-size:20px;cursor:pointer}
+
+  .tools{display:flex;justify-content:space-between;align-items:center;margin:18px 0 4px;font-size:12px;color:var(--text3)}
+  .tools button{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text2);font-size:12px;cursor:pointer}
+  footer{text-align:center;color:var(--text3);font-size:11px;padding:22px 14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="kick">ORA HEALTH · 🌀</div>
+    <h1>App Store Release Pipeline</h1>
+    <p>Work top to bottom. The gold card is always your next move.</p>
+    <div class="bar"><i id="barfill"></i></div>
+    <div class="barlabel"><span id="barpct">0%</span><span id="barcnt"></span></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="next" class="next"></div>
+  <div id="phases"></div>
+  <div class="tools">
+    <span>Saves automatically on this device.</span>
+    <span><button id="collapseAll">Collapse all</button> <button id="reset">Reset</button></span>
+  </div>
+</div>
+<footer>Ora release pipeline · built with Aura AI. Check items off, add your own, and the next step surfaces itself.</footer>
+
+<script>
+const KEY='ora.release.v1';
+let UID=1;
+const uid=()=> 't'+(UID++);
+
+// side: 'app' = things to do in the app/code · 'apple' = Apple / App Store Connect side
+function seed(){
+  const P=(title,em,side,tasks)=>({id:uid(),title,em,side,open:true,
+    tasks:tasks.map(t=>Array.isArray(t)?{id:uid(),text:t[0],done:!!t[1]}:{id:uid(),text:t,done:false})});
+  return {uid:1, phases:[
+    P('Phase 0 · Accounts & agreements','🔑','apple',[
+      'Confirm Apple Developer Program is active ($99/yr)',
+      'Accept the latest Apple Developer Program License Agreement',
+      'Sign the Paid Applications Agreement (required for subscriptions) — App Store Connect → Business',
+      'Create the App Store Connect app record (name, primary language, bundle id com.russellm22.ora-ai, SKU)',
+      'Confirm Expo/EAS account — run `eas login` and `eas init` linked to the project',
+    ]),
+    P('Phase 1 · App build readiness','🛠️','app',[
+      ['Expo SDK 54 / RN 0.81 — current & submittable',true],
+      ['app.json basics: name, icon, splash, adaptive icon, bundle id',true],
+      ['eas.json build profiles (development / preview / production)',true],
+      'Add iOS permission strings to app.json infoPlist: NSMicrophoneUsageDescription (voice agent), NSPhotoLibraryUsageDescription (image picker), notifications rationale',
+      'Set encryption compliance: ios.config.usesNonExemptEncryption = false (add ITSAppUsesNonExemptEncryption)',
+      'Production config: point EXPO_PUBLIC_API_BASE_URL at prod backend; store ElevenLabs / LiveKit / RevenueCat keys as EAS secrets',
+      'Disable dev-only paths for prod: DEV_MOCK_USER bypass, /voice/debug-log logging, FORCE_ONBOARDING; confirm feature-flag defaults (life_os off for launch?)',
+      'Add an eas.json `submit` profile (Apple ID, ASC app id, Apple team id)',
+      'Push notifications: upload APNs key to EAS/Expo and send a test notification',
+      'Subscriptions: create the products in App Store Connect and wire RevenueCat entitlements to prod',
+      'QA on a real device via `eas build -p ios --profile preview` — run login, onboarding, therapy/voice, purchase',
+    ]),
+    P('Phase 2 · Apple compliance','🛡️','apple',[
+      'Publish a Privacy Policy at a public URL (required — health / sensitive data)',
+      'Fill App Privacy "nutrition labels" in App Store Connect (account, health/mental-health, usage, purchases)',
+      'Add in-app Account Deletion (Apple requires it whenever accounts exist)',
+      'Sign in with Apple — required IF any third-party/social login is offered; confirm and add if so',
+      'Surface a mental-health disclaimer + crisis resources in-app (Apple scrutinizes health apps)',
+      'Complete the Age Rating questionnaire (likely 17+ with descriptors)',
+      'Paywall compliance: show price/terms, a Restore Purchases button, and links to Terms (EULA) + Privacy',
+    ]),
+    P('Phase 3 · Store listing','🖼️','apple',[
+      'Write name, subtitle, promotional text, description, keywords',
+      'Capture screenshots: 6.7" iPhone (required) + others; optional app preview video',
+      'Add Support URL + Marketing URL',
+      'Set category (Health & Fitness) and pricing (free + subscription)',
+      'App Review notes + a working demo account / AccessCode (reviewers must get past login + onboarding)',
+    ]),
+    P('Phase 4 · Build, TestFlight & submit','🚀','app',[
+      'Production build: `eas build -p ios --profile production`',
+      'Upload: `eas submit -p ios` (or Transporter) to App Store Connect',
+      'TestFlight internal test — verify it boots and IAP works in sandbox',
+      'Attach the build to the version and complete App Review Information',
+      'Submit for Review',
+      'Respond to any reviewer feedback and resubmit',
+    ]),
+    P('Phase 5 · Launch & post-release','🎉','app',[
+      'Release (manual, or auto on approval)',
+      'Watch crashes & reviews for the first 48 hours',
+      'Set up the version-bump / update release process',
+      'Plan Life OS Phase 2–4 (backend, voice agent, onboarding) for the next version',
+    ]),
+  ]};
+}
+
+let state;
+function load(){
+  try{const raw=localStorage.getItem(KEY); if(raw){state=JSON.parse(raw);
+      UID = state.uid||1; return;}}catch(e){}
+  state=seed(); UID=1000; save();
+}
+function save(){ state.uid=UID; try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){} }
+
+function allTasks(){ return state.phases.flatMap(p=>p.tasks.map(t=>({p,t}))); }
+function nextTask(){ return allTasks().find(x=>!x.t.done); }
+
+function render(){
+  // progress
+  const all=allTasks(); const done=all.filter(x=>x.t.done).length;
+  const pct= all.length? Math.round(done/all.length*100):0;
+  document.getElementById('barfill').style.width=pct+'%';
+  document.getElementById('barpct').textContent=pct+'% complete';
+  document.getElementById('barcnt').textContent=done+' / '+all.length+' done';
+
+  // next up
+  const nx=nextTask(); const nc=document.getElementById('next');
+  if(nx){
+    nc.innerHTML=`<div class="lbl">⭐ Next up · ${nx.p.title.split('·')[0].trim()}</div>
+      <div class="task">${esc(nx.t.text)}</div>
+      <div class="meta">${nx.p.em} ${esc(nx.p.title)} &nbsp;·&nbsp; <span class="tag ${nx.p.side}">${nx.p.side==='app'?'APP':'APPLE'}</span></div>
+      <button class="btn" onclick="toggle('${nx.t.id}')">Mark done → show next step</button>`;
+    nc.style.display='block';
+  } else {
+    nc.innerHTML=`<div class="lbl">🎉 Pipeline</div><div class="task allclear">All clear — nothing left in the list. Ship it. 🚀</div>`;
+  }
+
+  // phases
+  const host=document.getElementById('phases'); host.innerHTML='';
+  state.phases.forEach(p=>{
+    const d=p.tasks.filter(t=>t.done).length;
+    const el=document.createElement('div');
+    el.className='phase'+(p.open?'':' collapsed');
+    el.innerHTML=`
+      <div class="phead" onclick="togglePhase('${p.id}')">
+        <span class="em">${p.em}</span>
+        <h2>${esc(p.title)} <span class="tag ${p.side}">${p.side==='app'?'APP':'APPLE'}</span></h2>
+        <span class="cnt">${d}/${p.tasks.length}</span>
+        <span class="chev">▾</span>
+      </div>
+      <ul class="plist">
+        ${p.tasks.map(t=>`
+          <li class="item ${t.done?'done':''}">
+            <div class="cb ${t.done?'on':''}" onclick="toggle('${t.id}')">${t.done?'✓':''}</div>
+            <div class="txt" onclick="edit('${t.id}')">${esc(t.text)}</div>
+            <div class="del" onclick="del('${t.id}')">×</div>
+          </li>`).join('')}
+      </ul>
+      <div class="add">
+        <input id="in_${p.id}" placeholder="Add a step to this phase…" onkeydown="if(event.key==='Enter')addTask('${p.id}')"/>
+        <button onclick="addTask('${p.id}')">+</button>
+      </div>`;
+    host.appendChild(el);
+  });
+}
+
+function esc(s){return (s+'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+window.toggle=id=>{ for(const p of state.phases) for(const t of p.tasks) if(t.id===id){t.done=!t.done;} save(); render(); };
+window.togglePhase=id=>{ const p=state.phases.find(p=>p.id===id); if(p){p.open=!p.open; save(); render();} };
+window.del=id=>{ for(const p of state.phases){const i=p.tasks.findIndex(t=>t.id===id); if(i>=0){p.tasks.splice(i,1);break;}} save(); render(); };
+window.edit=id=>{ for(const p of state.phases) for(const t of p.tasks) if(t.id===id){
+  const v=prompt('Edit step:',t.text); if(v!==null && v.trim()){t.text=v.trim(); save(); render();} return; } };
+window.addTask=pid=>{ const inp=document.getElementById('in_'+pid); const v=inp.value.trim(); if(!v)return;
+  const p=state.phases.find(p=>p.id===pid); p.tasks.push({id:uid(),text:v,done:false}); inp.value=''; save(); render(); };
+
+document.getElementById('reset').onclick=()=>{ if(confirm('Reset the whole pipeline to the original plan? Your added steps and checks will be lost.')){localStorage.removeItem(KEY); load(); render();} };
+document.getElementById('collapseAll').onclick=()=>{ const anyOpen=state.phases.some(p=>p.open); state.phases.forEach(p=>p.open=!anyOpen); save(); render(); document.getElementById('collapseAll').textContent=anyOpen?'Expand all':'Collapse all'; };
+
+load(); render();
+</script>
+</body>
+</html>

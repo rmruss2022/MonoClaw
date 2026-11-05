@@ -247,24 +247,67 @@ PY
 publish() {
   [ "$DRY" = "1" ] && { echo "(dry) would publish to reports app + attach voice note"; return 0; }
   mkdir -p "$TTS_OUT" "$PORTAL_REPORTS"
-  # spoken script: concise, no emoji / markdown / URLs
+  # spoken script: the FULL report narrated (what it did + shipped + tomorrow),
+  # not just the 3-bullet chat summary. No emoji / markdown / URLs / code fences.
   local spoken="$WORK/voice.txt"
-  chat_summary | python3 -I - > "$spoken" <<'PY'
-import sys, re
-t = sys.stdin.read()
-t = re.sub(r'https?://\S+', '', t)                 # drop URLs
-t = ''.join(ch for ch in t if ord(ch) < 128)       # drop emoji / non-ascii
-t = re.sub(r'[*_`#>]+', '', t)                      # markdown markers
-t = re.sub(r'(?m)^\s*Full report:.*$', '', t)       # drop the footer line
-t = re.sub(r'\n{2,}', '. ', t).replace('\n', ' ').strip()
-print("Here is tonight's Night Sweep. " + t)
+  REPORT="$REPORT" python3 -I - > "$spoken" <<'PY'
+import os, re
+rep = open(os.environ["REPORT"]).read()
+# keep only the narration-worthy sections, in spoken order
+WANT = [("Changes", "Here's what got done across the day."),
+        ("Implemented, tested & deployed tonight", "What the sweep itself shipped tonight:"),
+        ("Suggestions for tomorrow", "And here's what I'd tackle tomorrow:")]
+def grab(header):
+    out, on = [], False
+    for ln in rep.splitlines():
+        if ln.startswith("## "):
+            on = ln[3:].strip().lower().startswith(header.lower()); continue
+        if on: out.append(ln)
+    return "\n".join(out).strip()
+parts = ["Here is tonight's Night Sweep."]
+for header, lead in WANT:
+    body = grab(header)
+    if not body: continue
+    body = re.sub(r'```.*?```', ' ', body, flags=re.S)      # drop code fences
+    body = re.sub(r'`([^`]*)`', r'\1', body)                # inline code
+    body = re.sub(r'https?://\S+', '', body)                # URLs
+    body = re.sub(r'\[([^\]]+)\]\([^)]*\)', r'\1', body)    # md links -> text
+    body = re.sub(r'[*_#>]+', '', body)                     # md markers
+    body = ''.join(c for c in body if ord(c) < 128)         # drop emoji/non-ascii
+    body = re.sub(r'(?m)^\s*[-*]\s*', '', body)             # bullet dashes
+    body = re.sub(r'(?m)^\s*\d+[.)]\s*', '', body)          # numbered list markers
+    body = re.sub(r'[ \t]+', ' ', body)
+    body = re.sub(r'\n{1,}', '. ', body).strip()
+    body = re.sub(r'(\.\s*){2,}', '. ', body)               # collapse ".. ."
+    parts.append(lead + " " + body)
+print("\n".join(parts).strip())
 PY
-  # voice note (best-effort; never blocks publishing the text)
-  local audio=""
-  if command -v edge-tts >/dev/null 2>&1 && edge-tts --voice en-US-GuyNeural --file "$spoken" --write-media "$MP3" >/dev/null 2>&1 && [ -s "$MP3" ]; then
-    audio=$(basename "$MP3"); echo "voice note: $MP3"
+  # voice note — edge-tts occasionally truncates mid-stream (writes a tiny stub
+  # that passes -s). Retry a few times and KEEP THE LARGEST; require a sane size
+  # so a 2-second stub never ships. Never blocks publishing the text.
+  local audio="" best=0 try=0 tmp="$WORK/voice-try.mp3"
+  if command -v edge-tts >/dev/null 2>&1; then
+    rm -f "$MP3"
+    for try in 1 2 3 4; do
+      rm -f "$tmp"
+      if edge-tts --voice en-US-GuyNeural --file "$spoken" --write-media "$tmp" >/dev/null 2>&1 && [ -s "$tmp" ]; then
+        local sz; sz=$(wc -c < "$tmp")
+        if [ "$sz" -gt "$best" ]; then best=$sz; cp -f "$tmp" "$MP3"; fi
+        # a full-report narration is always well over 60KB; accept once we clear it
+        [ "$sz" -gt 60000 ] && break
+      fi
+      sleep 2
+    done
+    rm -f "$tmp"
+    if [ "$best" -gt 60000 ]; then
+      audio=$(basename "$MP3"); echo "voice note: $MP3 (${best} bytes, try $try)"
+    elif [ "$best" -gt 0 ]; then
+      audio=$(basename "$MP3"); echo "WARN: voice note only ${best} bytes (edge-tts kept truncating) — shipping best effort"
+    else
+      echo "WARN: edge-tts produced nothing — publishing report without audio"; rm -f "$MP3"
+    fi
   else
-    echo "WARN: edge-tts unavailable/failed — publishing report without audio"; rm -f "$MP3"
+    echo "WARN: edge-tts unavailable — publishing report without audio"; rm -f "$MP3"
   fi
   # write the portal report json (audio basename auto-served from media/tts)
   REPORT="$REPORT" DATE="$DATE" AUDIO="$audio" OUT="$PORTAL_REPORTS/$DATE-nightsweep.json" \

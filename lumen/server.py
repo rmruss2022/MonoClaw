@@ -2373,18 +2373,18 @@ a{color:var(--purple)}
 .mgoal-echo{font-size:12px;color:var(--muted);margin-top:14px;font-style:italic;font-family:var(--serif)}
 .mgoal-echo b{color:var(--gold);font-style:normal}
 /* journal home — three full-width doors + links + community feed */
-.jbigs{display:flex;flex-direction:column;gap:11px;margin:4px 2px 14px}
-.jbig{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;background:linear-gradient(135deg,#1a1430,#141021);border:1px solid var(--line);border-radius:18px;padding:18px 16px;transition:.16s;color:var(--text)}
+.jbigs{display:flex;flex-direction:column;gap:8px;margin:4px 2px 10px}
+.jbig{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;background:linear-gradient(135deg,#1a1430,#141021);border:1px solid var(--line);border-radius:14px;padding:11px 13px;transition:.16s;color:var(--text)}
 .jbig:active{transform:scale(.99)}
 .jbig.rec{border-color:rgba(245,201,119,.45);background:linear-gradient(135deg,rgba(245,201,119,.10),#141021);box-shadow:0 8px 26px -16px var(--gold)}
-.jbig-ico{flex:none;width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.24)}
-.jbig-ico .i{width:24px;height:24px}
+.jbig-ico{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.24)}
+.jbig-ico .i{width:19px;height:19px}
 .jbig.rec .jbig-ico{background:rgba(245,201,119,.14);border-color:rgba(245,201,119,.3)}
-.jbig-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.jbig-t{font-family:var(--serif);font-size:20px;display:flex;align-items:center;gap:8px}
+.jbig-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.jbig-t{font-family:var(--serif);font-size:16.5px;display:flex;align-items:center;gap:8px}
 .jbig-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#2a1a05;background:linear-gradient(135deg,#f5c977,#e0953a);border-radius:999px;padding:2px 8px}
-.jbig-b{font-size:12.5px;color:var(--muted);line-height:1.35}
-.jbig-go{flex:none;color:#6f6794;font-size:26px;font-weight:300;line-height:1}
+.jbig-b{font-size:12px;color:var(--muted);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.jbig-go{flex:none;color:#6f6794;font-size:22px;font-weight:300;line-height:1}
 .jlinks{display:flex;gap:10px;margin:0 2px 20px}
 .jlink{flex:1;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:12px;color:var(--text);transition:.15s}
 .jlink:active{transform:scale(.98)}
@@ -2694,9 +2694,9 @@ a{color:var(--purple)}
 .jrny-grid{display:flex;flex-direction:column;gap:12px}
 .jrny-card{display:flex;align-items:stretch;gap:0;text-align:left;background:#140f24;border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;padding:0;position:relative}
 .jrny-card:active{transform:scale(.995)}
-.jrny-art{flex:none;width:84px;display:grid;place-items:center;background:linear-gradient(160deg,color-mix(in srgb,var(--a) 26%,#140f24),#140f24);border-right:1px solid var(--line)}
+.jrny-art{flex:none;width:112px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(160deg,color-mix(in srgb,var(--a) 26%,#140f24),#140f24);border-right:1px solid var(--line)}
 .jrny-art .i,.jrny-art svg{width:40px;height:40px}
-.jrny-body{flex:1;min-width:0;padding:13px 6px 13px 14px}
+.jrny-body{flex:1;min-width:0;padding:13px 14px 13px 15px}
 .jrny-name{font-weight:800;font-size:16px;color:#f1ecff}
 .jrny-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px}
 .jrny-bar{height:5px;border-radius:99px;background:#241c3a;overflow:hidden;margin:10px 0 6px}
@@ -2715,6 +2715,26 @@ a{color:var(--purple)}
 .lj-num{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#201839;border:1px solid var(--line);color:var(--a);font-weight:800;font-size:13px}
 .lj-row.done .lj-num{color:#7ee0b0}
 .lj-num .i{width:15px;height:15px}
+/* per-lesson emblem icon (journey detail rows) */
+.lj-ico{flex:none;position:relative;width:40px;height:40px}
+/* distinct per-lesson glyph emblem — accent-tinted, one icon per lesson */
+.lj-emb{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--a) 34%,#1b1530),#130e22);
+  border:1px solid color-mix(in srgb,var(--a) 50%,var(--line))}
+.lj-emb .i{width:21px;height:21px;color:var(--a);filter:drop-shadow(0 0 5px color-mix(in srgb,var(--a) 55%,transparent))}
+.lj-emb.lg{width:54px;height:54px;border-width:1.5px}
+.lj-emb.lg .i{width:28px;height:28px}
+.lj-row.next .lj-emb{box-shadow:0 0 0 1px var(--gold),0 0 12px -3px var(--gold)}
+.lj-row.done .lj-emb{opacity:.72}
+.lj-ico.lock{display:grid;place-items:center;border-radius:50%;background:#201839;border:1px solid var(--line);color:var(--muted)}
+.lj-ico.lock .i{width:16px;height:16px}
+.deity-emblem.ljm{width:40px;height:40px;border-width:1px}
+.deity-emblem.ljm .deity-glyph .i{width:19px;height:19px}
+.lj-row.next .deity-emblem.ljm{box-shadow:0 0 0 1px var(--gold),0 0 12px -3px var(--gold)}
+.lj-step{position:absolute;bottom:-3px;right:-3px;min-width:16px;height:16px;padding:0 3px;border-radius:9px;background:#201839;border:1px solid var(--line);color:#cbbfe6;font-weight:800;font-size:10px;line-height:14px;text-align:center}
+.lj-row.done .lj-step{display:none}
+.lj-seal{position:absolute;z-index:3;top:-4px;left:-4px;width:19px;height:19px;border-radius:50%;background:#0f2a20;border:1px solid #6ee7b7;display:grid;place-items:center;color:#6ee7b7}
+.lj-seal .i{width:11px;height:11px}
 .lj-main{flex:1;min-width:0}
 .lj-title{display:block;font-weight:700;font-size:14.5px;color:#f1ecff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lj-sub{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
@@ -3445,13 +3465,13 @@ function renderJourney(key){
     const meta=lessonMins(l)+' min · '+l.segments.length+' steps'
       +(isDone?(' · done '+p.count+'×'):(rs>0?' · resume · step '+(rs+1):''));
     return `<button class="lj-row${isDone?' done':''}${isNext?' next':''}" data-l="${l.code}" style="--a:${l.accent}">
-      <span class="lj-num">${isDone?ic('check'):(i+1)}</span>
+      <span class="lj-ico">${lessonEmblem(l,'ljm')}${isDone?`<span class="lj-seal">${ic('check')}</span>`:''}</span>
       <span class="lj-main"><span class="lj-title">${esc(l.title)} · ${esc(l.subtitle)}</span>
       <span class="lj-sub">${esc(meta)}</span></span>
       ${isNext?`<span class="lj-badge">Next up</span>`:`<span class="lj-go">${ic('play')}</span>`}
     </button>`;
   };
-  const soonRows=(ROADMAP[key]||[]).map(r=>`<div class="lj-row soon"><span class="lj-num">${ic('lock')}</span>`
+  const soonRows=(ROADMAP[key]||[]).map(r=>`<div class="lj-row soon"><span class="lj-ico lock">${ic('lock')}</span>`
     +`<span class="lj-main"><span class="lj-title">${esc(r.title)}</span><span class="lj-sub">${esc(r.sub)}</span></span></div>`).join('');
   $('#app').innerHTML=`
   <div class="brand"><button class="back-btn" id="jrback" title="All journeys">‹</button><span class="mark">${ic('lumen','mark')}</span><b>${esc(t.name)}</b></div>
@@ -3660,6 +3680,17 @@ function lessonResumeSi(l){const rs=jnyProg(l.code);return (rs!=null&&rs>0&&rs<l
 const SERIES_ART={Vishnu:'art/lesson_vishnu.png?v=2',Shiva:'art/lesson_shiva.png?v=2',Lakshmi:'art/lesson_lakshmi.png?v=2',Breath:'art/lesson_breath.png?v=2'};
 function deityEmblem(l,cls){const art=SERIES_ART[l.series]||l.img;
   return `<div class="deity-emblem ${cls||''}"><span class="deity-glyph">${ic('lotus','grad-gold')}</span>${art?`<img src="${art}" alt="" onerror="this.remove()">`:''}</div>`;}
+// A distinct emblem per lesson — each lesson gets its own themed glyph so every
+// step in a journey reads differently (instead of the same deity art repeated).
+const LESSON_ICON={
+  vishnu:'glow', vishnu_avatars:'star', vishnu_breath:'ocean', vishnu_emblems:'seal', vishnu_reflect:'spark',
+  shiva:'p_mtn', shiva_dance:'nova', shiva_breath:'calm', shiva_name:'target', shiva_reflect:'moon',
+  lakshmi:'lotus', lakshmi_forms:'coin', lakshmi_breath:'enso', lakshmi_flow:'flare', lakshmi_reflect:'bell',
+  breath:'meditate', breath_sigh:'bolt', breath_vagus:'ocean', breath_box:'target', breath_carry:'flag',
+};
+function lessonIcon(l){return LESSON_ICON[l.code]||'lotus';}
+function lessonEmblem(l,cls){
+  return `<div class="lj-emb ${cls||''}" style="--a:${l.accent}">${ic(lessonIcon(l))}</div>`;}
 let lessonFrom='lessons';
 let curJourney=null;       // which journey (track key) the open lesson belongs to
 let lessonSoundPick=null;  // background soundscape chosen in the journey detail modal

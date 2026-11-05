@@ -95,31 +95,32 @@ def seed_personal():
         # upgrade: Baby Cobra Bushwick runs DAILY evening classes (ClassPass is the
         # real daily schedule; Tickettailor only lists special workshops). Matthew
         # goes ~7pm, so show the daily 7pm class + layer specials on top.
-        if existing.get("seed_v") != 5:
-            existing["recurring"] = True
-            # Matthew's standing plan: Thu & Sat 7pm (not the whole studio catalog).
-            # The full daily schedule is scanned + browsable to add more classes.
-            existing["weekdays"] = [4, 6]
-            existing["time"] = "7:00 PM"
+        if existing.get("seed_v") != 6:
+            # Show the REAL scraped studio schedule directly (every class the
+            # crawl finds), not a synthetic standing class. seed_v 5 added a
+            # placeholder Thu/Sat 7pm recurrence — drop it.
+            existing["recurring"] = False
+            existing["show_all"] = True
+            existing.pop("weekdays", None)
+            existing.pop("time", None)
             existing["url"] = "https://babycobrayoga.com/bushwick/"
             existing["scan_url"] = "https://babycobrayoga.com/bushwick/"
             existing["location_match"] = "Bushwick"
-            existing["blurb"] = "Donation-based Bushwick loft studio. Your standing class is Thu & Sat 7pm — browse the full schedule to add more."
-            existing["seed_v"] = 5
+            existing["blurb"] = "Donation-based Bushwick loft studio — the full daily schedule, scraped live from the studio."
+            existing["seed_v"] = 6
             changed = True
     else:
         changed = True
         recs.append({
-            "id": uuid.uuid4().hex[:12], "seed": "babycobra", "seed_v": 5,
-            "title": "Baby Cobra Yoga", "recurring": True,
-            "weekdays": [4, 6], "time": "7:00 PM",
+            "id": uuid.uuid4().hex[:12], "seed": "babycobra", "seed_v": 6,
+            "title": "Baby Cobra Yoga", "recurring": False, "show_all": True,
             "venue": "Baby Cobra Yoga, 47 Thames St #206",
             "neighborhood": "Bushwick", "borough": "Brooklyn", "near_home": True,
             "category": "Wellness", "price": "Donation-based",
             "url": "https://babycobrayoga.com/bushwick/",
             "scan_url": "https://babycobrayoga.com/bushwick/",
             "location_match": "Bushwick",
-            "blurb": "Donation-based Bushwick loft studio. Your standing class is Thu & Sat 7pm — browse the full schedule to add more.",
+            "blurb": "Donation-based Bushwick loft studio — the full daily schedule, scraped live from the studio.",
         })
     # Williamsburg founders run — weekly Wednesday 7:30am (Luma, Firecrawl-scannable)
     if not any(r.get("seed") == "wburgrun" for r in recs):
@@ -219,6 +220,20 @@ def expand_personal(days=32):
                         if _skip(inst):
                             continue
                     out.append(inst); seen.add((inst["date"], _start_time(inst["time"])))
+        # 1b) a regular that surfaces its full REAL scraped schedule directly —
+        #     every class from the crawl (no synthetic standing class).
+        if r.get("show_all"):
+            for s in (r.get("sessions") or []):
+                sd = s.get("date", "")
+                if not (tj <= sd <= horizon):
+                    continue
+                inst = _session_from(r, s)
+                k = (inst["date"], _start_time(inst["time"]))
+                if _skip(inst) or k in seen:
+                    continue
+                # confirmed (in your calendar) only if you've added this class
+                inst["mine"] = (inst["date"] + "|" + _start_time(inst["time"])) in selected
+                out.append(inst); seen.add(k)
         # 2) specific classes you picked from the full schedule
         for key in selected:
             dt, _ = (key.split("|", 1) + [""])[:2]
@@ -345,6 +360,21 @@ def cache_put(url, md):
         print("[marquee] cache write failed:", e, flush=True)
 
 
+_fc_lock = threading.Lock()
+_fc_last = [0.0]
+FC_MIN_INTERVAL = float(os.environ.get("MARQUEE_FC_MIN_S", "6"))
+
+
+def _fc_throttle():
+    """Serialize Firecrawl calls with a min interval so parallel source scrapes
+    don't trip its rate limit (429). Only real (cache-miss) calls hit this."""
+    with _fc_lock:
+        w = FC_MIN_INTERVAL - (time.time() - _fc_last[0])
+        if w > 0:
+            time.sleep(w)
+        _fc_last[0] = time.time()
+
+
 def fc_scrape(url, max_age_h=CACHE_H, force=False, wait=0):
     """Scrape a page to markdown, CACHE-FIRST: serve fresh cached content when
     available, otherwise crawl via Firecrawl and cache it. Returns '' on failure
@@ -364,6 +394,7 @@ def fc_scrape(url, max_age_h=CACHE_H, force=False, wait=0):
         if wait:
             opts["waitFor"] = int(wait)
         body = json.dumps(opts).encode()
+        _fc_throttle()
         req = urllib.request.Request("https://api.firecrawl.dev/v2/scrape", data=body,
                                      headers={"Authorization": "Bearer " + FIRECRAWL_KEY,
                                               "Content-Type": "application/json"}, method="POST")
@@ -527,21 +558,15 @@ def fetch_events():
     if not GEMINI_KEY:
         raise RuntimeError("GEMINI_API_KEY not set")
     prompt = (
-        f"I live in {HOME}. Use Google Search to find 15 REAL, specific, currently-listed "
+        f"I live in {HOME}. Use Google Search to find 8 REAL, specific, currently-listed "
         "events happening in New York City in the next ~24 days. Include a strong share of "
         f"Brooklyn events near {HOME} (Bushwick, East Williamsburg, Williamsburg, Ridgewood, "
         "Bed-Stuy) alongside the best citywide highlights, across music, nightlife, arts, "
         "theater, comedy, sports, food, festivals, family, film.\n\n"
-        "STRICT ACCURACY RULES — getting these wrong is worse than returning fewer events:\n"
-        "- Every event must be a SINGLE real event you actually found on a specific listing "
-        "page (a ticketing page, the venue's event page, RA/Dice/Eventbrite, or an official "
-        "box office). NEVER merge two events, two artists, or two listings into one. NEVER "
-        "invent, guess, or approximate a title, venue, or date.\n"
-        "- \"url\" MUST be that event's OWN specific listing/ticket page (deep link with a "
-        "path), not a homepage or a search page. The \"date\" MUST be the exact date shown "
-        "on that page.\n"
-        "- If you cannot find a specific listing page with an unambiguous date for an event, "
-        "OMIT it. Fewer, fully-verified events is the goal.\n\n"
+        "Rules: each event is a SINGLE real event (never merge two artists/listings). "
+        "\"url\" should be that event's own listing/ticket page (a deep link with a path, "
+        "not a homepage or search page). Use the exact title, venue and date shown. Don't "
+        "invent events.\n\n"
         "Reply with ONLY a JSON array, no prose, no markdown fences. Each item: "
         "{\"title\",\"date\":\"YYYY-MM-DD\",\"time\",\"venue\",\"neighborhood\",\"borough\","
         "\"near_home\",\"category\",\"price\",\"url\",\"blurb\"}. category is one of: "
@@ -552,12 +577,15 @@ def fetch_events():
     )
     body = {"contents": [{"parts": [{"text": prompt}]}],
             "tools": [{"google_search": {}}],
-            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 10000}}
+            "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4000}}
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{GEMINI_MODEL}:generateContent?key={GEMINI_KEY}")
     req = urllib.request.Request(url, data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json"}, method="POST")
-    j = json.loads(urllib.request.urlopen(req, timeout=240).read())
+    # grounded search is slow (many live Google lookups) — a single generous
+    # timeout; on failure the refresh just proceeds with the platform sources and
+    # the next cycle retries. Runs in the background refresh, so users aren't blocked.
+    j = json.loads(urllib.request.urlopen(req, timeout=150).read())
     txt = "".join(p.get("text", "") for p in
                   ((j["candidates"][0].get("content") or {}).get("parts") or []))
     a, b = txt.find("["), txt.rfind("]")
@@ -609,14 +637,14 @@ def _clean_events(out):
 # extracted). Luma city pages are JS-only so Luma is used for specific events /
 # regulars, not a listing source here.
 SOURCES = [
-    {"key": "ra", "name": "Resident Advisor", "url": "https://ra.co/events/us/brooklyn", "hint": "Nightlife", "on": False},
+    {"key": "ra", "name": "Resident Advisor", "url": "https://ra.co/events/us/brooklyn", "hint": "Nightlife", "on": False, "wait": 8000},
     {"key": "dice", "name": "DICE", "url": "https://dice.fm/browse/new-york", "hint": "Music", "on": True},
     {"key": "shotgun", "name": "Shotgun", "url": "https://shotgun.live/en/cities/new-york", "hint": "Nightlife", "on": True},
     {"key": "eventbrite", "name": "Eventbrite", "url": "https://www.eventbrite.com/d/ny--brooklyn/events/", "hint": "Festival", "on": True},
-    {"key": "bandsintown", "name": "Bandsintown", "url": "https://www.bandsintown.com/c/new-york-ny", "hint": "Music", "on": False},
-    {"key": "songkick", "name": "Songkick", "url": "https://www.songkick.com/metro-areas/7644-us-new-york", "hint": "Music", "on": False},
-    {"key": "fever", "name": "Fever", "url": "https://feverup.com/en/new-york", "hint": "Arts", "on": False},
-    {"key": "posh", "name": "Posh", "url": "https://posh.vip/explore/new-york", "hint": "Nightlife", "on": False},
+    {"key": "bandsintown", "name": "Bandsintown", "url": "https://www.bandsintown.com/c/new-york-ny", "hint": "Music", "on": True},
+    {"key": "songkick", "name": "Songkick", "url": "https://www.songkick.com/metro-areas/7644-us-new-york", "hint": "Music", "on": True},
+    {"key": "fever", "name": "Fever", "url": "https://feverup.com/en/new-york", "hint": "Arts", "on": True},
+    {"key": "posh", "name": "Posh", "url": "https://posh.vip/explore/new-york", "hint": "Nightlife", "on": True},
 ]
 
 
@@ -628,34 +656,93 @@ _SRC_COLOR = {
 }
 
 
+def cache_ts(url):
+    """Last-scraped timestamp (ms) for a URL's cached page, or 0."""
+    try:
+        with open(_cache_path(url)) as f:
+            return int((json.load(f).get("ts")) or 0)
+    except Exception:
+        return 0
+
+
+# Partner platforms used for specific events / regulars (matched to a regular by
+# the domain in its scan_url). key -> (name, url, category, note, domain)
+_PARTNERS = [
+    ("luma", "Luma", "https://luma.com/", "Community", "Community & creator event pages", "luma.com"),
+    ("classpass", "ClassPass", "https://classpass.com/", "Wellness", "Studio class schedules", "classpass.com"),
+    ("tickettailor", "Tickettailor", "https://www.tickettailor.com/", "Tickets", "Independent event tickets", "tickettailor.com"),
+    ("axs", "AXS", "https://www.axs.com/", "Tickets", "Venue & concert tickets", "axs.com"),
+]
+
+
 def public_sources():
-    """The connected platforms Marquee's agents pull events from — shown to users
-    so they can see where the calendar comes from. Built from the live SOURCES
-    roster plus the partner platforms used for specific events/regulars."""
-    out = [{"name": "Our internet search", "url": None, "category": "Live search",
+    """The connected platforms Marquee's agents pull events from — with how many
+    listings each has ingested and when it last updated, so the user can see (and
+    drill into) exactly where the calendar comes from."""
+    st = load_store()
+    evs = st.get("events") or []
+    fetched_at = st.get("fetched_at", 0)
+    by_src = {}
+    for e in evs:
+        by_src.setdefault(e.get("source") or "", []).append(e)
+    regs = load_personal()
+    today = date.today().isoformat()
+
+    out = [{"key": "search", "name": "Our internet search", "url": None, "category": "Live search",
             "active": bool(GEMINI_KEY),
-            "note": "Gemini + Google Search grounding surfaces fresh NYC events"}]
+            "note": "Gemini + Google Search grounding surfaces fresh NYC events",
+            "count": len(by_src.get("Search", [])), "last_update": fetched_at}]
     for s in SOURCES:
-        out.append({"name": s["name"], "url": s["url"], "category": s["hint"],
-                    "active": bool(s.get("on")),
-                    "note": "Listing platform, scanned via Firecrawl"})
-    for name, url, cat, note in [
-        ("Luma", "https://luma.com/", "Community", "Community & creator event pages"),
-        ("ClassPass", "https://classpass.com/", "Wellness", "Studio class schedules"),
-        ("Tickettailor", "https://www.tickettailor.com/", "Tickets", "Independent event tickets"),
-        ("AXS", "https://www.axs.com/", "Tickets", "Venue & concert tickets"),
-    ]:
-        out.append({"name": name, "url": url, "category": cat, "active": True, "note": note})
+        n = len(by_src.get(s["name"], []))
+        out.append({"key": s["key"], "name": s["name"], "url": s["url"], "category": s["hint"],
+                    "active": bool(s.get("on")), "note": "Listing platform, scanned via Firecrawl",
+                    "count": n, "last_update": cache_ts(s["url"]) or (fetched_at if n else 0)})
+    for key, name, url, cat, note, dom in _PARTNERS:
+        matched = [r for r in regs if dom in (r.get("scan_url") or r.get("url") or "")]
+        cnt = sum(len([x for x in (r.get("sessions") or []) if x.get("date", "") >= today]) for r in matched)
+        lu = max([r.get("scanned_at") or 0 for r in matched] or [0])
+        out.append({"key": key, "name": name, "url": url, "category": cat, "active": True,
+                    "note": note, "count": cnt, "last_update": lu})
     for o in out:
         c = _SRC_COLOR.get(o["category"], ("#ff5c8a", "#a855f7"))
         o["c0"], o["c1"] = c
     return out
 
 
+def source_events(key):
+    """The actual listings a given source ingested (for the Sources drill-down)."""
+    st = load_store()
+    evs = st.get("events") or []
+    name = "Search" if key == "search" else next((s["name"] for s in SOURCES if s["key"] == key), None)
+    if name:
+        out = [{"title": e.get("title"), "date": e.get("date"), "time": e.get("time"),
+                "venue": e.get("venue"), "neighborhood": e.get("neighborhood"),
+                "category": e.get("category"), "url": e.get("url")}
+               for e in evs if (e.get("source") or "") == name]
+    else:
+        dom = next((d for k, n, u, c, nt, d in _PARTNERS if k == key), None)
+        if not dom:
+            return []
+        today = date.today().isoformat()
+        out = []
+        for r in load_personal():
+            if dom in (r.get("scan_url") or r.get("url") or ""):
+                for s in (r.get("sessions") or []):
+                    if s.get("date", "") >= today:
+                        t = r.get("title", "")
+                        if s.get("title"):
+                            t = t + " · " + s["title"]
+                        out.append({"title": t, "date": s.get("date"), "time": s.get("time"),
+                                    "venue": r.get("venue"), "neighborhood": r.get("neighborhood"),
+                                    "category": r.get("category"), "url": s.get("url") or r.get("url")})
+    out.sort(key=lambda e: (e.get("date", ""), _mins(e.get("time", ""))))
+    return out[:250]
+
+
 def fetch_from_source(src, limit=6):
     """Firecrawl-scrape a platform's NYC listing (cache-first) and have Gemini
     extract its real upcoming events. Returns a list tagged with the source."""
-    md = fc_scrape(src["url"])
+    md = fc_scrape(src["url"], wait=src.get("wait", 0))
     if not md or not GEMINI_KEY:
         return []
     today = date.today().isoformat()
@@ -720,14 +807,18 @@ def build_all_events():
         except Exception as e:
             print(f"[marquee] {tag} errored:", e, flush=True)
 
-    jobs = [threading.Thread(target=run, args=(fetch_events, "search"))]
-    for src in SOURCES:
-        if src.get("on"):
-            jobs.append(threading.Thread(target=run, args=((lambda s: (lambda: fetch_from_source(s)))(src), src["key"])))
+    # 1) platform sources in parallel — cache-first + throttled Firecrawl (_fc_throttle),
+    #    so cache hits return instantly and cache-misses don't burst the rate limit.
+    jobs = []
+    for src in [s for s in SOURCES if s.get("on")]:
+        jobs.append(threading.Thread(target=run, args=((lambda s: (lambda: fetch_from_source(s)))(src), src["key"])))
     for j in jobs:
         j.start()
     for j in jobs:
-        j.join(timeout=210)
+        j.join(timeout=150)
+    # 2) grounded Google-Search discovery runs ALONE afterwards — it's slow and gets
+    #    starved if it competes with the platform extractions for the Gemini API.
+    run(fetch_events, "search")
     merged, seen = [], set()
     for evs in results:
         for e in evs:
@@ -1165,6 +1256,46 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  .app-tag.public{background:rgba(52,211,153,.16);color:#34d399}
  .app-tag.private{background:rgba(148,148,170,.18);color:#bdbccb}
  .app-tag.soon{background:rgba(245,201,119,.16);color:#f5c977}
+ .src-card{width:100%;text-align:left;cursor:pointer;font:inherit}
+ .src-wrap.open .src-card{border-bottom-left-radius:0;border-bottom-right-radius:0}
+ .src-chev{flex:0 0 auto;color:#6f6794;font-size:18px;margin-left:2px}
+ .src-det{background:#100f1a;border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;padding:4px 10px 8px}
+ .src-ev{display:flex;gap:10px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px}
+ .src-ev:last-child{border-bottom:0}
+ .src-ev-d{flex:0 0 auto;color:var(--gold);font-weight:700;min-width:82px}
+ .src-ev-t{min-width:0;color:var(--text)}
+ .src-visit{display:inline-flex;align-items:center;gap:6px;margin-top:8px;color:#c4a0ff;font-size:12px;text-decoration:none}
+ .src-visit .ci{width:13px;height:13px}
+ .wk-head{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px}
+ .wk-head b{font-size:15px;font-family:var(--serif)}
+ .wk-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:0 2px 16px}
+ .wk-day{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 7px;border-radius:12px;background:#13101f;border:1px solid var(--line);color:var(--text);cursor:pointer;min-height:60px;transition:.12s}
+ .wk-day:active{transform:scale(.96)}
+ .wk-day.sel{border-color:var(--gold);background:rgba(245,201,119,.1)}
+ .wk-day.today .wk-num{color:var(--gold)}
+ .wk-dow{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+ .wk-num{font-size:16px;font-weight:700;line-height:1.1}
+ .wk-dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;min-height:6px;margin-top:2px;max-width:44px}
+ .wk-dots i{width:5px;height:5px;border-radius:50%;display:block}
+ .wk2{margin:0 2px 8px}
+ .wk2-hdr{display:flex;margin:0 2px 0}
+ .wk2-gutter{width:30px;flex:0 0 30px}
+ .wk2-dcol{flex:1;text-align:center;padding:3px 0 6px;min-width:0;background:none;border:0;color:var(--text);cursor:pointer;font:inherit}
+ .wk2-dcol.sel{background:rgba(168,85,247,.18);border-radius:10px}
+ .wk2-dow{display:block;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
+ .wk2-dnum{font-size:14px;font-weight:700;line-height:1.3}
+ .wk2-dcol.today .wk2-dnum{color:#1a1020;background:var(--gold);border-radius:999px;width:22px;height:22px;line-height:22px;display:inline-block}
+ .wk2-dcol.today .wk2-dow{color:var(--gold)}
+ .wk2-grid{display:flex;border-top:1px solid var(--line)}
+ .wk2-gutter2{width:30px;flex:0 0 30px}
+ .wk2-hr{font-size:8px;color:var(--muted);text-align:right;padding-right:4px;box-sizing:border-box;border-bottom:1px solid rgba(255,255,255,.045);overflow:visible}
+ .wk2-cols{flex:1;display:flex;position:relative;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px);background-position:0 -1px}
+ .wk2-col{flex:1;position:relative;border-left:1px solid rgba(255,255,255,.05);min-width:0}
+ .wk2-col.today{background:rgba(245,201,119,.05)}
+ .wk2-ev{position:absolute;border-radius:5px;padding:2px 3px;overflow:hidden;color:#fff;font-size:8.5px;line-height:1.12;cursor:pointer;background:linear-gradient(150deg,#ff5c8a,#8b5cf6);box-shadow:0 1px 3px rgba(124,58,237,.35);box-sizing:border-box;border:.5px solid rgba(255,255,255,.14)}
+ .wk2-ev b{display:block;font-weight:800;font-size:8.5px;white-space:nowrap}
+ .wk2-now{position:absolute;left:0;right:0;height:0;border-top:1.5px solid #ff5c8a;z-index:4;pointer-events:none}
+ .wk2-now:before{content:'';position:absolute;left:-2px;top:-3.5px;width:6px;height:6px;border-radius:50%;background:#ff5c8a}
  .evm-top{height:6px}
  .evm-x{position:absolute;top:12px;right:12px;border:0;background:rgba(255,255,255,.08);color:#dcdae8;width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;line-height:1}
  .evm-x:hover{background:rgba(255,255,255,.16)}
@@ -1234,7 +1365,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
     <rect x="11" y="15" width="26" height="20" rx="3" fill="#fff"/><rect x="11" y="15" width="26" height="6" rx="3" fill="#ffd7e4"/>
     <circle cx="16" cy="12" r="2" fill="#fff"/><circle cx="24" cy="11" r="2" fill="#fff"/><circle cx="32" cy="12" r="2" fill="#fff"/>
     <g fill="#a855f7"><circle cx="17" cy="27" r="2"/><circle cx="24" cy="27" r="2"/><circle cx="31" cy="27" r="2"/><circle cx="17" cy="32" r="2"/><circle cx="24" cy="32" r="2"/></g></svg>
-   <div><h1>Marquee</h1><p class="sub">What's on in NYC · <span class="home" id="homePill"><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg> Bushwick, Brooklyn</span></p></div>
+   <div><h1>Marquee</h1><p class="sub">What's on in NYC · <button class="home" id="homePill" title="Set your area"><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg> Set your area</button></p></div>
   </header>
   <div class="actions">
    <button class="refresh add" id="addBtn" title="Add your own event">+ Add event</button>
@@ -1247,8 +1378,8 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  </div>
  <div class="chips" id="chips"></div>
  <div class="controls">
-   <span class="views" id="loc"><button data-l="mine" class="on">★ Mine</button><button data-l="all">All NYC</button><button data-l="near">★ Near me</button><button data-l="Brooklyn">Brooklyn</button></span>
-   <span class="views" id="views"><button data-v="cal" class="on">Calendar</button><button data-v="week">This week</button><button data-v="list">Upcoming</button></span>
+   <span class="views" id="loc"><button data-l="mine" class="on">★ Mine</button><button data-l="near">★ Near me</button><button data-l="all">All NYC</button></span>
+   <span class="views" id="views"><button data-v="week" class="on">This week</button><button data-v="cal">Calendar</button><button data-v="list">Upcoming</button></span>
  </div>
  <div id="calWrap" class="cal" hidden>
   <div class="cal-head"><button class="cal-nav" id="pm">‹</button><b id="monLbl"></b><button class="cal-nav" id="nm">›</button></div>
@@ -1273,7 +1404,7 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  </div>
  <label>Venue / location</label><input type="text" id="f_venue" placeholder="47 Thames St, Bushwick">
  <label>Website / tickets URL</label><input type="text" id="f_url" placeholder="https://…">
- <label class="mnear"><input type="checkbox" id="f_near" checked> Near me (Bushwick)</label>
+ <label class="mnear"><input type="checkbox" id="f_near" checked> Near my home area</label>
  <div class="modal-actions"><button class="m-cancel" id="f_cancel">Cancel</button><button class="m-save" id="f_save">Add to calendar</button></div>
 </div></div>
 <div class="modal-bg" id="subModal" hidden><div class="modal">
@@ -1286,11 +1417,19 @@ PAGE = r"""<!doctype html><html lang="en"><head>
  <p class="mh" style="margin-top:6px">In Google Calendar: <b>Other calendars → + → From URL</b>, then paste.</p>
  <div class="modal-actions"><button class="m-cancel" id="sub_cancel">Done</button></div>
 </div></div>
+<div class="modal-bg" id="homeModal" hidden><div class="modal"><h3>Your home area</h3><p class="mh">Set where you live so <b>Near me</b> surfaces what&rsquo;s close to you.</p><label>Neighborhood</label><input type="text" id="home_nb" placeholder="e.g. Bushwick"><label style="margin-top:12px">Borough</label><select id="home_boro"><option value="">Select…</option><option>Manhattan</option><option>Brooklyn</option><option>Queens</option><option>Bronx</option><option>Staten Island</option></select><div class="modal-actions"><button class="m-cancel" id="home_cancel">Cancel</button><button class="m-save" id="home_save">Save</button></div></div></div>
 <div class="modal-bg" id="evModal" hidden><div class="evm-card"></div></div>
 <div class="modal-bg" id="appsModal" hidden><div class="apps-sheet"><div class="apps-head"><b>Where events come from</b><button class="evm-x" data-close title="Close">✕</button></div><p class="apps-sub">Marquee pulls live events from these platforms — scanned &amp; refreshed daily.</p><div class="apps-grid" id="appsGrid"></div></div></div>
 <script>
 var CATCOLOR={Music:'#ff5c8a',Nightlife:'#a855f7',Arts:'#38bdf8',Theater:'#f59e0b',Comedy:'#fbbf24',
-  Sports:'#22c55e',Food:'#fb7185',Festival:'#ec4899',Family:'#2dd4bf',Film:'#818cf8',Wellness:'#34d399'};
+  Sports:'#22c55e',Food:'#fb7185',Festival:'#ec4899',Family:'#2dd4bf',Film:'#818cf8',Wellness:'#22d3ee'};
+var SERVER_HOME='';
+function getHome(){try{var h=localStorage.getItem('mq_home');if(h){var o=JSON.parse(h);if(o&&(o.neighborhood||o.borough))return o;}}catch(e){}
+ if(SERVER_HOME){var p=SERVER_HOME.split(',');return {neighborhood:(p[0]||'').trim(),borough:(p[1]||'').trim(),label:SERVER_HOME};}return null;}
+function homeLabel(){var h=getHome();return h?(h.label||[h.neighborhood,h.borough].filter(Boolean).join(', ')):'Set your area';}
+function nearMe(e){var h=getHome();if(!h)return false;var n=(e.neighborhood||'').toLowerCase(),b=(e.borough||'').toLowerCase();
+ if(h.neighborhood&&n&&n===h.neighborhood.toLowerCase())return true;
+ if(h.borough&&b&&b===h.borough.toLowerCase())return true;return false;}
 var CAT_SVG={
  Music:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.6A4 4 0 1 0 14 17V7.3l5-1.1V3z"/></svg>',
  Nightlife:'<svg class="ci" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 6.3L20 10l-6.1 1.7L12 18l-1.9-6.3L4 10l6.1-1.7z"/></svg>',
@@ -1317,11 +1456,13 @@ function schName(t){t=t||'Class';var hot=/\uD83C\uDF36/.test(t);return esc(t.rep
 var CATS=['Music','Nightlife','Arts','Theater','Comedy','Sports','Food','Festival','Family','Film','Wellness'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-var all=[],active=new Set(),view='cal',curMonth=null,selDay=null,loc='mine';
+var all=[],active=new Set(),view=(function(){try{return localStorage.getItem('mq_view2')||'week';}catch(e){return'week';}})(),curMonth=null,selDay=null,loc='mine',weekOffset=0,wkSel=null;
+function evMins(t){var p=parseTime(t);return p?p.h*60+p.m:9999;}
+function shortTitle(t){t=(t||'').replace(/\s*🌶️?/g,'');var i=t.lastIndexOf(' · ');return i>=0?t.slice(i+3):t;}
 function esc(s){return (s||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function parseD(s){var p=(s||'').split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
 function chipTime(t){var m=(t||'').match(/(\d{1,2})(?::(\d{2}))?\s*([ap])/i);if(!m)return '';var mm=(m[2]&&m[2]!=='00')?':'+m[2]:'';return m[1]+mm+m[3].toLowerCase();}
-function matchLoc(e){return loc==='all'||(loc==='near'?!!e.near_home:(loc==='mine'?!!e.mine:e.borough===loc));}
+function matchLoc(e){return loc==='all'||(loc==='mine'?!!e.mine:nearMe(e));}
 function filtered(){return all.filter(function(e){return (!active.size||active.has(e.category))&&matchLoc(e);});}
 function chips(){
  var c=document.getElementById('chips');
@@ -1332,19 +1473,18 @@ function evCard(e){
  var d=parseD(e.date);
  return '<div class="ev'+(e.mine?' mine':'')+'" data-open="'+e._i+'" role="button" tabindex="0">'
   +'<div class="dte"><div class="mo">'+MON[d.getMonth()]+'</div><div class="dy">'+d.getDate()+'</div><div class="wd">'+WD[d.getDay()]+'</div></div>'
-  +'<div class="body"><div class="t">'+esc(e.title)+'</div>'
+  +'<div class="body"><div class="t">'+schName(e.title)+'</div>'
   +'<div class="meta"><span class="cat" style="background:linear-gradient(135deg,'+(CATCOLOR[e.category]||'#ff5c8a')+',#a855f7)">'+catIcon(e.category)+' '+esc(e.category)+'</span>'
   +(e.mine?'<span class="mine-tag">'+(e.recurring?'★ Mine · weekly':'★ Mine')+'</span>':'')
-  +(e.near_home&&!e.mine?'<span class="near-tag">★ Near you</span>':'')
+  +(nearMe(e)&&!e.mine?'<span class="near-tag">★ Near you</span>':'')
   +(e.time?'<span>'+IC.clock+' '+esc(e.time)+'</span>':'')
   +(e.venue?'<span>'+IC.pin+' '+esc(e.venue)+(e.neighborhood?', '+esc(e.neighborhood):(e.borough?', '+esc(e.borough):''))+'</span>':'')
   +(e.price?'<span>'+IC.ticket+' '+esc(e.price)+'</span>':'')
   +(e.source&&!e.mine?'<span class="src">via '+esc(e.source)+'</span>':'')+'</div>'
   +(e.blurb?'<p class="bl">'+esc(e.blurb)+'</p>':'')+'</div>'
   +'<div class="acts">'
-   +'<button class="act" data-ics="'+e._i+'" title="Add to my calendar (.ics)">'+IC.cal+'</button>'
-   +(e.mine?'<button class="act del" data-rm="'+e._i+'" title="Remove this one">✕</button>'
-           :'<button class="act" data-save="'+e._i+'" title="Save to my events">＋</button>')
+   +(e.mine?'<button class="act del" data-rm="'+e._i+'" title="Remove from my calendar">✕</button>'
+           :'<button class="act add" data-add="'+e._i+'" title="Add to my calendar">'+IC.cal+'</button>')
   +'</div></div>';
 }
 function openEvent(e){
@@ -1355,8 +1495,8 @@ function openEvent(e){
   +'<button class="evm-x" data-close title="Close">✕</button>'
   +'<div class="evm-body">'
    +'<div class="evm-cat">'+catIcon(e.category)+' '+esc(e.category)
-     +(e.mine?' · ★ Mine'+(e.recurring?' · weekly':''):'')+(e.near_home&&!e.mine?' · ★ Near you':'')+(e.source&&!e.mine?' · via '+esc(e.source):'')+'</div>'
-   +'<h2 class="evm-title">'+esc(e.title)+'</h2>'
+     +(e.mine?' · ★ Mine'+(e.recurring?' · weekly':''):'')+(nearMe(e)&&!e.mine?' · ★ Near you':'')+(e.source&&!e.mine?' · via '+esc(e.source):'')+'</div>'
+   +'<h2 class="evm-title">'+schName(e.title)+'</h2>'
    +'<div class="evm-when">'+WD[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate()+(e.time?' · '+esc(e.time):'')+'</div>'
    +(place?'<div class="evm-row">'+IC.pin+' '+esc(place)+'</div>':'')
    +(e.price?'<div class="evm-row">'+IC.ticket+' '+esc(e.price)+'</div>':'')
@@ -1364,11 +1504,10 @@ function openEvent(e){
    +(e.url?'<div class="evm-link">'+IC.link+' <a href="'+esc(e.url)+'" target="_blank" rel="noopener">'+esc(e.url.replace(/^https?:\/\//,'').slice(0,54))+'…</a></div>':'')
    +'<div class="evm-actions">'
     +(e.url?'<a class="evm-btn primary" href="'+esc(e.url)+'" target="_blank" rel="noopener">'+IC.ticket+' Open / Tickets</a>':'')
-    +'<button class="evm-btn" data-mics>'+IC.cal+' Add to calendar</button>'
-    +(e.mine&&e.recurring?'<button class="evm-btn" data-mbrowse="'+esc(e.pid||'')+'">'+IC.list+' Browse full schedule &amp; add classes</button>':'')
-    +(e.mine?('<button class="evm-btn danger" data-mrm>✕ Remove this class</button>'
-             +(e.recurring?'<button class="evm-btn danger" data-mrmall>Remove the whole series</button>':''))
-            :'<button class="evm-btn" data-msave>＋ Save to my events</button>')
+    +(e.mine
+       ?('<button class="evm-btn danger" data-mrm>✕ Remove from my calendar</button>'
+         +(e.recurring?'<button class="evm-btn danger" data-mrmall>Remove the whole series</button>':''))
+       :'<button class="evm-btn primary" data-madd>'+IC.cal+' Add to my calendar</button>')
    +'</div>'
   +'</div>';
  m._ev=e;m.hidden=false;
@@ -1444,18 +1583,41 @@ function todayStr(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()
 function renderWeek(){
  var box=document.getElementById('list'),evs=filtered(),byDate={};
  evs.forEach(function(e){(byDate[e.date]=byDate[e.date]||[]).push(e);});
- var now=new Date(),tStr=todayStr();
- var sat=new Date(now.getFullYear(),now.getMonth(),now.getDate()+(6-now.getDay()));
- var html='',any=false;
- for(var d=new Date(now.getFullYear(),now.getMonth(),now.getDate());d<=sat;d.setDate(d.getDate()+1)){
-  var ds=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-  var isT=(ds===tStr),evsD=byDate[ds]||[];if(evsD.length)any=true;
-  html+='<div class="day-h'+(isT?' today':'')+'">'+WD[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate()+(isT?' · Today':'')+'<span class="ln"></span></div>';
-  html+=evsD.length?evsD.map(evCard).join(''):'<div class="noday">—</div>';
- }
- if(!any&&loc==='mine')html='<div class="minebar"><div><b>Your regulars &amp; saved events</b><span>Nothing this week yet — tap ＋ on any event or <b>+ Add event</b>.</span></div><button class="scanbtn">⟳ Scan for real times</button></div>'+html;
- else if(loc==='mine')html='<div class="minebar"><div><b>Your week</b><span>Your regulars &amp; saved events.</span></div><button class="scanbtn">⟳ Scan for real times</button></div>'+html;
- box.innerHTML=html;
+ var base=new Date(),tStr=todayStr(),nowD=new Date();
+ var start=new Date(base.getFullYear(),base.getMonth(),base.getDate()-base.getDay()+weekOffset*7);
+ var days=[],dks=[];
+ for(var i=0;i<7;i++){var d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);days.push(d);dks.push(d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()));}
+ if(!wkSel||dks.indexOf(wkSel)<0)wkSel=(dks.indexOf(tStr)>=0?tStr:dks[0]);
+ // tight hour window around this week's events -> short, not a 24h scroll
+ var wm=[];evs.forEach(function(e){if(dks.indexOf(e.date)>=0){var m=evMins(e.time);if(m<9999)wm.push(m);}});
+ var sH=9,eH=21;
+ if(wm.length){sH=Math.max(5,Math.floor(Math.min.apply(null,wm)/60));eH=Math.min(24,Math.ceil(Math.max.apply(null,wm)/60)+1);if(eH-sH<5)eH=Math.min(24,sH+6);}
+ var HR=34,gridH=(eH-sH)*HR;
+ var head='<div class="wk-head"><button class="cal-nav" id="wpm">‹</button><b>'+MON[days[0].getMonth()]+' '+days[0].getDate()+' – '+MON[days[6].getMonth()]+' '+days[6].getDate()+'</b><button class="cal-nav" id="wnm">›</button></div>';
+ var hdr='<div class="wk2-hdr"><div class="wk2-gutter"></div>'+days.map(function(d,i){var isT=dks[i]===tStr,sl=dks[i]===wkSel;
+   return '<button class="wk2-dcol'+(isT?' today':'')+(sl?' sel':'')+'" data-wd="'+dks[i]+'"><span class="wk2-dow">'+WD[d.getDay()]+'</span><span class="wk2-dnum">'+d.getDate()+'</span></button>';}).join('')+'</div>';
+ var times='';for(var h=sH;h<eH;h++){var lab=(h===0?'12a':h<12?h+'a':h===12?'12p':(h-12)+'p');times+='<div class="wk2-hr" style="height:'+HR+'px">'+lab+'</div>';}
+ var cols=days.map(function(d,i){var k=dks[i],isT=k===tStr;
+   var ls=(byDate[k]||[]).slice().sort(function(a,b){return evMins(a.time)-evMins(b.time);});
+   var laneEnd=[],items=ls.map(function(e){var s=evMins(e.time);if(s>=9999)s=sH*60;var en=s+55,l=0;
+     while(l<laneEnd.length&&laneEnd[l]>s)l++;laneEnd[l]=en;return {e:e,s:s,en:en,lane:l};});
+   var nL=Math.max(1,laneEnd.length);
+   var blocks=items.map(function(o){var top=Math.max(0,(o.s-sH*60)/60*HR),hgt=Math.max(15,(o.en-o.s)/60*HR-2);
+     var w=100/nL,left=o.lane*w;
+     return '<div class="wk2-ev" data-open="'+o.e._i+'" style="top:'+top+'px;height:'+hgt+'px;left:'+left+'%;width:calc('+w+'% - 2px)"><b>'+esc(chipTime(o.e.time))+'</b>'+esc(shortTitle(o.e.title))+'</div>';
+   }).join('');
+   return '<div class="wk2-col'+(isT?' today':'')+'">'+blocks+'</div>';
+ }).join('');
+ var now='';if(dks.indexOf(tStr)>=0){var nm=nowD.getHours()*60+nowD.getMinutes();if(nm>=sH*60&&nm<=eH*60)now='<div class="wk2-now" style="top:'+((nm-sH*60)/60*HR)+'px"></div>';}
+ var grid='<div class="wk2"><div class="wk2-grid"><div class="wk2-gutter2">'+times+'</div><div class="wk2-cols" style="height:'+gridH+'px;background-size:100% '+HR+'px">'+cols+now+'</div></div></div>';
+ var list='';
+ days.forEach(function(d,i){var k=dks[i],evsD=(byDate[k]||[]).slice().sort(function(a,b){return evMins(a.time)-evMins(b.time);});
+   if(!evsD.length)return;
+   list+='<div class="day-h'+(k===tStr?' today':'')+'" id="d-'+k+'" style="margin-top:14px">'+WD[d.getDay()]+', '+MON[d.getMonth()]+' '+d.getDate()+(k===tStr?' · Today':'')+'<span class="ln"></span></div>'+evsD.map(evCard).join('');
+ });
+ if(!list)list='<div class="empty" style="margin-top:16px">Nothing in your calendar this week — tap '+IC.cal+' on any event (try <b>All NYC</b>) to add it.</div>';
+ var bar=(loc==='mine')?'<div class="minebar"><div><b>Your week</b><span>Only what you\'ve added. Tap '+IC.cal+' on any event (try <b>All NYC</b>) to add it.</span></div><button class="scanbtn">⟳ Scan for real times</button></div>':'';
+ box.innerHTML=bar+head+hdr+grid+list;
 }
 function render(){chips();document.getElementById('calWrap').hidden=(view!=='cal');if(view==='cal')renderCal();else if(view==='week')renderWeek();else renderList();}
 function load(force){
@@ -1463,7 +1625,7 @@ function load(force){
  fetch('api/events'+(force?'?force=1':''),{cache:'no-store'}).then(function(x){return x.json();}).then(function(d){
   all=d.events||[];
   all.forEach(function(e,i){e._i=i;});
-  if(d.home)document.getElementById('homePill').innerHTML=IC.pin+' '+esc(d.home);
+  if(d.home)SERVER_HOME=d.home;document.getElementById('homePill').innerHTML=IC.pin+' '+esc(homeLabel());
   document.getElementById('foot').textContent=all.length+' events · updated '+(d.fetched_at?new Date(d.fetched_at).toLocaleString():'—')+' · tap any event for tickets';
   render();r.classList.remove('spin');
  }).catch(function(){r.classList.remove('spin');});
@@ -1474,13 +1636,16 @@ document.getElementById('chips').addEventListener('click',function(ev){
 });
 document.getElementById('views').addEventListener('click',function(ev){
  var b=ev.target.closest('button');if(!b)return;view=b.getAttribute('data-v');
+ try{localStorage.setItem('mq_view2',view);}catch(e){}
  Array.prototype.forEach.call(this.children,function(x){x.classList.toggle('on',x===b);});
  selDay=null;render();
 });
+(function(){try{var vv=document.getElementById('views');Array.prototype.forEach.call(vv.children,function(x){x.classList.toggle('on',x.getAttribute('data-v')===view);});}catch(e){}})();
 document.getElementById('loc').addEventListener('click',function(ev){
  var b=ev.target.closest('button');if(!b)return;loc=b.getAttribute('data-l');
  Array.prototype.forEach.call(this.children,function(x){x.classList.toggle('on',x===b);});
  selDay=null;render();
+ if(loc==='near'&&!getHome()){var hm=document.getElementById('homeModal');if(hm)hm.hidden=false;}
 });
 document.getElementById('cells').addEventListener('click',function(ev){
  var chip=ev.target.closest('.evchip');
@@ -1504,8 +1669,24 @@ var modal=document.getElementById('addModal'),selWd=new Set();
 })();
 function openModal(){modal.hidden=false;}
 function closeModal(){modal.hidden=true;}
-var SRC_CACHE=null;
+var SRC_CACHE=null,SRC_OPEN=null,SRC_EV={};
 function srcTag(active){return '<span class="app-tag '+(active?'public':'soon')+'">'+(active?'Active':'Standby')+'</span>';}
+function agoMs(ms){if(!ms)return 'never';var s=Math.max(0,(Date.now()-ms)/1000);if(s<90)return 'just now';var m=s/60;if(m<60)return Math.round(m)+'m ago';var h=m/60;if(h<24)return Math.round(h)+'h ago';return Math.round(h/24)+'d ago';}
+function niceShort(d){var x=parseD(d);return MON[x.getMonth()]+' '+x.getDate();}
+function srcCard(a){
+ var ico='<span class="app-ico" style="background:linear-gradient(135deg,'+(a.c0||'#ff5c8a')+','+(a.c1||'#a855f7')+')">'+esc((a.name||'?')[0])+'</span>';
+ var meta=esc(a.category||'')+' · '+(a.count||0)+' listing'+(a.count===1?'':'s')+' · updated '+agoMs(a.last_update);
+ var open=SRC_OPEN===a.key,det='';
+ if(open){var list=SRC_EV[a.key];
+  if(!list)det='<div class="app-d" style="padding:10px 12px">Loading…</div>';
+  else if(!list.length)det='<div class="app-d" style="padding:10px 12px">No listings ingested yet.</div>';
+  else det=list.map(function(e){var tm=(e.time&&e.time!=='None')?' · '+esc(e.time):'';return '<div class="src-ev"><span class="src-ev-d">'+esc(niceShort(e.date))+tm+'</span><span class="src-ev-t">'+esc(e.title||'')+'</span></div>';}).join('')
+     +(a.url?'<a class="src-visit" href="'+esc(a.url)+'" target="_blank" rel="noopener">'+IC.link+' Open '+esc(a.name)+'</a>':'');
+  det='<div class="src-det">'+det+'</div>';}
+ return '<div class="src-wrap'+(open?' open':'')+'"><button class="app-card src-card" data-skey="'+esc(a.key)+'">'+ico
+   +'<div class="app-main"><div class="app-n">'+esc(a.name)+srcTag(a.active)+'</div><div class="app-d">'+meta+'</div></div>'
+   +'<span class="src-chev">'+(open?'▾':'›')+'</span></button>'+det+'</div>';
+}
 async function renderApps(){
  var g=document.getElementById('appsGrid');
  document.getElementById('appsModal').hidden=false;
@@ -1513,14 +1694,25 @@ async function renderApps(){
   g.innerHTML='<div class="app-d" style="padding:18px 4px;text-align:center">Loading sources…</div>';
   try{SRC_CACHE=(await (await fetch('api/sources')).json()).sources||[];}catch(e){SRC_CACHE=[];}
  }
- g.innerHTML=SRC_CACHE.map(function(a){
-  var ico='<span class="app-ico" style="background:linear-gradient(135deg,'+(a.c0||'#ff5c8a')+','+(a.c1||'#a855f7')+')">'+esc((a.name||'?')[0])+'</span>';
-  var meta=esc(a.note||'')+(a.category?' · '+esc(a.category):'');
-  var inner='<div class="app-card">'+ico+'<div class="app-main"><div class="app-n">'+esc(a.name)+srcTag(a.active)+'</div><div class="app-d">'+meta+'</div></div></div>';
-  return a.url?'<a class="app-link" href="'+esc(a.url)+'" target="_blank" rel="noopener">'+inner+'</a>':'<div class="app-link">'+inner+'</div>';
- }).join('');
+ g.innerHTML=SRC_CACHE.map(srcCard).join('');
 }
+document.getElementById('appsGrid').addEventListener('click',function(ev){
+ var c=ev.target.closest('.src-card');if(!c)return;
+ var k=c.getAttribute('data-skey');
+ if(SRC_OPEN===k){SRC_OPEN=null;renderApps();return;}
+ SRC_OPEN=k;
+ if(!SRC_EV[k]){renderApps();fetch('api/source?key='+encodeURIComponent(k)).then(function(r){return r.json();}).then(function(j){SRC_EV[k]=j.events||[];renderApps();}).catch(function(){SRC_EV[k]=[];renderApps();});}
+ else renderApps();
+});
 document.getElementById('addBtn').onclick=openModal;
+(function(){var hm=document.getElementById('homeModal');
+ document.getElementById('homePill').onclick=function(){var h=getHome()||{};document.getElementById('home_nb').value=h.neighborhood||'';document.getElementById('home_boro').value=h.borough||'';hm.hidden=false;};
+ document.getElementById('home_cancel').onclick=function(){hm.hidden=true;};
+ hm.addEventListener('click',function(e){if(e.target===hm)hm.hidden=true;});
+ document.getElementById('home_save').onclick=function(){var nb=document.getElementById('home_nb').value.trim(),bo=document.getElementById('home_boro').value;
+  try{localStorage.setItem('mq_home',JSON.stringify({neighborhood:nb,borough:bo,label:[nb,bo].filter(Boolean).join(', ')}));}catch(e){}
+  document.getElementById('homePill').innerHTML=IC.pin+' '+esc(homeLabel());hm.hidden=true;load(false);};
+})();
 document.getElementById('f_cancel').onclick=closeModal;
 (function(){
  var sm=document.getElementById('subModal');
@@ -1559,23 +1751,34 @@ document.getElementById('f_save').onclick=function(){
 };
 // card: quick action buttons, else tap opens the detail modal
 document.getElementById('list').addEventListener('click',function(ev){
+ var we=ev.target.closest('.wk2-ev');if(we){openEvent(all[+we.getAttribute('data-open')]);return;}
+ var dd=ev.target.closest('.wk2-dcol');if(dd){wkSel=dd.getAttribute('data-wd');renderWeek();var s=document.getElementById('d-'+wkSel);if(s)s.scrollIntoView({behavior:'smooth',block:'start'});return;}
+ var wn=ev.target.closest('#wpm,#wnm');if(wn){weekOffset+=(wn.id==='wnm'?1:-1);renderWeek();return;}
  var b=ev.target.closest('.act, .scanbtn');
  if(b){ev.preventDefault();ev.stopPropagation();
   if(b.classList.contains('scanbtn')){scanRegulars(b);return;}
-  if(b.hasAttribute('data-ics')){downloadICS(all[+b.getAttribute('data-ics')]);return;}
-  if(b.hasAttribute('data-save')){saveMine(all[+b.getAttribute('data-save')]);b.textContent='✓';return;}
+  if(b.hasAttribute('data-add')){confirmEvent(all[+b.getAttribute('data-add')]);return;}
   if(b.hasAttribute('data-rm')){removeOccurrence(all[+b.getAttribute('data-rm')]);return;}
   return;}
  var card=ev.target.closest('.ev[data-open]');if(card)openEvent(all[+card.getAttribute('data-open')]);
 });
-// remove ONE occurrence (recurring -> exclude this date/time; one-off -> delete)
+// add an event to YOUR Marquee calendar (no OS popup). A regular's class ->
+// confirm that occurrence; a discovered NYC event -> save it as a personal event.
+function confirmEvent(e){
+ if(!e)return;
+ if(e.pid){
+  fetch('api/personal/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:e.pid,date:e.date,time:e.time})}).then(function(){load(false);});
+ } else {
+  var body={title:e.title,category:e.category,time:e.time,venue:e.venue,neighborhood:e.neighborhood,borough:e.borough,near_home:!!e.near_home,url:e.url,blurb:e.blurb,price:e.price,date:e.date};
+  fetch('api/personal/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(){load(false);});
+ }
+}
+// remove ONE occurrence from your calendar (a class/recurring -> hide just it; one-off -> delete)
 function removeOccurrence(e){
  if(!e||!e.pid)return;
- if(e.recurring){
-  if(!confirm('Remove just this class — '+e.date+(e.time?' '+e.time:'')+'? (keeps the rest)'))return;
+ if(e.scanned||e.recurring){
   fetch('api/personal/exclude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:e.pid,date:e.date,time:e.time})}).then(function(){load(false);});
  } else {
-  if(!confirm('Remove this event from your calendar?'))return;
   fetch('api/personal/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:e.pid})}).then(function(){load(false);});
  }
 }
@@ -1620,8 +1823,7 @@ evModal.addEventListener('click',function(ev){
    .then(function(){go.classList.toggle('on',adding);go.textContent=adding?'✓ Going':'+ Add';load(false);});
   return;}
  var e=evModal._ev;if(!e)return;
- if(ev.target.closest('[data-mics]')){downloadICS(e);return;}
- if(ev.target.closest('[data-msave]')){saveMine(e);closeEv();return;}
+ if(ev.target.closest('[data-madd]')){confirmEvent(e);closeEv();return;}
  var mb=ev.target.closest('[data-mbrowse]');if(mb){openSchedule(mb.getAttribute('data-mbrowse'),e.title);return;}
  if(ev.target.closest('[data-mrm]')){removeOccurrence(e);closeEv();return;}
  if(ev.target.closest('[data-mrmall]')){removeSeries(e);closeEv();return;}
@@ -1676,6 +1878,12 @@ class H(BaseHTTPRequestHandler):
             self._send(json.dumps(admin_data()))
         elif p == "/api/sources":
             self._send(json.dumps({"sources": public_sources()}))
+        elif p == "/api/source":
+            key = ""
+            for kv in q.split("&"):
+                if kv.startswith("key="):
+                    key = urllib.parse.unquote(kv[4:])
+            self._send(json.dumps({"events": source_events(key)}))
         elif p == "/favicon.svg":
             self._send(FAVICON, "image/svg+xml")
         elif p == "/api/events":

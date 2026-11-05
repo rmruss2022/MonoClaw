@@ -1,0 +1,32 @@
+[2026-11-01 13:00:01 UTC] === digest run start (2026-11-01) ===
+[2026-11-01 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-01 13:00:43 UTC] briefing composed (2447 bytes); generating voice note...
+[2026-11-01 13:00:47 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-01.mp3
+[2026-11-01 13:00:47 UTC] report saved to portal
+[2026-11-01 13:00:54 UTC] briefing text delivered
+[2026-11-01 13:01:01 UTC] voice note delivered
+[2026-11-01 13:01:01 UTC] === digest run complete ===
+[2026-11-02 13:00:01 UTC] === digest run start (2026-11-02) ===
+[2026-11-02 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-02 13:00:43 UTC] briefing composed (2039 bytes); generating voice note...
+[2026-11-02 13:00:47 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-02.mp3
+[2026-11-02 13:00:47 UTC] report saved to portal
+[2026-11-02 13:00:53 UTC] briefing text delivered
+[2026-11-02 13:01:00 UTC] voice note delivered
+[2026-11-02 13:01:00 UTC] === digest run complete ===
+[2026-11-03 13:00:01 UTC] === digest run start (2026-11-03) ===
+[2026-11-03 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-03 13:00:41 UTC] briefing composed (2159 bytes); generating voice note...
+[2026-11-03 13:00:45 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-03.mp3
+[2026-11-03 13:00:45 UTC] report saved to portal
+[2026-11-03 13:00:51 UTC] briefing text delivered
+[2026-11-03 13:00:59 UTC] voice note delivered
+[2026-11-03 13:00:59 UTC] === digest run complete ===
+[2026-11-04 13:00:01 UTC] === digest run start (2026-11-04) ===
+[2026-11-04 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-04 13:01:08 UTC] briefing composed (1924 bytes); generating voice note...
+[2026-11-04 13:01:14 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-04.mp3
+[2026-11-04 13:01:14 UTC] report saved to portal
+[2026-11-04 13:01:20 UTC] briefing text delivered
+[2026-11-04 13:01:27 UTC] voice note delivered
+[2026-11-04 13:01:27 UTC] === digest run complete ===

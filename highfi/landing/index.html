@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HighFi — Screw in. Tune in.</title>
+  <meta name="description" content="HighFi is a 510-thread cart battery with a built-in MP3 player and speaker. Screw in your cart, load your tracks, press play. Hi-fi audio meets elevated sessions." />
+  <meta name="theme-color" content="#0d0a12" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="HighFi — Screw in. Tune in." />
+  <meta property="og:description" content="A 510-thread cart battery that's also an MP3 player + speaker. One pocket-sized device for the whole session." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="assets/hero.jpg" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#how">Skip to content</a>
+
+  <!-- ===== Nav ===== -->
+  <header class="nav" id="top">
+    <div class="wrap nav__inner">
+      <a class="brand" href="#top" aria-label="HighFi home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l10-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="16" cy="16" r="3" />
+          </svg>
+        </span>
+        <span class="brand__word">HighFi</span>
+      </a>
+
+      <nav class="nav__links" id="nav-links" aria-label="Primary">
+        <a href="#how">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#app">App</a>
+        <a href="#specs">Specs</a>
+        <a href="#gallery">Gallery</a>
+        <a href="#faq">FAQ</a>
+        <a class="btn btn--sm" href="#waitlist">Join the waitlist</a>
+      </nav>
+
+      <button class="nav__toggle" id="nav-toggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-links">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <div class="wrap hero__inner">
+        <div class="hero__copy">
+          <p class="eyebrow">510-thread battery · MP3 player · speaker</p>
+          <h1 class="hero__title">HighFi</h1>
+          <p class="hero__tagline">Screw in. Tune in.</p>
+          <p class="hero__sub">
+            The pocket-sized cart battery that's also a music player. Screw in your cart,
+            load your tracks, and let the onboard speaker rip — one device for the whole session.
+          </p>
+          <div class="hero__cta">
+            <a class="btn btn--lg" href="#waitlist">Join the waitlist</a>
+            <a class="btn btn--ghost btn--lg" href="#how">See how it works</a>
+          </div>
+          <p class="hero__note">Local-first · No account · Hi-fi meets elevated</p>
+        </div>
+
+        <div class="hero__media">
+          <div class="hero__glow" aria-hidden="true"></div>
+          <img
+            src="assets/hero.jpg"
+            alt="HighFi device — an anodized aluminum cart battery with a speaker grille and 510 connector"
+            class="hero__img"
+            loading="eager"
+            onerror="this.classList.add('img--missing'); this.removeAttribute('src');"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== How it works ===== -->
+    <section class="section" id="how">
+      <div class="wrap">
+        <h2 class="section__title">How it works</h2>
+        <p class="section__lead">Three moves. One pocket.</p>
+        <ol class="steps">
+          <li class="step">
+            <span class="step__num">1</span>
+            <h3 class="step__title">Screw in your cart</h3>
+            <p>Spring-loaded 510 connector on top. Thread in any standard cart and you're locked and loaded.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">2</span>
+            <h3 class="step__title">Load your tracks</h3>
+            <p>Drop MP3s on a microSD card or upload over WiFi from the app. Your library, stored locally.</p>
+          </li>
+          <li class="step">
+            <span class="step__num">3</span>
+            <h3 class="step__title">Press play &amp; rip</h3>
+            <p>Onboard speaker fires up. Fire button vapes, play button plays — one-handed, one session.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ===== Features ===== -->
+    <section class="section section--alt" id="features">
+      <div class="wrap">
+        <h2 class="section__title">Everything on board</h2>
+        <p class="section__lead">Audio, vape, and control in a single 18650-class body.</p>
+        <div class="grid features">
+          <article class="card">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            </span>
+            <h3>Onboard speaker</h3>
+            <p>A MAX98357A class-D amp drives a 3 W micro speaker. No earbuds required — the room hears it.</p>
+          </article>
+
+          <article class="card">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16"/><path d="M12 9h5"/><path d="M12 13h5"/></svg>
+            </span>
+            <h3>MP3 &amp; AAC playback</h3>
+            <p>Play MP3, AAC, WAV, and FLAC straight off microSD — or upload tracks over WiFi from the app.</p>
+          </article>
+
+          <article class="card">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+            </span>
+            <h3>Phone app remote</h3>
+            <p>A mobile web app is the full remote: now playing, library, and a clearly-separated vape panel.</p>
+          </article>
+
+          <article class="card">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </span>
+            <h3>USB-C fast charge</h3>
+            <p>Charge over USB-C with a proper power-path charger and fuel gauge. Top up and keep going.</p>
+          </article>
+
+          <article class="card">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 10v4"/><path d="M6 10v4"/></svg>
+            </span>
+            <h3>All-day 18650 battery</h3>
+            <p>A single 18650 Li-ion cell (~3000 mAh) powers audio and vape from the same source.</p>
+          </article>
+
+          <article class="card">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 8.4 8 11 4.6-2.6 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></svg>
+            </span>
+            <h3>Real vape safety interlocks</h3>
+            <p>10 s cutoff, short and no-atomizer lockouts, over-temp protection, and a 5-click lock — enforced in firmware.</p>
+          </article>
+
+          <article class="card">
+            <span class="card__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+            </span>
+            <h3>Local-first, no account</h3>
+            <p>The device hosts its own app and stores your library on the card. No cloud login, no tracking.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== The app ===== -->
+    <section class="section" id="app">
+      <div class="wrap app__inner">
+        <div class="app__copy">
+          <p class="eyebrow">The controller</p>
+          <h2 class="section__title">Your phone is the remote</h2>
+          <p>
+            HighFi serves its own mobile-first web app over WiFi — no download, no account.
+            Connect and you get the whole session in one place.
+          </p>
+          <ul class="checklist">
+            <li><strong>Now playing</strong> — transport, seek, volume, shuffle and repeat.</li>
+            <li><strong>Library</strong> — browse tracks on the card and upload new ones over WiFi.</li>
+            <li><strong>Vape panel</strong> — battery, coil status, wattage and session timer, clearly separated from music.</li>
+            <li><strong>Vibe &amp; LED</strong> — set the RGB mood with presets like "sunset".</li>
+          </ul>
+          <p class="app__note">Develops fully against a built-in emulator — zero hardware required.</p>
+        </div>
+
+        <div class="app__shots">
+          <img
+            src="assets/app-now.jpg"
+            alt="HighFi app — now playing screen with transport controls"
+            class="shot shot--primary"
+            loading="lazy"
+            onerror="this.closest('.shot-wrap')?.classList.add('is-hidden'); this.classList.add('img--missing'); this.removeAttribute('src');"
+          />
+          <img
+            src="assets/app-vape.jpg"
+            alt="HighFi app — vape panel with battery, coil status and session timer"
+            class="shot shot--secondary"
+            loading="lazy"
+            onerror="this.classList.add('is-hidden'); this.removeAttribute('src');"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Specs ===== -->
+    <section class="section section--alt" id="specs">
+      <div class="wrap">
+        <h2 class="section__title">Specs</h2>
+        <p class="section__lead">Pulled straight from the source-of-truth spec.</p>
+        <div class="specs">
+          <table class="spec-table">
+            <tbody>
+              <tr><th scope="row">Compute</th><td>ESP32-S3-WROOM-1 (dual-core LX7, 16 MB flash, 8 MB PSRAM)</td></tr>
+              <tr><th scope="row">Audio amp</th><td>MAX98357A I2S class-D → 4 Ω / 3 W micro speaker</td></tr>
+              <tr><th scope="row">Formats</th><td>MP3 / AAC / WAV / FLAC</td></tr>
+              <tr><th scope="row">Storage</th><td>microSD (SDMMC) library + LittleFS on-flash tracks</td></tr>
+              <tr><th scope="row">Battery</th><td>Single 18650 Li-ion (~3000 mAh); 18350 "mini" variant</td></tr>
+              <tr><th scope="row">Charging</th><td>USB-C, power-path charger, MAX17048 fuel gauge</td></tr>
+              <tr><th scope="row">Connectivity</th><td>WiFi (SoftAP + STA, mDNS), BLE 5, WebSocket + REST</td></tr>
+              <tr><th scope="row">Vape connector</th><td>Spring-loaded 510 thread; 5–15 W / 2.5–3.6 V, firmware-clamped</td></tr>
+              <tr><th scope="row">Display</th><td>0.96" SSD1306 OLED (default) or WS2812 RGB ring</td></tr>
+              <tr><th scope="row">Dimensions</th><td>~92 mm × 26 mm (18650 class), anodized aluminum body</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Gallery ===== -->
+    <section class="section" id="gallery">
+      <div class="wrap">
+        <h2 class="section__title">Gallery</h2>
+        <p class="section__lead">Mockups and renders. Tap to enlarge.</p>
+        <div class="grid gallery" id="gallery-grid">
+          <!-- Each tile hides itself if its image is missing -->
+          <button class="tile" data-full="assets/hero.jpg" aria-label="Enlarge hero render">
+            <img src="assets/hero.jpg" alt="HighFi device hero render" loading="lazy"
+              onerror="this.closest('.tile').classList.add('is-hidden');" />
+          </button>
+          <button class="tile" data-full="assets/render.jpg" aria-label="Enlarge studio render">
+            <img src="assets/render.jpg" alt="HighFi studio product render" loading="lazy"
+              onerror="this.closest('.tile').classList.add('is-hidden');" />
+          </button>
+          <button class="tile" data-full="assets/lifestyle.jpg" aria-label="Enlarge lifestyle shot">
+            <img src="assets/lifestyle.jpg" alt="HighFi in use — lifestyle shot" loading="lazy"
+              onerror="this.closest('.tile').classList.add('is-hidden');" />
+          </button>
+          <button class="tile" data-full="assets/exploded.jpg" aria-label="Enlarge exploded view">
+            <img src="assets/exploded.jpg" alt="HighFi exploded view of internal subsystems" loading="lazy"
+              onerror="this.closest('.tile').classList.add('is-hidden');" />
+          </button>
+          <button class="tile" data-full="assets/app-now.jpg" aria-label="Enlarge app screenshot">
+            <img src="assets/app-now.jpg" alt="HighFi app now-playing screenshot" loading="lazy"
+              onerror="this.closest('.tile').classList.add('is-hidden');" />
+          </button>
+        </div>
+        <p class="gallery__empty" id="gallery-empty" hidden>Renders landing soon.</p>
+      </div>
+    </section>
+
+    <!-- ===== Waitlist ===== -->
+    <section class="section section--cta" id="waitlist">
+      <div class="wrap waitlist">
+        <h2 class="section__title">Join the waitlist</h2>
+        <p class="section__lead">Be first to hear when HighFi is ready to screw in.</p>
+        <form class="waitlist__form" id="waitlist-form" novalidate>
+          <label class="sr-only" for="email">Email address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            inputmode="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            required
+          />
+          <button class="btn btn--lg" type="submit">Notify me</button>
+        </form>
+        <p class="waitlist__msg" id="waitlist-msg" role="status" aria-live="polite"></p>
+        <p class="waitlist__fineprint">Front-end demo only — no email is stored or sent.</p>
+      </div>
+    </section>
+
+    <!-- ===== FAQ ===== -->
+    <section class="section" id="faq">
+      <div class="wrap wrap--narrow">
+        <h2 class="section__title">FAQ</h2>
+
+        <details class="faq">
+          <summary>Does it stream to Bluetooth speakers?</summary>
+          <p>
+            The onboard speaker is the primary output. HighFi runs on an ESP32-S3, which is
+            <strong>BLE-only</strong> — it doesn't do Classic Bluetooth (A2DP), so it can't
+            stream to standard BT speakers or headphones today. Bluetooth-out is a planned
+            option that would need a dedicated BT-transmitter module. Documented, not faked.
+          </p>
+        </details>
+
+        <details class="faq">
+          <summary>Is this a certified consumer product?</summary>
+          <p>
+            No. HighFi is an <strong>experimental maker reference design</strong>. It is
+            <strong>not FDA, UL, or CE certified</strong> and is not for sale as-is. It's
+            published so makers can learn from and build on it.
+          </p>
+        </details>
+
+        <details class="faq">
+          <summary>Who is it for, and what can I put in it?</summary>
+          <p>
+            Adults of <strong>legal age</strong> only, using <strong>legal carts</strong> where
+            permitted. Cannabis hardware is <strong>state-regulated</strong> and nicotine devices
+            have their own requirements — know and follow your local law before building or using one.
+          </p>
+        </details>
+
+        <details class="faq">
+          <summary>Is the vape side actually safe?</summary>
+          <p>
+            A heating element plus a Li-ion cell is not a toy. Every fire path has interlocks
+            enforced in firmware: a 10-second hard cutoff, short-circuit and no-atomizer lockouts,
+            over-temperature cutoff, battery protection, and a 5-click lock. Setpoints are clamped
+            in firmware — the app is treated as untrusted input.
+          </p>
+        </details>
+
+        <details class="faq">
+          <summary>Do I need an account or the cloud?</summary>
+          <p>
+            No. HighFi is <strong>local-first</strong>. It hosts its own control app over WiFi and
+            keeps your music library on the microSD card. No login, no cloud dependency.
+          </p>
+        </details>
+
+        <details class="faq">
+          <summary>How do I get music onto it?</summary>
+          <p>
+            Copy MP3/AAC/WAV/FLAC files onto a microSD card, or upload tracks over WiFi from the app.
+            A few tracks can also live in on-device flash.
+          </p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <div class="footer__brand">
+        <span class="brand__word">HighFi</span>
+        <p class="footer__tag">Screw in. Tune in.</p>
+      </div>
+      <nav class="footer__links" aria-label="Footer">
+        <a href="https://github.com/" rel="noopener">Repo</a>
+        <a href="#faq">Safety &amp; legal</a>
+        <a href="#specs">Specs</a>
+        <a href="#waitlist">Waitlist</a>
+      </nav>
+    </div>
+    <div class="wrap footer__legal">
+      <p>© <span id="year">2026</span> HighFi. Experimental maker reference design — not a certified consumer product. Not FDA/UL/CE certified. For adults of legal age using legal carts where permitted; cannabis hardware is state-regulated.</p>
+    </div>
+  </footer>
+
+  <!-- ===== Lightbox ===== -->
+  <div class="lightbox" id="lightbox" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button class="lightbox__close" id="lightbox-close" aria-label="Close">&times;</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="" />
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

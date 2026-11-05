@@ -1,0 +1,74 @@
+══════════ NIGHT SWEEP 2026-11-01 05:41 EST (dry=1) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement safe
+   (dry run — skipping implementation)
+   ✓ PASS: implement safe
+──▶ GATE: compose report
+nightsweep/nightsweep.sh: line 136: NOW_: unbound variable
+══════════ NIGHT SWEEP 2026-11-01 05:41 EST (dry=1) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement safe
+   (dry run — skipping implementation)
+   ✓ PASS: implement safe
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: deliver
+── DRY REPORT ──
+🌙 *Night Sweep — 2026-11-01*
+
+*What got done:*
+- **OpenHome cloud control-plane landed** (`dabce1a`): new `services/cloud` (auth, SQLite db, seed, Railway/Nixpacks config), hub-side SSO auth (`services/hub/src/auth.ts`), and the web app pages (`apps/app/*.html`) re-pointed at cloud SSO routing.
+- **OpenHome native mobile app (Expo/EAS)**: Login/Home/Lights/Climate/Speakers/Settings screens, auth context, API client + hooks; follow-ups fixed EAS release bundling (`babel.config.js`, `index.js` entry), added `ascAppId` for TestFlight submit, and shipped an app icon to clear Apple's processing rejection.
+- **OpenHome TV content-router** (`d4bbd42` → `0e5b9ee`): new router service (engine, sessions, deep-link builder, TMDB + sample providers), a stick client, and a phone TV tab; then real providers — Watchmode (2-step lookup, quota-aware availability), YouTube, Plex, Jellyfin — and deployed to Railway with both clients pointed at it.
+
+*Top picks for tomorrow:*
+- (see report)
+
+_Full report: nightsweep/reports/2026-11-01.md_
+   ✓ PASS: deliver
+══════════ DONE — pass: 6  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-01 05:47 EST (dry=1) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   (dry run — skipping implementation)
+   ✓ PASS: implement
+──▶ GATE: deploy
+   (dry run — skip deploy)
+   ✓ PASS: deploy
+──▶ GATE: push
+   (dry run — skip push)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: deliver
+── DRY REPORT ──
+🌙 *Night Sweep — 2026-11-01*
+
+*What got done:*
+- **openhome cloud control plane + native app (dabce1a):** New `services/cloud` (auth, SQLite db, seed, SSO pages, Railway config), hub auth, and a full Expo mobile app (Login, Home, Lights, Climate, Speakers, Settings) with an `AuthContext`. The web `apps/app/*.html` pages were rewired for SSO.
+- **Mobile release pipeline (b2ee817, 7c28f11, ab451fb):** Fixed EAS release bundling (babel config + `index.js` entry), added `ascAppId` for TestFlight, and added an app icon, which fixed Apple's processing rejection. The working tree has another `icon.png` change plus a new `adaptive-icon.png`, neither committed.
+- **openhome TV content router (d4bbd42 → 0e5b9ee):** New router service with a search/availability engine, deep links, stick pairing and sessions, and an SSE stream to the stick. It now uses real providers: TMDB, Watchmode (2-step lookup that tracks the API quota), YouTube, Plex and Jellyfin. It's deployed to Railway and the phone TV tab and stick client point at it.
+
+*Top picks for tomorrow:*
+- **Lock down mock-stick pairing (security, P0).** `/stick/pair/begin` accepts *any* `code` from the caller when `stickId === "stick-mock"`. Pairings are saved with `INSERT OR REPLACE` keyed by code, so anyone can overwrite a real TV's pending pairing code. The owner then pairs the mock stick instead of their TV, and the attacker's browser gets the casts. Only allow `"000000"` (fixed tonight, see below). Then consider hiding `/mock` behind an env flag in production, since every account that claims `000000` shares one `stick-mock`.
+- **Commit the router WIP** (`mockStick.ts`, `remoteCtrl.ts`, index/sessions changes), redeploy the router on Railway, and test end to end: `/remote` login → search → cast → the `/mock` tab shows the title.
+- **Check `/remote/login` for abuse.** It's an open proxy for password attempts against the cloud `/api/login`. Add a simple per-IP rate limit, and confirm the cloud service has its own limit.
+
+_Full report: nightsweep/reports/2026-11-01.md_
+   ✓ PASS: deliver
+══════════ DONE — pass: 8  fail: 0 ══════════

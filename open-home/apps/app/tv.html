@@ -67,8 +67,10 @@
     <div class="card">
       <div class="muted" style="margin-bottom:8px">Cast to</div>
       <div class="sticks" id="sticks"></div>
+      <div style="margin:8px 0"><a href="#" onclick="showPair();return false" class="muted" style="font-size:13px">＋ Pair a TV</a></div>
       <div id="nostick" style="display:none">
-        <div class="muted" style="margin-bottom:10px">No TV paired yet. Open <b>openhome-tv-production.up.railway.app/mock</b> in another tab (that's your TV — it shows a 6-digit code, <b>000000</b> for the mock), then enter the code here:</div>
+        <div class="muted" style="margin-bottom:10px">No TV paired yet. Open <b><span id="mockhost"></span>/mock</b> in another tab (that's your TV — it shows a 6-digit code, <b>000000</b> for the mock), then enter the code here:</div>
+        <script>var _mh=document.getElementById('mockhost');if(_mh)_mh.textContent=location.host;</script>
         <div style="display:flex;gap:8px">
           <input id="paircode" inputmode="numeric" maxlength="6" placeholder="000000" value="000000" style="flex:1;margin:0"/>
           <button class="cast" style="margin:0" onclick="pairTv()">Pair</button>
@@ -104,13 +106,23 @@ async function loadSticks(){
   $('sticks').innerHTML=list.map(s=>`<span class="chip ${s.id===STICK?'on':''}" onclick="pick('${s.id}')">${s.online?'● ':'○ '}${esc(s.name)}</span>`).join('');
 }
 function pick(id){STICK=id;loadSticks();}
+function showPair(){$('nostick').style.display='block';$('paircode').focus();}
 async function pairTv(){
   const code=($('paircode').value||'').trim();
   if(!code){toast('Enter the code shown on your TV');return;}
-  const r=await fetch(API+'/sticks/pair/claim',{method:'POST',headers:{'Content-Type':'application/json'},
+  const claim=()=>fetch(API+'/sticks/pair/claim',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({code})}).then(r=>r.json()).catch(()=>({ok:false}));
+  let r=await claim();
+  // The browser mock stick (code 000000) only registers its code while its tab
+  // is open. If it's missing/expired, register it on the spot, then re-claim —
+  // so pairing the mock works whether or not /mock is currently open.
+  if(!r.ok && code==='000000'){
+    await fetch(API+'/sticks/pair/begin',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({stickId:'stick-mock',name:'Mock TV (browser)',code:'000000'})}).catch(()=>{});
+    r=await claim();
+  }
   if(r.ok){toast('Paired '+((r.stick&&r.stick.name)||'TV'));loadSticks();}
-  else toast(r.error==='bad_or_expired_code'?'Bad or expired code':'Pairing failed');
+  else toast(r.error==='unauthorized'?'Sign in with your account to pair':(r.error==='bad_or_expired_code'?'Bad or expired code':'Pairing failed'));
 }
 async function doSearch(){
   const q=$('q').value.trim();

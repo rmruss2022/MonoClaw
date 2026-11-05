@@ -1,0 +1,13 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Local dev servers / logs
+*.log
+
+# Node (not used, but guard against accidental installs)
+node_modules/

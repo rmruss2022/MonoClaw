@@ -1,0 +1,12 @@
+travelog on 127.0.0.1:18824  base=/  ai=on  db=/root/MonoClaw/travelog/data/travelog.db
+Traceback (most recent call last):
+  File "/root/MonoClaw/travelog/server.py", line 3615, in <module>
+    ThreadingHTTPServer((HOST, PORT), H).serve_forever()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socketserver.py", line 457, in __init__
+    self.server_bind()
+  File "/usr/lib/python3.12/http/server.py", line 136, in server_bind
+    socketserver.TCPServer.server_bind(self)
+  File "/usr/lib/python3.12/socketserver.py", line 473, in server_bind
+    self.socket.bind(self.server_address)
+OSError: [Errno 98] Address already in use

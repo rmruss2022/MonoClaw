@@ -1,0 +1,159 @@
+{"t": "2026-10-07T05:58:35Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /crop HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T05:58:35Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "selftest", "data": {"hello": "world"}}}
+{"t": "2026-10-07T05:58:35Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /crop/api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T05:58:35Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "selftest_public", "ios": true}}
+{"t": "2026-10-07T05:58:35Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T05:58:35Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /crop HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T05:58:45Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T05:58:45Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "tunnel_selftest"}}
+{"t": "2026-10-07T05:58:45Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:00:15Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T06:00:20Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/login HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T06:00:20Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T06:00:21Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "load", "data": {"tf": "object", "coco": "object", "w": 402, "h": 676, "share": true}, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:00:21Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:00:24Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "model_ready", "data": null, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:00:24Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:09:17Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T06:09:18Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "load", "data": {"tf": "object", "coco": "object", "w": 402, "h": 676, "share": true}, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:09:18Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:09:18Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "model_ready", "data": null, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:09:18Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:09:40Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "image_loaded", "data": {"nw": 4284, "nh": 5712, "dw": 323, "dh": 431}, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:09:40Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:09:40Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "pick", "data": {"name": "IMG_4840.jpeg", "type": "image/jpeg", "size": 2692649}, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:09:40Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:09:41Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "detect", "data": {"n": 2, "classes": ["person", "motorcycle"]}, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:09:41Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:09:48Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "crop", "data": {"ow": 2344, "oh": 3125, "x": 1477, "y": 2392}, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:09:48Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:09:52Z", "kind": "client", "ip": "127.0.0.1", "data": {"ev": "dl_share_ok", "data": {"ow": 2344, "oh": 3125}, "ios": true, "standalone": true}}
+{"t": "2026-10-07T06:09:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/log HTTP/1.1\" 204 -"}}
+{"t": "2026-10-07T06:43:47Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /crop/ HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T06:45:29Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /crop/ HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T07:33:48Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /crop/ HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T08:05:04Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /crop/ HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T08:05:04Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T08:05:15Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T08:05:32Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T08:06:11Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T08:06:11Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-07T22:36:36Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-07T22:36:36Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-07T22:36:36Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-07T22:36:36Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-09T04:00:26Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-09T04:00:26Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-09T04:00:26Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-09T04:00:26Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-09T23:54:14Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-09T23:54:14Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-09T23:54:14Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-09T23:54:14Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-10T22:33:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-10T22:33:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-10T22:33:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-10T22:33:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-11T22:31:28Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-11T22:31:28Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-11T22:31:29Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-11T22:31:29Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-13T22:31:32Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-13T22:31:32Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-13T22:31:32Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-13T22:31:32Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-14T22:31:45Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-14T22:31:45Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-14T22:31:45Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-14T22:31:45Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-15T22:33:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-15T22:33:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-15T22:33:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-15T22:33:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-16T22:59:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-16T22:59:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-16T22:59:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-16T22:59:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-17T22:30:47Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-17T22:30:47Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-17T22:30:47Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-17T22:30:47Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-18T22:31:44Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-18T22:31:44Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-18T22:31:44Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-18T22:31:44Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-19T22:57:12Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-19T22:57:12Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-20T12:47:29Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-20T12:47:29Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-20T12:47:29Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"POST /api/signup HTTP/1.1\" 200 -"}}
+{"t": "2026-10-20T12:47:29Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /api/horoscope?tz=0 HTTP/1.1\" 404 -"}}
+{"t": "2026-10-20T23:49:07Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-20T23:49:07Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-20T23:49:07Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-20T23:49:07Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-22T00:04:43Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-22T00:04:43Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-22T00:04:43Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-22T00:04:43Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-22T23:42:42Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-22T23:42:42Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-22T23:42:42Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-22T23:42:42Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-24T00:15:23Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-24T00:15:23Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-24T00:15:23Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-24T00:15:23Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-25T00:19:57Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-25T00:19:57Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-25T00:19:57Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-25T00:19:57Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-26T00:02:22Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-26T00:02:22Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-26T00:02:22Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-26T00:02:22Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-27T00:12:37Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-27T00:12:37Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-27T00:12:37Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-27T00:12:37Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-28T00:09:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-28T00:09:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-30T20:12:44Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-31T00:17:20Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-31T00:17:20Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "code 501, message Unsupported method ('HEAD')"}}
+{"t": "2026-10-31T00:17:20Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-31T00:17:20Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"HEAD / HTTP/1.1\" 501 -"}}
+{"t": "2026-10-31T19:55:22Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-31T19:55:53Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-31T20:20:48Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /robots.txt HTTP/1.1\" 401 -"}}
+{"t": "2026-10-31T20:20:49Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-10-31T20:28:43Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-01T08:30:12Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-01T08:31:17Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-01T08:35:05Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-01T08:43:58Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-01T12:08:47Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-01T12:48:56Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-01T20:05:25Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-02T08:34:02Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-02T23:10:55Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T05:01:34Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T05:35:32Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T05:35:35Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T05:35:51Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /favicon.ico HTTP/1.1\" 401 -"}}
+{"t": "2026-11-03T05:35:52Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /favicon.ico HTTP/1.1\" 401 -"}}
+{"t": "2026-11-03T06:43:21Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T07:35:21Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T07:42:19Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T08:30:55Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T09:10:49Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T10:07:42Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T10:07:43Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /favicon.ico HTTP/1.1\" 401 -"}}
+{"t": "2026-11-03T11:29:50Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T13:57:19Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-03T15:52:22Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-04T18:10:27Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /robots.txt HTTP/1.1\" 401 -"}}
+{"t": "2026-11-04T18:10:28Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-04T21:35:13Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET /robots.txt HTTP/1.1\" 401 -"}}
+{"t": "2026-11-04T21:35:24Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
+{"t": "2026-11-04T23:11:04Z", "kind": "http", "ip": "127.0.0.1", "data": {"msg": "\"GET / HTTP/1.1\" 200 -"}}
