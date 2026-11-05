@@ -1,1 +1,7 @@
-{}
+{
+  "recilia": {
+    "host": "Matthews-MacBook-Pro",
+    "since": "2026-11-05T16:36Z",
+    "note": "GardenScreen hearth treatment + fix ref-during-render lint in Walk/Blend (Mac: native/Expo builds)"
+  }
+}
