@@ -1134,6 +1134,14 @@ border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.55);max-height:68vh;overfl
 .pcardmini .novc{height:92px;display:flex;align-items:center;justify-content:center;color:var(--muted);background:var(--panel2)}
 .pcm-nm{display:block;font-size:13px;font-weight:700;color:var(--ink);padding:7px 9px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pcm-dt{display:block;font-size:11px;color:var(--muted);padding:1px 9px 8px}
+/* ---- Plan / AI guide ---- */
+.gunder{font-size:14.5px;line-height:1.6;color:var(--ink)}
+.guidelist{display:flex;flex-direction:column;gap:9px}
+.gitem{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 13px;box-shadow:var(--shadow)}
+.gi-nm{font-size:14.5px;font-weight:700;color:var(--ink)}
+.gi-note{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.45}
+.gtips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
+.gtips li{font-size:13.5px;color:var(--ink);line-height:1.45}
 /* place cards (single column, big cover) */
 .placecard{position:relative;border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:15px;background:var(--panel);box-shadow:var(--shadow);
 -webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);transition:transform .18s cubic-bezier(.22,.61,.36,1),box-shadow .18s ease,border-color .18s ease}
@@ -1635,7 +1643,7 @@ width:32px;height:32px;cursor:pointer;flex:none;display:flex;align-items:center;
 <nav class="tabs" id="tabs" style="display:none">
   <button class="tab" data-t="home" data-ic="compass" onclick="goTab('home')">Trip</button>
   <button class="tab" data-t="places" data-ic="pin" onclick="goTab('places')">Places</button>
-  <button class="tab" data-t="photos" data-ic="camera" onclick="goTab('photos')">Photos</button>
+  <button class="tab" data-t="plan" data-ic="sparkle" onclick="goTab('plan')">Plan</button>
   <button class="tab" data-t="map" data-ic="map" onclick="goTab('map')">Map</button>
   <button class="tab" data-t="memories" data-ic="film" onclick="goTab('memories')">Memories</button>
   <button class="tab" data-t="chat" data-ic="chat" onclick="goTab('chat')">Chat</button>
@@ -1920,6 +1928,7 @@ function renderTab(){
  const ap=el('app');if(ap){ap.classList.remove('fadein');void ap.offsetWidth;ap.classList.add('fadein');}
  if(TAB==='home')return renderHome();
  if(TAB==='places')return renderPlaces();
+ if(TAB==='plan')return renderPlan();
  if(TAB==='photos')return renderPhotos();
  if(TAB==='map')return openMap();
  if(TAB==='memories')return renderMemories();
@@ -2194,7 +2203,7 @@ function renderHome(){const t=TRIP;if(!t)return;
  const ranked=photos.slice().sort((a,b)=>((b.people||0)-(a.people||0))||((a.category==='Journal')-(b.category==='Journal')));
  const highlights=ranked.slice(0,9);
  const mosaic=highlights.length?`<div class="gh"><h2>${ic('camera')} Highlights</h2><span class="sub">tap to see them all</span></div>
-   <div class="hmosaic" onclick="goTab('photos')">${highlights.map(p=>`<div class="hm"><img src="${BASE}/photo/${p.filename}" loading="lazy"></div>`).join('')}</div>`:'';
+   <div class="hmosaic" onclick="goTab('map')">${highlights.map(p=>`<div class="hm"><img src="${BASE}/photo/${p.filename}" loading="lazy"></div>`).join('')}</div>`:'';
  // places strip
  const strip=entries.length?`<div class="gh"><h2>${ic('pin')} The route</h2><span class="sub">${entries.length} stop${entries.length===1?'':'s'}</span></div>
    <div class="pstrip">${entries.map(e=>{const ph=(photos.find(p=>p.entry_id===e.id&&p.filename===e.cover)||photos.find(p=>p.entry_id===e.id)||{}).filename;
@@ -2209,6 +2218,45 @@ function renderHome(){const t=TRIP;if(!t)return;
    +mosaic
    +strip
    +emptyNote;
+}
+// ---- Plan: AI booking recommendations for the destination ----
+let PLAN_CACHE={};
+async function renderPlan(){const t=TRIP;if(!t)return;const app=el('app');
+ const dest=(t.destination||t.title||'').trim();
+ if(!dest){app.innerHTML=`<div class="tabhead"><h2>${ic('sparkle')} Plan</h2></div><div class="empty">Add a destination to this trip to get recommendations — tap the trip name up top to edit it.</div>`;return;}
+ const q=encodeURIComponent(dest),din=t.start_date||'',dout=t.end_date||'';
+ const links=[
+   {ic:'send',t:'Flights',s:'Search flights to '+dest,prov:'Google Flights',u:'https://www.google.com/travel/flights?q='+encodeURIComponent('flights to '+dest)},
+   {ic:'building',t:'Lodging',s:'Hotels & rentals',prov:'Booking.com',u:'https://www.booking.com/searchresults.html?ss='+q+(din?'&checkin='+din:'')+(dout?'&checkout='+dout:'')},
+   {ic:'sparkle',t:'Activities',s:'Tours & things to do',prov:'GetYourGuide',u:'https://www.getyourguide.com/s/?q='+q},
+   {ic:'book',t:'Eating',s:'Restaurants & food',prov:'Google Maps',u:'https://www.google.com/maps/search/'+encodeURIComponent('best restaurants in '+dest)},
+ ];
+ const linkGrid=links.map(x=>`<a class="book-card" href="${x.u}" target="_blank" rel="noopener"><span class="book-ic">${ic(x.ic)}</span><span class="book-tx"><b>${x.t}</b><span class="muted sm">${esc(x.s)}</span></span><span class="book-prov">${x.prov} ›</span></a>`).join('');
+ app.innerHTML=`<div class="tabhead"><h2>${ic('sparkle')} Plan ${esc(dest)}</h2></div>
+   <div class="secgroup"><div class="gh"><h2>${ic('compass')} Book it</h2><span class="sub">opens in your browser · no fees, we don't see your booking</span></div><div class="book-grid">${linkGrid}</div></div>
+   <div id="guidebox"><div class="muted sm" style="padding:6px 2px"><span class="spinner"></span> Asking the guide about ${esc(dest)}…</div></div>`;
+ let d=PLAN_CACHE[t.id];
+ if(!d){try{d=await api('/api/trips/'+t.id+'/guide');PLAN_CACHE[t.id]=d;}catch(e){d=null;}}
+ renderGuideBox(d,t.id,dest);
+}
+function renderGuideBox(d,tid,dest){const box=el('guidebox');if(!box)return;
+ const g=d&&d.guide;
+ if(!g){box.innerHTML=`<div class="empty">${esc((d&&d.error)||"Couldn't load recommendations.")}<br><button class="btn ghost sm" style="width:auto;margin-top:8px" onclick="refreshGuide(${tid})">${ic('refresh')} Try again</button></div>`;return;}
+ const item=(x)=>`<div class="gitem"><div class="gi-nm">${esc(x.name||'')}</div>${x.note?`<div class="gi-note">${esc(x.note)}</div>`:''}</div>`;
+ const sec=(icn,title,items)=>(items&&items.length)?`<div class="secgroup"><div class="gh"><h2>${ic(icn)} ${title}</h2></div><div class="guidelist">${items.map(item).join('')}</div></div>`:'';
+ let h='';
+ if(g.understand)h+=`<div class="secgroup"><div class="gh"><h2>${ic('landmark')} Understand ${esc(dest)}</h2></div><div class="card gunder">${esc(g.understand)}</div></div>`;
+ h+=sec('book','Where to eat',g.eat);
+ h+=sec('sparkle','What to do',g.do);
+ h+=sec('building','Where to stay',g.stay);
+ if(g.tips&&g.tips.length)h+=`<div class="secgroup"><div class="gh"><h2>${ic('bulb')} Good to know</h2></div><div class="card"><ul class="gtips">${g.tips.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div>`;
+ h+=`<div style="text-align:center;margin:4px 0 12px"><button class="btn ghost sm" style="width:auto" onclick="refreshGuide(${tid})">${ic('refresh')} Refresh recommendations</button></div>`;
+ box.innerHTML=h;
+}
+async function refreshGuide(tid){delete PLAN_CACHE[tid];const box=el('guidebox');
+ if(box)box.innerHTML=`<div class="muted sm" style="padding:6px 2px"><span class="spinner"></span> Refreshing…</div>`;
+ let d;try{d=await api('/api/trips/'+tid+'/guide?refresh=1');PLAN_CACHE[tid]=d;}catch(e){d=null;}
+ const dest=((TRIP||{}).destination||(TRIP||{}).title||'').trim();renderGuideBox(d,tid,dest);
 }
 function renderPlaces(){const t=TRIP;
  if(PLACE){const e=(t.entries||[]).find(x=>x.id===PLACE);if(e)return renderPlaceDetail(e);PLACE=null;}
@@ -3345,6 +3393,59 @@ class H(BaseHTTPRequestHandler):
                     cats.append({"name": cat, "items": []})
                 cats[idx[cat]]["items"].append(dict(r))
             return self._json(200, {"categories": cats, "count": len(rows)})
+        m = re.match(r"/api/trips/(\d+)/guide$", p)
+        if m:
+            tid = int(m.group(1)); c = db()
+            try:
+                refresh = (self._query().get("refresh", ["0"])[0] == "1")
+                row = c.execute("SELECT text FROM trip_notes WHERE trip_id=? AND source='guide' "
+                                "ORDER BY id DESC LIMIT 1", (tid,)).fetchone()
+                if row and not refresh:
+                    try:
+                        return self._json(200, {"guide": json.loads(row["text"]), "cached": True})
+                    except Exception:
+                        pass
+                t = c.execute("SELECT * FROM trips WHERE id=?", (tid,)).fetchone()
+                if not t:
+                    return self._json(404, {"error": "no trip"})
+                dest = (t["destination"] or t["title"] or "").strip()
+                if not dest:
+                    return self._json(200, {"guide": None,
+                        "error": "Add a destination to this trip to get recommendations."})
+                places = [r["place"] for r in c.execute(
+                    "SELECT place FROM entries WHERE trip_id=? AND place IS NOT NULL AND place!=''",
+                    (tid,)).fetchall()]
+                dates = " to ".join([x for x in (t["start_date"], t["end_date"]) if x])
+                prompt = (
+                    "You are a sharp, well-traveled trip guide. For a trip to "
+                    f"\"{dest}\"" + (f" (dates: {dates})" if dates else "")
+                    + (". Places already on their itinerary: " + ", ".join(places[:12]) if places else "")
+                    + ". Give concrete, non-generic recommendations a savvy friend would give. "
+                    "Return ONLY JSON with this exact shape:\n"
+                    "{\"understand\":\"3-4 vivid sentences orienting them to the place — the vibe, "
+                    "what it's known for, the best time to visit, and how to get around\","
+                    "\"eat\":[{\"name\":\"a specific dish, market, or restaurant\",\"note\":\"one short line — what to order / why\"}],"
+                    "\"do\":[{\"name\":\"a specific sight or activity\",\"note\":\"one short line why\"}],"
+                    "\"stay\":[{\"name\":\"a specific neighborhood/area\",\"note\":\"who it suits / the vibe\"}],"
+                    "\"tips\":[\"short practical tip (money, transit, safety, etiquette)\"]}\n"
+                    "Give 4 items for eat, 4 for do, 3 for stay, 3 tips. Be specific to this destination.")
+                raw = gemini_text(prompt, want_json=True, timeout=40)
+                data = None
+                if raw:
+                    try:
+                        data = json.loads(raw)
+                    except Exception:
+                        data = None
+                if not isinstance(data, dict):
+                    return self._json(200, {"guide": None,
+                        "error": "Couldn't reach the guide right now — try again in a moment."})
+                c.execute("DELETE FROM trip_notes WHERE trip_id=? AND source='guide'", (tid,))
+                c.execute("INSERT INTO trip_notes(trip_id,category,text,place,source,created) "
+                          "VALUES(?,?,?,?,?,?)", (tid, "guide", json.dumps(data), dest, "guide", now()))
+                c.commit()
+                return self._json(200, {"guide": data, "destination": dest})
+            finally:
+                c.close()
         m = re.match(r"/api/trips/(\d+)/members$", p)
         if m:
             tid = int(m.group(1)); c = db()
