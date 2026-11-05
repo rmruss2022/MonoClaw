@@ -30,3 +30,18 @@ foreman/data/jobs.json
 foreman/data/heartbeat.json
 foreman/data/evidence/
 nyc-events/data/
+
+# Secrets (never commit)
+*.p8
+*.pem
+portal/.token
+
+# Nested repos (own their own git history — tracked separately)
+/contentforge/
+/coupe/
+/dropstick/
+/favorly/
+/lumen-ios/
+/recilia/
+/rolodex-ios/
+/travelog-ios/
