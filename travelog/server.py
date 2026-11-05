@@ -16,7 +16,7 @@ hub with TRAVELOG_BASE=/travelog (served Tailscale-only, like the other apps).
 """
 import os, json, re, sqlite3, base64, hashlib, urllib.request, urllib.parse, mimetypes, math, threading, subprocess, tempfile, shutil, secrets, struct
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # PORT: honor Railway's $PORT; local hub still sets TRAVELOG_PORT. HOST: stays
 # loopback for the local hub, but Railway/containers set TRAVELOG_HOST=0.0.0.0.
@@ -97,6 +97,10 @@ def init_db():
       trip_id INTEGER PRIMARY KEY, provider TEXT DEFAULT 'sim',
       cardholder_id TEXT, card_id TEXT, last4 TEXT, brand TEXT DEFAULT 'Visa',
       status TEXT DEFAULT 'active', funder TEXT, currency TEXT DEFAULT 'USD', created TEXT);
+    CREATE TABLE IF NOT EXISTS device_locations(
+      trip_id INTEGER, device TEXT, lat REAL, lon REAL, acc REAL, updated TEXT,
+      UNIQUE(trip_id, device));
+    CREATE INDEX IF NOT EXISTS ix_devloc ON device_locations(trip_id, updated);
     """)
     # migrate older expenses tables (pre trip-card) to carry source + external_id
     ecol = [r[1] for r in c.execute("PRAGMA table_info(expenses)").fetchall()]
@@ -1142,6 +1146,20 @@ border-radius:14px;box-shadow:0 14px 34px rgba(0,0,0,.55);max-height:68vh;overfl
 .gi-note{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.45}
 .gtips{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px}
 .gtips li{font-size:13.5px;color:var(--ink);line-height:1.45}
+/* ---- live location ---- */
+.locchip{display:flex;align-items:center;gap:7px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:13px;padding:10px 12px;margin:0 0 16px;cursor:pointer;font-size:13.5px;color:var(--ink);font-weight:600}
+.locchip svg{width:15px;height:15px;color:var(--accent);flex:none}
+.locchip.on{border-color:#4fc3a1;background:linear-gradient(90deg,rgba(79,195,161,.12),var(--panel2))}
+.locchip .muted{font-weight:400}
+.locdot{width:9px;height:9px;border-radius:50%;background:#4fc3a1;box-shadow:0 0 0 0 rgba(79,195,161,.6);animation:locpulse 1.8s infinite;flex:none}
+@keyframes locpulse{0%{box-shadow:0 0 0 0 rgba(79,195,161,.5)}70%{box-shadow:0 0 0 8px rgba(79,195,161,0)}100%{box-shadow:0 0 0 0 rgba(79,195,161,0)}}
+.locnear{color:var(--muted);font-weight:400;font-size:12.5px}
+.locbtn{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--accent);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.livedot{width:18px;height:18px;border-radius:50%;background:var(--c,#8b7cf6);border:2.5px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,.5);position:relative}
+.livedot.me{width:20px;height:20px}
+.livedot .lvp{position:absolute;inset:-6px;border-radius:50%;background:var(--c,#8b7cf6);opacity:.35;animation:locpulse2 1.8s infinite}
+@keyframes locpulse2{0%{transform:scale(.6);opacity:.5}100%{transform:scale(1.5);opacity:0}}
 /* place cards (single column, big cover) */
 .placecard{position:relative;border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:15px;background:var(--panel);box-shadow:var(--shadow);
 -webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);transition:transform .18s cubic-bezier(.22,.61,.36,1),box-shadow .18s ease,border-color .18s ease}
@@ -1704,6 +1722,47 @@ function deviceToken(){let t;try{t=localStorage.getItem('tl_device');}catch(e){}
  if(!t){t='d'+Math.random().toString(36).slice(2,11)+Date.now().toString(36);try{localStorage.setItem('tl_device',t);}catch(e){}}return t;}
 function myName(){try{return (localStorage.getItem('tl_name')||'').trim();}catch(e){return '';}}
 function setMyName(n){try{localStorage.setItem('tl_name',(n||'').trim());}catch(e){}}
+// ---- live user location: request permission + keep it current while a trip is in progress ----
+let USER_LOC=null, GEO_WATCH=null, LIVEMARKERS=[];
+function locOn(){try{return localStorage.getItem('tl_loc_on')==='1';}catch(e){return false;}}
+function setLocOn(v){try{localStorage.setItem('tl_loc_on',v?'1':'0');}catch(e){}}
+function tripInProgress(t){if(!t)return false;const today=new Date().toISOString().slice(0,10);
+ const s=t.start_date||'',e=t.end_date||'';if(s&&today<s)return false;if(e&&today>e)return false;return true;}
+async function pushLoc(trip){if(!USER_LOC||!trip)return;
+ try{await api('/api/location',{method:'POST',body:JSON.stringify({trip_id:trip.id,device:deviceToken(),lat:USER_LOC.lat,lon:USER_LOC.lon,acc:USER_LOC.acc})});}catch(e){}}
+function enableLocation(trip,cb){trip=trip||TRIP;if(!trip)return;
+ if(!navigator.geolocation){toast("Location isn't supported on this device");return;}
+ toast('Getting your location…');
+ navigator.geolocation.getCurrentPosition(async pos=>{
+   USER_LOC={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy,ts:Date.now()};
+   setLocOn(true);await pushLoc(trip);startLocWatch(trip);
+   if(cb)cb();if(TAB==='home')renderHome();else if(TAB==='map'&&MAPOBJ){drawLive(MAPOBJ);}
+ },err=>{setLocOn(false);toast(err&&err.code===1?'Location permission denied — enable it in Settings':"Couldn't get your location");
+ },{enableHighAccuracy:true,timeout:12000,maximumAge:30000});}
+function startLocWatch(trip){if(GEO_WATCH!=null||!navigator.geolocation)return;let last=0;
+ GEO_WATCH=navigator.geolocation.watchPosition(pos=>{
+   USER_LOC={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy,ts:Date.now()};
+   const n=Date.now();if(n-last>60000){last=n;pushLoc(trip);if(TAB==='map'&&MAPOBJ)drawLive(MAPOBJ);}
+ },()=>{},{enableHighAccuracy:true,timeout:15000,maximumAge:60000});}
+function stopLocWatch(){if(GEO_WATCH!=null&&navigator.geolocation)navigator.geolocation.clearWatch(GEO_WATCH);GEO_WATCH=null;}
+function maybeAutoLocate(trip){if(locOn()&&tripInProgress(trip)&&navigator.geolocation)enableLocation(trip);}
+function recenterMap(){if(MAPOBJ&&USER_LOC){try{MAPOBJ.flyTo({center:[USER_LOC.lon,USER_LOC.lat],zoom:13,duration:600});}catch(e){}}}
+async function drawLive(map){if(!map)return;
+ LIVEMARKERS.forEach(m=>{try{m.remove();}catch(e){}});LIVEMARKERS=[];
+ let d=null;try{d=await api('/api/trips/'+TRIP.id+'/location?device='+encodeURIComponent(deviceToken()));}catch(e){}
+ const add=(o,me)=>{const elm=document.createElement('div');elm.className='livedot'+(me?' me':'');
+   elm.style.setProperty('--c',me?'#8b7cf6':(o.color||'#4fc3a1'));elm.innerHTML='<span class="lvp"></span>';
+   const mk=new maplibregl.Marker({element:elm}).setLngLat([o.lon,o.lat]).addTo(map);
+   mk.getElement().title=(me?'You':(o.name||'A traveler'))+' · live';LIVEMARKERS.push(mk);};
+ if(USER_LOC)add({lat:USER_LOC.lat,lon:USER_LOC.lon},true);else if(d&&d.me)add(d.me,true);
+ ((d&&d.crew)||[]).forEach(o=>add(o,false));
+ if(USER_LOC&&!(MAPPLACES&&MAPPLACES.length)){try{map.flyTo({center:[USER_LOC.lon,USER_LOC.lat],zoom:12,duration:500});}catch(e){}}}
+function locChipHTML(t){
+ if(USER_LOC&&locOn())return `<div class="locchip on"><span class="locdot"></span>${ic('pin')} Sharing live location<span class="locnear" id="locnear"></span><button class="locbtn" onclick="goTab('map')">Map</button></div>`;
+ return `<div class="locchip" onclick="enableLocation(TRIP)">${ic('pin')} Share my live location<span class="muted sm"> · keeps the map &amp; tips on you while this trip's on</span></div>`;}
+async function refreshLocNear(t){const box=el('locnear');if(!box||!t)return;
+ let d;try{d=await api('/api/trips/'+t.id+'/location?device='+encodeURIComponent(deviceToken()));}catch(e){return;}
+ const n=((d&&d.crew)||[]).length;box.textContent=n?` · ${n} of your crew nearby`:'';}
 function initialsOf(n){return ((n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('')||'?').toUpperCase();}
 function avatarHTML(name,color,size){const s=size||28;return `<span class="mavatar" title="${esc(name)}" style="width:${s}px;height:${s}px;background:${color||'#888'};font-size:${Math.round(s*0.42)}px">${esc(initialsOf(name))}</span>`;}
 function memberColor(name){const C=["#E8863B","#3BA6E8","#C65BCF","#3BC07A","#E85B7A","#D4A02B","#6C6CE0","#2BB3B3","#E8623B","#5BAF4A"];let s=0;for(const ch of (name||'?'))s+=ch.charCodeAt(0);return C[s%C.length];}
@@ -1917,6 +1976,7 @@ async function openTrip(id){
  el('tripselCov').innerHTML=t.cover?`<img src="${BASE}/collage/${t.cover}">`:ic('map',22);
  el('tripselDt').textContent=[t.destination,dates].filter(Boolean).join(' · ')||'Tap to switch or add a trip';
  renderTab();
+ maybeAutoLocate(t);
  checkImportJob(id);
 }
 function goTab(tab){PLACE=null;TAB=tab;renderTab();}
@@ -2213,11 +2273,13 @@ function renderHome(){const t=TRIP;if(!t)return;
    +`<div class="thero-in"><h1 class="thero-ttl">${esc(t.title||t.destination||'Your trip')}</h1>`
    +`<div class="thero-sub">${t.destination?ic('pin')+' '+esc(t.destination)+' · ':''}${esc(fmtDateRange(t))}</div></div></div>`
    +`<div class="sgrid">${tiles}</div>`
+   +(tripInProgress(t)?locChipHTML(t):'')
    +`<div class="gh"><h2>${ic('users')} The crew</h2><span class="btn sm ghost" style="width:auto" onclick="openShareSheet()">${ic('users')} Invite</span></div>`
    +`<div class="people">${people}</div>`
    +mosaic
    +strip
    +emptyNote;
+ if(tripInProgress(t)&&USER_LOC&&locOn())refreshLocNear(t);
 }
 // ---- Plan: AI booking recommendations for the destination ----
 let PLAN_CACHE={};
@@ -2696,7 +2758,10 @@ async function openMap(){
    <div id="map"></div>
    <button id="mapfs" class="mapfs" onclick="toggleMapFull()" title="Full screen">⛶</button>
   </div>
-  <button class="btn sm ghost" id="placeBtn" style="width:auto;margin-top:10px" onclick="placePhotos()">${ic('pin')} Place photos on map</button>`;
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+   <button class="btn sm ghost" id="placeBtn" style="width:auto" onclick="placePhotos()">${ic('pin')} Place photos on map</button>
+   <button class="btn sm ghost" id="meBtn" style="width:auto" onclick="locOn()&&USER_LOC?recenterMap():enableLocation(TRIP,()=>recenterMap())">${ic('pin')} ${locOn()?'Recenter on me':'Show my location'}</button>
+  </div>`;
  const data=await api('/api/map/'+TRIP.id);
  loadMapLibre(()=>renderMap(data));
 }
@@ -2722,6 +2787,7 @@ function renderMap(data){
   : `${places.length} place${places.length!==1?'s':''} · upload geotagged photos to pin your journey.`;
  const map=new maplibregl.Map({container:'map',style:MAP_STYLE,center:MAPCENTER?[MAPCENTER[1],MAPCENTER[0]]:[20,8],zoom:2.4,pitch:0,bearing:0,attributionControl:true,dragRotate:true});
  MAPOBJ=map;RAD=null;COLLAGES=data.collages||[];MAPCENTER=data.center||null;MAPPLACES=places;PLACEMARKERS={};
+ map.on('load',()=>{try{drawLive(map);}catch(e){}});
  CLUSMARKERS={};REPCACHE={};
  map.on('load',()=>{
   // faint date-ordered route between the trip's destinations — context only, never the container
@@ -3446,6 +3512,28 @@ class H(BaseHTTPRequestHandler):
                 return self._json(200, {"guide": data, "destination": dest})
             finally:
                 c.close()
+        m = re.match(r"/api/trips/(\d+)/location$", p)
+        if m:
+            tid = int(m.group(1)); dev = (self._query().get("device", [""])[0] or "")
+            cutoff = (datetime.now(timezone.utc) - timedelta(hours=6)).isoformat()
+            c = db()
+            try:
+                rows = c.execute(
+                    "SELECT d.device,d.lat,d.lon,d.acc,d.updated,m.name,m.color "
+                    "FROM device_locations d LEFT JOIN trip_members m "
+                    "ON m.trip_id=d.trip_id AND m.token=d.device "
+                    "WHERE d.trip_id=? AND d.updated>=?", (tid, cutoff)).fetchall()
+            finally:
+                c.close()
+            me = None; crew = []
+            for r in rows:
+                o = {"lat": r["lat"], "lon": r["lon"], "acc": r["acc"], "updated": r["updated"],
+                     "name": r["name"] or "Someone", "color": r["color"] or "#8b7cf6"}
+                if r["device"] == dev:
+                    me = o
+                else:
+                    crew.append(o)
+            return self._json(200, {"me": me, "crew": crew})
         m = re.match(r"/api/trips/(\d+)/members$", p)
         if m:
             tid = int(m.group(1)); c = db()
@@ -3652,6 +3740,24 @@ class H(BaseHTTPRequestHandler):
         b = self._body()
         c = db()
         try:
+            if p == "/api/location":
+                tid = b.get("trip_id"); dev = (b.get("device") or "")[:64]
+                try:
+                    lat = float(b.get("lat")); lon = float(b.get("lon"))
+                except Exception:
+                    return self._json(400, {"error": "bad coords"})
+                if not tid or not dev:
+                    return self._json(400, {"error": "missing trip or device"})
+                try:
+                    acc = float(b.get("acc"))
+                except Exception:
+                    acc = None
+                c.execute("INSERT INTO device_locations(trip_id,device,lat,lon,acc,updated) VALUES(?,?,?,?,?,?) "
+                          "ON CONFLICT(trip_id,device) DO UPDATE SET lat=excluded.lat,lon=excluded.lon,"
+                          "acc=excluded.acc,updated=excluded.updated",
+                          (tid, dev, lat, lon, acc, now()))
+                c.commit()
+                return self._json(200, {"ok": True})
             if p == "/api/trips":
                 if b.get("id"):
                     c.execute("UPDATE trips SET title=?,destination=?,start_date=?,end_date=? WHERE id=?",
