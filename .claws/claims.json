@@ -1,7 +1,1 @@
-{
-  "mission-control": {
-    "host": "Matthews-MacBook-Pro",
-    "since": "2026-11-05T16:34Z",
-    "note": "apply salvaged jobId-normalization + audioSrc scope fix from the June Mac clone"
-  }
-}
+{}
