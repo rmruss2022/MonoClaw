@@ -1,0 +1,26 @@
+══════════ NIGHT SWEEP 2026-11-02 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed 253ee83d23f7d45073b508d370ceb367c975805e
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: foreman
+   (no auto-deploy for foreman)
+   deploy: memory
+   (no auto-deploy for memory)
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: deliver
+   ✓ PASS: deliver
+══════════ DONE — pass: 8  fail: 0 ══════════

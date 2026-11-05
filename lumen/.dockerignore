@@ -1,0 +1,10 @@
+data/
+__pycache__/
+*.pyc
+*.db
+*.db-wal
+*.db-shm
+*.sh
+*.md
+node_modules/
+.git/

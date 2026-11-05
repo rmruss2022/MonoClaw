@@ -1,0 +1,6 @@
+# Data (db, photos, collages, backups) lives on the Railway volume, not the image.
+data/
+__pycache__/
+*.pyc
+*.bak-*
+tunnel.sh

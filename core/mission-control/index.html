@@ -308,7 +308,7 @@
         
         async function loadData() {
             try {
-                const response = await fetch('http://127.0.0.1:18795/data?' + Date.now());
+                const response = await fetch('/data?' + Date.now());
                 data = await response.json();
                 render();
             } catch (e) {
@@ -326,7 +326,7 @@
             button.textContent = 'Switching...';
             
             try {
-                const response = await fetch('http://127.0.0.1:18795/set-model', {
+                const response = await fetch('/set-model', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ model })

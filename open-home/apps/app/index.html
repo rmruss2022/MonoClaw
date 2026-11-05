@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>openhome</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg" />
+<meta name="theme-color" content="#0b0a12" />
+<link rel="stylesheet" href="/assets/app.css?v=2" />
+<style>
+  /* page-only styles — everything shared lives in app.css */
+  .hero {
+    position: relative; display: block; overflow: hidden;
+    border: 1px solid var(--line); border-radius: var(--r-xl);
+    margin-bottom: var(--s-5); box-shadow: var(--shadow-2);
+  }
+  .hero img { width: 100%; display: block; aspect-ratio: 16/7; object-fit: cover; }
+  .hero__copy { position: absolute; inset: auto 0 0 0; padding: var(--s-6); background: linear-gradient(0deg, rgba(10,12,16,.92), transparent); }
+  .hero__copy h1 { font-size: clamp(20px, 3.2vw, 26px); font-weight: 800; letter-spacing: -.02em; margin: 0; }
+  .hero__copy p  { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+  .banner {
+    display: flex; align-items: center; gap: var(--s-4);
+    padding: 16px 18px; margin-bottom: var(--s-4);
+    border: 1px solid var(--accent-line); border-radius: var(--r-lg);
+    background: linear-gradient(135deg, #1c1630, var(--panel));
+    color: var(--text);
+  }
+  .banner__cta { color: var(--accent); font-weight: 700; white-space: nowrap; }
+  .device-list { margin-top: var(--s-3); max-height: 300px; overflow-y: auto; }
+  .device { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+  .device:last-child { border-bottom: 0; }
+  .device .room { color: var(--muted); font-weight: 400; }
+</style>
+<style id="oh-lumen">
+:root{--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --gold:#f5c977;--purple:#a855f7;--purple2:#7c3aed;--pink:#ec4899;--glow:rgba(168,85,247,.22)}
+body{font-family:ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}
+h1,h2,.greeting h1,.home b,.brand b,.sb-name{font-family:var(--serif);letter-spacing:.2px;font-weight:600}
+.greeting h1{background:linear-gradient(180deg,#fff,#d9cbf0);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+/* gold→purple accents + soft glow on highlighted chrome */
+.appnav a.active,.tabs button.on,.chip.on,.badge.on{box-shadow:0 0 0 1px rgba(245,201,119,.18),0 6px 24px var(--glow)}
+.core.listening,.badge.on{box-shadow:0 0 22px rgba(245,201,119,.25)}
+/* nav icons */
+.appnav a .i,.tabs button .i{width:16px;height:16px;vertical-align:-3px;margin-right:6px;stroke-width:1.9}
+.i{width:18px;height:18px}
+.pillglow{box-shadow:0 8px 30px var(--glow)}
+</style>
+</head>
+<body>
+<canvas class="stars" style="position:fixed;inset:0;z-index:-1;pointer-events:none"></canvas>
+  <header class="app-header">
+    <div class="app-brand">
+      <img src="/assets/brand/logo.svg" alt="openhome" />
+      <small>Your home. Your data. Your keys.</small>
+    </div>
+    <nav class="app-nav">
+      <a href="/" class="active"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</a>
+      <a href="/control"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="15" cy="17" r="2"/></svg>Control</a>
+      <a href="/music"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="18" r="2.4"/><circle cx="18" cy="16" r="2.4"/><path d="M9.4 18V6l11-2v10"/></svg>Music</a>
+      <a href="/lights"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5"/><path d="M10 21h4"/><path d="M8 11a4 4 0 1 1 8 0c0 2-2 3-2 5h-4c0-2-2-3-2-5z"/></svg>Lights</a>
+      <a href="/speakers"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><circle cx="12" cy="14" r="3"/><circle cx="12" cy="7" r="1"/></svg>Speakers</a>
+      <a href="/climate"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a2 2 0 0 1 2 2v9a4 4 0 1 1-4 0V5a2 2 0 0 1 2-2z"/></svg>Climate</a>
+      <a href="/tv"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>TV</a><a href="/docs"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 18a2 2 0 0 1 2-2h10"/></svg>Docs</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="status-pill"><span class="dot" id="dot"></span><span id="statusText">connecting…</span></span>
+  </header>
+
+  <main class="container">
+    <a id="setupBanner" href="/setup" class="banner" style="display:none;text-decoration:none">
+      <span style="font-size:26px">🏠</span>
+      <span style="flex:1">
+        <b id="setupTitle">Set up your home</b>
+        <div class="muted small">Find your hub, name your home, and add your first lights &amp; speakers.</div>
+      </span>
+      <span class="banner__cta">Start →</span>
+    </a>
+
+    <a href="/docs/roadmap" class="hero">
+      <img src="/assets/photo/box-lifestyle.png" alt="openhome" />
+      <div class="hero__copy">
+        <h1>Own your home. Not a subscription to it.</h1>
+        <p>Local-first automation · your box, your data, your agent — see the roadmap →</p>
+      </div>
+    </a>
+
+    <div class="grid">
+      <section class="card">
+        <h2 class="card__title">Hub</h2>
+        <div class="metric" id="hubState">—</div>
+        <div class="metric__sub" id="hubSub">contacting hub…</div>
+        <div style="margin-top:var(--s-4)">
+          <div class="kv"><span>service</span><span id="svc">—</span></div>
+          <div class="kv"><span>uptime</span><span id="uptime" class="tnum">—</span></div>
+          <div class="kv"><span>endpoint</span><span id="endpoint">—</span></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card__title">Devices</h2>
+        <div class="metric" id="deviceCount">0</div>
+        <div class="metric__sub" id="deviceNote">no devices yet</div>
+        <div class="device-list" id="deviceList"></div>
+      </section>
+
+      <section class="card" style="grid-column: 1 / -1;">
+        <h2 class="card__title">Event stream <span class="faint small" id="updated"></span></h2>
+        <div class="feed" id="feed"><div class="empty">waiting for events…</div></div>
+      </section>
+    </div>
+
+    <section style="margin-top:var(--s-8)">
+      <p class="eyebrow">The product</p>
+      <div class="tile-grid">
+        <a class="tile" href="/docs/business"><img src="/assets/photo/box-studio.png" alt="The box"/><span>The box</span></a>
+        <a class="tile" href="/docs/business"><img src="/assets/photo/camera.png" alt="Cameras"/><span>Cameras</span></a>
+        <a class="tile" href="/docs/business"><img src="/assets/photo/doorbell.png" alt="Doorbell"/><span>Doorbell</span></a>
+        <a class="tile" href="/docs/concepts"><img src="/assets/photo/pod-hand.png" alt="The Pod"/><span>The Pod</span></a>
+        <a class="tile" href="/docs/roadmap"><img src="/assets/photo/app-hand.png" alt="The app"/><span>The app</span></a>
+        <a class="tile" href="/docs/business"><img src="/assets/photo/home-golden.png" alt="Your home"/><span>Your home</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    Running locally on your hub · <span id="modelFoot">local-first</span> ·
+    <a href="https://openclaw.ai" target="_blank" rel="noopener">built on the open-home stack</a>
+  </footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function fmtUptime(s) {
+  s = Math.floor(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return (h?`${h}h `:"") + (m?`${m}m `:"") + `${sec}s`;
+}
+function fmtTime(ts) {
+  return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+fetch("/hub/status").then(r=>r.json()).then(s=>{
+  const b = $("setupBanner"); if(!b) return;
+  const done = s && s.home && s.home.setupComplete;
+  const nm = s && s.home && s.home.name;
+  if(!done){ b.style.display="flex"; }
+  else if(nm){ $("setupTitle").textContent = nm; b.querySelector("div").textContent = "Manage your home — hub, rooms, lights & speakers."; b.style.display="flex"; }
+}).catch(()=>{});
+
+async function tick() {
+  try {
+    const [h, d, e] = await Promise.all([
+      fetch("/health").then(r => r.json()),
+      fetch("/devices").then(r => r.json()),
+      fetch("/events/recent").then(r => r.json()),
+    ]);
+
+    $("dot").className = "dot ok";
+    $("statusText").textContent = "online";
+    $("hubState").textContent = h.status === "ok" ? "Online" : "Degraded";
+    $("hubSub").textContent = "hub is responding";
+    $("svc").textContent = h.service ?? "—";
+    $("uptime").textContent = h.uptime != null ? fmtUptime(h.uptime) : "—";
+    $("endpoint").textContent = location.host;
+    $("modelFoot").textContent = h.model ?? "local-first";
+
+    const devices = d.devices ?? [];
+    const s = d.summary ?? {};
+    $("deviceCount").textContent = devices.length;
+    $("deviceNote").textContent = devices.length
+      ? `${s.rooms ?? ""} rooms · ${s.lightsOn ?? 0}/${s.lightsTotal ?? 0} lights on · ${s.allLocked ? "locked" : "unlocked"} · ${s.temp ?? "–"}°`
+      : (d.note ?? "no devices yet");
+    $("deviceList").innerHTML = devices.map(dev =>
+      `<div class="device"><span>${dev.icon ?? ""} ${dev.name ?? dev.id} <span class="room">· ${dev.room ?? ""}</span></span><span style="color:${dev.on ? 'var(--accent)' : 'var(--muted)'};font-weight:600">${dev.state ?? dev.type ?? ""}</span></div>`).join("");
+
+    const events = e.events ?? [];
+    $("feed").innerHTML = events.length
+      ? events.map(ev => `<div class="event"><time>${fmtTime(ev.ts)}</time><span class="type">${ev.type}</span>${
+          ev.type === "hub.heartbeat" ? '<span class="badge badge--muted">heartbeat</span>' : ""
+        }</div>`).join("")
+      : '<div class="empty">no events yet</div>';
+    $("updated").textContent = "· updated " + fmtTime(Date.now());
+  } catch (err) {
+    $("dot").className = "dot down";
+    $("statusText").textContent = "offline";
+    $("hubState").textContent = "Unreachable";
+    $("hubSub").textContent = "cannot reach hub — is the service running?";
+  }
+}
+
+tick();
+setInterval(tick, 5000);
+</script>
+<nav class="oh-tabbar" aria-label="Primary navigation">
+  <a href="/"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg><span>Home</span></a>
+  <a href="/music"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><span>Music</span></a>
+  <a href="/lights"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M8.5 14a6 6 0 1 1 7 0c-.6.5-1 1.2-1 2H9.5c0-.8-.4-1.5-1-2Z"/></svg><span>Lights</span></a>
+  <a href="/speakers"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="7" r="1"/></svg><span>Speakers</span></a>
+  <a href="/climate"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/></svg><span>Climate</span></a>
+  <a href="/tv"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg><span>TV</span></a>
+</nav>
+<script>
+(function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
+function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+var st=Array.from({length:70},function(){return{x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.2+.2,a:Math.random()*6};});
+(function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<st.length;i++){var s=st[i];s.a+=0.015;var o=.25+.35*Math.sin(s.a);x.fillStyle='rgba(220,210,255,'+o+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();
+})();
+</script>
+</body>
+</html>

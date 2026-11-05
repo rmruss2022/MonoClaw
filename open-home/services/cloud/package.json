@@ -1,0 +1,15 @@
+{
+  "name": "openhome-cloud",
+  "version": "0.1.0",
+  "private": true,
+  "description": "openhome control-plane — accounts, home directory, and hub routing grants.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "seed": "node --experimental-strip-types src/seed.ts",
+    "dev": "node --watch --experimental-strip-types src/index.ts"
+  }
+}

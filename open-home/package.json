@@ -1,0 +1,20 @@
+{
+  "name": "open-home",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Open-source, local-first home automation you actually own. OpenClaw-style agent + IoT + app + NAS.",
+  "license": "AGPL-3.0-or-later",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace services/hub",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

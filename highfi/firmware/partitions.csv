@@ -1,0 +1,11 @@
+# HighFi partition table — 16 MB flash (ESP32-S3-WROOM-1-N16R8)
+# Dual OTA app slots (signed OTA over WiFi, SPEC §3.6) + LittleFS for config
+# and a few flash-resident tracks. The music library proper lives on microSD.
+#
+# Name,      Type, SubType,  Offset,    Size,     Flags
+nvs,         data, nvs,      0x9000,    0x5000,
+otadata,     data, ota,      0xe000,    0x2000,
+app0,        app,  ota_0,    0x10000,   0x640000,   # 6.25 MB OTA slot A
+app1,        app,  ota_1,    0x650000,  0x640000,   # 6.25 MB OTA slot B
+littlefs,    data, spiffs,   0xc90000,  0x360000,   # ~3.4 MB config + flash tracks
+coredump,    data, coredump, 0xff0000,  0x10000,    # crash dumps for field debug

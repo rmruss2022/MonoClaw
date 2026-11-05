@@ -388,7 +388,7 @@ function getAvailableModels(config) {
 async function isGmailEnabled() {
     try {
         const { stdout } = await Promise.race([
-            execPromise('/opt/homebrew/bin/openclaw cron list --json'),
+            execPromise('openclaw cron list --json'),
             new Promise((_, reject) => setTimeout(() => reject(new Error('cron list timeout')), 3000))
         ]);
         const cronData = JSON.parse(stdout);
@@ -403,7 +403,7 @@ async function isGmailEnabled() {
 async function toggleGmail(enabled) {
     try {
         const enableFlag = enabled ? 'true' : 'false';
-        await execPromise(`/opt/homebrew/bin/openclaw cron update 3956a4f1-f07b-4ce6-869d-5d69664debb2 --patch '{"enabled":${enableFlag}}'`);
+        await execPromise(`openclaw cron update 3956a4f1-f07b-4ce6-869d-5d69664debb2 --patch '{"enabled":${enableFlag}}'`);
         return { success: true, enabled };
     } catch (error) {
         console.error('Failed to toggle Gmail:', error.message);
@@ -767,7 +767,7 @@ async function checkVoiceServerHealth() {
 async function getCronJobs() {
     try {
         const { stdout } = await Promise.race([
-            execPromise('/opt/homebrew/bin/openclaw cron list --json'),
+            execPromise('openclaw cron list --json'),
             new Promise((_, reject) => setTimeout(() => reject(new Error('cron list timeout')), 5000))
         ]);
         const cronData = JSON.parse(stdout);
@@ -821,7 +821,7 @@ async function parseOpenClawStatus() {
     try {
         // Add timeout to openclaw status command (max 2 seconds)
         const { stdout } = await Promise.race([
-            execPromise('/opt/homebrew/bin/openclaw status'),
+            execPromise('openclaw status'),
             new Promise((_, reject) => setTimeout(() => reject(new Error('openclaw status timeout')), 2000))
         ]);
         
@@ -880,7 +880,7 @@ async function setModel(model) {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
         
         // Restart gateway to apply
-        await execPromise('/opt/homebrew/bin/openclaw gateway restart');
+        await execPromise('openclaw gateway restart');
         
         return { success: true };
     } catch (error) {
@@ -1007,7 +1007,9 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
+    // Never let phones/Safari cache the hub or its data (stale error responses were sticking)
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+
     if (req.method === 'OPTIONS') {
         res.writeHead(200);
         res.end();
@@ -1055,7 +1057,7 @@ const server = http.createServer(async (req, res) => {
         }
     } else if (req.url === '/api/openclaw-status' && req.method === 'GET') {
         try {
-            const { stdout } = await execPromise('/opt/homebrew/bin/openclaw status');
+            const { stdout } = await execPromise('openclaw status');
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, output: stdout }));
         } catch (error) {
@@ -1101,7 +1103,7 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify(health));
     } else if (req.url === '/api/cron' && req.method === 'GET') {
         try {
-            const { stdout } = await execPromise('/opt/homebrew/bin/openclaw cron list --json');
+            const { stdout } = await execPromise('openclaw cron list --json');
             const cronData = JSON.parse(stdout);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(cronData));
@@ -1117,7 +1119,7 @@ const server = http.createServer(async (req, res) => {
             // Get full job state from cron list (with timeout)
             let cronData = { jobs: [] };
             try {
-                const { stdout } = await execPromise('/opt/homebrew/bin/openclaw cron list --json');
+                const { stdout } = await execPromise('openclaw cron list --json');
                 cronData = JSON.parse(stdout);
             } catch (e) { console.error('cron list failed:', e.message); }
 
@@ -1453,7 +1455,7 @@ const server = http.createServer(async (req, res) => {
         res.end();
     } else if (req.url === '/api/sessions' && req.method === 'GET') {
         try {
-            const { stdout } = await execPromise('/opt/homebrew/bin/openclaw sessions list --json');
+            const { stdout } = await execPromise('openclaw sessions list --json');
             const sessions = JSON.parse(stdout);
             
             // Enrich sessions with labels from sessions.json (openclaw CLI doesn't return them)
@@ -1497,7 +1499,7 @@ const server = http.createServer(async (req, res) => {
                 return;
             }
             
-            const { stdout } = await execPromise(`/opt/homebrew/bin/openclaw sessions history "${sessionKey}" --json --limit 50`);
+            const { stdout } = await execPromise(`openclaw sessions history "${sessionKey}" --json --limit 50`);
             const data = JSON.parse(stdout);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true, history: data.messages || [] }));
@@ -1528,7 +1530,8 @@ const server = http.createServer(async (req, res) => {
                 res.end(JSON.stringify({ success: false, error: error.message }));
             }
         });
-    } else if (req.url === '/hub' || req.url === '/hub.html') {
+    } else if (req.url === '/command' || req.url === '/command-hub') {
+        // Command hub (moved off the default route)
         const html = fs.readFileSync(path.join(__dirname, 'hub.html'), 'utf-8');
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(html);
@@ -1536,23 +1539,23 @@ const server = http.createServer(async (req, res) => {
         const html = fs.readFileSync(path.join(__dirname, 'cron-dashboard.html'), 'utf-8');
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(html);
-    } else if (req.url === '/' || req.url === '/index.html') {
-        const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(html);
+    } else if (req.url === '/' || req.url === '/index.html' || req.url === '/hub' || req.url === '/hub.html') {
+        // Default landing → cron jobs & reports (was the command hub)
+        res.writeHead(302, { 'Location': '/cron' });
+        res.end();
     } else {
         res.writeHead(404);
         res.end('Not found');
     }
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '127.0.0.1', () => {
     console.log(`🦞 Mission Control running at http://127.0.0.1:${PORT}`);
 
     // Also bind explicitly to Tailscale IP — macOS 0.0.0.0 doesn't route utun traffic
     const { execSync } = require('child_process');
     try {
-        const tsIp = execSync('/opt/homebrew/bin/tailscale ip 2>/dev/null || tailscale ip 2>/dev/null', { encoding: 'utf8', env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' } }).trim().split('\n')[0];
+        const tsIp = execSync('tailscale ip 2>/dev/null || tailscale ip 2>/dev/null', { encoding: 'utf8', env: { ...process.env, PATH: '/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin' } }).trim().split('\n')[0];
         if (tsIp && /^\d+\.\d+\.\d+\.\d+$/.test(tsIp)) {
             const tsServer = http.createServer(server.listeners('request')[0]);
             tsServer.listen(PORT, tsIp, () => {

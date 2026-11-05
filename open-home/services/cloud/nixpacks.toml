@@ -1,0 +1,6 @@
+# Pin Node 22 — we rely on node:sqlite and --experimental-strip-types.
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[start]
+cmd = "node --experimental-strip-types src/index.ts"

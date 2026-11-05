@@ -7,6 +7,7 @@ import { HomeScreen } from '../screens/HomeScreen';
 import { MeditationScreen } from '../screens/MeditationScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { CommunityScreen } from '../screens/CommunityScreen';
+import { LifeOSNavigator } from './LifeOSNavigator';
 
 type TabIconOptions = {
   focused: boolean;
@@ -45,6 +46,15 @@ export const AppNavigator: React.FC = () => {
           options={{
             tabBarIcon: (props: TabIconOptions) => (
               <TabIcon emoji="🏠" focused={props.focused} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Life OS"
+          component={LifeOSNavigator}
+          options={{
+            tabBarIcon: (props: TabIconOptions) => (
+              <TabIcon emoji="🌀" focused={props.focused} />
             ),
           }}
         />

@@ -1,0 +1,15 @@
+[Unit]
+Description=Admin Hub — index of every app's admin panel, tools, and docs
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/MonoClaw/admin-hub
+Environment=ADMIN_PORT=18834
+Environment=ADMIN_BASE=
+ExecStart=/usr/bin/python3 /root/MonoClaw/admin-hub/server.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

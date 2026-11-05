@@ -832,6 +832,10 @@
     <div class="header">
         <h1>🦞 Cron Job Dashboard</h1>
         <div class="subtitle">Real-time monitoring of all scheduled tasks</div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+            <a href="/reports/" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:1px solid #1f7a56;border-radius:10px;background:rgba(61,220,151,.1);color:#3ddc97;text-decoration:none;font-weight:700;font-size:14px">📄🎙️ Reports &amp; Voice Notes →</a>
+            <a href="/rolodex/" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border:1px solid #345;border-radius:10px;background:rgba(125,180,255,.1);color:#7db4ff;text-decoration:none;font-weight:700;font-size:14px">👥 Rolodex →</a>
+        </div>
     </div>
 
     <div class="stats-grid" id="stats">
@@ -1641,8 +1645,10 @@
         window._modalRunIndex = 0; // 0 = latest, 1 = one before, etc.
 
         async function openReportModal(jobIdSafe, runIndex) {
+            // Normalize: callers may pass a raw UUID (hyphens) or the safe key (underscores)
+            jobIdSafe = String(jobIdSafe || '').replace(/[^a-z0-9]/gi, '_');
             const data = (window._jobReportData || {})[jobIdSafe];
-            if (!data) return;
+            if (!data) { console.warn('openReportModal: no data for', jobIdSafe, Object.keys(window._jobReportData || {})); return; }
             runIndex = runIndex !== undefined ? runIndex : 0;
             window._modalRunIndex = runIndex;
             window._modalJobIdSafe = jobIdSafe;
@@ -1758,6 +1764,9 @@
             });
             audioWrap.style.display = 'flex';
 
+            // audioSrc is scoped to calRenderJob(); inside this function the value
+            // only exists on the stored record, so read it from there.
+            const audioSrc = data.audioSrc || null;
             if (audioSrc) {
                 audioEl.src = audioSrc;
                 audioEl.load();

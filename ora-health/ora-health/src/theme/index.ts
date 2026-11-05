@@ -1,54 +1,61 @@
 /**
  * Ora Health Design System
- * Mediterranean Sanctuary Aesthetic
- * Based on UI Reference Screenshot
+ * Modern Aurora Aesthetic — purple + pink
+ * (Keys kept stable so every screen re-themes from this one file.)
  */
 
 export const theme = {
   colors: {
-    // Primary Greens (Sage/Olive) - Icons, accents
-    sage: '#8B9A6B',
-    oliveGreen: '#6B7B5A',
-    
-    // Backgrounds - Warm, organic
-    warmCream: '#F5F2EA',
-    warmBeige: '#EDE9DF',
-    backgroundLight: '#F8F6F2',
-    
+    // Primary muted purple - matches the real app's #7B5EA7 (key name kept as `sage`)
+    sage: '#7B5EA7',
+    oliveGreen: '#5F4B87',
+
+    // Backgrounds - Soft lavender (matches app's #F0E8F5)
+    warmCream: '#F3EDF8',
+    warmBeige: '#EADDF3',
+    backgroundLight: '#F0E8F5',
+
     // Surfaces - Cards, modals
-    softTaupe: '#D4C9B8',
-    warmWhite: '#FEFEFE',
+    softTaupe: '#D4B8E8',
+    warmWhite: '#FFFFFF',
     cardBg: '#FFFFFF',
-    
-    // Accents - Highlights, badges
-    mutedGold: '#C4A962',
-    goldHighlight: '#D4B86A',
-    weekBadge: '#E8D9A6',
-    
+
+    // Accents - Blush pink (matches app's #F8C8DC family)
+    mutedGold: '#E68FBE',
+    goldHighlight: '#F0B8D6',
+    weekBadge: '#F6DCEC',
+
     // Semantic Colors
-    text: '#2C2C2C',
-    textSecondary: '#5C5C5C',
-    textTertiary: '#8C8C8C',
-    textLight: '#A8A8A8',
-    
-    // Category Colors (muted, harmonious)
-    categoryPurple: '#A89AC4',
-    categoryGreen: '#8B9A6B',
-    categoryCoral: '#D4A59A',
-    categoryBlue: '#8BA4B8',
-    categoryAmber: '#C4A962',
-    
+    text: '#2E2440',
+    textSecondary: '#5C5470',
+    textTertiary: '#8B84A0',
+    textLight: '#B4ADC6',
+
+    // Category Colors (soft purple/pink family)
+    categoryPurple: '#A78BCF',
+    categoryGreen: '#7B5EA7',
+    categoryCoral: '#E89BC4',
+    categoryBlue: '#8E9BD6',
+    categoryAmber: '#D98FC0',
+
     // Functional
-    border: '#E5E1D8',
-    borderLight: '#F0EDE5',
-    shadow: 'rgba(44, 44, 44, 0.08)',
-    shadowDark: 'rgba(44, 44, 44, 0.12)',
-    
+    border: '#ECE1F5',
+    borderLight: '#F4ECFA',
+    shadow: 'rgba(123, 94, 167, 0.12)',
+    shadowDark: 'rgba(123, 94, 167, 0.18)',
+
     // Interactive
-    active: '#6B7B5A',
-    inactive: '#B8B8B8',
-    error: '#D47B7B',
-    success: '#7B9A6B',
+    active: '#6D4F9C',
+    inactive: '#C9BBDD',
+    error: '#E27B9C',
+    success: '#7B5EA7',
+  },
+
+  // Signature gradients (mirrors the real app's LinearGradient pairs)
+  gradients: {
+    signature: ['#D4B8E8', '#F8C8DC'] as const, // lavender → blush pink (used 24× in-app)
+    purple: ['#9B72B0', '#7B5EA7'] as const,    // muted purple buttons
+    pink: ['#EFB4D6', '#F8C8DC'] as const,       // pink selected state
   },
   
   spacing: {

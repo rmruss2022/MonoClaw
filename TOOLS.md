@@ -54,3 +54,8 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 ---
 
 Add whatever helps you do your job. This is your cheat sheet.
+
+### Lumen X / Twitter
+- **Credentials:** `/root/.openclaw/lumen-x.env` (chmod 600, outside git). OAuth 1.0a.
+- Have: access token + secret. **Need:** API key + secret (consumer keys) to post.
+- Account: @lumen (Lumen meditation app). First post drafted 2026-10-21.

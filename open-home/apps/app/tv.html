@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>TV · openhome</title>
+<link rel="icon" type="image/svg+xml" href="/assets/brand/favicon.svg"/>
+<meta name="theme-color" content="#0b0a12"/>
+<style>
+  :root{--bg:#0b0a12;--bg2:#13111d;--panel:#181527;--line:#2a2540;--text:#ece9f5;--muted:#9a93b8;
+    --accent:#f5c977;--accent-dim:#b78a2e;--purple:#a855f7;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{height:100%;background:var(--bg)}
+  body{margin:0;min-height:100%;background:radial-gradient(1200px 900px at 50% -5%,#140f22,var(--bg));color:var(--text);
+    font:15px/1.5 ui-rounded,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;padding:0 0 60px}
+  .stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+  .topbar{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0) + 16px) 20px 12px}
+  .home{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--text)}
+  .home img{height:22px}.home b{font-size:18px;font-family:var(--serif);font-weight:600}
+  .sp{flex:1}
+  .appnav{display:flex;gap:4px;flex-wrap:wrap}
+  .appnav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid transparent;display:inline-flex;align-items:center;gap:5px}
+  .appnav a.active{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.08)}
+  .appnav a .i{width:15px;height:15px}
+  @media(max-width:720px){.appnav{display:none}}
+  .wrap{max-width:620px;margin:0 auto;padding:10px 18px}
+  h1{font-family:var(--serif);font-weight:600;font-size:28px;margin:6px 0 16px;letter-spacing:.2px}
+  .i{width:18px;height:18px}
+  input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0b0a12;color:var(--text);font-size:16px;outline:none;margin-bottom:10px}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,201,119,.15)}
+  .card{background:rgba(24,21,39,.8);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+  .muted{color:var(--muted);font-size:13px}
+  .sticks{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;background:var(--panel)}
+  .chip.on{color:var(--accent);border-color:var(--accent-dim);background:rgba(245,201,119,.1)}
+  .row{display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:8px}
+  .row img{width:46px;height:68px;border-radius:8px;object-fit:cover;background:#0e0b1a;border:1px solid var(--line)}
+  .row .nm{font-weight:600}.row .mt{font-size:12px;color:var(--muted)}
+  .cast{margin-left:auto;background:rgba(245,201,119,.1);border:1px solid var(--accent-dim);color:var(--accent);font-weight:800;border-radius:999px;padding:8px 16px;cursor:pointer}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--accent-dim);border-radius:999px;padding:12px 18px;font-weight:700;opacity:0;transition:.2s;z-index:20}
+  .toast.show{opacity:1}
+  /* bottom tab bar (mobile) — mirrors app.css */
+  .oh-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:none;background:rgba(11,10,18,.9);
+    -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--line);
+    padding:6px 6px calc(env(safe-area-inset-bottom,0px) + 6px)}
+  .oh-tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;
+    color:var(--muted);font-size:10.5px;font-weight:600;padding:6px 2px;border-radius:12px}
+  .oh-tabbar a .ic{opacity:.75}
+  .oh-tabbar a.active{color:var(--accent)}.oh-tabbar a.active .ic{opacity:1}
+  .oh-tabbar a:active{background:var(--panel)}
+  @media(max-width:720px){.oh-tabbar{display:flex}}
+</style>
+</head>
+<body>
+  <canvas class="stars"></canvas>
+  <div class="topbar">
+    <a class="home" href="/"><img src="/assets/brand/mark.svg" alt=""/><b>openhome</b></a>
+    <div class="sp"></div>
+    <nav class="appnav">
+      <a href="/">Home</a><a href="/control">Control</a><a href="/music">Music</a><a href="/lights">Lights</a><a href="/speakers">Speakers</a><a href="/climate">Climate</a><a href="/tv" class="active">TV</a>
+    </nav>
+  </div>
+
+  <div class="wrap">
+    <h1>TV</h1>
+    <div class="card">
+      <div class="muted" style="margin-bottom:8px">Cast to</div>
+      <div class="sticks" id="sticks"></div>
+      <div style="margin:8px 0"><a href="#" onclick="showPair();return false" class="muted" style="font-size:13px">＋ Pair a TV</a></div>
+      <div id="nostick" style="display:none">
+        <div class="muted" style="margin-bottom:10px">No TV paired yet. Open <b><span id="mockhost"></span>/mock</b> in another tab (that's your TV — it shows a 6-digit code, <b>000000</b> for the mock), then enter the code here:</div>
+        <script>var _mh=document.getElementById('mockhost');if(_mh)_mh.textContent=location.host;</script>
+        <div style="display:flex;gap:8px">
+          <input id="paircode" inputmode="numeric" maxlength="6" placeholder="000000" value="000000" style="flex:1;margin:0"/>
+          <button class="cast" style="margin:0" onclick="pairTv()">Pair</button>
+        </div>
+      </div>
+    </div>
+    <input id="q" placeholder="Search movies, shows…" onkeydown="if(event.key==='Enter')doSearch()"/>
+    <div id="results"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <nav class="oh-tabbar" aria-label="Primary navigation">
+    <a href="/"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9.5"/></svg><span>Home</span></a>
+    <a href="/music"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg><span>Music</span></a>
+    <a href="/lights"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M8.5 14a6 6 0 1 1 7 0c-.6.5-1 1.2-1 2H9.5c0-.8-.4-1.5-1-2Z"/></svg><span>Lights</span></a>
+    <a href="/speakers"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="7" r="1"/></svg><span>Speakers</span></a>
+    <a href="/climate"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/></svg><span>Climate</span></a>
+    <a href="/tv" class="active"><svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg><span>TV</span></a>
+  </nav>
+
+<script>
+const API="/tv/api";   // proxied by the hub with your existing session — no extra login
+let STICK=null;
+const $=id=>document.getElementById(id);
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+async function loadSticks(){
+  const d=await fetch(API+'/sticks').then(r=>r.json()).catch(()=>({sticks:[]}));
+  const list=d.sticks||[];
+  if(!list.length){$('nostick').style.display='block';$('sticks').innerHTML='';return;}
+  $('nostick').style.display='none';
+  STICK=STICK||(list.find(s=>s.online)||list[0]).id;
+  $('sticks').innerHTML=list.map(s=>`<span class="chip ${s.id===STICK?'on':''}" onclick="pick('${s.id}')">${s.online?'● ':'○ '}${esc(s.name)}</span>`).join('');
+}
+function pick(id){STICK=id;loadSticks();}
+function showPair(){$('nostick').style.display='block';$('paircode').focus();}
+async function pairTv(){
+  const code=($('paircode').value||'').trim();
+  if(!code){toast('Enter the code shown on your TV');return;}
+  const claim=()=>fetch(API+'/sticks/pair/claim',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code})}).then(r=>r.json()).catch(()=>({ok:false}));
+  let r=await claim();
+  // The browser mock stick (code 000000) only registers its code while its tab
+  // is open. If it's missing/expired, register it on the spot, then re-claim —
+  // so pairing the mock works whether or not /mock is currently open.
+  if(!r.ok && code==='000000'){
+    await fetch(API+'/sticks/pair/begin',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({stickId:'stick-mock',name:'Mock TV (browser)',code:'000000'})}).catch(()=>{});
+    r=await claim();
+  }
+  if(r.ok){toast('Paired '+((r.stick&&r.stick.name)||'TV'));loadSticks();}
+  else toast(r.error==='unauthorized'?'Sign in with your account to pair':(r.error==='bad_or_expired_code'?'Bad or expired code':'Pairing failed'));
+}
+async function doSearch(){
+  const q=$('q').value.trim();
+  const d=await fetch(API+'/'+(q?'search?q='+encodeURIComponent(q):'trending')).then(r=>r.json()).catch(()=>({results:[]}));
+  $('results').innerHTML=(d.results||[]).map(t=>`<div class="row">
+    <img src="${t.poster||''}" onerror="this.style.visibility='hidden'"/>
+    <div><div class="nm">${esc(t.name)}</div><div class="mt">${t.year||''} · ${(t.sources||[]).map(s=>s.serviceName).slice(0,3).join(', ')||'—'}</div></div>
+    <button class="cast" onclick='cast(${JSON.stringify(t.id)},${JSON.stringify(t.name)})'>Cast</button></div>`).join('');
+}
+async function cast(id,name){
+  if(!STICK){toast('Pair a TV first');loadSticks();return;}
+  const r=await fetch(API+'/route',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({titleId:id,stickId:STICK})}).then(r=>r.json()).catch(()=>({ok:false}));
+  toast(r.ok?('▶ '+name+' → '+(r.castTo||'TV')):(r.reason||'Couldn\'t cast'));
+  loadSticks();
+}
+(function(){var c=document.querySelector('.stars');if(!c)return;var x=c.getContext('2d');
+function rs(){c.width=innerWidth;c.height=innerHeight;}rs();addEventListener('resize',rs);
+var st=Array.from({length:60},function(){return{x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*1.2+.2,a:Math.random()*6};});
+(function loop(){x.clearRect(0,0,c.width,c.height);for(var i=0;i<st.length;i++){var s=st[i];s.a+=0.015;var o=.22+.33*Math.sin(s.a);x.fillStyle='rgba(220,210,255,'+o+')';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill();}requestAnimationFrame(loop);})();})();
+loadSticks(); doSearch();
+</script>
+</body></html>

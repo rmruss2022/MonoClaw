@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#1b1430"/><stop offset="100%" stop-color="#0b0a12"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ffe9b8"/><stop offset="45%" stop-color="#f5c977"/>
+      <stop offset="78%" stop-color="#c084fc"/><stop offset="100%" stop-color="#6d28d9"/>
+    </radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="22" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g filter="url(#glow)">
+    <circle cx="256" cy="248" r="118" fill="url(#orb)"/>
+    <g stroke="#f5c977" stroke-width="13" stroke-linecap="round" opacity="0.92">
+      <line x1="256" y1="62" x2="256" y2="104"/><line x1="256" y1="392" x2="256" y2="434"/>
+      <line x1="70" y1="248" x2="112" y2="248"/><line x1="400" y1="248" x2="442" y2="248"/>
+      <line x1="123" y1="115" x2="153" y2="145"/><line x1="359" y1="351" x2="389" y2="381"/>
+      <line x1="389" y1="115" x2="359" y2="145"/><line x1="153" y1="351" x2="123" y2="381"/>
+    </g>
+  </g>
+</svg>

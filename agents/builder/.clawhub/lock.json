@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "skills": {
+    "xpoz-social-search": {
+      "version": "1.5.0",
+      "installedAt": 1793695763154,
+      "registry": "https://clawhub.ai",
+      "artifact": {
+        "kind": "archive",
+        "sha256": "fc053cfc2fb7a4e12d6a748027da26fb3243ac2ba08b7a8e7b8c5791b804ac16",
+        "integrity": "sha256-/AU8/C+3pOEtanSAJ9om+zJDrCugi3qOe4xXkbgErBY="
+      },
+      "skillFile": {
+        "path": "SKILL.md",
+        "sha256": "59cafd37a59615d384a2ff78bcd26eaa1a3cd01f43661908de99a92ccd7ba401"
+      },
+      "verification": {
+        "schema": "clawhub.skill.verify.v1",
+        "ok": true,
+        "decision": "pass",
+        "reasons": [],
+        "card": {
+          "available": true,
+          "path": "skill-card.md",
+          "url": "https://wry-manatee-359.convex.site/api/v1/skills/xpoz-social-search/card?ownerHandle=atyachin&version=1.5.0",
+          "sha256": "b910b4d1a01d680528d0f68b9f022e65eadac7a2a628a03c555e9c7d45ec1511",
+          "size": 2360,
+          "contentType": "text/markdown; charset=utf-8"
+        },
+        "artifact": {
+          "sourceFingerprint": "918ff3523fcc0d6808a9e58e8f22283ddf7a880f431b7865f0b58c3d2ab73e26",
+          "bundleFingerprints": [
+            "cd1a32f2a726e8a64b89cc48cf18f05ca95caa4235a808f78f72c0bf11e2e385",
+            "88bee7e1bd19c1acb908af11de3b800bb22f88736501ec5140f5577cdca390cf"
+          ],
+          "files": [
+            {
+              "path": "SKILL.md",
+              "size": 3391,
+              "sha256": "59cafd37a59615d384a2ff78bcd26eaa1a3cd01f43661908de99a92ccd7ba401",
+              "contentType": "text/markdown"
+            },
+            {
+              "path": "setup.md",
+              "size": 337,
+              "sha256": "24dc0be9282f2975da66adf996f64a93751343436830a8b5dfbcd1fa6b98659e",
+              "contentType": "text/markdown"
+            }
+          ]
+        },
+        "provenance": {
+          "source": "unavailable",
+          "reason": "No server-resolved GitHub import provenance is stored for this version."
+        },
+        "security": {
+          "status": "clean",
+          "passed": true,
+          "rawStatus": "clean",
+          "verdict": "benign",
+          "confidence": "medium",
+          "summary": "This skill is a disclosed social-media search integration, with the main caveat that it relies on external setup and an unpinned npm tool.",
+          "model": null,
+          "checkedAt": 1789061405758,
+          "scannerReports": {
+            "aig": null,
+            "skillspector": null
+          }
+        },
+        "signature": {
+          "status": "unsigned"
+        }
+      }
+    }
+  }
+}

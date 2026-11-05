@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Dash",
+    "slug": "dash",
+    "scheme": "dash",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "owner": "tigertroll14",
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0b0b12"
+        }
+      ]
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "casa.bedrock.dash",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "casa.bedrock.dash",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0b0b12"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "924890e3-48fc-44c5-a7e7-fda588c0bce6"
+      }
+    }
+  }
+}

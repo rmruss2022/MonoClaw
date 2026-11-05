@@ -1,0 +1,9 @@
+data/
+*.db
+*.db-*
+*.bak-*
+*.log
+__pycache__/
+tests/
+appstore/
+art/
