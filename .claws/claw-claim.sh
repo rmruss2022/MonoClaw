@@ -9,6 +9,7 @@ set -uo pipefail
 F="$(cd "$(dirname "$0")" && pwd)/claims.json"
 HOST="$(hostname -s)"
 act="${1:-list}"
+case "$act" in list|-r) ;; -h|--help) sed -n '2,7p' "$0"; exit 0 ;; -*) echo "claw-claim: unknown option '$act' (usage: claw-claim.sh [<app> [note] | -r <app>])" >&2; exit 2 ;; esac
 
 # Values are passed through argv, never interpolated into the Python source,
 # so apostrophes in a note (e.g. "fixing lumen's submit flow") can't break it.
