@@ -2003,6 +2003,15 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .home-hero{display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
 .home-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
   background:radial-gradient(120% 80% at 88% -25%,color-mix(in srgb,var(--lc) 30%,transparent),transparent 60%)}
+.orb-hero{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;z-index:1;padding:4px 0 8px}
+.orb-wrap{width:172px;height:172px;position:relative;filter:drop-shadow(0 0 20px color-mix(in srgb,var(--lc) 42%,transparent))}
+.lumorb{display:block;animation:orbpulse 5.5s ease-in-out infinite}
+.lumorb-rays{transform-origin:80px 80px;animation:orbspin 70s linear infinite}
+@keyframes orbspin{to{transform:rotate(360deg)}}
+@keyframes orbpulse{0%,100%{opacity:.9}50%{opacity:1}}
+.orb-lv{font-weight:800;font-size:17px;letter-spacing:.01em;margin-top:2px}
+.orb-sub{font-size:12px}
+@media (prefers-reduced-motion:reduce){.lumorb,.lumorb-rays{animation:none}}
 .hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
 .hh-league{display:flex;align-items:center;gap:11px}
 .hh-badge{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;
@@ -3314,6 +3323,54 @@ function _medEx(icn,title,desc){
     +`<div class="jwc-body"><div class="jwc-title">${title}</div>`
     +`<div class="jwc-desc">${desc}</div></div></div>`;
 }
+/* Your light — a living orb that brightens, grows and gathers rays as your
+   Light (XP), level and sessions climb. The ring around it fills with your
+   progress to the next level. It lights up a little more every time you sit. */
+function lumenOrb(me){
+  const lvl=Math.max(1,me.level||1);
+  const into=me.level_into||0, need=me.level_need||100;
+  const prog=Math.max(0,Math.min(1,into/((into+need)||1)));
+  const b=Math.max(.16,Math.min(1,(lvl-1)/11 + prog/11));   // brightness 0..1, grows with level
+  const col=(me.league&&me.league.color)||'#f5c977';
+  const rays=Math.min(18,6+Math.floor(lvl*0.9));
+  const motes=Math.min(12,Math.floor((me.total_sessions||0)/5));
+  const coreR=17+Math.round(20*b);
+  let rayEls='';
+  for(let i=0;i<rays;i++){
+    const a=(i/rays)*Math.PI*2;
+    const r0=coreR+7, r1=coreR+12+24*b*(0.6+0.4*Math.abs(Math.sin(i*2.3)));
+    const x0=(80+Math.cos(a)*r0).toFixed(1),y0=(80+Math.sin(a)*r0).toFixed(1);
+    const x1=(80+Math.cos(a)*r1).toFixed(1),y1=(80+Math.sin(a)*r1).toFixed(1);
+    rayEls+=`<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="2" stroke-linecap="round" opacity="${(0.22+0.5*b).toFixed(2)}"/>`;
+  }
+  let moteEls='';
+  for(let i=0;i<motes;i++){
+    const a=(i/motes)*Math.PI*2+0.6, rr=coreR+30+(i%2?9:0);
+    const x=(80+Math.cos(a)*rr).toFixed(1),y=(80+Math.sin(a)*rr).toFixed(1);
+    moteEls+=`<circle cx="${x}" cy="${y}" r="${(1.5+1.4*b).toFixed(1)}" fill="#fff" opacity="${(0.35+0.45*b).toFixed(2)}"/>`;
+  }
+  const pr=coreR+30, arc=(2*Math.PI*pr*prog).toFixed(1);
+  return `<svg class="lumorb" viewBox="0 0 160 160" width="100%" height="100%">
+    <defs>
+      <radialGradient id="lo_core" cx="50%" cy="45%" r="55%">
+        <stop offset="0" stop-color="#fff" stop-opacity="${(0.6+0.35*b).toFixed(2)}"/>
+        <stop offset="0.4" stop-color="${col}" stop-opacity="${(0.5+0.45*b).toFixed(2)}"/>
+        <stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>
+      <radialGradient id="lo_halo" cx="50%" cy="50%" r="50%">
+        <stop offset="0" stop-color="${col}" stop-opacity="${(0.3*b+0.05).toFixed(2)}"/>
+        <stop offset="1" stop-color="${col}" stop-opacity="0"/></radialGradient>
+    </defs>
+    <circle cx="80" cy="80" r="79" fill="url(#lo_halo)"/>
+    <g class="lumorb-rays">${rayEls}</g>
+    ${moteEls}
+    <circle cx="80" cy="80" r="${pr}" fill="none" stroke="#ffffff12" stroke-width="2.5"/>
+    <circle cx="80" cy="80" r="${pr}" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round"
+      stroke-dasharray="${arc} 9999" transform="rotate(-90 80 80)" opacity="0.92"
+      style="filter:drop-shadow(0 0 5px ${col})"/>
+    <circle cx="80" cy="80" r="${coreR+10}" fill="url(#lo_core)"/>
+    <circle cx="80" cy="80" r="${Math.round(coreR*0.52)}" fill="#fff" opacity="${(0.45+0.4*b).toFixed(2)}"/>
+  </svg>`;
+}
 function renderMeditatePledge(){
   if(ME&&ME.goal_days&&!mediGoal_touched)mediGoal=ME.goal_days;
   const dayword=mediGoal===1?'day':'days';
@@ -3360,6 +3417,11 @@ async function renderMeditate(){
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
   <div class="card home-hero" style="--lc:${ME.league.color}">
+    <div class="orb-hero">
+      <div class="orb-wrap">${lumenOrb(ME)}</div>
+      <div class="orb-lv">Level ${ME.level}</div>
+      <div class="orb-sub muted">${fmt(ME.level_into)} / ${fmt(ME.level_into+ME.level_need)} light to Level ${ME.level+1}</div>
+    </div>
     <div class="hh-top">
       <div class="hh-league"><span class="hh-badge" style="color:${ME.league.color}">${leagueIcon(ME.league.name)}</span>
         <div><div class="hh-lg-name" style="color:${ME.league.color}">${ME.league.name} league</div>
