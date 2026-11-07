@@ -2011,6 +2011,14 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 @keyframes orbpulse{0%,100%{opacity:.9}50%{opacity:1}}
 .orb-lv{font-weight:800;font-size:17px;letter-spacing:.01em;margin-top:2px}
 .orb-sub{font-size:12px}
+.journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 0 6px;
+  background:linear-gradient(135deg,#f7d891,#e0a94a 70%,#caa047);color:#241a06;font-weight:800;font-size:15px;
+  border:0;border-radius:16px;padding:16px 18px;cursor:pointer;letter-spacing:.01em;
+  box-shadow:0 0 22px rgba(245,201,119,.42),0 8px 22px rgba(0,0,0,.35);animation:jglow 3.4s ease-in-out infinite}
+.journal-cta .i{width:20px;height:20px}
+.journal-cta:active{transform:translateY(1px)}
+@keyframes jglow{0%,100%{box-shadow:0 0 18px rgba(245,201,119,.36),0 8px 22px rgba(0,0,0,.35)}50%{box-shadow:0 0 32px rgba(245,201,119,.62),0 8px 22px rgba(0,0,0,.35)}}
+@media (prefers-reduced-motion:reduce){.journal-cta{animation:none}}
 @media (prefers-reduced-motion:reduce){.lumorb,.lumorb-rays{animation:none}}
 .hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
 .hh-league{display:flex;align-items:center;gap:11px}
@@ -3453,8 +3461,7 @@ async function renderMeditate(){
   <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:12px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
   ${challengeCardHTML(chal)}
   ${horoscopeCardHTML(horo)}
-  ${dp?`<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;margin:20px 2px 4px">Today's Light ${dp.ai?'· AI':''}</div>
-  <div id="homeprompts">${[['focus','Your focus','compass'],['reflection','Daily reflection','lotus'],['gratitude','Gratitude','spark']].map(([k,label,icn])=>`<div class="lo-prompt" data-p="${esc(dp[k])}" title="Write about this in your journal"><div class="lo-pico">${ic(icn,'g')}</div><div style="flex:1"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">${label}</div><div style="font-family:var(--serif);font-size:15px;margin-top:2px">${esc(dp[k])}</div></div><span class="lo-write">${ic('book')}</span></div>`).join('')}</div>`:''}`;
+  <button class="journal-cta" id="journalCta" type="button">${ic('book')}<span>Unlock today’s journal entry</span></button>`;
   $('#durs').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.minutes=+c.dataset.d;renderMeditate();});
   $('#snds').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s;renderMeditate();});
   $('#start').onclick=startSession;
@@ -3463,7 +3470,7 @@ async function renderMeditate(){
    const hl=document.querySelector('.horo-listen:not(.pick-listen)');if(hl&&horo&&horo.text)hl.onclick=()=>playHoroscope(hl,horo.text);
    const pl=document.querySelector('.pick-listen');if(pl&&PICK)pl.onclick=()=>playHoroscope(pl,pickInvite(PICK));
    const hn=document.querySelector('.horo-addnatal');if(hn)hn.onclick=addNatal;}
-  document.querySelectorAll('#homeprompts .lo-prompt').forEach(row=>row.onclick=()=>{openJournalDaily(row.dataset.p);});
+  {const jc=$('#journalCta');if(jc)jc.onclick=()=>openJournalDaily(dp?dp.focus:undefined);}
   document.querySelectorAll('.lesson-card').forEach(c=>c.onclick=()=>{lessonFrom='meditate';lessonDetail(c.dataset.l);});
   const al=$('#allles');if(al)al.onclick=()=>go('lessons');
 }
