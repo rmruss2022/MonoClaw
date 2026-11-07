@@ -2003,8 +2003,8 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .home-hero{display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
 .home-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
   background:radial-gradient(120% 80% at 88% -25%,color-mix(in srgb,var(--lc) 30%,transparent),transparent 60%)}
-.orb-hero{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;z-index:1;padding:4px 0 8px}
-.orb-wrap{width:172px;height:172px;position:relative;filter:drop-shadow(0 0 20px color-mix(in srgb,var(--lc) 42%,transparent))}
+.orb-hero{display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;z-index:1;padding:2px 0 6px}
+.orb-wrap{width:168px;height:168px;position:relative;margin-bottom:-10px;filter:drop-shadow(0 0 20px color-mix(in srgb,var(--lc) 42%,transparent))}
 .lumorb{display:block;animation:orbpulse 5.5s ease-in-out infinite}
 .lumorb-rays{transform-origin:80px 80px;animation:orbspin 70s linear infinite}
 @keyframes orbspin{to{transform:rotate(360deg)}}
@@ -3438,11 +3438,6 @@ async function renderMeditate(){
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
     <div class="hh-live"><span class="live-dot"></span> <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
   </div>
-  ${challengeCardHTML(chal)}
-  ${horoscopeCardHTML(horo)}
-  ${PICK?`<div class="lesson-head" style="margin:18px 2px 8px"><div><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Today's pick</div><div class="muted" style="font-size:12px;margin-top:2px">${todGreeting()}</div></div>
-    <button class="btn ghost horo-listen pick-listen" title="Hear today's pick aloud">${ic('sound')} Listen</button></div>
-  <div class="rec-feature">${lessonCardHTML(PICK)}</div>`:''}
   <div class="card">
     <div class="sec-head"><span class="sec-ic">${ic('clock')}</span><h3>Duration</h3></div>
     <div class="grid4" id="durs">${durs.map(d=>`<div class="chip dur-chip ${d===pick.minutes?'sel':''}" data-d="${d}"><div class="big">${d}</div><div class="chip-unit">min</div><div class="chip-sub">${DUR_LABEL[d]||''}</div></div>`).join('')}</div>
@@ -3452,10 +3447,14 @@ async function renderMeditate(){
     <p class="muted center" style="font-size:12px;margin:10px 0 0">${ic('flame','flame grad-flame glow')} ${ME.streak}-day streak · ${ME.league.name} league</p>
     ${ME.equipped&&ITEM_NAME[ME.equipped]?`<div class="center"><span class="companion">${ART_IMG[ME.equipped]?`<img src="${ART_IMG[ME.equipped]}" class="cph" alt="" onerror="this.remove()">`:ic(ITEM_ICON[ME.equipped])} meditating with your ${ITEM_NAME[ME.equipped]}</span></div>`:(ME.companion&&COMP_NAME[ME.companion]?`<div class="center"><span class="companion">${ic(COMP_ICON[ME.companion])} ${COMP_NAME[ME.companion]} is sitting with you</span></div>`:'')}
   </div>
-  ${dp?`<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;margin:18px 2px 4px">Today's Light ${dp.ai?'· AI':''}</div>
-  <div id="homeprompts">${[['focus','Your focus','compass'],['reflection','Daily reflection','lotus'],['gratitude','Gratitude','spark']].map(([k,label,icn])=>`<div class="lo-prompt" data-p="${esc(dp[k])}" title="Write about this in your journal"><div class="lo-pico">${ic(icn,'g')}</div><div style="flex:1"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">${label}</div><div style="font-family:var(--serif);font-size:15px;margin-top:2px">${esc(dp[k])}</div></div><span class="lo-write">${ic('book')}</span></div>`).join('')}</div>`:''}
-  <div class="lesson-head" style="margin:22px 2px 8px"><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">More journeys</div><a class="lesson-all" id="allles">See all ${LESSONS.length} &rarr;</a></div>
-  ${REST.slice(0,4).map(l=>lessonCardHTML(l)).join('')}`;
+  ${PICK?`<div class="lesson-head" style="margin:20px 2px 8px"><div><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Today's pick</div><div class="muted" style="font-size:12px;margin-top:2px">${todGreeting()}</div></div>
+    <button class="btn ghost horo-listen pick-listen" title="Hear today's pick aloud">${ic('sound')} Listen</button></div>
+  <div class="rec-feature">${lessonCardHTML(PICK)}</div>
+  <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:12px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
+  ${challengeCardHTML(chal)}
+  ${horoscopeCardHTML(horo)}
+  ${dp?`<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;margin:20px 2px 4px">Today's Light ${dp.ai?'· AI':''}</div>
+  <div id="homeprompts">${[['focus','Your focus','compass'],['reflection','Daily reflection','lotus'],['gratitude','Gratitude','spark']].map(([k,label,icn])=>`<div class="lo-prompt" data-p="${esc(dp[k])}" title="Write about this in your journal"><div class="lo-pico">${ic(icn,'g')}</div><div style="flex:1"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">${label}</div><div style="font-family:var(--serif);font-size:15px;margin-top:2px">${esc(dp[k])}</div></div><span class="lo-write">${ic('book')}</span></div>`).join('')}</div>`:''}`;
   $('#durs').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.minutes=+c.dataset.d;renderMeditate();});
   $('#snds').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s;renderMeditate();});
   $('#start').onclick=startSession;
