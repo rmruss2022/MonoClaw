@@ -1645,8 +1645,10 @@
         window._modalRunIndex = 0; // 0 = latest, 1 = one before, etc.
 
         async function openReportModal(jobIdSafe, runIndex) {
+            // Normalize: callers may pass a raw UUID (hyphens) or the safe key (underscores)
+            jobIdSafe = String(jobIdSafe || '').replace(/[^a-z0-9]/gi, '_');
             const data = (window._jobReportData || {})[jobIdSafe];
-            if (!data) return;
+            if (!data) { console.warn('openReportModal: no data for', jobIdSafe, Object.keys(window._jobReportData || {})); return; }
             runIndex = runIndex !== undefined ? runIndex : 0;
             window._modalRunIndex = runIndex;
             window._modalJobIdSafe = jobIdSafe;
@@ -1762,6 +1764,9 @@
             });
             audioWrap.style.display = 'flex';
 
+            // audioSrc is scoped to calRenderJob(); inside this function the value
+            // only exists on the stored record, so read it from there.
+            const audioSrc = data.audioSrc || null;
             if (audioSrc) {
                 audioEl.src = audioSrc;
                 audioEl.load();
