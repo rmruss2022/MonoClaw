@@ -2675,23 +2675,26 @@ a{color:var(--purple)}
 .pcase-eyebrow .i{width:14px;height:14px}
 /* the four focus pillars, each a recoloured Lottie column standing in the niche */
 .pcols{display:flex;justify-content:center;align-items:flex-end;gap:clamp(4px,3vw,14px)}
-.pcolumn{display:flex;flex-direction:column;align-items:center;gap:6px;width:clamp(56px,20vw,74px);background:none;border:0;cursor:pointer;font-family:inherit;padding:0}
+.pcolumn{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;width:clamp(56px,20vw,74px);background:none;border:0;cursor:pointer;font-family:inherit;padding:0}
 .pcolumn:active{transform:translateY(1px)}
-.pcolumn-art{width:100%;height:92px;filter:drop-shadow(0 6px 9px rgba(0,0,0,.55))}
+.pcolumn-glow{position:absolute;left:50%;top:40px;width:62px;height:62px;transform:translateX(-50%);pointer-events:none;z-index:0;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--pc) 55%,transparent),transparent 68%);filter:blur(7px);opacity:.5}
+.pcolumn:active .pcolumn-glow{opacity:.75}
+.pcolumn-art{position:relative;z-index:1;width:100%;height:92px;filter:drop-shadow(0 6px 9px rgba(0,0,0,.55))}
 .pcolumn-art svg{width:100%!important;height:100%!important}
-.pcolumn-base{width:92%;height:3px;border-radius:2px;margin-top:-2px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--pc) 60%,transparent),transparent)}
+.pcolumn-base{position:relative;z-index:1;width:92%;height:3px;border-radius:2px;margin-top:-2px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--pc) 45%,transparent),transparent)}
 .pcolumn-nm{font-size:11px;font-weight:700;color:#efe6ff;line-height:1.12;text-align:center}
 .pcase-empty{color:var(--muted);font-size:12.5px;max-width:30ch;margin:8px auto 2px}
 .pgrid-h,.jpath-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
 .pgrid-h{color:var(--gold);margin:2px 2px 10px}
 .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .pgrid-card{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;font-family:inherit;padding:13px 6px 11px;border-radius:15px;
-  background:linear-gradient(165deg,color-mix(in srgb,var(--pc) 15%,#15111f),#110d1b 80%);border:1px solid color-mix(in srgb,var(--pc) 28%,var(--line));box-shadow:0 8px 22px -16px color-mix(in srgb,var(--pc) 85%,#000)}
+  background:linear-gradient(165deg,#191326,#110d1b 82%);border:1px solid rgba(245,201,119,.14);box-shadow:0 8px 22px -18px #000}
 .pgrid-card:active{transform:scale(.97)}
-.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--pc);
-  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--pc) 42%,transparent),#140e26 70%);border:1px solid color-mix(in srgb,var(--pc) 32%,transparent);box-shadow:0 0 12px -4px color-mix(in srgb,var(--pc) 80%,transparent)}
+.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--gold) 82%,#fff);
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--gold) 24%,transparent),#140e26 72%);border:1px solid color-mix(in srgb,var(--gold) 22%,transparent);box-shadow:0 0 12px -5px color-mix(in srgb,var(--gold) 70%,transparent)}
 .pgrid-med .i{width:21px;height:21px}
-.pgrid-nm{font-size:10.5px;font-weight:600;color:#cfc6ea;text-align:center;line-height:1.15}
+.pgrid-nm{font-size:10.5px;font-weight:600;color:#d6ccdf;text-align:center;line-height:1.15}
 .jpath{position:relative;overflow:hidden;border:1px solid #2a2144;border-radius:18px;padding:16px;margin-top:20px;background:linear-gradient(165deg,#171127,#100c1b 78%)}
 .jpath:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:radial-gradient(120% 70% at 92% -10%,rgba(168,85,247,.2),transparent 55%)}
 .jpath>*{position:relative;z-index:1}
@@ -5729,7 +5732,8 @@ async function renderPillarsSection(){
   const chosen=chosenNames.map(nm=>pillars.find(p=>p.name===nm)).filter(Boolean);
   const others=pillars.filter(p=>!chosenNames.includes(p.name));
   const caseItem=(p)=>`<button class="pcolumn" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
-    +`<span class="pcolumn-art" data-pc="${pcolor(p.name)}"></span>`
+    +`<span class="pcolumn-glow"></span>`
+    +`<span class="pcolumn-art" data-pc="#d8c6a0"></span>`
     +`<span class="pcolumn-base"></span>`
     +`<span class="pcolumn-nm">${esc(p.name)}</span></button>`;
   const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
