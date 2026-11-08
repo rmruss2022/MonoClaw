@@ -2022,6 +2022,8 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .spinner{display:inline-block;width:1.3em;height:1.3em;vertical-align:-0.3em;line-height:0}
 .spinner svg{display:block;width:100%;height:100%}
 .center .spinner{display:block;width:60px;height:60px;margin:2px auto 10px;vertical-align:baseline}
+.boot-load{min-height:74vh;display:flex;align-items:center;justify-content:center}
+.boot-load .spinner{display:block;width:92px;height:92px;vertical-align:baseline}
 @media (prefers-reduced-motion:reduce){.lumorb,.lumorb-rays{animation:none}}
 .hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
 .hh-league{display:flex;align-items:center;gap:11px}
@@ -2882,7 +2884,7 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
   <linearGradient id="gSlate" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24"><stop offset="0" stop-color="#e2e8f0"/><stop offset="1" stop-color="#94a3b8"/></linearGradient>
 </defs></svg>
 <canvas class="stars"></canvas>
-<div id="app"></div>
+<div id="app"><div class="boot-load"><span class="spinner"></span></div></div>
 <nav class="hidden" id="nav"><div class="inner">
   <button data-tab="meditate" class="on"><span class="ic"></span>Meditate</button>
   <button data-tab="lessons"><span class="ic"></span>Journeys</button>
