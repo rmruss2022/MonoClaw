@@ -2965,7 +2965,7 @@ a{color:var(--purple)}
 .trk-name{font-weight:800;font-size:16px;color:#f1ecff}
 .trk-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
 /* Journeys tab — journey cards + journey-detail lesson rows */
-.jrny-grid{display:flex;flex-direction:column;gap:20px}
+.jrny-grid{display:flex;flex-direction:column;gap:30px}
 .jrny-card{display:flex;align-items:stretch;gap:0;text-align:left;border:1px solid color-mix(in srgb,var(--a) 34%,var(--line));border-radius:18px;overflow:hidden;cursor:pointer;padding:0;position:relative;
   background:linear-gradient(135deg,color-mix(in srgb,var(--a) 13%,#15111f),#110d1b 72%);
   box-shadow:0 12px 32px -20px color-mix(in srgb,var(--a) 85%,#000);transition:transform .14s,border-color .15s}
