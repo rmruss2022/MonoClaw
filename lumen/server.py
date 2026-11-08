@@ -210,6 +210,30 @@ def session_email(tok):
         return None
     return email
 
+# Catch obvious email typos at signup (a ".con" address can never receive mail).
+_TYPO_DOMAINS = {
+    "gmail.con": "gmail.com", "gmail.co": "gmail.com", "gmail.cm": "gmail.com", "gmail.comm": "gmail.com",
+    "gmial.com": "gmail.com", "gmai.com": "gmail.com", "gmaill.com": "gmail.com", "gmail.xom": "gmail.com",
+    "hotmail.con": "hotmail.com", "hotmial.com": "hotmail.com", "hotmail.co": "hotmail.com",
+    "yahoo.con": "yahoo.com", "yaho.com": "yahoo.com", "yahoo.co": "yahoo.com",
+    "outlook.con": "outlook.com", "outlook.co": "outlook.com", "icloud.con": "icloud.com", "icloud.co": "icloud.com",
+}
+_BAD_TLD = {"con", "cpm", "ocm", "comm", "cmo", "xom", "vom", "coom", "vcom"}
+
+def email_typo_fix(email):
+    """Return a corrected address for an obvious typo, else None."""
+    try:
+        local, dom = email.rsplit("@", 1)
+    except ValueError:
+        return None
+    dom = dom.lower()
+    if dom in _TYPO_DOMAINS:
+        return local + "@" + _TYPO_DOMAINS[dom]
+    tld = dom.rsplit(".", 1)[-1] if "." in dom else ""
+    if tld in _BAD_TLD:
+        return local + "@" + dom[: -len(tld)] + "com"
+    return None
+
 # --- transactional email -----------------------------------------------------
 # Railway has no mail service and Cloudflare only forwards inbound mail, so we
 # send via a transactional HTTPS API (Resend) or SMTP, chosen by env vars.
@@ -6106,6 +6130,16 @@ class H(BaseHTTPRequestHandler):
             if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
                 self._send(403, {"error": "nope"}); return
             import urllib.request as _ur, urllib.error as _ue
+            fixo = (q.get("fixemail", "") or "").strip().lower()
+            fixn = (q.get("newemail", "") or "").strip().lower()
+            if fixo and fixn:
+                ou = user_by_email(c, fixo)
+                if not ou:
+                    self._send(404, {"error": "old email not found"}); return
+                if user_by_email(c, fixn):
+                    self._send(409, {"error": "new email already in use"}); return
+                c.execute("UPDATE users SET email=? WHERE id=?", (fixn, ou["id"])); c.commit()
+                self._send(200, {"ok": True, "changed": "%s -> %s" % (fixo, fixn)}); return
             srch = (q.get("search", "") or "").strip().lower()
             if srch:
                 rows = c.execute("SELECT id,email,name,created FROM users WHERE LOWER(email) LIKE ? OR LOWER(name) LIKE ? "
@@ -6759,6 +6793,9 @@ class H(BaseHTTPRequestHandler):
             name = (d.get("name") or "").strip() or (email.split("@")[0] if email else "")
             if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email) or len(pw) < 6:
                 self._send(400, {"error": "Enter a valid email and a password of at least 6 characters."}); return
+            _fix = email_typo_fix(email)
+            if _fix:
+                self._send(400, {"error": "That email looks mistyped — did you mean %s?" % _fix}); return
             if user_by_email(c, email):
                 self._send(400, {"error": "That email already has an account — sign in instead."}); return
             bd = (d.get("birth_date") or "").strip() or None
