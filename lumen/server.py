@@ -2052,6 +2052,13 @@ h1,h2,h3{font-weight:700;letter-spacing:-.02em}
 .btn:active{transform:translateY(1px)}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);box-shadow:none}
 .btn.gold{background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;box-shadow:0 6px 24px -8px var(--gold)}
+/* luxe "seal" CTA — gold-on-dark, sticks out, bigger gold seal */
+.btn.seal-cta{background:linear-gradient(135deg,#2b2010,#1d1408 55%,#120c05);color:#f7d488;
+  border:1px solid rgba(245,201,119,.58);
+  box-shadow:0 10px 30px -12px rgba(245,201,119,.55),inset 0 1px 0 rgba(255,236,180,.14),inset 0 0 0 1px rgba(245,201,119,.06);
+  text-shadow:0 0 12px rgba(245,201,119,.35);letter-spacing:.015em}
+.btn.seal-cta:active{transform:translateY(1px)}
+.seal-cta .seal-ic{width:30px;height:30px;filter:drop-shadow(0 0 7px rgba(245,201,119,.7))}
 .row{display:flex;gap:10px}.row>*{flex:1}
 input,textarea,select{width:100%;background:#0f0d18;border:1px solid var(--line);border-radius:12px;
   color:var(--text);padding:12px 14px;font-size:16px;font-family:inherit}
@@ -3864,7 +3871,7 @@ function renderMeditatePledge(){
     +`<div class="jwelc-pledge">`
       +`<div class="jwelc-pl-h">${ic('seal','g')} My pledge</div>`
       +`<p class="jwelc-pl-body">“I’ll sit ${mediGoal} ${dayword} a week — showing up for my own mind, one breath at a time.”</p>`
-      +`<button class="btn gold jwelc-seal" id="mpl-sign">${ic('seal','seal-ic')} Set my rhythm &amp; begin</button>`
+      +`<button class="btn seal-cta jwelc-seal" id="mpl-sign">${ic('seal','seal-ic grad-gold')} Set my rhythm &amp; begin</button>`
       +`<button class="jwelc-skip" id="mpl-skip">Maybe later</button>`
     +`</div>`
   +`</div>`;
@@ -5333,7 +5340,7 @@ function renderJournalWelcome(){
       +`<div class="jwelc-pl-h">${ic('seal','g')} My pledge</div>`
       +`<p class="jwelc-pl-body">“I promise to show up for myself on the page — a few honest lines, most days. Not for anyone else. For the quiet it gives back.”</p>`
       +`<input id="jpl-name" class="jwelc-sign" maxlength="48" placeholder="Sign your name" value="${nm}">`
-      +`<button class="btn gold jwelc-seal" id="jpl-sign">${ic('seal','seal-ic')} Sign &amp; begin</button>`
+      +`<button class="btn seal-cta jwelc-seal" id="jpl-sign">${ic('seal','seal-ic grad-gold')} Sign &amp; begin</button>`
       +`<button class="jwelc-skip" id="jpl-skip">Maybe later</button>`
     +`</div>`
   +`</div>`;
