@@ -4363,7 +4363,7 @@ function completeFlow(minutes){
       const res=await api('session/complete','POST',body);
       // best-effort profile refresh — must NOT block showing the reward if it blips
       try{const r=await api('me');if(r&&r.profile)ME=r.profile;}catch(_e){}
-      showRewards(res);
+      showRewards(res,minutes);
     }catch(e){
       if(btn){btn.disabled=false;btn.innerHTML='Collect your Light '+ic('spark');}
       toast(typeof e==='string'?e:'Could not collect your Light — check your connection and try again.');
@@ -4371,7 +4371,44 @@ function completeFlow(minutes){
   };
 }
 
-function showRewards(res){
+// A shareable 1080×1350 card of the session just finished — drawn on a canvas,
+// then handed to the native share sheet (Web Share API) with the App Store link.
+function buildShareCard(d){
+  const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const bg=g.createRadialGradient(W/2,H*0.34,60,W/2,H*0.34,H*0.9);
+  bg.addColorStop(0,'#1c1636');bg.addColorStop(.55,'#120f24');bg.addColorStop(1,'#09080f');
+  g.fillStyle=bg;g.fillRect(0,0,W,H);
+  for(let i=0;i<48;i++){g.globalAlpha=0.05+Math.random()*0.28;g.fillStyle='#f5c977';g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.9,0,7);g.fill();}
+  g.globalAlpha=1;g.textAlign='center';
+  g.fillStyle='#f5c977';g.font='700 58px Georgia,"Times New Roman",serif';g.fillText('lumen',W/2,152);
+  const ox=W/2,oy=438;
+  let halo=g.createRadialGradient(ox,oy,0,ox,oy,255);halo.addColorStop(0,'rgba(246,201,119,.55)');halo.addColorStop(.5,'rgba(240,168,74,.16)');halo.addColorStop(1,'rgba(240,168,74,0)');
+  g.fillStyle=halo;g.beginPath();g.arc(ox,oy,255,0,7);g.fill();
+  g.save();g.translate(ox,oy);g.rotate(-0.34);g.strokeStyle='rgba(255,231,176,.5)';g.lineWidth=5;g.beginPath();g.ellipse(0,0,192,54,0,0,7);g.stroke();g.restore();
+  let core=g.createRadialGradient(ox-30,oy-40,8,ox,oy,116);core.addColorStop(0,'#fffdf6');core.addColorStop(.45,'#f7c972');core.addColorStop(.84,'#e49b38');core.addColorStop(1,'#9a5e1c');
+  g.fillStyle=core;g.beginPath();g.arc(ox,oy,112,0,7);g.fill();
+  g.save();g.translate(ox,oy);g.rotate(-0.34);g.strokeStyle='rgba(255,231,176,.92)';g.lineWidth=5;g.beginPath();g.ellipse(0,0,192,54,0,3.14,6.28);g.stroke();g.restore();
+  g.fillStyle='#f6f1ea';g.font='700 170px Georgia,serif';g.fillText(String(d.minutes||0),W/2,780);
+  g.fillStyle='#b9b0d0';g.font='400 46px -apple-system,"Segoe UI",sans-serif';g.fillText((d.minutes===1?'minute':'minutes')+' of stillness',W/2,848);
+  if(d.sound){g.fillStyle='#8f8a9d';g.font='400 38px -apple-system,sans-serif';g.fillText(d.sound.charAt(0).toUpperCase()+d.sound.slice(1)+' soundscape',W/2,910);}
+  g.fillStyle='#f5c977';g.font='700 72px -apple-system,sans-serif';g.fillText('+'+fmt(d.light||0)+' Light',W/2,1022);
+  if(d.streak&&d.streak>1){g.fillStyle='#fb923c';g.font='600 44px -apple-system,sans-serif';g.fillText(d.streak+'-day streak',W/2,1092);}
+  g.fillStyle='#7f7a92';g.font='400 34px -apple-system,sans-serif';g.fillText('light, one breath at a time',W/2,1272);
+  return c;
+}
+async function shareMeditation(d){
+  const url='https://apps.apple.com/app/id6822133425';
+  const text=`I sat for ${d.minutes} ${d.minutes===1?'minute':'minutes'} with Lumen${d.streak>1?` — ${d.streak}-day streak`:''}. Light, one breath at a time.`;
+  let file=null;
+  try{const cv=buildShareCard(d);const blob=await new Promise(r=>cv.toBlob(r,'image/png',0.92));if(blob)file=new File([blob],'lumen-meditation.png',{type:'image/png'});}catch(e){}
+  try{
+    if(file&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:text+'\n'+url});return;}
+    if(navigator.share){await navigator.share({title:'Lumen',text,url});return;}
+  }catch(e){if(e&&e.name==='AbortError')return;}
+  try{await navigator.clipboard.writeText(text+' '+url);toast(ic('check','g')+' Link copied — share it anywhere');return;}catch(e){}
+  toast('Sharing isn’t available on this device.');
+}
+function showRewards(res,minutes){
   $('#nav').classList.remove('hidden');bindNav();
   const ach=(res.new_achievements||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'star')} ${a.title}</div>`).join(' ');
   $('#app').innerHTML=`
@@ -4387,11 +4424,13 @@ function showRewards(res){
     ${res.leveled_up?`<h2 style="margin:14px 0 0;color:var(--pink)">Level ${res.level} reached!</h2>`:''}
     ${ach?`<div style="margin-top:14px"><div class="muted" style="font-size:12px">Achievement unlocked</div><div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ach}</div></div>`:''}
     ${lessonReflect?`<div class="reflect-note" style="margin-top:16px"><div class="muted" style="font-size:12px;margin-bottom:7px">Carry the lesson forward</div><button class="btn ghost" id="reflect" style="text-align:left;line-height:1.4">${ic('book')} “${esc(lessonReflect)}”</button></div>`:''}
-    <button class="btn" id="done" style="margin-top:18px">Done</button>
+    <button class="btn gold" id="shareSit" style="margin-top:18px">${ic('share')} Share your sit</button>
+    <button class="btn ghost" id="done" style="margin-top:9px">Done</button>
     <button class="btn ghost" id="seemap" style="margin-top:9px">See your light on the map ${ic('globe')}</button>
   </div>`;
   const rf=lessonReflect;lessonReflect=null;
   const rb=$('#reflect');if(rb)rb.onclick=()=>{openJournalDaily(rf);};
+  const sb=$('#shareSit');if(sb)sb.onclick=()=>shareMeditation({minutes:minutes||0,light:res.light_earned||0,streak:res.streak||0,sound:(pick&&pick.sound)||''});
   $('#done').onclick=()=>go('meditate');
   $('#seemap').onclick=()=>go('map');
 }
@@ -4940,7 +4979,7 @@ async function lessonPlay(lesson, startSi){
     let res;try{res=await api('session/complete','POST',body);}catch(e){go('meditate');return;}
     try{const r=await api('me');ME=r.profile;}catch(e){}
     lessonReflect=complete&&lesson.prompt?lesson.prompt:null;
-    showRewards(res);}
+    showRewards(res,mins);}
   $('#lend').onclick=()=>finish(false);
   $('#lmute').onclick=()=>{lsSpeak=!lsSpeak;const m=$('#lmute');if(m){m.innerHTML=ic(lsSpeak?'sound':'mute');m.classList.toggle('on',lsSpeak);}
     if(!lsSpeak)stopNarration();};
