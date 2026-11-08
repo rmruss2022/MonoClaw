@@ -2475,6 +2475,11 @@ nav button.on{color:var(--text);background:#211a37}
 .seg{display:flex;background:#13101f;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:8px;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px}
 .seg button.on{background:#271f42;color:var(--text)}
+.ctoggle{position:fixed;left:0;right:0;bottom:calc(80px + env(safe-area-inset-bottom));z-index:6;display:flex;justify-content:center;padding:0 14px;pointer-events:none}
+.ctoggle .seg{pointer-events:auto;max-width:560px;width:100%;box-shadow:0 12px 30px -12px #000;background:#15111f}
+.ctoggle .seg button{display:flex;align-items:center;justify-content:center;gap:6px}
+.ctoggle .seg button .i{width:15px;height:15px}
+.cbody-art{padding-bottom:150px}
 .feed-item{border-left:2px solid var(--purple);padding:4px 0 4px 12px;margin:12px 0}
 .feed-item .who{font-size:12px;color:var(--muted)}
 a{color:var(--purple)}
@@ -6091,13 +6096,14 @@ const ELEMENT_COL={Light:'#f5c977',Fire:'#fb923c',Water:'#5fb0fa',Air:'#67e8f9',
 // each altar piece is placed when you unlock its achievement
 async function renderCollection(){
   const r=await api('me');ME=r.profile;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Your Mandala</b>
+  const isArt=collectView==='artifacts';
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>${isArt?'Your Artifacts':'Your Mandala'}</b>
     <span class="motebal">${ic('spark','g glow')} ${fmt(ME.motes)}</span></div>
-  <div class="seg" id="cv">
-    <button class="${collectView!=='artifacts'?'on':''}" data-v="altar">Mandala</button>
-    <button class="${collectView==='artifacts'?'on':''}" data-v="artifacts">Artifacts</button>
-  </div>
-  <div id="cbody"></div>`;
+  <div id="cbody" class="${isArt?'cbody-art':'cbody-altar'}"></div>
+  <div class="ctoggle"><div class="seg" id="cv">
+    <button class="${!isArt?'on':''}" data-v="altar">${ic('crystal')} Mandala</button>
+    <button class="${isArt?'on':''}" data-v="artifacts">${ic('seal')} Artifacts</button>
+  </div></div>`;
   $('#cv').querySelectorAll('button').forEach(b=>b.onclick=()=>{collectView=b.dataset.v;renderCollection();});
   if(collectView==='artifacts')await renderArtifacts();
   else await renderAltar();
@@ -6163,8 +6169,8 @@ async function renderAltar(){
   // scrolls inside it, with the prev/next bar pinned to the panel's top.
   $('#cbody').innerHTML=`
   <div class="mandala-wrap">
-    <iframe id="mandalaFrame" src="assets/mandala.html?v=3" title="Your mandala" loading="eager"
-      style="width:100%;height:calc(100dvh - 206px);min-height:470px;border:0;display:block;background:transparent"></iframe>
+    <iframe id="mandalaFrame" src="assets/mandala.html?v=4" title="Your mandala" loading="eager"
+      style="width:100%;height:calc(100dvh - 250px);min-height:430px;border:0;display:block;background:transparent"></iframe>
   </div>`;
 }
 async function renderItems(){
@@ -7802,7 +7808,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v8';
+const CACHE = 'lumen-v9';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();

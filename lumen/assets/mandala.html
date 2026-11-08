@@ -89,10 +89,11 @@
   .card{background:transparent!important;border:none!important;border-radius:0!important;padding:2px 6px 0!important;overflow:hidden!important;flex:1 1 auto!important;display:flex!important;flex-direction:column!important;min-height:0!important}
   .card::before{display:none!important}
   .stage{flex:0 0 auto!important}
-  /* panel scrolls on its own; the prev/back/next bar stays pinned at the top */
+  /* panel scrolls on its own; the prev/back/next bar stays pinned flush at the top,
+     with a solid backing so scrolling content never bleeds through behind it */
   .panel{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding-bottom:18px!important}
-  .panel .nav{position:sticky!important;top:0!important;z-index:6;margin:0 0 12px!important;padding:9px 2px 11px!important;
-    background:linear-gradient(to bottom,#0d0b14 60%,rgba(13,11,20,0))!important}
+  .panel .nav{position:sticky!important;top:0!important;z-index:6;margin:0 0 12px!important;padding:12px 2px 12px!important;
+    background:#0b0a12!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
 </style>
 </head>
 <body>
