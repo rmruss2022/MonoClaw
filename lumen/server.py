@@ -2965,7 +2965,7 @@ a{color:var(--purple)}
 .trk-name{font-weight:800;font-size:16px;color:#f1ecff}
 .trk-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
 /* Journeys tab — journey cards + journey-detail lesson rows */
-.jrny-grid{display:flex;flex-direction:column;gap:12px}
+.jrny-grid{display:flex;flex-direction:column;gap:20px}
 .jrny-card{display:flex;align-items:stretch;gap:0;text-align:left;border:1px solid color-mix(in srgb,var(--a) 34%,var(--line));border-radius:18px;overflow:hidden;cursor:pointer;padding:0;position:relative;
   background:linear-gradient(135deg,color-mix(in srgb,var(--a) 13%,#15111f),#110d1b 72%);
   box-shadow:0 12px 32px -20px color-mix(in srgb,var(--a) 85%,#000);transition:transform .14s,border-color .15s}
@@ -3002,10 +3002,11 @@ a{color:var(--purple)}
 .lj-list{display:flex;flex-direction:column;gap:11px}
 .lj-row{display:flex;align-items:center;gap:13px;text-align:left;width:100%;background:#140f24;border:1px solid var(--line);border-radius:14px;padding:15px 14px;cursor:pointer}
 /* lesson-detail modal (opened from the journey list) */
-.lmodal-ov{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:16px;overflow-y:auto;
+.lmodal-ov{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+  padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 14px);
   background:rgba(5,4,10,.62);backdrop-filter:blur(4px);opacity:0;transition:opacity .22s}
 .lmodal-ov.show{opacity:1}
-.lmodal{position:relative;width:min(440px,94vw);max-height:75vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+.lmodal{position:relative;width:min(440px,94vw);max-height:75vh;max-height:75dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;
   transform:translateY(14px) scale(.985);opacity:0;transition:transform .26s cubic-bezier(.2,.85,.25,1),opacity .22s}
 .lmodal-ov.show .lmodal{transform:none;opacity:1}
 .lmodal .card{margin:0}
@@ -4067,11 +4068,9 @@ async function renderLessons(){
   };
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journeys</b></div>
-  <button class="btn ghost" id="lesback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
-  <p class="muted" style="font-size:13px;margin:0 2px 14px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
+  <p class="muted" style="font-size:13px;margin:4px 2px 16px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
   <div class="jrny-grid">${TRACKS.map(card).join('')}</div>
-  <p class="muted center" style="font-size:12px;margin:18px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
-  $('#lesback').onclick=()=>go('meditate');
+  <p class="muted center" style="font-size:12px;margin:20px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
   document.querySelectorAll('.jrny-card').forEach(c=>c.onclick=()=>renderJourney(c.dataset.k));
 }
 
