@@ -2670,17 +2670,18 @@ a{color:var(--purple)}
 /* inner gold outline tracing the arch */
 .pcase-frame{position:absolute;inset:9px;border:1px solid rgba(245,201,119,.22);border-radius:92px 92px 14px 14px;pointer-events:none;box-shadow:inset 0 0 22px -10px rgba(245,201,119,.4)}
 .pcase-eyebrow,.pcase-row{position:relative;z-index:1}
-.pcase-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin-bottom:17px}
+.pcase-eyebrow,.pcols{position:relative;z-index:1}
+.pcase-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin-bottom:10px}
 .pcase-eyebrow .i{width:14px;height:14px}
-.pcase-row{display:flex;justify-content:center;gap:clamp(10px,5vw,24px);flex-wrap:wrap}
-.pcase-item{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;cursor:pointer;font-family:inherit;width:64px}
-.pcase-item:active{transform:scale(.95)}
-.pcase-med{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;color:var(--pc);
-  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--pc) 55%,transparent),color-mix(in srgb,var(--pc) 24%,transparent) 64%,#120d22);
-  border:1px solid color-mix(in srgb,var(--pc) 50%,transparent);box-shadow:0 0 18px -4px color-mix(in srgb,var(--pc) 85%,transparent)}
-.pcase-med .i{width:25px;height:25px}
-.pcase-nm{font-size:11.5px;font-weight:700;color:#efe6ff;line-height:1.12}
-.pcase-sit{font-size:10px;color:var(--muted)}
+/* the four focus pillars, each a recoloured Lottie column standing in the niche */
+.pcols{display:flex;justify-content:center;align-items:flex-end;gap:clamp(4px,3vw,14px)}
+.pcolumn{display:flex;flex-direction:column;align-items:center;gap:6px;width:clamp(56px,20vw,74px);background:none;border:0;cursor:pointer;font-family:inherit;padding:0}
+.pcolumn:active{transform:translateY(1px)}
+.pcolumn-art{width:100%;height:92px;filter:drop-shadow(0 6px 9px rgba(0,0,0,.55))}
+.pcolumn-art svg{width:100%!important;height:100%!important}
+.pcolumn-base{width:92%;height:3px;border-radius:2px;margin-top:-2px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--pc) 60%,transparent),transparent)}
+.pcolumn-nm{font-size:11px;font-weight:700;color:#efe6ff;line-height:1.12;text-align:center}
+.pcase-empty{color:var(--muted);font-size:12.5px;max-width:30ch;margin:8px auto 2px}
 .pgrid-h,.jpath-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
 .pgrid-h{color:var(--gold);margin:2px 2px 10px}
 .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
@@ -3288,6 +3289,22 @@ function _mountDiya(){
 }
 fetch('/assets/diya.json').then(r=>r.json()).then(d=>{_diyaData=d;_mountDiya();}).catch(()=>{});
 try{new MutationObserver(()=>_mountDiya()).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+/* Ancient-column Lottie, recoloured per-pillar and frozen on its finished frame,
+   mounted into any .pcolumn-art placeholder (data-pc = the pillar's colour). */
+let _colData=null;
+function _hexRgb(h){h=(h||'#f5c977').replace('#','');return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255];}
+function _tintCol(data,hex){const rgb=_hexRgb(hex),r=rgb[0],g=rgb[1],b=rgb[2];const cl=JSON.parse(JSON.stringify(data));
+  const dark=[r*0.4,g*0.4,b*0.4],mid=[r,g,b],light=[r+(1-r)*0.65,g+(1-g)*0.65,b+(1-b)*0.65];
+  (function w(o){if(Array.isArray(o))return o.forEach(w);
+    if(o&&typeof o==='object'){if((o.ty==='fl'||o.ty==='st')&&o.c&&Array.isArray(o.c.k)&&o.c.k.length>=3){
+      const c=o.c.k,lum=(c[0]+c[1]+c[2])/3;const n=lum<0.35?dark:(c[0]>0.7&&c[1]<0.55?mid:light);o.c.k=[n[0],n[1],n[2],c[3]!=null?c[3]:1];}
+      Object.values(o).forEach(w);}})(cl.layers);return cl;}
+function _mountCols(){if(!window.lottie||!_colData)return;
+  document.querySelectorAll('.pcolumn-art:not([data-col])').forEach(elm=>{elm.setAttribute('data-col','1');
+    try{const a=window.lottie.loadAnimation({container:elm,renderer:'svg',loop:false,autoplay:false,animationData:_tintCol(_colData,elm.getAttribute('data-pc')||'#f5c977')});
+      a.addEventListener('DOMLoaded',()=>{try{a.goToAndStop(a.totalFrames-1,true);}catch(e){}});}catch(e){}});}
+fetch('/assets/column.json').then(r=>r.json()).then(d=>{_colData=d;_mountCols();}).catch(()=>{});
+try{new MutationObserver(()=>_mountCols()).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
 const el=(h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
 async function api(path,method='GET',body){
   const o={method,headers:{}};
@@ -5711,10 +5728,10 @@ async function renderPillarsSection(){
   const chosenNames=(typeof LO!=='undefined'&&LO&&LO.pillars)?DIRS.map(([k])=>LO.pillars[k]).filter(Boolean):((pp&&pp.focus)||[]);
   const chosen=chosenNames.map(nm=>pillars.find(p=>p.name===nm)).filter(Boolean);
   const others=pillars.filter(p=>!chosenNames.includes(p.name));
-  const caseItem=(p)=>`<button class="pcase-item" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
-    +`<span class="pcase-med">${ic(picon(p.name))}</span>`
-    +`<span class="pcase-nm">${esc(p.name)}</span>`
-    +`<span class="pcase-sit">${(p.sittings||0)?(p.sittings+(p.sittings===1?' sitting':' sittings')):'begin'}</span></button>`;
+  const caseItem=(p)=>`<button class="pcolumn" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
+    +`<span class="pcolumn-art" data-pc="${pcolor(p.name)}"></span>`
+    +`<span class="pcolumn-base"></span>`
+    +`<span class="pcolumn-nm">${esc(p.name)}</span></button>`;
   const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
     +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
   const jung=[['The Shadow','Meet what you suppress'],['The Persona','The mask you wear'],['Anima &amp; Animus','Your inner opposite'],['The Self','Wholeness &amp; integration']];
@@ -5722,7 +5739,7 @@ async function renderPillarsSection(){
     `<div class="pcase">`
       +`<div class="pcase-frame"></div>`
       +`<div class="pcase-eyebrow">${ic('seal')} Your focus pillars</div>`
-      +`<div class="pcase-row">${chosen.length?chosen.map(caseItem).join(''):'<span class="muted" style="font-size:12.5px;max-width:30ch">Assign pillars on the compass above to fill your case.</span>'}</div>`
+      +`<div class="pcols">${chosen.length?chosen.map(caseItem).join(''):'<span class="pcase-empty">Assign pillars on the compass above to fill your case.</span>'}</div>`
     +`</div>`
     +(others.length?`<div class="pgrid-h">${ic('compass','g')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
     +`<div class="jpath">`
@@ -5730,7 +5747,8 @@ async function renderPillarsSection(){
       +`<p class="jpath-sub">A guided descent through the archetypes — meeting the shadow, the persona, the anima, and the Self.</p>`
       +`<div class="jpath-rows">${jung.map(j=>`<div class="jpath-row"><span class="jpath-ico">${ic('lock')}</span><span class="jpath-main"><span class="jpath-t">${j[0]}</span><span class="jpath-d">${j[1]}</span></span><span class="jpath-lock">Locked</span></div>`).join('')}</div>`
     +`</div>`;
-  box.querySelectorAll('.pcase-item,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
+  box.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
+  _mountCols();
 }
 function pickPillar(dir,paintDirs,paintFocus){openPillarCard(dir,paintDirs,paintFocus);}
 function openPillarCard(dir,paintDirs,paintFocus){
