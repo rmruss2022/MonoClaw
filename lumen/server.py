@@ -2004,6 +2004,22 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .dur-chip.sel .big{color:var(--gold)}
 .dur-chip.sel .chip-sub{color:#f3d8a0}
 .snd-chip{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px}
+.quick-sit{display:flex;gap:10px;align-items:stretch;margin:4px 0 2px}
+.quick-pick{flex:1;min-width:0;display:flex;align-items:center;gap:9px;background:#ffffff0a;border:1px solid var(--line);border-radius:14px;padding:13px 14px;color:var(--text);font-weight:600;font-size:14px;cursor:pointer}
+.quick-pick .i{width:18px;height:18px;color:var(--gold);flex:none}
+.quick-pick span:not(.caret){flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quick-pick .caret{color:var(--muted);font-size:13px;flex:none}
+.quick-pick:active{background:#ffffff14}
+.quick-begin{flex:0 0 auto;width:auto;padding:13px 22px;margin:0;white-space:nowrap}
+.sheet-ov{position:fixed;inset:0;z-index:60;background:rgba(5,4,10,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .24s}
+.sheet-ov.on{opacity:1}
+.sheet{width:100%;max-width:560px;background:linear-gradient(180deg,#18131f,#120d18);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;padding:10px 18px calc(24px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.85,.25,1);box-shadow:0 -24px 70px -24px #000}
+.sheet-ov.on .sheet{transform:translateY(0)}
+.sheet-grip{width:40px;height:4px;border-radius:2px;background:#ffffff26;margin:2px auto 14px}
+.sheet-h{font-size:18px;margin:0 2px 16px;font-weight:800}
+.sheet-lbl{display:flex;align-items:center;gap:7px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 2px 9px}
+.sheet-lbl .i{width:15px;height:15px;color:var(--gold)}
+@media (prefers-reduced-motion:reduce){.sheet,.sheet-ov{transition:none}}
 .stat{text-align:center}.stat .n{font-size:26px;font-weight:800}.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .bar{height:9px;border-radius:999px;background:#241d3a;overflow:hidden}
 .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));box-shadow:0 0 10px -3px var(--pink)}
@@ -3552,35 +3568,39 @@ function renderMeditatePledge(){
     toast('Your rhythm is set ✦');renderMeditate();};
   $('#mpl-skip').onclick=()=>{try{localStorage.setItem('lumen_medi_pledged','1');}catch(e){}renderMeditate();};
 }
-/* Gold embers that rise and burst from the journal seal — "it's ready".
-   Tiny additive canvas particle emitter; reduced-motion safe, off-screen paused. */
+/* Subtle sparks that flick off the journal outline — spark, pause, spark again.
+   Each arcs up over the top border and falls back toward the bottom. Reduced-
+   motion safe, off-screen paused, torn down per render. */
 function ctaSparks(){
   if(window.__ctaSparks){try{window.__ctaSparks();}catch(e){}window.__ctaSparks=null;}
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const btn=document.getElementById('journalCta'); if(!btn)return;
   btn.style.position='relative';
+  const PAD=46,BOT=12;
   const cv=document.createElement('canvas');
-  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2';
+  cv.style.cssText='position:absolute;left:0;top:-'+PAD+'px;width:100%;height:calc(100% + '+(PAD+BOT)+'px);pointer-events:none;z-index:2';
   btn.appendChild(cv);
   const ctx=cv.getContext('2d'); const dpr=Math.min(window.devicePixelRatio||1,2);
-  let W=0,H=0,sx=0,sy=0;
-  function size(){const r=btn.getBoundingClientRect(); if(!r.width)return; W=cv.width=Math.round(r.width*dpr); H=cv.height=Math.round(r.height*dpr);
-    const ic=btn.querySelector('.i'); if(ic){const q=ic.getBoundingClientRect(); sx=(q.left-r.left+q.width/2)*dpr; sy=(q.top-r.top+q.height/2)*dpr;} else {sx=W*0.2;sy=H/2;}}
+  let W=0,H=0,topY=0,botY=0;
+  function size(){const r=btn.getBoundingClientRect(); if(!r.width)return;
+    W=cv.width=Math.round(r.width*dpr); H=cv.height=Math.round((r.height+PAD+BOT)*dpr); topY=PAD*dpr; botY=(PAD+r.height)*dpr;}
   size();
-  const P=[]; let raf=0,dead=false,last=performance.now(),acc=0,burst=0,visible=true;
-  function emit(n){for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-0.5)*2.1; const sp=(0.7+Math.random()*1.8)*dpr; P.push({x:sx+(Math.random()-0.5)*14*dpr,y:sy+(Math.random()-0.5)*14*dpr,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:(1.1+Math.random()*2.4)*dpr,tw:Math.random()*6.28});}}
-  function frame(now){raf=0; if(dead||!visible)return; const dt=Math.min(now-last,50); last=now; acc+=dt; burst-=dt;
-    if(acc>30){acc=0; emit(2+(Math.random()<0.4?1:0));}
-    if(burst<=0){burst=1200+Math.random()*1800; emit(8+Math.floor(Math.random()*6));}
+  const P=[]; const grav=0.03*dpr; let raf=0,dead=false,last=performance.now(),nextBurst=500,inBurst=0,tick=0,visible=true;
+  function spark(){const x=(0.08+Math.random()*0.84)*W; const vx=(Math.random()-0.5)*1.3*dpr; const vy=-(1.15+Math.random()*0.95)*dpr;
+    P.push({x:x,y:topY,vx:vx,vy:vy,life:1,r:(0.8+Math.random()*1.1)*dpr,tw:Math.random()*6.28});}
+  function frame(now){raf=0; if(dead||!visible)return; const dt=Math.min(now-last,50); last=now; const f=dt/16;
+    nextBurst-=dt;
+    if(inBurst>0){ tick-=dt; if(tick<=0){ spark(); inBurst--; tick=90+Math.random()*80; } }
+    else if(nextBurst<=0){ inBurst=1+Math.floor(Math.random()*3); tick=0; nextBurst=2000+Math.random()*2200; }
     ctx.clearRect(0,0,W,H); ctx.globalCompositeOperation='lighter';
-    for(let i=P.length-1;i>=0;i--){const p=P[i]; const f=dt/16;
-      p.x+=p.vx*f; p.y+=p.vy*f; p.vy-=0.018*f*dpr; p.vx*=0.99; p.life-=dt/1800;
-      if(p.life<=0){P.splice(i,1);continue;}
-      const al=Math.max(0,p.life*(0.72+0.28*Math.sin(now*0.012+p.tw))); const R=p.r;
-      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*6);
-      g.addColorStop(0,'rgba(255,240,200,'+(al*0.95)+')'); g.addColorStop(0.3,'rgba(248,196,100,'+(al*0.55)+')'); g.addColorStop(1,'rgba(248,196,100,0)');
-      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,R*6,0,6.2832); ctx.fill();
-      ctx.fillStyle='rgba(255,250,232,'+al+')'; ctx.beginPath(); ctx.arc(p.x,p.y,R*0.85,0,6.2832); ctx.fill();
+    for(let i=P.length-1;i>=0;i--){const p=P[i];
+      p.vy+=grav*f; p.x+=p.vx*f; p.y+=p.vy*f; p.life-=dt/2400;
+      if(p.life<=0 || p.y>botY+8*dpr){P.splice(i,1);continue;}
+      const al=Math.max(0,Math.min(1,p.life*1.1))*(0.6+0.3*Math.sin(now*0.013+p.tw)); const R=p.r;
+      const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*5);
+      rg.addColorStop(0,'rgba(255,238,195,'+(al*0.8)+')'); rg.addColorStop(0.35,'rgba(246,196,104,'+(al*0.4)+')'); rg.addColorStop(1,'rgba(246,196,104,0)');
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(p.x,p.y,R*5,0,6.2832); ctx.fill();
+      ctx.fillStyle='rgba(255,248,228,'+al+')'; ctx.beginPath(); ctx.arc(p.x,p.y,R*0.75,0,6.2832); ctx.fill();
     }
     ctx.globalCompositeOperation='source-over';
     raf=requestAnimationFrame(frame);
@@ -3590,6 +3610,27 @@ function ctaSparks(){
   window.addEventListener('resize',size);
   start();
   window.__ctaSparks=function(){dead=true; if(raf)cancelAnimationFrame(raf); try{io.disconnect();}catch(e){} window.removeEventListener('resize',size); if(cv.parentNode)cv.parentNode.removeChild(cv);};
+}
+function sessionSummary(){const s=SOUNDS.find(x=>x[0]===pick.sound); return `${pick.minutes} min · ${s?s[2]:'Silence'}`;}
+function syncQuick(){const q=document.getElementById('quickSummary'); if(q)q.textContent=sessionSummary();}
+function closeSessionSheet(){const o=document.getElementById('sessSheet'); if(o){o.classList.remove('on'); setTimeout(()=>{try{o.remove();}catch(e){}},240);}}
+function openSessionSheet(){
+  closeSessionSheet();
+  const ov=el(`<div class="sheet-ov" id="sessSheet"><div class="sheet" role="dialog" aria-label="Set your session">
+    <div class="sheet-grip"></div>
+    <h3 class="sheet-h">Set your session</h3>
+    <div class="sheet-lbl">${ic('clock')} Duration</div>
+    <div class="grid4" id="mDurs">${[5,10,20,30].map(d=>`<div class="chip dur-chip ${d===pick.minutes?'sel':''}" data-d="${d}"><div class="big">${d}</div><div class="chip-unit">min</div><div class="chip-sub">${DUR_LABEL[d]||''}</div></div>`).join('')}</div>
+    <div class="sheet-lbl" style="margin-top:16px">${ic('sound')} Soundscape</div>
+    <div class="grid3" id="mSnds">${SOUNDS.map(s=>`<div class="chip snd-chip ${s[0]===pick.sound?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
+    <button class="btn gold" id="mStart" style="margin-top:20px">Begin session &rarr;</button>
+  </div></div>`);
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>ov.classList.add('on'));
+  ov.addEventListener('click',e=>{if(e.target===ov)closeSessionSheet();});
+  ov.querySelectorAll('#mDurs .chip').forEach(c=>c.onclick=()=>{pick.minutes=+c.dataset.d; ov.querySelectorAll('#mDurs .chip').forEach(x=>x.classList.toggle('sel',x===c)); syncQuick();});
+  ov.querySelectorAll('#mSnds .chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s; ov.querySelectorAll('#mSnds .chip').forEach(x=>x.classList.toggle('sel',x===c)); syncQuick();});
+  ov.querySelector('#mStart').onclick=()=>{closeSessionSheet(); startSession();};
 }
 async function renderMeditate(){
   if(!_mediPledged()){renderMeditatePledge();return;}
@@ -3639,22 +3680,17 @@ async function renderMeditate(){
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
     <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
   </div>
-  <div class="card">
-    <div class="sec-head"><span class="sec-ic">${ic('clock')}</span><h3>Duration</h3></div>
-    <div class="grid4" id="durs">${durs.map(d=>`<div class="chip dur-chip ${d===pick.minutes?'sel':''}" data-d="${d}"><div class="big">${d}</div><div class="chip-unit">min</div><div class="chip-sub">${DUR_LABEL[d]||''}</div></div>`).join('')}</div>
-    <div class="sec-head" style="margin-top:18px"><span class="sec-ic snd">${ic('sound')}</span><h3>Soundscape</h3></div>
-    <div class="grid3" id="snds">${SOUNDS.map(s=>`<div class="chip snd-chip ${s[0]===pick.sound?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
-    <button class="btn gold" id="start" style="margin-top:18px">Begin session &rarr;</button>
-    <p class="muted center" style="font-size:12px;margin:10px 0 0">${ic('flame','flame grad-flame glow')} ${ME.streak}-day streak · ${ME.league.name} league</p>
-    ${ME.equipped&&ITEM_NAME[ME.equipped]?`<div class="center"><span class="companion">${ART_IMG[ME.equipped]?`<img src="${ART_IMG[ME.equipped]}" class="cph" alt="" onerror="this.remove()">`:ic(ITEM_ICON[ME.equipped])} meditating with your ${ITEM_NAME[ME.equipped]}</span></div>`:(ME.companion&&COMP_NAME[ME.companion]?`<div class="center"><span class="companion">${ic(COMP_ICON[ME.companion])} ${COMP_NAME[ME.companion]} is sitting with you</span></div>`:'')}
+  <div class="quick-sit">
+    <button class="quick-pick" id="quickPick" type="button">${ic('clock')}<span id="quickSummary">${sessionSummary()}</span><span class="caret">&#9662;</span></button>
+    <button class="btn gold quick-begin" id="start" type="button">Begin &rarr;</button>
   </div>
+  <p class="muted center" style="font-size:12px;margin:9px 0 0">${ic('flame','flame grad-flame glow')} ${ME.streak}-day streak · ${ME.league.name} league${ME.equipped&&ITEM_NAME[ME.equipped]?` · with your ${ITEM_NAME[ME.equipped]}`:(ME.companion&&COMP_NAME[ME.companion]?` · ${COMP_NAME[ME.companion]} sits with you`:'')}</p>
   ${PICK?`<div class="rec-feature">${lessonCardHTML(PICK)}</div>
   <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
   ${challengeCardHTML(chal)}
   ${horoscopeCardHTML(horo)}
   <button class="journal-cta" id="journalCta" type="button">${ic('seal')}<span>Unlock today’s journal entry</span></button>`;
-  $('#durs').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.minutes=+c.dataset.d;renderMeditate();});
-  $('#snds').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s;renderMeditate();});
+  {const qp=$('#quickPick');if(qp)qp.onclick=openSessionSheet;}
   $('#start').onclick=startSession;
   document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
   {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
