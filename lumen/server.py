@@ -125,7 +125,8 @@ def init_db():
                      ("goal_days", "goal_days INTEGER DEFAULT 0"),  # meditation days/week pledge (0=unset)
                      ("tier", "tier TEXT DEFAULT 'free'"),          # free | premium (RevenueCat wires this later)
                      ("email_optout", "email_optout INTEGER DEFAULT 0"),  # 1 = unsubscribed from lifecycle email
-                     ("unsub_token", "unsub_token TEXT")):          # per-user unsubscribe token
+                     ("unsub_token", "unsub_token TEXT"),           # per-user unsubscribe token
+                     ("last_journey", "last_journey TEXT")):        # track key of the most recently practiced journey
         if col not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
     # Daily "Morning Pilgrimage" challenge: sit in the morning, at a new place, with a photo.
@@ -2047,6 +2048,7 @@ def profile_dict(c, u):
         "total_minutes": u["total_minutes"], "total_sessions": u["total_sessions"],
         "weekly_light": wl, "league": lg,
         "tier": (u["tier"] if "tier" in u.keys() else "free"),
+        "last_journey": (u["last_journey"] if "last_journey" in u.keys() else None),
         "lat": u["lat"], "lon": u["lon"], "city": u["city"],
         "birth_date": u["birth_date"], "birth_time": u["birth_time"],
         "birth_place": u["birth_place"], "sun_sign": u["sun_sign"],
@@ -3163,6 +3165,16 @@ a{color:var(--purple)}
   background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--a) 32%,#140f24),#120d20 78%);border-right:1px solid color-mix(in srgb,var(--a) 20%,var(--line))}
 .jrny-art:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--a) 34%,transparent),transparent 62%)}
 .jrny-art .i,.jrny-art svg{position:relative;z-index:1;width:42px;height:42px}
+/* most recently practiced journey — pulsing glow so you can pick up where you left off */
+.jrny-card.recent{border-color:color-mix(in srgb,var(--a) 62%,transparent);animation:jrnyPulse 2.4s ease-in-out infinite}
+.jrny-card.recent .jrny-art:after{opacity:.9;animation:jrnyArt 2.4s ease-in-out infinite}
+.jrny-tag{position:absolute;top:9px;right:10px;z-index:2;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--a);background:color-mix(in srgb,var(--a) 15%,#0c0a14);border:1px solid color-mix(in srgb,var(--a) 45%,transparent);
+  border-radius:999px;padding:3px 8px}
+@keyframes jrnyPulse{0%,100%{box-shadow:0 12px 32px -20px color-mix(in srgb,var(--a) 85%,#000),0 0 0 0 color-mix(in srgb,var(--a) 40%,transparent)}
+  50%{box-shadow:0 12px 30px -18px color-mix(in srgb,var(--a) 95%,#000),0 0 22px 2px color-mix(in srgb,var(--a) 42%,transparent)}}
+@keyframes jrnyArt{0%,100%{opacity:.55}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.jrny-card.recent,.jrny-card.recent .jrny-art:after{animation:none}}
 .jrny-body{flex:1;min-width:0;padding:13px 14px 13px 15px}
 .jrny-name{font-weight:800;font-size:16.5px;color:#f1ecff;letter-spacing:-.01em}
 .jrny-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px}
@@ -4307,9 +4319,16 @@ function _journeyNext(ls){
   return ls.find(l=>{const p=lessonProg(l.code);return !(p&&p.count>0);})
     || ls.find(l=>lessonResumeSi(l)>0) || null;
 }
+function _trackLast(key){let m=0;LESSONS.filter(l=>l.track===key).forEach(l=>{const p=lessonProg(l.code);
+  if(p&&p.last){const t=Date.parse(p.last);if(t>m)m=t;}});return m;}
 async function renderLessons(){
   try{const r=await api('me');ME=r.profile;}catch(e){}
+  // order journeys by most-recently practiced (saved last_journey wins the tie / drives the pulse)
+  const tracks=[...TRACKS].sort((a,b)=>_trackLast(b.key)-_trackLast(a.key));
+  let recentKey=(ME&&ME.last_journey&&TRACKS.some(t=>t.key===ME.last_journey))?ME.last_journey:null;
+  if(!recentKey&&_trackLast(tracks[0].key)>0)recentKey=tracks[0].key;
   const card=(t)=>{
+    const isRecent=t.key===recentKey;
     const ls=LESSONS.filter(l=>l.track===t.key);
     const soon=(ROADMAP[t.key]||[]).length;
     const total=ls.length;
@@ -4320,7 +4339,8 @@ async function renderLessons(){
     const allDone=total&&done>=total;
     const nextLbl=allDone?'Journey complete · revisit'
       :(next?('Next · '+next.title+' · '+next.subtitle):(soon?'Coming soon':'Start'));
-    return `<button class="jrny-card" data-k="${t.key}" style="--a:${t.accent}">
+    return `<button class="jrny-card${isRecent?' recent':''}" data-k="${t.key}" style="--a:${t.accent}">
+      ${isRecent?`<span class="jrny-tag">${ic('play')} Continue</span>`:''}
       <div class="jrny-art">${ls[0]?deityEmblem(ls[0]):ic('lotus','g')}</div>
       <div class="jrny-body">
         <div class="jrny-name">${esc(t.name)}</div>
@@ -4335,7 +4355,7 @@ async function renderLessons(){
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journeys</b></div>
   <p class="muted" style="font-size:13px;margin:4px 2px 16px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
-  <div class="jrny-grid">${TRACKS.map(card).join('')}</div>
+  <div class="jrny-grid">${tracks.map(card).join('')}</div>
   <p class="muted center" style="font-size:12px;margin:20px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
   document.querySelectorAll('.jrny-card').forEach(c=>c.onclick=()=>renderJourney(c.dataset.k));
 }
@@ -5105,7 +5125,7 @@ async function lessonPlay(lesson, startSi){
   async function finish(complete){if(ended)return;ended=true;clearStep();clearInterval(tick);try{Sound.stop();}catch(e){}stopNarration();
     if(complete){jnyClear(lesson.code);try{Sound.bell();}catch(e){}}  // finished → clear resume point
     const mins=Math.max(1,Math.round((complete?totalEst:elapsed)/60));
-    const body={minutes:mins,soundscape:lesson.soundscape,mood:'',note:'Guided lesson · '+lesson.title,lesson:lesson.code};
+    const body={minutes:mins,soundscape:lesson.soundscape,mood:'',note:'Guided lesson · '+lesson.title,lesson:lesson.code,track:lesson.track};
     if(geoFix&&Date.now()-geoFix.t<3600000){body.lat=geoFix.lat;body.lon=geoFix.lon;}
     let res;try{res=await api('session/complete','POST',body);}catch(e){go('meditate');return;}
     try{const r=await api('me');ME=r.profile;}catch(e){}
@@ -7743,6 +7763,9 @@ class H(BaseHTTPRequestHandler):
                          lat=COALESCE(?,lat),lon=COALESCE(?,lon),city=COALESCE(?,city) WHERE id=?""",
                       (new_light, streak, best, td.isoformat(), minutes, 1, add_light,
                        cs, cb, cl, lat, lon, city, u["id"]))
+            trk = (d.get("track") or "")[:32]
+            if trk:
+                c.execute("UPDATE users SET last_journey=? WHERE id=?", (trk, u["id"]))
             if note.strip():
                 c.execute("INSERT INTO journal(user_id,prompt,text,mood,shared,session_id,created) VALUES(?,?,?,?,?,?,?)",
                           (u["id"], "", note.strip(), mood, 1 if d.get("share") else 0, sid, now_iso()))
@@ -8109,7 +8132,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v14';
+const CACHE = 'lumen-v15';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
