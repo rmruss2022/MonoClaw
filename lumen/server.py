@@ -1527,10 +1527,11 @@ def journal_reflect(prompt, text, kind="daily", pillar=None, place=None):
     return {"reflection": (r.get("reflection") or "").strip()[:400],
             "mood": (r.get("mood") or "").strip().lower()[:24]}
 
-def deep_exercise(c, u, pillar):
+def deep_exercise(c, u, pillar, chapter=None):
     """The next chapter of a pillar's lesson plan, chosen by how far the person has
     already walked it, plus an optional AI-written opening that greets them where
-    their recent work left off. The plan is the backbone; the opening is the touch."""
+    their recent work left off. The plan is the backbone; the opening is the touch.
+    If `chapter` (1-based) is given and valid, open that specific chapter instead."""
     plan = PILLAR_PLANS.get(pillar)
     if not plan:
         return None
@@ -1540,7 +1541,10 @@ def deep_exercise(c, u, pillar):
     done = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=? AND kind='deep' "
                      "AND pillar=?", (u["id"], pillar)).fetchone()["n"]
     n = len(chapters)
-    idx = done % n if n else 0
+    if chapter and str(chapter).isdigit() and 1 <= int(chapter) <= n:
+        idx = int(chapter) - 1
+    else:
+        idx = done % n if n else 0
     title, invitation, steps = chapters[idx]
     titles = [ch[0] for ch in chapters]
     opening = ""
@@ -2644,6 +2648,11 @@ a{color:var(--purple)}
 .pp-count b{color:var(--gold);font-size:17px}
 .pp-bar{height:8px;border-radius:999px;background:#241c3e;overflow:hidden;margin-top:10px}
 .pp-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#e0953a);border-radius:999px;transition:width .4s}
+.plz-head{background:#13101f;border:1px solid var(--line);border-radius:16px;padding:16px;margin:2px 2px 16px}
+.plz-pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--gold)}
+.plz-pill .i{width:15px;height:15px}
+.plz-arc{font-family:var(--serif);font-size:14px;color:#d8cff0;line-height:1.42;margin:10px 0 2px}
+.plz-meta{font-size:12px;color:var(--muted);margin-top:8px}
 .pp-list{display:flex;flex-direction:column;gap:10px}
 .pp-row{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-left:3px solid var(--pc,#a855f7);border-radius:14px;padding:13px 14px;color:var(--text);transition:.15s}
 .pp-row:active{transform:scale(.99)}
@@ -5229,6 +5238,7 @@ const niceDate=(d)=>new Date(d).toLocaleDateString(undefined,{weekday:'long',mon
 // ---- journaling modes: Deep (pillar work) · Daily (letter) · Season (life-chapter) ----
 let journalMode='daily';     // 'deep' | 'daily' | 'season'
 let journalPillar=null;      // chosen pillar when in Deep mode
+let journalChapter=null;     // specific chapter to open (1-based), else next
 let jSeason='';              // optional "name this season" label
 let jSeasonPrompt=null;      // current Season prompt
 let jRec=null;               // today's recommended mode {mode,pillar,title,reason,why}
@@ -5401,11 +5411,12 @@ async function renderDeepCompose(){
     return;
   }
   $('#jcompose').innerHTML=`<div class="card center muted"><span class="spinner"></span> Opening your ${esc(journalPillar)} sitting…</div>`;
-  let ex;try{ex=await api('journal/deep?pillar='+encodeURIComponent(journalPillar));}catch(e){ex=null;}
-  if(!ex||!ex.ready){$('#jcompose').innerHTML=`<div class="card center muted">Couldn’t open that pillar right now. <button class="lo-btn" id="pback">${ic('compass')} Back to pillars</button></div>`;const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;jScreen='pillars';renderJournal();};return;}
+  const chq=journalChapter?('&chapter='+journalChapter):'';
+  let ex;try{ex=await api('journal/deep?pillar='+encodeURIComponent(journalPillar)+chq);}catch(e){ex=null;}
+  if(!ex||!ex.ready){$('#jcompose').innerHTML=`<div class="card center muted">Couldn’t open that pillar right now. <button class="lo-btn" id="pback">${ic('compass')} Back to pillars</button></div>`;const pb=$('#pback');if(pb)pb.onclick=()=>{journalChapter=null;jScreen='plessons';renderJournal();};return;}
   const steps=(ex.steps||[]).map(s=>`<li>${esc(s)}</li>`).join('');
   const top=`<div class="deep-head" style="--pc:${pcolor(journalPillar)}">`
-    +`<button class="deep-back" id="pback" title="Back to pillars">${ic('compass')}</button>`
+    +`<button class="deep-back" id="pback" title="Back to chapters">${ic('compass')}</button>`
     +`<div><div class="deep-pill">${ic(picon(journalPillar),'g')} ${esc(journalPillar)}</div>`
     +`<div class="deep-title">${esc(ex.title||'')}</div></div></div>`
     +planBar(ex,journalPillar)
@@ -5414,7 +5425,7 @@ async function renderDeepCompose(){
   const prompt=ex.invitation||ex.title||journalPillar;
   $('#jcompose').innerHTML=composerHTML({prompt,shuffle:false,topHTML:top,placeholder:'Take it one step at a time…'});
   wireComposerCommon(()=>composeSpeech(ex));
-  const pb=$('#pback');if(pb)pb.onclick=()=>{journalPillar=null;jScreen='pillars';renderJournal();};
+  const pb=$('#pback');if(pb)pb.onclick=()=>{journalChapter=null;jScreen='plessons';renderJournal();};
   $('#jsave').onclick=sealHandler(()=>({kind:'deep',pillar:journalPillar,prompt}));
 }
 
@@ -5492,6 +5503,7 @@ function renderJournalWelcome(){
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
   if(jScreen==='compose')return renderJournalCompose();
+  if(jScreen==='plessons')return renderPillarLessons();
   if(jScreen==='pillars')return renderLifeOS();
   return renderJournalHome();
 }
@@ -5553,9 +5565,41 @@ async function renderJournalHome(){
     else{jScreen='compose';}
     renderJournal();};
   document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
-  document.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
+  document.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;journalChapter=null;jScreen='plessons';renderJournal();});
   _mountCols();
   journalView='feed';renderJournalBody();
+}
+
+// A single pillar's lesson plan — every chapter listed (like the Journeys view),
+// with completed chapters sealed and the next one flagged. Tap any chapter to open
+// that specific guided sitting.
+async function renderPillarLessons(){
+  const name=journalPillar;
+  if(!name){jScreen='home';return renderJournal();}
+  const back=()=>{journalPillar=null;journalChapter=null;jScreen='home';renderJournal();};
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="plback" title="Back to journal">‹</button><span class="mark">${lumenMark('mark')}</span><b>${esc(name)}</b></div>`
+    +`<div class="card center muted" style="font-size:13px"><span class="spinner"></span> Opening your ${esc(name)} plan…</div>`;
+  $('#plback').onclick=back;
+  let d;try{d=await api('pillar?name='+encodeURIComponent(name));}catch(e){d=null;}
+  if(!d||!d.chapters||!d.chapters.length){
+    $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="plb" title="Back">‹</button><span class="mark">${lumenMark('mark')}</span><b>${esc(name)}</b></div>`
+      +`<div class="card center muted">No lesson plan for this pillar yet.</div>`;
+    $('#plb').onclick=back;return;}
+  const total=d.total,done=Math.min(d.sittings||0,total),pct=total?Math.round(100*done/total):0;
+  const row=(ch)=>`<button class="lj-row${ch.done?' done':''}${ch.next?' next':''}" data-n="${ch.n}" style="--a:${pcolor(name)}">`
+    +`<span class="lj-num">${ch.done?ic('check'):ch.n}</span>`
+    +`<span class="lj-main"><span class="lj-title">${esc(ch.title)}</span>`
+      +`<span class="lj-sub">${esc(ch.invitation)} · ${ch.steps} prompt${ch.steps===1?'':'s'}</span></span>`
+    +(ch.next?`<span class="lj-badge">Next up</span>`:`<span class="lj-go">${ic('play')}</span>`)+`</button>`;
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="plback2" title="Back to journal">‹</button><span class="mark">${lumenMark('mark')}</span><b>${esc(name)}</b></div>`
+    +`<div class="plz-head"><div class="plz-pill">${ic(picon(name),'g')} ${esc(name)} · guided sittings</div>`
+      +(d.arc?`<p class="plz-arc">${esc(d.arc)}</p>`:'')
+      +`<div class="pp-bar"><i style="width:${pct}%"></i></div>`
+      +`<div class="plz-meta">${done} of ${total} chapters walked${d.rounds>0?' · looped '+d.rounds+'×':''}</div></div>`
+    +`<div class="lj-list">`+d.chapters.map(row).join('')+`</div>`
+    +`<p class="muted center" style="font-size:12px;margin:16px 0 4px">Each chapter is a short guided sitting. Tap to open it.</p>`;
+  $('#plback2').onclick=back;
+  document.querySelectorAll('.lj-row').forEach(b=>b.onclick=()=>{journalChapter=+b.dataset.n;journalMode='deep';jScreen='compose';renderJournal();});
 }
 
 // Pillars & progress — the eight life pillars, how far you've worked through them,
@@ -6726,10 +6770,35 @@ class H(BaseHTTPRequestHandler):
             pillar = (q.get("pillar", "") or "").strip()
             if pillar not in PILLARS:
                 self._send(400, {"error": "unknown pillar"}); return
-            ex = deep_exercise(c, u, pillar)
+            ex = deep_exercise(c, u, pillar, chapter=q.get("chapter"))
             if not ex:
                 self._send(404, {"error": "no exercise"}); return
             self._send(200, {"ready": True, **ex}); return
+
+        if p == "/api/pillar":
+            # Full lesson plan for one pillar — all chapters, with which are done
+            # and which is next — so the app can show the list (like Journeys).
+            u = self._me(c)
+            name = (q.get("name", "") or "").strip()
+            if name not in PILLARS:
+                self._send(400, {"error": "unknown pillar"}); return
+            plan = PILLAR_PLANS.get(name)
+            chapters = plan[1] if plan else []
+            arc = plan[0] if plan else ""
+            done = 0
+            if u:
+                done = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=? AND "
+                                 "kind='deep' AND pillar=?", (u["id"], name)).fetchone()["n"]
+            n = len(chapters)
+            nxt = (done % n) if n else 0
+            rounds = (done // n) if n else 0
+            out = []
+            for i, ch in enumerate(chapters):
+                out.append({"n": i + 1, "title": ch[0], "invitation": ch[1],
+                            "steps": len(ch[2]), "done": (i < nxt) or (rounds > 0),
+                            "next": (i == nxt)})
+            self._send(200, {"pillar": name, "arc": arc, "chapters": out,
+                             "total": n, "sittings": done, "rounds": rounds}); return
 
         if p == "/api/journal/season":
             u = self._me(c)
@@ -7733,7 +7802,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v6';
+const CACHE = 'lumen-v7';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
