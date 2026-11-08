@@ -2015,14 +2015,13 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .orb-stage{position:relative;width:272px;height:272px;max-width:82vw;max-height:82vw;margin:-6px 0 -12px;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
 .orb-stage canvas,.orb-stage>svg,.orb-stage .orb-fallback{position:absolute;inset:0;width:100%;height:100%}
 .orb-fallback{display:none;border-radius:50%}
-.journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 0 6px;
-  background:linear-gradient(135deg,#f7d891,#e0a94a 70%,#caa047);color:#241a06;font-weight:800;font-size:15px;
-  border:0;border-radius:16px;padding:16px 18px;cursor:pointer;letter-spacing:.01em;
-  box-shadow:0 0 22px rgba(245,201,119,.42),0 8px 22px rgba(0,0,0,.35);animation:jglow 3.4s ease-in-out infinite}
-.journal-cta .i{width:20px;height:20px}
+.journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 6px;
+  background:transparent;color:var(--gold);font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;
+  border:0;padding:14px 18px;cursor:pointer;letter-spacing:.01em}
+.journal-cta .i{width:36px;height:36px;filter:drop-shadow(0 0 7px rgba(245,201,119,.55));animation:sealpulse 3.6s ease-in-out infinite}
 .journal-cta:active{transform:translateY(1px)}
-@keyframes jglow{0%,100%{box-shadow:0 0 18px rgba(245,201,119,.36),0 8px 22px rgba(0,0,0,.35)}50%{box-shadow:0 0 32px rgba(245,201,119,.62),0 8px 22px rgba(0,0,0,.35)}}
-@media (prefers-reduced-motion:reduce){.journal-cta{animation:none}}
+@keyframes sealpulse{0%,100%{filter:drop-shadow(0 0 5px rgba(245,201,119,.4))}50%{filter:drop-shadow(0 0 12px rgba(245,201,119,.72))}}
+@media (prefers-reduced-motion:reduce){.journal-cta .i{animation:none}}
 .spinner{display:inline-block;width:1.3em;height:1.3em;vertical-align:-0.3em;line-height:0}
 .spinner svg{display:block;width:100%;height:100%}
 .center .spinner{display:block;width:60px;height:60px;margin:2px auto 10px;vertical-align:baseline}
@@ -2245,16 +2244,22 @@ nav button.on{color:var(--text);background:#211a37}
   box-shadow:0 0 0 4px #ffffff07,0 10px 26px -14px #000}
 .horo-sym{font-size:29px;line-height:1;color:var(--gold);filter:drop-shadow(0 0 9px #f5c97788);font-variant-emoji:text}
 .horo-medallion .i{width:26px;height:26px;color:var(--gold)}
-.horo-name{font-family:var(--serif);font-size:21px;font-weight:600;color:#f1ecff;line-height:1.12}
-.horo-rashi-en{font-size:12.5px;color:var(--muted);margin-top:2px}
-.horo-nak{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-top:7px}
-.horo-nak .i{width:13px;height:13px;flex:none}
+.horo-name{font-family:var(--serif);font-size:22px;font-weight:600;color:#f1ecff;line-height:1.12}
+.horo-sub{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);margin-top:5px}
+.horo-sub .i{width:13px;height:13px;flex:none}
 .horo-text{font-family:var(--serif);font-size:16px;line-height:1.75;color:#e9e2f7;margin:0;
   padding-top:15px;border-top:1px solid #ffffff12}
-.horo-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
-.horo-sit{flex:1 1 170px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;margin:0}
-.horo-listen{flex:none;display:inline-flex;align-items:center;gap:8px;padding:11px 15px;margin:0}
-.horo-sit .i,.horo-listen .i{width:16px;height:16px}
+.horo-cta{display:flex;flex-direction:column;align-items:center;gap:11px;margin-top:18px}
+.rndbtn{flex:none;width:52px;height:52px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
+  border:1px solid color-mix(in srgb,var(--gold) 42%,var(--line));background:#ffffff08;color:var(--gold);transition:.15s}
+.rndbtn:hover{background:color-mix(in srgb,var(--gold) 13%,transparent);box-shadow:0 0 18px -4px var(--gold)}
+.rndbtn .i{width:21px;height:21px}
+.rndbtn.playing{animation:rndpulse 1.25s ease-in-out infinite}
+@keyframes rndpulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--gold) 42%,transparent)}50%{box-shadow:0 0 0 8px transparent}}
+.horo-sit{background:none;border:0;padding:3px 4px;margin:0;color:var(--gold);font-weight:700;font-size:14px;cursor:pointer;
+  font-family:inherit;display:inline-flex;align-items:center;gap:7px}
+.horo-sit:hover{text-decoration:underline;text-underline-offset:3px}
+.horo-sit .i{width:15px;height:15px}
 .horo-signs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:2px}
 .horo-sign{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 4px 11px;background:#17112e;border:1px solid var(--line);border-radius:16px;color:var(--text);cursor:pointer;font-family:inherit;transition:.15s}
 .horo-sign:hover,.horo-sign:active{border-color:var(--gold);background:#201839;transform:translateY(-1px)}
@@ -3356,14 +3361,13 @@ function horoscopeCardHTML(h){
       <span class="horo-medallion"><span class="horo-sym">${h.glyph}︎</span></span>
       <div>
         <div class="horo-name">${esc(h.sanskrit||h.name)}</div>
-        <div class="horo-rashi-en">${esc(h.name)}${h.lord?' · ruled by '+esc(h.lord):''}</div>
-        ${h.nakshatra?`<div class="horo-nak">${ic('moon','p')} Moon in ${esc(h.nakshatra)}${h.pada?' · pada '+h.pada:''}${h.deity?' · '+esc(h.deity):''}</div>`:''}
+        <div class="horo-sub">${ic('moon','p')} ${esc(h.name)}${h.nakshatra?' · Moon in '+esc(h.nakshatra):''}</div>
       </div>
     </div>
     <div class="horo-text">${esc(h.text)}</div>
-    <div class="horo-actions">
-      <button class="btn gold horo-sit" data-snd="${esc(h.soundscape)}" data-min="${mins}">${ic(h.soundscape||'silence')} Sit with this · ${mins} min${snd?' · '+snd:''}</button>
-      <button class="btn ghost horo-listen" title="Hear it aloud">${ic('sound')} Listen</button>
+    <div class="horo-cta">
+      <button class="rndbtn horo-listen" title="Hear it aloud" aria-label="Hear it aloud">${ic('sound')}</button>
+      <button class="horo-sit" data-snd="${esc(h.soundscape)}" data-min="${mins}">${ic(h.soundscape||'silence')} Meditate with this · ${mins} min${snd?' · '+snd:''}</button>
     </div>
     ${h.janma?`<div class="horo-foot">${ic('lotus','g')} Birth star ${esc(h.janma)} · daśā ${esc(h.maha)}–${esc(h.antar)}</div>`
              :`<div class="horo-foot horo-addnatal" style="cursor:pointer">${ic('nova','g')} Add your birth time for your birth star &amp; daśā</div>`}
@@ -3377,15 +3381,18 @@ async function addNatal(){
     toast('Birth details saved '+ic('spark','g'));renderMeditate();}
   catch(e){toast(e);}
 }
+function _btnRound(btn){return btn.classList.contains('rndbtn')||btn.classList.contains('pick-listen');}
 async function playHoroscope(btn,text){
   if(!text)return; const orig=btn.dataset.orig||btn.innerHTML; btn.dataset.orig=orig;
-  btn.disabled=true; btn.innerHTML=ic('sound')+' Loading…';
-  const done=()=>{btn.disabled=false;btn.innerHTML=orig;};
+  const round=_btnRound(btn);
+  const set=(label)=>{if(round)btn.classList.toggle('playing',!!label);else btn.innerHTML=label?ic('sound')+' '+label:orig;};
+  btn.disabled=true; set('Loading…');
+  const done=()=>{btn.disabled=false;if(round)btn.classList.remove('playing');btn.innerHTML=orig;};
   try{
     const r=await fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
     if(!r.ok)throw 0;
     const a=new Audio(URL.createObjectURL(await r.blob()));
-    btn.disabled=false; btn.innerHTML=ic('sound')+' Playing…';
+    btn.disabled=false; set('Playing…');
     a.onended=done; a.onerror=()=>speakLocal(btn,text,orig,done); a.play();
   }catch(e){ speakLocal(btn,text,orig,done); }
 }
@@ -3400,7 +3407,7 @@ function speakLocal(btn,text,orig,done){
     const pref=vs.find(v=>/^en/i.test(v.lang)&&/(samantha|serena|libby|aria|jenny|sonia|female|google uk english female)/i.test(v.name))
              ||vs.find(v=>/^en(-|_)?(GB|US)/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang));
     if(pref)u.voice=pref;
-    if(btn){btn.disabled=false;btn.innerHTML=ic('sound')+' Playing…';}
+    if(btn){btn.disabled=false;if(_btnRound(btn))btn.classList.add('playing');else btn.innerHTML=ic('sound')+' Playing…';}
     u.onend=()=>{done&&done();}; u.onerror=()=>{done&&done();};
     speechSynthesis.speak(u);
   }catch(e){done&&done();toast('Voice unavailable right now');}
@@ -3559,7 +3566,7 @@ async function renderMeditate(){
   <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
   ${challengeCardHTML(chal)}
   ${horoscopeCardHTML(horo)}
-  <button class="journal-cta" id="journalCta" type="button">${ic('book')}<span>Unlock today’s journal entry</span></button>`;
+  <button class="journal-cta" id="journalCta" type="button">${ic('seal')}<span>Unlock today’s journal entry</span></button>`;
   $('#durs').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.minutes=+c.dataset.d;renderMeditate();});
   $('#snds').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s;renderMeditate();});
   $('#start').onclick=startSession;
