@@ -2998,7 +2998,7 @@ a{color:var(--purple)}
 .lmodal-ov{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:16px;overflow-y:auto;
   background:rgba(5,4,10,.62);backdrop-filter:blur(4px);opacity:0;transition:opacity .22s}
 .lmodal-ov.show{opacity:1}
-.lmodal{position:relative;width:min(440px,94vw);max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+.lmodal{position:relative;width:min(440px,94vw);max-height:75vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
   transform:translateY(14px) scale(.985);opacity:0;transition:transform .26s cubic-bezier(.2,.85,.25,1),opacity .22s}
 .lmodal-ov.show .lmodal{transform:none;opacity:1}
 .lmodal .card{margin:0}
