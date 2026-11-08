@@ -122,7 +122,10 @@ def init_db():
                      ("birth_tz", "birth_tz INTEGER"),
                      ("horo", "horo TEXT"),
                      ("horo_day", "horo_day TEXT"),
-                     ("goal_days", "goal_days INTEGER DEFAULT 0")):  # meditation days/week pledge (0=unset)
+                     ("goal_days", "goal_days INTEGER DEFAULT 0"),  # meditation days/week pledge (0=unset)
+                     ("tier", "tier TEXT DEFAULT 'free'"),          # free | premium (RevenueCat wires this later)
+                     ("email_optout", "email_optout INTEGER DEFAULT 0"),  # 1 = unsubscribed from lifecycle email
+                     ("unsub_token", "unsub_token TEXT")):          # per-user unsubscribe token
         if col not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
     # Daily "Morning Pilgrimage" challenge: sit in the morning, at a new place, with a photo.
@@ -138,6 +141,15 @@ def init_db():
     # pre-launch waitlist for the physical Lumen Journal (the anchor product)
     c.execute("""CREATE TABLE IF NOT EXISTS journal_waitlist(
       email TEXT PRIMARY KEY, created TEXT)""")
+    # lifecycle email log — one row per (user, dedupe_key); mirrors notif_log so the
+    # engine never emails the same beat twice and we can report what was sent.
+    c.execute("""CREATE TABLE IF NOT EXISTS email_log(
+      id INTEGER PRIMARY KEY, user_id INTEGER, kind TEXT, dedupe_key TEXT,
+      status TEXT, created TEXT, sent TEXT)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_email_log_uid ON email_log(user_id)")
+    # premium interest / waitlist (until RevenueCat is live, 'upgrade' CTAs land here)
+    c.execute("""CREATE TABLE IF NOT EXISTS premium_waitlist(
+      user_id INTEGER PRIMARY KEY, email TEXT, created TEXT)""")
     # password-reset codes: a 6-digit code (stored hashed) with expiry + attempt cap
     c.execute("""CREATE TABLE IF NOT EXISTS password_resets(
       email TEXT PRIMARY KEY, code_hash TEXT, expires REAL, tries INTEGER DEFAULT 0, sent REAL)""")
@@ -1979,6 +1991,7 @@ def profile_dict(c, u):
         "streak": u["streak"], "best_streak": u["best_streak"],
         "total_minutes": u["total_minutes"], "total_sessions": u["total_sessions"],
         "weekly_light": wl, "league": lg,
+        "tier": (u["tier"] if "tier" in u.keys() else "free"),
         "lat": u["lat"], "lon": u["lon"], "city": u["city"],
         "birth_date": u["birth_date"], "birth_time": u["birth_time"],
         "birth_place": u["birth_place"], "sun_sign": u["sun_sign"],
@@ -6037,6 +6050,18 @@ async function renderProfile(){
     <div class="stat"><div class="n">${p.best_streak}</div><div class="l">Best streak</div></div>
     <div class="stat"><div class="n">${fmt(p.weekly_light)}</div><div class="l">This week</div></div>
   </div></div>
+  ${(p.tier!=='premium')?`<div class="card" id="procard" style="border:1px solid #4a3a1e;background:linear-gradient(160deg,#1c1507,#14111f)">
+    <div class="row" style="align-items:center;gap:12px">
+      <span style="flex:0 0 auto">${lumenMark('pro')}</span>
+      <div style="flex:1">
+        <div class="pill" style="border-color:#f5c977;color:#f5c977;font-size:11px">LUMEN PREMIUM</div>
+        <h3 style="margin:8px 0 2px;color:#f6f1ea">Go deeper with Premium</h3>
+        <p class="muted" style="font-size:13px;margin:0;line-height:1.55">The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">coming soon</b>.</p>
+      </div>
+    </div>
+    <button class="btn" id="pro" style="margin-top:12px;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;font-weight:700;border:0">${ic('spark')} Get founding-member access</button>
+    <p class="muted" id="prostate" style="font-size:12px;text-align:center;margin:8px 0 0">First access + a founding price when it opens. No charge yet.</p>
+  </div>`:''}
   <div class="card">
     <h3 style="margin:0 0 2px">Achievements</h3>
     <p class="muted" style="font-size:12px;margin:0 0 10px">Tap a badge to open its card</p>
@@ -6106,6 +6131,14 @@ async function renderProfile(){
     NCATS.forEach(cc=>{const el=document.getElementById('nc_'+cc[0]);if(el)el.onchange=saveNotif;});
     ['nqs','nqe'].forEach(id=>{const el=document.getElementById(id);if(el)el.onchange=saveNotif;});
   }
+  {const pb=$('#pro');if(pb)pb.onclick=async()=>{
+    pb.disabled=true;const old=pb.innerHTML;pb.innerHTML=ic('live','g')+' Saving…';
+    try{await api('premium/interest','POST',{});
+      pb.style.display='none';
+      const st=$('#prostate');if(st){st.innerHTML=ic('check','g')+' You’re on the founding-member list. We’ll reach out when Premium opens.';st.style.color='#f5c977';}
+      toast(ic('spark','g')+' You’re on the Premium list');
+    }catch(e){toast(e);pb.disabled=false;pb.innerHTML=old;}
+  };}
   $('#out').onclick=async()=>{await api('logout','POST',{});ME=null;renderAuth();};
   $('#del').onclick=async()=>{const b=$('#del');
     if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Tap again to permanently delete';b.style.background='#5a2230';b.style.color='#fff';
@@ -6524,6 +6557,60 @@ class H(BaseHTTPRequestHandler):
             self._send(200, site_page(), "text/html; charset=utf-8"); return
         if p == "/health":
             self._send(200, {"ok": True}); return
+        if p == "/e/unsub":
+            tok = (q.get("u") or "").strip()
+            done = False
+            if tok:
+                with _dblock:
+                    cc = db()
+                    try:
+                        r = cc.execute("SELECT id FROM users WHERE unsub_token=?", (tok,)).fetchone()
+                        if r:
+                            cc.execute("UPDATE users SET email_optout=1 WHERE id=?", (r["id"],)); cc.commit()
+                            done = True
+                    finally:
+                        cc.close()
+            msg = ("You're unsubscribed." if done else "This link is no longer valid.")
+            sub = ("You won't receive lifecycle emails from Lumen anymore. You can still change this in the app."
+                   if done else "If you meant to unsubscribe, open Lumen and adjust your email preferences.")
+            page = (f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                    f"<title>Lumen</title></head><body style='margin:0;background:#0b0a12;color:#f6f1ea;"
+                    f"font-family:-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center'>"
+                    f"<div style='max-width:420px;padding:28px'>"
+                    f"<div style='font-family:Georgia,serif;font-size:30px;font-weight:700;color:#f5c977'>lumen</div>"
+                    f"<h1 style='font-size:22px;margin:22px 0 8px'>{msg}</h1>"
+                    f"<p style='color:#b4acd0;line-height:1.6'>{sub}</p></div></body></html>")
+            self._send(200, page, "text/html; charset=utf-8"); return
+        if p == "/e/premium":
+            # Landing for the upgrade email's CTA — records founding-member interest
+            # (deduped) and confirms. No payment yet; RevenueCat wires that later.
+            tok = (q.get("u") or "").strip()
+            ok = False
+            if tok:
+                with _dblock:
+                    cc = db()
+                    try:
+                        r = cc.execute("SELECT id, email FROM users WHERE unsub_token=?", (tok,)).fetchone()
+                        if r:
+                            cc.execute("INSERT OR IGNORE INTO premium_waitlist(user_id,email,created) VALUES(?,?,?)",
+                                        (r["id"], r["email"], now_iso())); cc.commit()
+                            ok = True
+                    finally:
+                        cc.close()
+            msg = ("You're on the list ✦" if ok else "Hmm — that link expired.")
+            sub = ("You'll get first access to Lumen Premium and a founding-member price when it opens. Keep practicing in the meantime."
+                   if ok else "Open Lumen and tap “Go Premium” to raise your hand.")
+            page = (f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                    f"<title>Lumen Premium</title></head><body style='margin:0;background:#0b0a12;color:#f6f1ea;"
+                    f"font-family:-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center'>"
+                    f"<div style='max-width:420px;padding:28px'>"
+                    f"<div style='font-family:Georgia,serif;font-size:30px;font-weight:700;color:#f5c977'>lumen</div>"
+                    f"<h1 style='font-size:22px;margin:22px 0 8px'>{msg}</h1>"
+                    f"<p style='color:#b4acd0;line-height:1.6'>{sub}</p>"
+                    f"<a href='{APP_STORE_URL}' style='display:inline-block;margin-top:22px;background:linear-gradient(135deg,#f5c977,#e0953a);"
+                    f"color:#2a1a05;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:13px'>Open Lumen</a>"
+                    f"</div></body></html>")
+            self._send(200, page, "text/html; charset=utf-8"); return
         rel = p.lstrip("/")
         if rel in ("assets/diya.json", "assets/orb.js", "assets/mandala.html", "assets/column.json"):
             fp = os.path.join(HERE, "assets", os.path.basename(rel))
@@ -6593,6 +6680,26 @@ class H(BaseHTTPRequestHandler):
             try:
                 out = seed_demo_account(c)
                 self._send(200, {"ok": True, **out}); return
+            except Exception as e:
+                self._send(500, {"error": repr(e)}); return
+
+        if p == "/api/admin/emails":
+            if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
+                self._send(403, {"error": "nope"}); return
+            try:
+                prev = (q.get("preview") or "").strip()
+                if prev:
+                    u = user_by_email(c, "appreview@lumen.app") or \
+                        c.execute("SELECT * FROM users WHERE is_bot=0 LIMIT 1").fetchone()
+                    ctx = {"sessions": 5, "light": 640} if prev == "weekly_recap" else (
+                          {"subject": "Guided journeys", "headline": "Let a tradition guide you.",
+                           "paras": ["Lumen has narrated Journeys from real traditions.", "Start the one that calls to you."],
+                           "cta": "Explore Journeys"} if prev == "tip" else {})
+                    t = _email_tpl(prev, c, u, ctx)
+                    if not t:
+                        self._send(404, {"error": "unknown template"}); return
+                    self._send(200, t[1], "text/html; charset=utf-8"); return
+                self._send(200, email_admin_stats(c)); return
             except Exception as e:
                 self._send(500, {"error": repr(e)}); return
 
@@ -7073,6 +7180,20 @@ class H(BaseHTTPRequestHandler):
                 self._send(500, {"error": "Could not save — please try again."}); return
             self._send(200, {"ok": True}); return
 
+        if p == "/api/premium/interest":
+            # In-app "I want Premium" tap. Until RevenueCat is live this records
+            # intent (deduped by user) so we can gauge demand + reach out.
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            try:
+                c.execute("INSERT OR IGNORE INTO premium_waitlist(user_id,email,created) VALUES(?,?,?)",
+                          (u["id"], u["email"], now_iso())); c.commit()
+            except Exception as e:
+                print('[lumen] premium interest insert failed:', e, flush=True)
+                self._send(500, {"error": "Could not save — please try again."}); return
+            self._send(200, {"ok": True, "waitlisted": True}); return
+
         if p == "/api/feed/report":
             u = self._me(c)
             if not u:
@@ -7263,6 +7384,12 @@ class H(BaseHTTPRequestHandler):
                       "VALUES(?,?,?,?,?,?,?,?,?,?)",
                       (email, name, salt, _hash_pw(pw, salt), bd, bt, bp, btz, sign, now_iso()))
             c.commit()
+            try:
+                nu = user_by_email(c, email)
+                if nu:
+                    threading.Thread(target=lambda: _welcome_async(nu["id"]), daemon=True).start()
+            except Exception:
+                pass
             tok = new_session(email)
             self._send(200, {"ok": True}, extra=[("Set-Cookie", _cookie_hdr(tok))]); return
 
@@ -7871,7 +7998,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v12';
+const CACHE = 'lumen-v13';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -9092,11 +9219,334 @@ def notif_admin_stats(c):
             "by_category": by_cat, "recent": recent}
 
 
+# ===========================================================================
+# LIFECYCLE EMAIL ENGINE — welcome + onboarding drip + win-back + weekly
+# recap + free→premium upgrade nudges. Mirrors the push system: rules-based
+# "next best email", de-duped via email_log, opt-out honoured, frequency
+# capped. SENDING IS GATED by EMAIL_MODE so it never blasts real users until
+# it's explicitly turned on:
+#   EMAIL_MODE=off      -> engine idle (nothing logged or sent)
+#   EMAIL_MODE=dryrun   -> decides + logs who WOULD get what; sends nothing (default)
+#   EMAIL_MODE=on       -> actually sends via Resend
+# ===========================================================================
+EMAIL_MODE = (os.environ.get("EMAIL_MODE", "dryrun") or "dryrun").strip().lower()
+PUBLIC_URL = (os.environ.get("LUMEN_PUBLIC_URL", "https://lumen-production-a8c6.up.railway.app")).rstrip("/")
+EMAIL_SEND_HOUR_LOCAL = 10      # local hour marketing emails go out (recap uses 17)
+
+
+def _user_tz_off(c, u):
+    """Best guess of the user's UTC offset in minutes (for local-hour targeting)."""
+    try:
+        r = c.execute("SELECT tz_offset_min FROM notif_prefs WHERE user_id=?", (u["id"],)).fetchone()
+        if r and r["tz_offset_min"] is not None:
+            return int(r["tz_offset_min"])
+    except Exception:
+        pass
+    try:
+        if u["birth_tz"] is not None:
+            return int(u["birth_tz"])
+    except Exception:
+        pass
+    return -300  # default US-Eastern-ish
+
+
+def _email_local(c, u):
+    return datetime.now(timezone.utc) + timedelta(minutes=_user_tz_off(c, u))
+
+
+def _email_has(c, uid, dk):
+    return bool(c.execute("SELECT 1 FROM email_log WHERE user_id=? AND dedupe_key=? LIMIT 1",
+                          (uid, dk)).fetchone())
+
+
+def _email_recent_marketing(c, uid, days):
+    """True if any soft/marketing email went out in the last N days (recap/welcome exempt)."""
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    return bool(c.execute(
+        "SELECT 1 FROM email_log WHERE user_id=? AND created>=? AND status IN ('sent','dryrun') "
+        "AND kind IN ('first_nudge','tip','winback','upgrade') LIMIT 1", (uid, since)).fetchone())
+
+
+def _unsub_token(c, u):
+    tok = u["unsub_token"] if "unsub_token" in u.keys() else None
+    if not tok:
+        tok = secrets.token_urlsafe(18)
+        c.execute("UPDATE users SET unsub_token=? WHERE id=?", (tok, u["id"]))
+        c.commit()
+    return tok
+
+
+def _is_premium(u):
+    try:
+        return (u["tier"] or "free") == "premium"
+    except Exception:
+        return False
+
+
+def _email_shell(headline, paras, cta_text, cta_url, unsub_url, preheader=""):
+    """A dark, on-brand responsive HTML email + a plain-text fallback."""
+    body = "".join(
+        f'<p style="margin:0 0 16px;color:#d8d2e8;font-size:16px;line-height:1.6">{p}</p>' for p in paras)
+    html = f"""<!doctype html><html><body style="margin:0;background:#0b0a12;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">{preheader}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b0a12;padding:28px 12px">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#14111f;border:1px solid #2a2440;border-radius:20px;overflow:hidden">
+    <tr><td style="padding:34px 32px 8px;text-align:center">
+      <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:700;color:#f5c977;letter-spacing:.5px">lumen</div>
+      <div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8f8a9d;margin-top:6px">light, one breath at a time</div>
+    </td></tr>
+    <tr><td style="padding:18px 32px 4px">
+      <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:25px;line-height:1.25;color:#f6f1ea;font-weight:700">{headline}</h1>
+      {body}
+    </td></tr>
+    <tr><td style="padding:10px 32px 30px" align="center">
+      <a href="{cta_url}" style="display:inline-block;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;text-decoration:none;font-weight:700;font-size:16px;padding:14px 30px;border-radius:14px">{cta_text}</a>
+    </td></tr>
+    <tr><td style="padding:0 32px 30px;text-align:center;border-top:1px solid #241f38">
+      <p style="margin:18px 0 0;color:#6f6a82;font-size:12px;line-height:1.6">
+        You're getting this because you have a Lumen account.<br>
+        <a href="{unsub_url}" style="color:#8f8a9d;text-decoration:underline">Unsubscribe</a> from these emails anytime.
+      </p>
+    </td></tr>
+  </table>
+</td></tr></table></body></html>"""
+    text = "lumen — light, one breath at a time\n\n" + headline + "\n\n" + \
+        "\n\n".join(re.sub("<[^>]+>", "", p) for p in paras) + \
+        f"\n\n{cta_text}: {cta_url}\n\nUnsubscribe: {unsub_url}"
+    return html, text
+
+
+def _email_tpl(kind, c, u, ctx=None):
+    """Return (subject, html, text) for a lifecycle email kind, or None."""
+    ctx = ctx or {}
+    name = ((u["name"] or "there").split() or ["there"])[0]
+    app = APP_STORE_URL
+    unsub = f"{PUBLIC_URL}/e/unsub?u={_unsub_token(c, u)}"
+    def shell(hl, paras, cta, url=app, pre=""):
+        return _email_shell(hl, paras, cta, url, unsub, pre)
+    if kind == "welcome":
+        s = "Welcome to Lumen ✦"
+        hl = f"Welcome, {name}."
+        paras = [
+            "You just joined a worldwide community lighting up the map — one quiet breath at a time.",
+            "Your first sit is the best place to start. Even three minutes counts, and it lights your very first point on the living world map.",
+            "When you're ready: open Lumen, pick a soundscape, and simply sit."]
+        return (s, *shell(hl, paras, "Take your first breath", pre="Your first sit lights the map."))
+    if kind == "first_nudge":
+        s = "Your first point of light is waiting"
+        hl = "A single breath is enough to begin."
+        paras = [
+            f"{name}, you haven't taken your first sit yet — and that's okay. There's no streak to protect, nothing to catch up on.",
+            "Just three minutes, whenever it's quiet. The map is waiting to light up where you are."]
+        return (s, *shell(hl, paras, "Sit for three minutes", pre="No pressure — just a gentle start."))
+    if kind == "weekly_recap":
+        sits, light = ctx.get("sessions", 0), ctx.get("light", 0)
+        s = "Your week in light"
+        hl = f"{sits} {'sit' if sits==1 else 'sits'} this week."
+        paras = [
+            f"This week you sat {sits} {'time' if sits==1 else 'times'} and earned <b style=\"color:#f5c977\">+{light} Light</b>" +
+            (f", keeping a {u['streak']}-day streak alive." if (u['streak'] or 0) > 1 else "."),
+            "Quietly proud of you. A few minutes tomorrow keeps the thread going."]
+        return (s, *shell(hl, paras, "Continue your practice", pre=f"{sits} sits · +{light} Light"))
+    if kind == "winback":
+        s = "The map is still glowing for you"
+        hl = "Whenever you're ready, we're here."
+        paras = [
+            f"It's been a little while, {name}. No streak pressure, no guilt — your place on the map is exactly where you left it.",
+            "A three-minute reset is a perfectly good way back in."]
+        return (s, *shell(hl, paras, "Come back for a breath", pre="No pressure — a gentle way back."))
+    if kind == "tip":
+        s = ctx.get("subject", "A little more from Lumen")
+        hl = ctx.get("headline", "Something you might have missed")
+        paras = ctx.get("paras", [])
+        return (s, *shell(hl, paras, ctx.get("cta", "Open Lumen"), pre=ctx.get("pre", "")))
+    if kind == "upgrade":
+        s = "Go deeper with Lumen Premium"
+        hl = "You've built a real practice."
+        paras = [
+            f"{name}, your consistency is showing — and there's more waiting when you're ready to go deeper.",
+            "<b style=\"color:#f5c977\">Lumen Premium</b> (coming soon) will unlock the full library of journeys, deeper Vedic readings, and more ways to grow your mandala.",
+            "Want first access and a founding-member price? Tap below to raise your hand."]
+        return (s, *shell(hl, paras, "I'm interested in Premium",
+                          url=f"{PUBLIC_URL}/e/premium?u={_unsub_token(c, u)}",
+                          pre="Something more, when you're ready."))
+    return None
+
+
+def _email_candidate(c, u, lt):
+    """Pick the single best lifecycle email for a user right now, or None.
+    Returns (kind, subject, html, text, dedupe_key)."""
+    h, wd = lt.hour, lt.weekday()
+    tier = _notif_tier(u)
+    sessions = u["total_sessions"] or 0
+    ds_signup = _days_since(u["created"]) if u["created"] else 999
+    # weekly recap — Sunday evening, for anyone who sat this week
+    if wd == 6 and h == 17:
+        row = c.execute("SELECT COALESCE(SUM(light),0) s, COUNT(*) n FROM sessions WHERE user_id=? AND week=?",
+                        (u["id"], week_str())).fetchone()
+        if row and row["n"] > 0:
+            dk = f"weekly_recap:{week_str()}"
+            if not _email_has(c, u["id"], dk):
+                t = _email_tpl("weekly_recap", c, u, {"sessions": row["n"], "light": row["s"]})
+                if t:
+                    return ("weekly_recap", t[0], t[1], t[2], dk)
+    if h != EMAIL_SEND_HOUR_LOCAL:
+        return None
+    # one soft/marketing email at a time, and never two within 3 days
+    if _email_recent_marketing(c, u["id"], 3):
+        return None
+    # first-sit nudge — signed up, still zero sessions (once, days 2–6)
+    if sessions == 0 and 2 <= ds_signup <= 6:
+        dk = "first_nudge"
+        if not _email_has(c, u["id"], dk):
+            t = _email_tpl("first_nudge", c, u)
+            if t:
+                return ("first_nudge", t[0], t[1], t[2], dk)
+    # onboarding tips — day ~3 and ~10, for active users
+    if sessions >= 1:
+        for day_at, key, ctx in (
+            (3, "tip:journeys", {"subject": "Guided journeys are the heart of Lumen",
+                 "headline": "Let a real tradition guide you.",
+                 "paras": ["Beyond the timer, Lumen has narrated <b style=\"color:#f5c977\">Journeys</b> — guided courses drawn from Stoic, Vedic and breathwork traditions.",
+                           "Open the Journeys tab and start the one that calls to you."],
+                 "cta": "Explore Journeys", "pre": "There's more than the timer."}),
+            (10, "tip:journal", {"subject": "Meet the Keeper — your journal companion",
+                 "headline": "A few honest lines change everything.",
+                 "paras": ["Lumen's <b style=\"color:#f5c977\">Journal</b> gives you a warm companion, the Keeper, who reflects back the throughline in what you write.",
+                           "Try a single entry after your next sit."],
+                 "cta": "Open your journal", "pre": "Reflection makes it stick."})):
+            if ds_signup >= day_at and not _email_has(c, u["id"], key):
+                t = _email_tpl("tip", c, u, ctx)
+                if t:
+                    return ("tip", t[0], t[1], t[2], key)
+    # win-back — dormant/churned, gently rate-limited
+    if tier in ("dormant", "churned"):
+        dk = f"winback:{week_str()}"
+        if not _email_has(c, u["id"], dk):
+            t = _email_tpl("winback", c, u)
+            if t:
+                return ("winback", t[0], t[1], t[2], dk)
+    # upgrade nudge — hooked free users, at most monthly
+    if (not _is_premium(u)) and (sessions >= 7 or (u["streak"] or 0) >= 5):
+        dk = f"upgrade:{lt.year}-{(lt.month-1)//1:02d}"  # ~once a month
+        if not _email_has(c, u["id"], dk):
+            t = _email_tpl("upgrade", c, u)
+            if t:
+                return ("upgrade", t[0], t[1], t[2], dk)
+    return None
+
+
+def _email_deliver(c, u, kind, subject, html, text, dk):
+    """Send (or dry-run) one lifecycle email, honouring opt-out + mode, and log it."""
+    if EMAIL_MODE == "off":
+        return
+    if not u["email"] or (u["email_optout"] if "email_optout" in u.keys() else 0):
+        return
+    if _email_has(c, u["id"], dk):
+        return
+    status = "dryrun"
+    if EMAIL_MODE == "on":
+        try:
+            ok = send_email(u["email"], subject, text, html=html)
+            status = "sent" if ok else "failed"
+        except Exception:
+            status = "failed"
+    c.execute("INSERT INTO email_log(user_id,kind,dedupe_key,status,created,sent) VALUES(?,?,?,?,?,?)",
+              (u["id"], kind, dk, status, now_iso(), now_iso() if status == "sent" else None))
+    c.commit()
+
+
+def email_welcome(c, u):
+    """Fire the welcome email immediately on signup (deduped, mode-gated)."""
+    try:
+        t = _email_tpl("welcome", c, u)
+        if t:
+            _email_deliver(c, u, "welcome", t[0], t[1], t[2], "welcome")
+    except Exception as e:
+        print("[email] welcome failed:", e, flush=True)
+
+
+def _welcome_async(uid):
+    """Send the welcome email off the signup request thread (own db connection)."""
+    with _dblock:
+        c = db()
+        try:
+            u = c.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+            if u:
+                email_welcome(c, u)
+        except Exception as e:
+            print("[email] welcome_async failed:", e, flush=True)
+        finally:
+            c.close()
+
+
+def _email_pass(c):
+    if EMAIL_MODE == "off":
+        return
+    users = c.execute("SELECT * FROM users WHERE is_bot=0 AND email IS NOT NULL "
+                      "AND COALESCE(email_optout,0)=0").fetchall()
+    for u in users:
+        try:
+            # welcome: only genuinely-new accounts (<=2 days). Pre-existing users are
+            # marked welcomed (status 'skipped') so enabling the engine never blasts a
+            # "you just joined" email to the whole existing base.
+            if not _email_has(c, u["id"], "welcome"):
+                if u["created"] and _days_since(u["created"]) <= 2:
+                    email_welcome(c, u)
+                else:
+                    c.execute("INSERT INTO email_log(user_id,kind,dedupe_key,status,created,sent) "
+                              "VALUES(?,?,?,?,?,?)", (u["id"], "welcome", "welcome", "skipped", now_iso(), None))
+                    c.commit()
+                continue
+            lt = _email_local(c, u)
+            cand = _email_candidate(c, u, lt)
+            if cand:
+                _email_deliver(c, u, cand[0], cand[1], cand[2], cand[3], cand[4])
+        except Exception as e:
+            print("[email] pass error for", u["id"], e, flush=True)
+
+
+def email_tick():
+    with _dblock:
+        c = db()
+        try:
+            _email_pass(c)
+        except Exception as e:
+            print("email_tick error:", e, flush=True)
+        finally:
+            c.close()
+
+
+def email_admin_stats(c):
+    def one(q, a=()):
+        r = c.execute(q, a).fetchone(); return (r[0] if r else 0) or 0
+    by_kind = [dict(r) for r in c.execute(
+        "SELECT kind, status, COUNT(*) n FROM email_log GROUP BY kind, status ORDER BY kind")]
+    recent = [dict(r) for r in c.execute(
+        "SELECT user_id,kind,status,created FROM email_log ORDER BY id DESC LIMIT 30")]
+    return {"mode": EMAIL_MODE,
+            "total": one("SELECT COUNT(*) FROM email_log"),
+            "sent": one("SELECT COUNT(*) FROM email_log WHERE status='sent'"),
+            "dryrun": one("SELECT COUNT(*) FROM email_log WHERE status='dryrun'"),
+            "optouts": one("SELECT COUNT(*) FROM users WHERE COALESCE(email_optout,0)=1"),
+            "premium_interest": one("SELECT COUNT(*) FROM premium_waitlist"),
+            "by_kind": by_kind, "recent": recent}
+
+
+def email_loop():
+    time.sleep(35)  # settle after boot, after notif_loop
+    while True:
+        email_tick()
+        time.sleep(1800)  # every 30 minutes
+
+
 def main():
     init_db()
     seed_world()
     seed_subtasks()
     threading.Thread(target=notif_loop, daemon=True).start()
+    threading.Thread(target=email_loop, daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), H)
     print(f"Lumen on http://{HOST}:{PORT}  (BASE={BASE or '/'})")
     httpd.serve_forever()
