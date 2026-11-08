@@ -2233,21 +2233,23 @@ nav button.on{color:var(--text);background:#211a37}
 .atlas-eyebrow .i{width:14px;height:14px}
 .atlas-streak{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--gold)}
 .atlas-streak .i{width:15px;height:15px}
-.atlas-tag{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--muted);margin:6px 0 6px}
+.atlas-tag{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--muted);margin:6px 0 8px}
 .atlas-facets{display:flex;flex-direction:column}
-.atlas-facet{display:flex;align-items:center;gap:13px;padding:12px 0;border-top:1px solid #ffffff10}
-.atlas-fic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--gold);
-  background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--gold) 24%,#201732),#160f2b);border:1px solid #ffffff14}
-.atlas-fic .i{width:19px;height:19px}
+.atlas-facet{display:flex;align-items:center;gap:13px;padding:13px 0;border-top:1px solid #ffffff0e}
+.atlas-fic{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--fc,var(--gold));
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--fc,var(--gold)) 46%,transparent),color-mix(in srgb,var(--fc2,var(--fc,var(--gold))) 20%,transparent) 62%,#160f2b 92%);
+  border:1px solid color-mix(in srgb,var(--fc,var(--gold)) 30%,#ffffff12);
+  box-shadow:0 0 14px -5px color-mix(in srgb,var(--fc,var(--gold)) 75%,transparent)}
+.atlas-fic .i{width:20px;height:20px}
 .atlas-fmain{flex:1;min-width:0}
+.atlas-ftop{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .atlas-fname{font-weight:700;font-size:14px;color:#f1ecff}
-.atlas-fsub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.35}
-.atlas-fval{flex:none;font-family:var(--serif);font-size:23px;font-weight:600;color:#f3eeff;line-height:1;text-align:right;white-space:nowrap}
+.atlas-fval{flex:none;font-family:var(--serif);font-size:21px;font-weight:600;color:#f3eeff;line-height:1;white-space:nowrap}
 .atlas-fval small{font-family:-apple-system,system-ui,sans-serif;font-size:10.5px;font-weight:600;color:var(--muted);margin-left:3px}
-.atlas-fbadge{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
-  background:radial-gradient(circle at 32% 28%,color-mix(in srgb,var(--lc) 60%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 32%,transparent) 62%,transparent 82%);
-  filter:drop-shadow(0 0 10px color-mix(in srgb,var(--lc) 50%,transparent))}
-.atlas-fbadge .i{width:22px;height:22px}
+.atlas-fval.badge{color:var(--fc)}
+.atlas-fbar{height:5px;border-radius:999px;background:#ffffff10;overflow:hidden;margin:8px 0 5px}
+.atlas-fbar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--fc),var(--fc2,var(--fc)));box-shadow:0 0 8px -2px var(--fc);transition:width .5s ease}
+.atlas-fsub{font-size:11px;color:var(--muted);line-height:1.3}
 .atlas-foot{margin-top:4px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--gold);cursor:pointer;border-top:1px solid #ffffff10;padding-top:14px}
 .atlas-foot .i{width:14px;height:14px}
 .atlas-foot .rt{transform:rotate(90deg)}
@@ -3355,19 +3357,35 @@ function challengeCardHTML(ch){
   const mStreak=ME.streak||0, pStreak=(ch&&ch.streak)||0, shared=(ch&&ch.shared_today)||0;
   const lg=ME.league||{};
   const streakChip=mStreak>0?`<span class="atlas-streak">${ic('flame','flame grad-flame glow')}<b>${mStreak}</b> day streak</span>`:'';
-  const jsub=[J.daily?J.daily+' daily':'',J.season?J.season+' seasonal':'',J.deep?J.deep+' pillar':''].filter(Boolean).join(' · ')||'Open your first letter';
-  const facet=(icn,name,sub,right)=>`<div class="atlas-facet"><span class="atlas-fic">${ic(icn)}</span><div class="atlas-fmain"><div class="atlas-fname">${name}</div><div class="atlas-fsub">${sub}</div></div>${right}</div>`;
-  const val=(n,u)=>`<div class="atlas-fval">${fmt(n)}${u?`<small>${u}</small>`:''}</div>`;
-  const leagueBadge=`<span class="atlas-fbadge" style="--lc:${lg.color||'#f5c977'};--lc2:${lg.color2||lg.color||'#f5c977'};color:${lg.color||'#f5c977'}">${leagueIcon(lg.name)}</span>`;
+  // progress + remaining for each dimension
+  const lvlInto=ME.level_into||0, lvlNeed=ME.level_need||1, lvlPct=Math.round(100*lvlInto/(lvlInto+lvlNeed));
+  const jPct=totalLessons?Math.round(100*lessonsDone/totalLessons):0;
+  const JM=[3,5,10,20,40,75,120,200], jNext=JM.find(m=>m>(J.total||0))||((J.total||0)+100), jrPct=Math.round(100*(J.total||0)/jNext);
+  const tNext=(ch&&ch.next_milestone)||Math.max(3,places+ (places<3?3-places:1)), tPct=tNext?Math.round(100*places/tNext):0;
+  const cAt=lg.at||0, cNextAt=lg.next_at, cPct=cNextAt?Math.min(100,Math.round(100*((ME.weekly_light||0)-cAt)/((cNextAt-cAt)||1))):100;
+  const jsub=[J.daily?J.daily+' daily':'',J.season?J.season+' seasonal':'',J.deep?J.deep+' pillar':''].filter(Boolean).join(' · ')||'open your first letter';
+  // facet(colors, iconHTML, name, valueHTML, progress%, subline)
+  const facet=(c1,c2,iconHTML,name,valHTML,pct,sub)=>`<div class="atlas-facet" style="--fc:${c1};--fc2:${c2}">
+    <span class="atlas-fic">${iconHTML}</span>
+    <div class="atlas-fmain">
+      <div class="atlas-ftop"><span class="atlas-fname">${name}</span>${valHTML}</div>
+      <div class="atlas-fbar"><i style="width:${Math.max(4,Math.min(100,pct))}%"></i></div>
+      <div class="atlas-fsub">${sub}</div>
+    </div></div>`;
+  const val=(n,u,cls)=>`<span class="atlas-fval ${cls||''}">${fmt(n)}${u?`<small>${u}</small>`:''}</span>`;
   return `<div class="card atlas-card">
     <div class="atlas-head"><span class="atlas-eyebrow">${ic('compass','g')} Atlas</span>${streakChip}</div>
     <div class="atlas-tag">A map of your whole practice.</div>
     <div class="atlas-facets">
-      ${facet('meditate','Meditation',`${fmt(ME.total_minutes||0)} min · ${mStreak}-day streak`,val(ME.total_sessions||0,'sits'))}
-      ${facet('lotus','Journeys','lessons walked in order',`<div class="atlas-fval">${lessonsDone}<small>/ ${totalLessons}</small></div>`)}
-      ${facet('book','Journal',jsub,val(J.total||0,'entries'))}
-      ${facet('globe','Travel',`${places?'places lit around the world':'light a place to begin'}${pStreak>0?' · '+pStreak+'-day photo streak':''}`,val(places,places===1?'place':'places'))}
-      ${facet('trophy','Community',`${esc(lg.name||'Ember')} league · ${shared>0?shared+' spot'+(shared===1?'':'s')+' shared today':fmt(ME.weekly_light||0)+' light this week'}`,leagueBadge)}
+      ${facet('#f5c977','#f59e0b',ic('meditate'),'Meditation',val(ME.total_sessions||0,'sits'),lvlPct,
+        `${fmt(ME.total_minutes||0)} min · ${100-lvlPct}% to Level ${(ME.level||1)+1}`)}
+      ${facet('#22c55e','#4ade80',ic('lotus'),'Journeys',`<span class="atlas-fval">${lessonsDone}<small>/ ${totalLessons}</small></span>`,jPct,
+        totalLessons&&lessonsDone>=totalLessons?'every journey walked':`${totalLessons-lessonsDone} lesson${(totalLessons-lessonsDone)===1?'':'s'} to go`)}
+      ${facet('#a855f7','#c084fc',ic('book'),'Journal',val(J.total||0,'entries'),jrPct,jsub)}
+      ${facet('#06b6d4','#38bdf8',ic('globe'),'Travel',val(places,places===1?'place':'places'),tPct,
+        places?`${tNext-places} to your ${tNext}-spot badge${pStreak>0?' · '+pStreak+'-day photo streak':''}`:'light a place to begin your map')}
+      ${facet(lg.color||'#ec4899',lg.color2||'#f472b6',leagueIcon(lg.name),'Community',val(ME.weekly_light||0,'light',''),cPct,
+        cNextAt?`${esc(lg.name||'Ember')} · ${fmt(Math.max(0,cNextAt-(ME.weekly_light||0)))} to ${esc(lg.next||'next')}${shared>0?' · '+shared+' shared today':''}`:`${esc(lg.name||'')} — top league`)}
     </div>
     <div class="atlas-foot" onclick="go('map')">${ic('globe','g')} See where the world is meditating ${ic('up','rt')}</div>
   </div>`;
@@ -3534,6 +3552,45 @@ function renderMeditatePledge(){
     toast('Your rhythm is set ✦');renderMeditate();};
   $('#mpl-skip').onclick=()=>{try{localStorage.setItem('lumen_medi_pledged','1');}catch(e){}renderMeditate();};
 }
+/* Gold embers that rise and burst from the journal seal — "it's ready".
+   Tiny additive canvas particle emitter; reduced-motion safe, off-screen paused. */
+function ctaSparks(){
+  if(window.__ctaSparks){try{window.__ctaSparks();}catch(e){}window.__ctaSparks=null;}
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const btn=document.getElementById('journalCta'); if(!btn)return;
+  btn.style.position='relative';
+  const cv=document.createElement('canvas');
+  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2';
+  btn.appendChild(cv);
+  const ctx=cv.getContext('2d'); const dpr=Math.min(window.devicePixelRatio||1,2);
+  let W=0,H=0,sx=0,sy=0;
+  function size(){const r=btn.getBoundingClientRect(); if(!r.width)return; W=cv.width=Math.round(r.width*dpr); H=cv.height=Math.round(r.height*dpr);
+    const ic=btn.querySelector('.i'); if(ic){const q=ic.getBoundingClientRect(); sx=(q.left-r.left+q.width/2)*dpr; sy=(q.top-r.top+q.height/2)*dpr;} else {sx=W*0.2;sy=H/2;}}
+  size();
+  const P=[]; let raf=0,dead=false,last=performance.now(),acc=0,burst=0,visible=true;
+  function emit(n){for(let i=0;i<n;i++){const a=-Math.PI/2+(Math.random()-0.5)*2.1; const sp=(0.7+Math.random()*1.8)*dpr; P.push({x:sx+(Math.random()-0.5)*14*dpr,y:sy+(Math.random()-0.5)*14*dpr,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,r:(1.1+Math.random()*2.4)*dpr,tw:Math.random()*6.28});}}
+  function frame(now){raf=0; if(dead||!visible)return; const dt=Math.min(now-last,50); last=now; acc+=dt; burst-=dt;
+    if(acc>30){acc=0; emit(2+(Math.random()<0.4?1:0));}
+    if(burst<=0){burst=1200+Math.random()*1800; emit(8+Math.floor(Math.random()*6));}
+    ctx.clearRect(0,0,W,H); ctx.globalCompositeOperation='lighter';
+    for(let i=P.length-1;i>=0;i--){const p=P[i]; const f=dt/16;
+      p.x+=p.vx*f; p.y+=p.vy*f; p.vy-=0.018*f*dpr; p.vx*=0.99; p.life-=dt/1800;
+      if(p.life<=0){P.splice(i,1);continue;}
+      const al=Math.max(0,p.life*(0.72+0.28*Math.sin(now*0.012+p.tw))); const R=p.r;
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*6);
+      g.addColorStop(0,'rgba(255,240,200,'+(al*0.95)+')'); g.addColorStop(0.3,'rgba(248,196,100,'+(al*0.55)+')'); g.addColorStop(1,'rgba(248,196,100,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,R*6,0,6.2832); ctx.fill();
+      ctx.fillStyle='rgba(255,250,232,'+al+')'; ctx.beginPath(); ctx.arc(p.x,p.y,R*0.85,0,6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation='source-over';
+    raf=requestAnimationFrame(frame);
+  }
+  function start(){if(!raf&&!dead){last=performance.now();raf=requestAnimationFrame(frame);}}
+  const io=new IntersectionObserver(es=>{es.forEach(e=>visible=e.isIntersecting); if(visible)start();}); io.observe(btn);
+  window.addEventListener('resize',size);
+  start();
+  window.__ctaSparks=function(){dead=true; if(raf)cancelAnimationFrame(raf); try{io.disconnect();}catch(e){} window.removeEventListener('resize',size); if(cv.parentNode)cv.parentNode.removeChild(cv);};
+}
 async function renderMeditate(){
   if(!_mediPledged()){renderMeditatePledge();return;}
   let pres={now:0,today_sessions:0};try{pres=await api('presence');}catch(e){}
@@ -3608,6 +3665,7 @@ async function renderMeditate(){
   document.querySelectorAll('.lesson-card,.pickcard').forEach(c=>c.onclick=(e)=>{if(e.target.closest('.pick-listen'))return;lessonFrom='meditate';lessonDetail(c.dataset.l);});
   const al=$('#allles');if(al)al.onclick=()=>go('lessons');
   if(window.mountLumenOrb)mountLumenOrb({level:ME.level,into:ME.level_into,need:ME.level_need,palette:(window.LUM_LEAGUE_PAL&&window.LUM_LEAGUE_PAL[ME.league.name])||'Ember'});
+  try{ctaSparks();}catch(e){}
 }
 
 /* ---- guided journeys library ---- */
