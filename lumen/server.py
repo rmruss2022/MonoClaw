@@ -3269,7 +3269,9 @@ const SVGP={
   fog:'<path d="M4 8c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/><path d="M5 12c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/><path d="M4 16c2-1.6 4.5 1.6 7 0s4-1.6 6 0"/>',
   moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z" fill="currentColor" stroke="none"/>',
   sunrise:'<line x1="3" y1="19" x2="21" y2="19"/><path d="M7.5 19a4.5 4.5 0 0 1 9 0"/><line x1="12" y1="4" x2="12" y2="8"/><line x1="4.8" y1="10.8" x2="6.2" y2="12.2"/><line x1="19.2" y1="10.8" x2="17.8" y2="12.2"/>',
-  season:'<path d="M5.5 18.5c-1.3-7 2.7-14.5 14-15.5 1.1 9.3-3 15.6-11.2 16.1-1 .06-1.9-.1-2.8-.6Z"/><path d="M6.5 17.5C10.5 13.8 14.5 11 18 9.2"/>',
+  season:'<path d="M5.5 18.5c-1.3-7 2.7-14.5 14-15.5 1.1 9.3-3 15.6-11.2 16.1-1 .06-1.9-.1-2.8-.6Z"/><path d="M6.4 17.6C10.4 13.9 14.5 11 18 9.2"/><path d="M8.9 15.6c.2-1.7 1-3.1 2.2-4.2M11.3 13.4c.3-1.6 1.2-2.9 2.4-3.7M7.6 16.8c-.3-1.3-.9-2.3-1.8-3" opacity=".65"/>',
+  jdeep:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6.1" opacity=".45"/><path d="M12 3.4 13.25 10.75 20.6 12 13.25 13.25 12 20.6 10.75 13.25 3.4 12 10.75 10.75Z" fill="currentColor" stroke="none"/><path d="M12 7 12.55 11.45 17 12 12.55 12.55 12 17 11.45 12.55 7 12 11.45 11.45Z" opacity=".55"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/>',
+  jdaily:'<path d="M12 6.4C9.6 5 6.6 4.8 4.4 5.5V18c2.1-.7 5.1-.5 7.6 1 2.5-1.5 5.5-1.7 7.6-1V5.5c-2.2-.7-5.2-.5-7.6.9Z"/><path d="M12 6.4V19" opacity=".7"/><path d="M6.3 8.6h3.2M6.3 11h3.2M6.3 13.4h3.2M14.5 8.6h3.2M14.5 11h3.2M14.5 13.4h3.2" opacity=".6"/>',
   flag:'<line x1="6" y1="3" x2="6" y2="21"/><path d="M6 4h11l-2 3 2 3H6Z" fill="currentColor" stroke="none"/>',
   target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>',
   pin:'<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>',
@@ -5148,7 +5150,7 @@ let jScreen='home';          // journal sub-screen: 'home' | 'compose' | 'pillar
 // Open the Daily composer with a given prompt (used from Life OS / meditate home links).
 function openJournalDaily(p){if(p!=null)jPrompt=p;journalMode='daily';journalPillar=null;jScreen='compose';go('journal');}
 
-const J_MODES=[['deep','Deep','compass'],['daily','Daily','book'],['season','Season','season']];
+const J_MODES=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
 const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',season:'What chapter of life are you living through right now?'};
 
 function jWeekRing(){
@@ -5159,7 +5161,7 @@ function jWeekRing(){
     +`<span class="jwk-cap">${n>=3?'all three tended this week ✦':n+' of 3 this week'}</span></div>`;
 }
 // Journal hero — the three facets as glowing medallions, lit when tended this week.
-const JFACETS=[['deep','Deep','compass','#a855f7','#c084fc'],['daily','Daily','book','#38bdf8','#0ea5e9'],['season','Season','season','#f59e0b','#f97316']];
+const JFACETS=[['deep','Deep','jdeep','#a855f7','#c084fc'],['daily','Daily','jdaily','#38bdf8','#0ea5e9'],['season','Season','season','#f59e0b','#f97316']];
 function jWeekHero(){
   const cts=(jWeek&&jWeek.counts)||{};
   const n=JFACETS.filter(f=>(cts[f[0]]||0)>0).length;
@@ -5175,7 +5177,7 @@ function jWeekHero(){
 // Today's recommended journaling — one pick (Deep · Daily · Season) chosen by the
 // server, shown as a gold hero card at the top of the journal. Tapping Begin jumps
 // straight into that mode (and that pillar, for Deep). Wired in renderJournal.
-const J_MODE_ICON={deep:'compass',daily:'book',season:'season'};
+const J_MODE_ICON={deep:'jdeep',daily:'jdaily',season:'season'};
 function jRecCard(){
   if(!jRec||!jRec.mode)return '';
   const icn=J_MODE_ICON[jRec.mode]||'spark';
@@ -5379,8 +5381,8 @@ function renderJournalWelcome(){
       +`<h2 class="jwelc-h">Three ways to meet yourself</h2>`
       +`<p class="jwelc-sub">Putting your inner life into words is one of the most studied tools we have for a steadier mind. Here’s how your journal works — and the research behind each part.</p></div>`
     +`<div class="jwelc-cards">`
-      +_jwCard('book','Daily','A short, honest letter to today.','Just 15 minutes, 3–4 times is enough — a meta-analysis of expressive-writing studies found a <b>0.47 effect-size</b> gain in well-being.','Smyth, 1998 · meta-analysis of 13 studies')
-      +_jwCard('compass','Deep','Guided sittings on your eight life pillars — the things that matter most.','People who wrote each week about what they valued and were grateful for reported <b>~25% higher well-being</b>.','Emmons &amp; McCullough, 2003')
+      +_jwCard('jdaily','Daily','A short, honest letter to today.','Just 15 minutes, 3–4 times is enough — a meta-analysis of expressive-writing studies found a <b>0.47 effect-size</b> gain in well-being.','Smyth, 1998 · meta-analysis of 13 studies')
+      +_jwCard('jdeep','Deep','Guided sittings on your eight life pillars — the things that matter most.','People who wrote each week about what they valued and were grateful for reported <b>~25% higher well-being</b>.','Emmons &amp; McCullough, 2003')
       +_jwCard('season','Season','Step back and name the chapter of life you’re living through right now.','Writing about your life’s larger arc and goals lifted mood and <b>cut illness-related doctor visits</b> months later.','King, 2001')
     +`</div>`
     +`<div class="jwelc-note">${ic('spark','g')} Expressive and reflective writing has 40+ years of evidence behind it (James Pennebaker and others): less stress and rumination, clearer thinking, even better sleep.</div>`
@@ -5415,7 +5417,7 @@ async function renderJournalHome(){
   let pp=null;try{pp=await api('pillars');}catch(e){}
   listening=false;rec=null;
   const recMode=jRec&&jRec.mode;
-  const DOORS=[['deep','Deep','compass'],['daily','Daily','book'],['season','Season','season']];
+  const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
   const JDOOR_COL={deep:['#a855f7','#c084fc'],daily:['#38bdf8','#0ea5e9'],season:['#f59e0b','#f97316']};
   const door=([k,lbl,icn])=>{const isRec=recMode===k;const c=JDOOR_COL[k]||['#a855f7','#c084fc'];
     return `<button class="jbig${isRec?' rec':''}" data-m="${k}" style="--jc:${c[0]};--jc2:${c[1]}"><span class="jbig-ico">${ic(icn)}</span>`
