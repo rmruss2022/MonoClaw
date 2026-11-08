@@ -2645,8 +2645,10 @@ a{color:var(--purple)}
 .lesson-resume-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--a),var(--gold))}
 /* --- reworked vertical journey cards (deity centered, title + description below) --- */
 .jcard{flex-direction:column;align-items:stretch;gap:0;padding:0}
-.rec-feature .lesson-card{border-color:var(--gold);box-shadow:0 8px 28px rgba(245,201,119,.14)}
-.rec-feature .jcard-art{height:172px}
+.rec-feature .jrny-card{border-color:var(--gold);box-shadow:0 10px 30px -10px rgba(245,201,119,.22)}
+.rec-feature .jrny-art{width:124px;background:linear-gradient(160deg,color-mix(in srgb,var(--a) 30%,#140f24),#140f24)}
+.rec-feature .jrny-name{font-size:17px}
+.pickcard .jcard-badge{top:8px;left:8px;right:auto}
 /* onboarding */
 .onb-top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 0}
 .onb-brand{display:flex;align-items:center;gap:7px;font-weight:800;color:var(--gold)}
@@ -3517,7 +3519,7 @@ async function renderMeditate(){
    const pl=document.querySelector('.pick-listen');if(pl&&PICK)pl.onclick=()=>playHoroscope(pl,pickInvite(PICK));
    const hn=document.querySelector('.horo-addnatal');if(hn)hn.onclick=addNatal;}
   {const jc=$('#journalCta');if(jc)jc.onclick=()=>openJournalDaily(dp?dp.focus:undefined);}
-  document.querySelectorAll('.lesson-card').forEach(c=>c.onclick=()=>{lessonFrom='meditate';lessonDetail(c.dataset.l);});
+  document.querySelectorAll('.lesson-card,.pickcard').forEach(c=>c.onclick=()=>{lessonFrom='meditate';lessonDetail(c.dataset.l);});
   const al=$('#allles');if(al)al.onclick=()=>go('lessons');
   if(window.mountLumenOrb)mountLumenOrb({level:ME.level,into:ME.level_into,need:ME.level_need,palette:(window.LUM_LEAGUE_PAL&&window.LUM_LEAGUE_PAL[ME.league.name])||'Ember'});
 }
@@ -3809,25 +3811,29 @@ function lessonEmblem(l,cls){
 let lessonFrom='lessons';
 let curJourney=null;       // which journey (track key) the open lesson belongs to
 let lessonSoundPick=null;  // background soundscape chosen in the journey detail modal
+// The "Today's pick" feature card — mirrors the Journeys (.jrny-card) layout:
+// circular art on the left, title / serif blurb / progress bar / meta / next row,
+// and a play chevron on the right.
 function lessonCardHTML(l){
   const pr=lessonProg(l.code);
   const done=pr&&pr.count>0;
   const nSeg=l.segments.length;
   const rs=lessonResumeSi(l);
-  const doneline=done?`<div class="lesson-done">${ic('check')} Completed · ${pr.count}×</div>`:'';
-  const cta=rs>0
-    ? `<div class="lesson-go">${ic('play')} Continue · step ${rs+1} of ${nSeg}</div>`
-    : `<div class="lesson-go">${ic('play')} ${done?'Practice again':'Begin · earns Light'}</div>`;
-  return `<div class="lesson-card jcard${done?' done':''}${rs>0?' resume':''}" data-l="${l.code}" style="--a:${l.accent}">
-    <div class="jcard-art">${deityEmblem(l)}${done?`<span class="lesson-seal">${ic('check')}</span>`:''}${rs>0?`<span class="jcard-badge">Resume</span>`:''}</div>
-    <div class="jcard-body">
-      <div class="jcard-title">${esc(l.title)} <span>· ${esc(l.subtitle)}</span></div>
-      <div class="jcard-sub">${esc(l.tradition)} · ${lessonMins(l)} min · ${nSeg} steps</div>
-      <div class="jcard-desc">${esc(l.blurb)}</div>
-      ${rs>0?`<div class="lesson-resume-bar"><i style="width:${Math.round(100*rs/nSeg)}%"></i></div>`:''}
-      ${doneline}
-      ${cta}
-    </div></div>`;
+  const pct=done?100:(rs>0?Math.round(100*rs/nSeg):0);
+  const nextLbl=rs>0?('Resume · step '+(rs+1)+' of '+nSeg)
+    :(done?'Practice again · '+l.subtitle:'Begin · '+l.subtitle);
+  const metaExtra=done?(' · done '+pr.count+'×'):'';
+  return `<button class="jrny-card pickcard${done?' done':''}${rs>0?' resume':''}" data-l="${l.code}" style="--a:${l.accent}">
+    <div class="jrny-art">${deityEmblem(l)}${rs>0?`<span class="jcard-badge">Resume</span>`:''}</div>
+    <div class="jrny-body">
+      <div class="jrny-name">${esc(l.title)}</div>
+      <div class="jrny-sub">${esc(l.blurb)}</div>
+      <div class="jrny-bar"><i style="width:${pct}%"></i></div>
+      <div class="jrny-meta">${esc(l.tradition)} · ${lessonMins(l)} min · ${nSeg} steps${metaExtra}</div>
+      <div class="jrny-next">${ic(done?'check':'play','g')} ${esc(nextLbl)}</div>
+    </div>
+    <span class="jrny-go">${ic('play','g')}</span>
+  </button>`;
 }
 // Detail / preview screen shown before a journey begins
 function lessonDetail(code){
