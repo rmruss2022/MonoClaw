@@ -2645,10 +2645,33 @@ a{color:var(--purple)}
 .lesson-resume-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--a),var(--gold))}
 /* --- reworked vertical journey cards (deity centered, title + description below) --- */
 .jcard{flex-direction:column;align-items:stretch;gap:0;padding:0}
-.rec-feature .jrny-card{border-color:var(--gold);box-shadow:0 10px 30px -10px rgba(245,201,119,.22)}
-.rec-feature .jrny-art{width:124px;background:linear-gradient(160deg,color-mix(in srgb,var(--a) 30%,#140f24),#140f24)}
-.rec-feature .jrny-name{font-size:17px}
-.pickcard .jcard-badge{top:8px;left:8px;right:auto}
+/* --- Today's pick — clean featured card --- */
+.rec-feature{margin:18px 0 0}
+.pickcard{display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--a) 45%,var(--line));border-radius:22px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(165deg,color-mix(in srgb,var(--a) 15%,#15111f),#110d1b 72%);
+  box-shadow:0 16px 44px -22px color-mix(in srgb,var(--a) 80%,#000);transition:transform .12s,border-color .15s}
+.pickcard:active{transform:scale(.99)}
+.pick-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0}
+.pick-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:var(--gold)}
+.pick-tag .i{width:13px;height:13px}
+.pick-listen{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#ffffff0a;color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:.15s}
+.pick-listen:hover{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 50%,var(--line))}
+.pick-listen .i{width:16px;height:16px}
+.pick-top{display:flex;gap:15px;align-items:center;padding:13px 16px 16px}
+.pick-art{flex:none;width:84px;height:84px;border-radius:20px;overflow:hidden;position:relative;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 32%,color-mix(in srgb,var(--a) 42%,#2a1c46),#140e26);border:1px solid #ffffff16;box-shadow:0 8px 22px -12px color-mix(in srgb,var(--a) 80%,#000)}
+.pick-art .deity-emblem{width:100%;height:100%;border-radius:0;border:0;box-shadow:none}
+.pick-art .deity-emblem .deity-glyph .i{width:36px;height:36px}
+.pick-main{min-width:0;flex:1}
+.pick-title{font-size:20px;font-weight:800;color:#f3eeff;line-height:1.14;letter-spacing:-.01em}
+.pick-meta{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:5px}
+.pick-blurb{font-family:var(--serif);font-size:13.5px;color:#c4b9e0;line-height:1.5;margin-top:8px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pick-progress{height:4px;background:#ffffff12;margin:0 16px}
+.pick-progress>i{display:block;height:100%;background:linear-gradient(90deg,var(--a),var(--gold))}
+.pick-cta{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;font-weight:800;font-size:14.5px;
+  color:var(--a);border-top:1px solid #ffffff12;background:#ffffff07}
+.pick-cta .i{width:15px;height:15px}
 /* onboarding */
 .onb-top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 0}
 .onb-brand{display:flex;align-items:center;gap:7px;font-weight:800;color:var(--gold)}
@@ -3503,10 +3526,8 @@ async function renderMeditate(){
     <p class="muted center" style="font-size:12px;margin:10px 0 0">${ic('flame','flame grad-flame glow')} ${ME.streak}-day streak · ${ME.league.name} league</p>
     ${ME.equipped&&ITEM_NAME[ME.equipped]?`<div class="center"><span class="companion">${ART_IMG[ME.equipped]?`<img src="${ART_IMG[ME.equipped]}" class="cph" alt="" onerror="this.remove()">`:ic(ITEM_ICON[ME.equipped])} meditating with your ${ITEM_NAME[ME.equipped]}</span></div>`:(ME.companion&&COMP_NAME[ME.companion]?`<div class="center"><span class="companion">${ic(COMP_ICON[ME.companion])} ${COMP_NAME[ME.companion]} is sitting with you</span></div>`:'')}
   </div>
-  ${PICK?`<div class="lesson-head" style="margin:20px 2px 8px"><div><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Today's pick</div><div class="muted" style="font-size:12px;margin-top:2px">${todGreeting()}</div></div>
-    <button class="btn ghost horo-listen pick-listen" title="Hear today's pick aloud">${ic('sound')} Listen</button></div>
-  <div class="rec-feature">${lessonCardHTML(PICK)}</div>
-  <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:12px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
+  ${PICK?`<div class="rec-feature">${lessonCardHTML(PICK)}</div>
+  <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
   ${challengeCardHTML(chal)}
   ${horoscopeCardHTML(horo)}
   <button class="journal-cta" id="journalCta" type="button">${ic('book')}<span>Unlock today’s journal entry</span></button>`;
@@ -3519,7 +3540,7 @@ async function renderMeditate(){
    const pl=document.querySelector('.pick-listen');if(pl&&PICK)pl.onclick=()=>playHoroscope(pl,pickInvite(PICK));
    const hn=document.querySelector('.horo-addnatal');if(hn)hn.onclick=addNatal;}
   {const jc=$('#journalCta');if(jc)jc.onclick=()=>openJournalDaily(dp?dp.focus:undefined);}
-  document.querySelectorAll('.lesson-card,.pickcard').forEach(c=>c.onclick=()=>{lessonFrom='meditate';lessonDetail(c.dataset.l);});
+  document.querySelectorAll('.lesson-card,.pickcard').forEach(c=>c.onclick=(e)=>{if(e.target.closest('.pick-listen'))return;lessonFrom='meditate';lessonDetail(c.dataset.l);});
   const al=$('#allles');if(al)al.onclick=()=>go('lessons');
   if(window.mountLumenOrb)mountLumenOrb({level:ME.level,into:ME.level_into,need:ME.level_need,palette:(window.LUM_LEAGUE_PAL&&window.LUM_LEAGUE_PAL[ME.league.name])||'Ember'});
 }
@@ -3811,29 +3832,32 @@ function lessonEmblem(l,cls){
 let lessonFrom='lessons';
 let curJourney=null;       // which journey (track key) the open lesson belongs to
 let lessonSoundPick=null;  // background soundscape chosen in the journey detail modal
-// The "Today's pick" feature card — mirrors the Journeys (.jrny-card) layout:
-// circular art on the left, title / serif blurb / progress bar / meta / next row,
-// and a play chevron on the right.
+// The "Today's pick" feature card — a clean, spacious featured card:
+// a small gold tag, a rounded art thumbnail, title + one meta line + a short
+// blurb, and a single full-width CTA bar. (A thin progress bar shows only when
+// a session is mid-way through resuming.)
 function lessonCardHTML(l){
   const pr=lessonProg(l.code);
   const done=pr&&pr.count>0;
   const nSeg=l.segments.length;
   const rs=lessonResumeSi(l);
-  const pct=done?100:(rs>0?Math.round(100*rs/nSeg):0);
-  const nextLbl=rs>0?('Resume · step '+(rs+1)+' of '+nSeg)
-    :(done?'Practice again · '+l.subtitle:'Begin · '+l.subtitle);
-  const metaExtra=done?(' · done '+pr.count+'×'):'';
-  return `<button class="jrny-card pickcard${done?' done':''}${rs>0?' resume':''}" data-l="${l.code}" style="--a:${l.accent}">
-    <div class="jrny-art">${deityEmblem(l)}${rs>0?`<span class="jcard-badge">Resume</span>`:''}</div>
-    <div class="jrny-body">
-      <div class="jrny-name">${esc(l.title)}</div>
-      <div class="jrny-sub">${esc(l.blurb)}</div>
-      <div class="jrny-bar"><i style="width:${pct}%"></i></div>
-      <div class="jrny-meta">${esc(l.tradition)} · ${lessonMins(l)} min · ${nSeg} steps${metaExtra}</div>
-      <div class="jrny-next">${ic(done?'check':'play','g')} ${esc(nextLbl)}</div>
+  const cta=rs>0?('Resume · step '+(rs+1)):(done?'Practice again':'Begin · '+lessonMins(l)+' min');
+  return `<div class="pickcard" data-l="${l.code}" style="--a:${l.accent}">
+    <div class="pick-head">
+      <span class="pick-tag">${ic('spark','g')} Today's pick</span>
+      <button class="pick-listen" type="button" title="Hear today's pick aloud">${ic('sound')}</button>
     </div>
-    <span class="jrny-go">${ic('play','g')}</span>
-  </button>`;
+    <div class="pick-top">
+      <div class="pick-art">${deityEmblem(l)}</div>
+      <div class="pick-main">
+        <div class="pick-title">${esc(l.title)}</div>
+        <div class="pick-meta">${esc(l.tradition)} · ${lessonMins(l)} min · ${nSeg} steps</div>
+        <div class="pick-blurb">${esc(l.blurb)}</div>
+      </div>
+    </div>
+    ${rs>0?`<div class="pick-progress"><i style="width:${Math.round(100*rs/nSeg)}%"></i></div>`:''}
+    <div class="pick-cta">${ic(done&&rs<=0?'check':'play','g')} ${esc(cta)}</div>
+  </div>`;
 }
 // Detail / preview screen shown before a journey begins
 function lessonDetail(code){
