@@ -138,6 +138,9 @@ def init_db():
     # pre-launch waitlist for the physical Lumen Journal (the anchor product)
     c.execute("""CREATE TABLE IF NOT EXISTS journal_waitlist(
       email TEXT PRIMARY KEY, created TEXT)""")
+    # password-reset codes: a 6-digit code (stored hashed) with expiry + attempt cap
+    c.execute("""CREATE TABLE IF NOT EXISTS password_resets(
+      email TEXT PRIMARY KEY, code_hash TEXT, expires REAL, tries INTEGER DEFAULT 0, sent REAL)""")
     scols = [r[1] for r in c.execute("PRAGMA table_info(sessions)").fetchall()]
     if "lesson" not in scols:
         c.execute("ALTER TABLE sessions ADD COLUMN lesson TEXT")
@@ -206,6 +209,54 @@ def session_email(tok):
         SESSIONS.pop(tok, None)
         return None
     return email
+
+# --- transactional email -----------------------------------------------------
+# Railway has no mail service and Cloudflare only forwards inbound mail, so we
+# send via a transactional HTTPS API (Resend) or SMTP, chosen by env vars.
+#   RESEND_API_KEY + MAIL_FROM            -> Resend (https, Railway-friendly)
+#   SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS + MAIL_FROM -> any SMTP provider
+# MAIL_FROM must be an address on a domain you've verified with the provider
+# (e.g. "Lumen <noreply@yourdomain>"). Returns True only if actually accepted.
+MAIL_FROM = os.environ.get("MAIL_FROM", "Lumen <onboarding@resend.dev>")
+
+def send_email(to, subject, text, html=None):
+    import urllib.request
+    key = os.environ.get("RESEND_API_KEY")
+    if key:
+        try:
+            payload = json.dumps({
+                "from": MAIL_FROM, "to": [to], "subject": subject,
+                "text": text, "html": html or ("<pre style='font:15px/1.6 -apple-system,system-ui,sans-serif'>" + text + "</pre>"),
+            }).encode()
+            req = urllib.request.Request("https://api.resend.com/emails", data=payload, method="POST",
+                                         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=12) as r:
+                return 200 <= r.status < 300
+        except Exception as e:
+            print("[mail] resend failed:", e)
+    host = os.environ.get("SMTP_HOST")
+    if host:
+        try:
+            import smtplib
+            from email.message import EmailMessage
+            msg = EmailMessage()
+            msg["From"] = MAIL_FROM; msg["To"] = to; msg["Subject"] = subject
+            msg.set_content(text)
+            if html:
+                msg.add_alternative(html, subtype="html")
+            port = int(os.environ.get("SMTP_PORT", "587"))
+            with smtplib.SMTP(host, port, timeout=15) as s:
+                s.starttls()
+                u, pwd = os.environ.get("SMTP_USER"), os.environ.get("SMTP_PASS")
+                if u:
+                    s.login(u, pwd or "")
+                s.send_message(msg)
+            return True
+        except Exception as e:
+            print("[mail] smtp failed:", e)
+    # no provider configured — log so the code is recoverable during setup
+    print("[mail] NOT SENT (no RESEND_API_KEY/SMTP_HOST). To=%s Subject=%s\n%s" % (to, subject, text))
+    return False
 
 # ---------------------------------------------------------------------------
 # game engine
@@ -3254,18 +3305,64 @@ function renderAuth(){
     <div class="err" id="er"></div>
     <button class="btn" id="go">Sign in</button>
     <button class="btn ghost" id="sw" style="margin-top:9px">Create an account</button>
+    <div class="center" style="margin-top:12px"><a class="onb-signin" id="forgot">Forgot password?</a></div>
   </div>`;
   let mode='login';
   $('#sw').onclick=()=>{mode=mode==='login'?'signup':'login';
     $('#nameWrap').classList.toggle('hidden',mode!=='signup');
     $('#go').textContent=mode==='login'?'Sign in':'Create account & begin';
-    $('#sw').textContent=mode==='login'?'Create an account':'I already have an account';};
+    $('#sw').textContent=mode==='login'?'Create an account':'I already have an account';
+    $('#forgot').style.display=mode==='login'?'':'none';};
+  $('#forgot').onclick=()=>renderReset(($('#em').value||'').trim());
   $('#go').onclick=async()=>{const er=$('#er');er.textContent='';
     const email=$('#em').value.trim(),password=$('#pw').value;
     if(!email||!password){er.textContent='Enter your email and password.';return;}
     try{if(mode==='signup'){await api('signup','POST',{email,password,name:$('#nm').value,birth_date:($('#bd')&&$('#bd').value)||''});}else{await api('login','POST',{email,password});}
       const r=await api('me');ME=r.profile;$('#nav').classList.remove('hidden');bindNav();go('meditate');
     }catch(e){er.textContent=e;}};
+}
+// Password reset — request a 6-digit code by email, then enter it with a new password.
+function renderReset(prefill){
+  $('#nav').classList.add('hidden');
+  let stage='request';
+  const draw=()=>{
+    $('#app').innerHTML=`
+    <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+    <div class="center" style="margin:26px 0 10px">
+      <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${ic('lock','lg grad-gold')}</div>
+      <h1 style="margin:14px 0 4px">Reset your password</h1>
+      <p class="muted" style="margin:0 28px">${stage==='request'?'Enter your email and we’ll send you a 6-digit reset code.':'Enter the code we emailed you and choose a new password.'}</p>
+    </div>
+    <div class="card">
+      <label>Email</label><input id="rem" type="email" autocomplete="email" placeholder="you@example.com" value="${esc(prefill||'')}" ${stage==='verify'?'readonly':''}>
+      ${stage==='verify'?`<label>Reset code</label><input id="rcode" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code">
+      <label>New password</label><input id="rpw" type="password" autocomplete="new-password" placeholder="at least 6 characters">`:''}
+      <div class="err" id="rer"></div>
+      <button class="btn" id="rgo">${stage==='request'?'Send reset code':'Reset password'}</button>
+      ${stage==='verify'?`<button class="btn ghost" id="rresend" style="margin-top:9px">Resend code</button>`:''}
+      <div class="center" style="margin-top:12px"><a class="onb-signin" id="rback">Back to sign in</a></div>
+    </div>`;
+    $('#rback').onclick=renderAuth;
+    const rr=$('#rresend');if(rr)rr.onclick=()=>{stage='request';draw();};
+    $('#rgo').onclick=async()=>{const er=$('#rer');er.textContent='';
+      const email=($('#rem').value||'').trim();
+      if(!email){er.textContent='Enter your email.';return;}
+      if(stage==='request'){
+        try{await api('forgot','POST',{email});prefill=email;stage='verify';draw();
+          toast(ic('check','g')+' If that email has an account, a code is on its way');
+        }catch(e){er.textContent=e;}
+        return;
+      }
+      const code=($('#rcode').value||'').trim(),password=$('#rpw').value||'';
+      if(!code){er.textContent='Enter the code from your email.';return;}
+      if(password.length<6){er.textContent='Password needs at least 6 characters.';return;}
+      try{await api('reset','POST',{email,code,password});
+        const r=await api('me');ME=r.profile;$('#nav').classList.remove('hidden');bindNav();go('meditate');
+        toast(ic('check','g')+' Password updated — welcome back');
+      }catch(e){er.textContent=e;}
+    };
+  };
+  draw();
 }
 
 /* ---- onboarding (value slides → personalization → account) ---- */
@@ -6630,6 +6727,61 @@ class H(BaseHTTPRequestHandler):
             tok = self._cookie("lumen_sess")
             SESSIONS.pop(tok, None)
             self._send(200, {"ok": True}, extra=[("Set-Cookie", "lumen_sess=; Path=/; Max-Age=0")]); return
+
+        if p == "/api/forgot":
+            # Request a reset code. Always reply ok (never reveal whether the email exists).
+            d = self._body()
+            email = (d.get("email") or "").strip().lower()
+            if re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+                u = user_by_email(c, email)
+                if u:
+                    row = c.execute("SELECT sent FROM password_resets WHERE email=?", (email,)).fetchone()
+                    # throttle: at most one code per 60s
+                    if not (row and row["sent"] and time.time() - row["sent"] < 60):
+                        code = "%06d" % secrets.randbelow(1000000)
+                        ch = hashlib.sha256(code.encode()).hexdigest()
+                        c.execute("INSERT INTO password_resets(email,code_hash,expires,tries,sent) VALUES(?,?,?,0,?) "
+                                  "ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash,expires=excluded.expires,tries=0,sent=excluded.sent",
+                                  (email, ch, time.time() + 900, time.time()))
+                        c.commit()
+                        send_email(email, "Your Lumen reset code",
+                                   "Your Lumen password reset code is %s\n\nIt expires in 15 minutes. "
+                                   "If you didn't ask to reset your password, you can ignore this email." % code,
+                                   "<div style=\"font:16px/1.6 -apple-system,system-ui,sans-serif;color:#1a1326\">"
+                                   "<p>Your Lumen password reset code is:</p>"
+                                   "<p style=\"font-size:30px;font-weight:800;letter-spacing:4px;color:#b8860b\">%s</p>"
+                                   "<p style=\"color:#666\">It expires in 15 minutes. If you didn't ask to reset your "
+                                   "password, you can safely ignore this email.</p></div>" % code)
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/reset":
+            d = self._body()
+            email = (d.get("email") or "").strip().lower()
+            code = (d.get("code") or "").strip()
+            pw = d.get("password") or ""
+            if len(pw) < 6:
+                self._send(400, {"error": "Password needs at least 6 characters."}); return
+            row = c.execute("SELECT code_hash,expires,tries FROM password_resets WHERE email=?", (email,)).fetchone()
+            if not row or (row["expires"] or 0) < time.time():
+                self._send(400, {"error": "That code has expired. Request a new one."}); return
+            if (row["tries"] or 0) >= 5:
+                c.execute("DELETE FROM password_resets WHERE email=?", (email,)); c.commit()
+                self._send(400, {"error": "Too many attempts. Request a new code."}); return
+            if not hmac.compare_digest(hashlib.sha256(code.encode()).hexdigest(), row["code_hash"] or ""):
+                c.execute("UPDATE password_resets SET tries=tries+1 WHERE email=?", (email,)); c.commit()
+                self._send(400, {"error": "That code isn't right."}); return
+            u = user_by_email(c, email)
+            if not u:
+                self._send(400, {"error": "That code isn't right."}); return
+            salt = secrets.token_hex(16)
+            c.execute("UPDATE users SET salt=?, hash=? WHERE id=?", (salt, _hash_pw(pw, salt), u["id"]))
+            c.execute("DELETE FROM password_resets WHERE email=?", (email,))
+            c.commit()
+            # invalidate any existing sessions for this email, then sign them in fresh
+            for t in [t for t, v in list(SESSIONS.items()) if v and v[0] == email]:
+                SESSIONS.pop(t, None)
+            tok = new_session(email)
+            self._send(200, {"ok": True}, extra=[("Set-Cookie", _cookie_hdr(tok))]); return
 
         if p == "/api/tts":
             audio = eleven_tts(self._body().get("text"))
