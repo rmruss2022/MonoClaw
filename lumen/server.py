@@ -2022,10 +2022,13 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .orb-stage canvas,.orb-stage>svg,.orb-stage .orb-fallback{position:absolute;inset:0;width:100%;height:100%}
 .orb-fallback{display:none;border-radius:50%}
 .journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 6px;
-  background:transparent;color:var(--gold);font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;
-  border:1px solid rgba(245,201,119,.5);border-radius:16px;padding:14px 18px;cursor:pointer;letter-spacing:.01em;
-  box-shadow:0 0 16px rgba(245,201,119,.22),inset 0 0 14px rgba(245,201,119,.05);animation:ctaglow 3.6s ease-in-out infinite}
-.journal-cta .i{width:48px;height:48px;filter:drop-shadow(0 0 8px rgba(245,201,119,.55));animation:sealpulse 3.6s ease-in-out infinite}
+  background:linear-gradient(135deg,#33250f 0%,#211607 55%,#140d06 100%);color:var(--gold);
+  border:1px solid rgba(245,201,119,.52);border-radius:16px;padding:15px 18px;cursor:pointer;
+  box-shadow:0 0 16px rgba(245,201,119,.22),inset 0 0 16px rgba(245,201,119,.06);animation:ctaglow 3.6s ease-in-out infinite}
+.journal-cta span{font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;letter-spacing:.01em;
+  background:linear-gradient(180deg,#fff0cf 0%,#f3d79a 45%,#e0ad52 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  text-shadow:0 1px 10px rgba(245,201,119,.18)}
+.journal-cta .i{width:48px;height:48px;color:var(--gold);filter:drop-shadow(0 0 8px rgba(245,201,119,.6));animation:sealpulse 3.6s ease-in-out infinite}
 .journal-cta:active{transform:translateY(1px)}
 @keyframes sealpulse{0%,100%{filter:drop-shadow(0 0 5px rgba(245,201,119,.4))}50%{filter:drop-shadow(0 0 12px rgba(245,201,119,.72))}}
 @keyframes ctaglow{0%,100%{border-color:rgba(245,201,119,.42);box-shadow:0 0 13px rgba(245,201,119,.18),inset 0 0 12px rgba(245,201,119,.04)}50%{border-color:rgba(245,201,119,.72);box-shadow:0 0 26px rgba(245,201,119,.38),inset 0 0 16px rgba(245,201,119,.07)}}
