@@ -2186,6 +2186,17 @@ nav button.on{color:var(--text);background:#211a37}
 @keyframes breathe{0%,100%{transform:scale(.72)}45%,55%{transform:scale(1.08)}}
 .ring{position:absolute;width:260px;height:260px;border-radius:50%;border:1px solid #a855f755;animation:breathe 10s ease-in-out infinite}
 .breath-label{position:absolute;bottom:6px;color:var(--muted);font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+/* lesson-player orb — accent-tinted, with slow rotating sun-rays like the home orb */
+.lorb-wrap{--a:#a855f7}
+.lorb-wrap:before{content:"";position:absolute;width:300px;height:300px;border-radius:50%;pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--a) 22%,transparent) 0deg 2.4deg,transparent 2.4deg 15deg);
+  -webkit-mask:radial-gradient(circle,transparent 44%,#000 55%,transparent 80%);mask:radial-gradient(circle,transparent 44%,#000 55%,transparent 80%);
+  animation:orbspin 70s linear infinite;opacity:.55}
+@keyframes orbspin{to{transform:rotate(360deg)}}
+.lorb-wrap .orb{background:radial-gradient(circle at 50% 38%,#fff6e0,var(--a) 52%,color-mix(in srgb,var(--a) 58%,#140b24) 100%);
+  box-shadow:0 0 72px 10px color-mix(in srgb,var(--a) 55%,transparent),0 0 150px 34px color-mix(in srgb,var(--a) 26%,transparent)}
+.lorb-wrap .ring{border-color:color-mix(in srgb,var(--a) 48%,transparent)}
+.lorb-wrap .orb .t{color:color-mix(in srgb,var(--a) 62%,#120b20)}
 .lesson-teach.lead{font-style:italic;color:#d9cff2}
 .lesson-teach.resting{color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-family:inherit;opacity:.85;transition:opacity .6s}
 /* map */
@@ -2213,7 +2224,7 @@ nav button.on{color:var(--text);background:#211a37}
 .jny-meta{margin-top:4px;display:flex;flex-direction:column}
 .jny-meta b{font-size:14px}.jny-meta span{font-size:11px;color:var(--muted)}
 .jny-bar{height:5px;border-radius:5px;background:#241d3a;margin-top:7px;overflow:hidden}
-.jny-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));transition:width .4s}
+.jny-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));box-shadow:0 0 9px -2px var(--pink);transition:width .4s}
 .jny-done{font-size:13px;color:var(--gold);display:flex;align-items:center;gap:6px;font-weight:700}
 .jny-drop{animation:jnydrop .5s cubic-bezier(.2,1.3,.3,1)}
 @keyframes jnydrop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.3)}100%{transform:scale(1);opacity:1}}
@@ -2916,7 +2927,12 @@ a{color:var(--purple)}
 .jcard-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:4px}
 .jcard-desc{font-family:var(--serif);font-size:13.5px;color:#cbbfe6;line-height:1.55;margin-top:9px}
 /* --- journey detail / preview screen --- */
-.jdetail{text-align:center}
+.jdetail{text-align:center;position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--a) 30%,var(--line));
+  background:linear-gradient(165deg,color-mix(in srgb,var(--a) 11%,#15111f),#110d1b 76%)}
+.jdetail:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.45;background:radial-gradient(120% 75% at 50% -8%,color-mix(in srgb,var(--a) 30%,transparent),transparent 56%)}
+.jdetail>*{position:relative;z-index:1}
+.jd-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:var(--a);margin-bottom:2px}
+.jd-eyebrow .i{width:13px;height:13px}
 .jd-art{display:flex;justify-content:center;margin:4px 0 14px}
 .jd-title{margin:0;font-size:26px}
 .jd-subtitle{font-family:var(--serif);font-style:italic;color:#cbbfe6;font-size:16px;margin-top:2px}
@@ -2943,20 +2959,39 @@ a{color:var(--purple)}
 .trk-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:2px}
 /* Journeys tab — journey cards + journey-detail lesson rows */
 .jrny-grid{display:flex;flex-direction:column;gap:12px}
-.jrny-card{display:flex;align-items:stretch;gap:0;text-align:left;background:#140f24;border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;padding:0;position:relative}
+.jrny-card{display:flex;align-items:stretch;gap:0;text-align:left;border:1px solid color-mix(in srgb,var(--a) 34%,var(--line));border-radius:18px;overflow:hidden;cursor:pointer;padding:0;position:relative;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--a) 13%,#15111f),#110d1b 72%);
+  box-shadow:0 12px 32px -20px color-mix(in srgb,var(--a) 85%,#000);transition:transform .14s,border-color .15s}
 .jrny-card:active{transform:scale(.995)}
-.jrny-art{flex:none;width:112px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(160deg,color-mix(in srgb,var(--a) 26%,#140f24),#140f24);border-right:1px solid var(--line)}
-.jrny-art .i,.jrny-art svg{width:40px;height:40px}
+.jrny-art{flex:none;width:114px;display:grid;place-items:center;overflow:hidden;position:relative;
+  background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--a) 32%,#140f24),#120d20 78%);border-right:1px solid color-mix(in srgb,var(--a) 20%,var(--line))}
+.jrny-art:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--a) 34%,transparent),transparent 62%)}
+.jrny-art .i,.jrny-art svg{position:relative;z-index:1;width:42px;height:42px}
 .jrny-body{flex:1;min-width:0;padding:13px 14px 13px 15px}
-.jrny-name{font-weight:800;font-size:16px;color:#f1ecff}
+.jrny-name{font-weight:800;font-size:16.5px;color:#f1ecff;letter-spacing:-.01em}
 .jrny-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px}
-.jrny-bar{height:5px;border-radius:99px;background:#241c3a;overflow:hidden;margin:10px 0 6px}
-.jrny-bar>i{display:block;height:100%;background:var(--a);border-radius:99px}
+.jrny-bar{height:6px;border-radius:99px;background:#ffffff12;overflow:hidden;margin:11px 0 6px}
+.jrny-bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--a),color-mix(in srgb,var(--a) 50%,#ffffff));box-shadow:0 0 9px -2px var(--a);transition:width .4s}
 .jrny-meta{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .jrny-next{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#efe6ff;margin-top:7px}
-.jrny-next .i{width:14px;height:14px}
-.jrny-go{flex:none;display:grid;place-items:center;width:40px;color:var(--a);opacity:.8}
+.jrny-next .i{width:14px;height:14px;color:var(--a)}
+.jrny-go{flex:none;display:grid;place-items:center;width:40px;color:var(--a);opacity:.9}
 .jrny-go .i{width:16px;height:16px}
+/* journey-detail hero — accent-glow header with medallion */
+.jrh{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--a) 34%,var(--line));border-radius:20px;padding:18px 16px;margin:2px 2px 14px;text-align:center;
+  background:linear-gradient(165deg,color-mix(in srgb,var(--a) 14%,#15111f),#110d1b 74%)}
+.jrh:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--a) 34%,transparent),transparent 58%)}
+.jrh>*{position:relative;z-index:1}
+.jrh-med{margin:0 auto 10px;width:72px;height:72px}
+.jrh-med .deity-emblem{width:72px;height:72px}
+.jrh-med .deity-emblem .deity-glyph .i{width:34px;height:34px}
+.jrh-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--a)}
+.jrh-eyebrow .i{width:13px;height:13px}
+.jrh-name{font-family:var(--serif);font-size:23px;font-weight:600;color:#f3eeff;margin:6px 0 2px;line-height:1.1}
+.jrh-sub{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--muted);margin:0 auto 13px;max-width:34ch;line-height:1.45}
+.jrh-bar{height:7px;border-radius:999px;background:#ffffff12;overflow:hidden;max-width:260px;margin:0 auto}
+.jrh-bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--a),color-mix(in srgb,var(--a) 50%,#ffffff));box-shadow:0 0 10px -2px var(--a);transition:width .4s}
+.jrh-count{font-size:12px;color:var(--muted);margin-top:9px;letter-spacing:.02em}
 .lj-list{display:flex;flex-direction:column;gap:8px}
 .lj-row{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:#140f24;border:1px solid var(--line);border-radius:13px;padding:12px 13px;cursor:pointer}
 .lj-row:active{transform:scale(.995)}
@@ -3999,7 +4034,7 @@ async function renderLessons(){
     const mins=ls.reduce((s,l)=>s+lessonMins(l),0);
     const next=_journeyNext(ls);
     const allDone=total&&done>=total;
-    const nextLbl=allDone?'✦ Journey complete · revisit'
+    const nextLbl=allDone?'Journey complete · revisit'
       :(next?('Next · '+next.title+' · '+next.subtitle):(soon?'Coming soon':'Start'));
     return `<button class="jrny-card" data-k="${t.key}" style="--a:${t.accent}">
       <div class="jrny-art">${ls[0]?deityEmblem(ls[0]):ic('lotus','g')}</div>
@@ -4008,9 +4043,9 @@ async function renderLessons(){
         <div class="jrny-sub">${esc(t.sub)}</div>
         <div class="jrny-bar"><i style="width:${pct}%"></i></div>
         <div class="jrny-meta">${done} of ${total} lessons${soon?' · '+soon+' coming':''} · ~${mins} min</div>
-        <div class="jrny-next">${ic(allDone?'check':'play','g')} ${esc(nextLbl)}</div>
+        <div class="jrny-next">${ic(allDone?'check':'play')} ${esc(nextLbl)}</div>
       </div>
-      <span class="jrny-go">${ic('play','g')}</span>
+      <span class="jrny-go">${ic('play')}</span>
     </button>`;
   };
   $('#app').innerHTML=`
@@ -4049,9 +4084,15 @@ function renderJourney(key){
     +`<span class="lj-main"><span class="lj-title">${esc(r.title)}</span><span class="lj-sub">${esc(r.sub)}</span></span></div>`).join('');
   $('#app').innerHTML=`
   <div class="brand"><button class="back-btn" id="jrback" title="All journeys">‹</button><span class="mark">${lumenMark('mark')}</span><b>${esc(t.name)}</b></div>
-  <p class="muted" style="font-size:13px;margin:0 2px 12px">${esc(t.sub)}</p>
-  <div class="pp-top"><div class="pp-count">${done} of ${total} lessons complete</div><div class="pp-bar"><i style="width:${pct}%"></i></div></div>
-  ${next?`<button class="btn gold" id="jrnext" style="margin:14px 0 6px">${ic('play')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:14px 0">✦ You've completed this journey. Revisit any lesson below.</div>`}
+  <div class="jrh" style="--a:${t.accent}">
+    <div class="jrh-med">${ls[0]?deityEmblem(ls[0]):''}</div>
+    <div class="jrh-eyebrow">${ic('lotus')} Journey</div>
+    <div class="jrh-name">${esc(t.name)}</div>
+    <div class="jrh-sub">${esc(t.sub)}</div>
+    <div class="jrh-bar"><i style="width:${pct}%"></i></div>
+    <div class="jrh-count">${done} of ${total} lessons complete</div>
+  </div>
+  ${next?`<button class="btn gold" id="jrnext" style="margin:0 0 8px">${ic('play')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:6px 0 10px">${ic('check','g')} You've completed this journey — revisit any lesson below.</div>`}
   <div class="lj-list">${ls.map(row).join('')}</div>
   ${soonRows?`<div class="trk-head" style="--a:${t.accent};margin-top:18px"><div class="trk-name">Coming soon</div></div>${soonRows}`:''}`;
   $('#jrback').onclick=()=>go('lessons');
@@ -4311,6 +4352,7 @@ function lessonDetail(code){
   <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journey</b></div>
   <button class="btn ghost" id="dback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
   <div class="card jdetail" style="--a:${l.accent}">
+    <div class="jd-eyebrow">${ic('lotus')} ${esc((TRACKS.find(x=>x.key===l.track)||{}).name||'Journey')}${l.part?' · Part '+l.part:''}</div>
     <div class="jd-art">${deityEmblem(l,'lg')}</div>
     <h1 class="jd-title" style="color:${l.accent}">${esc(l.title)}</h1>
     <div class="jd-subtitle">${esc(l.subtitle)}</div>
@@ -4694,7 +4736,7 @@ async function lessonPlay(lesson, startSi){
     <div class="lesson-step muted" id="lstep"></div>
     <div class="jny-bar" style="margin-top:7px"><i id="lprog" style="width:0%"></i></div>
   </div>
-  <div class="orb-wrap" style="height:220px"><div class="ring"></div><div class="orb" id="lorb"><div class="t" style="font-size:19px">◦</div></div><div class="breath-label" id="lcue"></div></div>
+  <div class="orb-wrap lorb-wrap" style="height:220px;--a:${lesson.accent}"><div class="ring"></div><div class="orb" id="lorb"><div class="t" style="font-size:19px">◦</div></div><div class="breath-label" id="lcue"></div></div>
   <div class="lesson-teach" id="lteach"></div>
   <div class="lesson-foot">
     <button class="mic on" id="lmute" title="Narration">${ic('sound')}</button>
