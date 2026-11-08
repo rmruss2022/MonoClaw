@@ -2040,9 +2040,9 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .orb-stage{position:relative;width:272px;height:272px;max-width:82vw;max-height:82vw;margin:-6px 0 -12px;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
 .orb-stage canvas,.orb-stage>svg,.orb-stage .orb-fallback{position:absolute;inset:0;width:100%;height:100%}
 .orb-fallback{display:none;border-radius:50%}
-.journal-cta{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;margin:22px 0 6px;
+.journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 6px;
   background:linear-gradient(135deg,#33250f 0%,#211607 55%,#140d06 100%);color:var(--gold);
-  border:1px solid rgba(245,201,119,.52);border-radius:16px;padding:18px 18px;cursor:pointer;
+  border:1px solid rgba(245,201,119,.52);border-radius:16px;padding:15px 18px;cursor:pointer;
   box-shadow:0 0 16px rgba(245,201,119,.22),inset 0 0 16px rgba(245,201,119,.06);animation:ctaglow 3.6s ease-in-out infinite}
 .journal-cta span{font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;letter-spacing:.01em;
   background:linear-gradient(180deg,#fff0cf 0%,#f3d79a 45%,#e0ad52 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
