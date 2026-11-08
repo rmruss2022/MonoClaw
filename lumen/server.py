@@ -2480,6 +2480,7 @@ nav button.on{color:var(--text);background:#211a37}
 .ctoggle .seg button{display:flex;align-items:center;justify-content:center;gap:6px}
 .ctoggle .seg button .i{width:15px;height:15px}
 .cbody-art{padding-top:4px}
+.cbody-altar{padding-top:26px}
 .feed-item{border-left:2px solid var(--purple);padding:4px 0 4px 12px;margin:12px 0}
 .feed-item .who{font-size:12px;color:var(--muted)}
 a{color:var(--purple)}
@@ -3377,6 +3378,7 @@ const SVGP={
   target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>',
   pin:'<path d="M12 21s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>',
   up:'<line x1="12" y1="19" x2="12" y2="6"/><path d="M6 11l6-6 6 6"/>',
+  share:'<path d="M12 3v12"/><path d="M8.5 6.5 12 3l3.5 3.5"/><path d="M6 11H5a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7a1 1 0 0 0-1-1h-1"/>',
   check:'<path d="M5 12.5l4.5 4.5L19 6.5"/>',
   clock:'<circle cx="12" cy="12.5" r="8"/><path d="M12 8v4.5l3.2 1.9"/><path d="M9 2.8h6"/><path d="M12 2.8v1.7"/>',
   seal:'<circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="6.1" stroke-dasharray="0.4 2" opacity=".75"/><path d="M12 15.7c-2.6 0-4.6-1.6-4.6-3.2 1.2 0 2 .3 2.6.8C9.4 11.5 10.4 9.9 12 8.5c1.6 1.4 2.6 3 2 4.8.6-.5 1.4-.8 2.6-.8 0 1.6-2 3.2-4.6 3.2Z" fill="currentColor" stroke="none"/>',
@@ -7814,7 +7816,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v10';
+const CACHE = 'lumen-v11';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
