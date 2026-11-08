@@ -2019,6 +2019,9 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .journal-cta:active{transform:translateY(1px)}
 @keyframes jglow{0%,100%{box-shadow:0 0 18px rgba(245,201,119,.36),0 8px 22px rgba(0,0,0,.35)}50%{box-shadow:0 0 32px rgba(245,201,119,.62),0 8px 22px rgba(0,0,0,.35)}}
 @media (prefers-reduced-motion:reduce){.journal-cta{animation:none}}
+.spinner{display:inline-block;width:1.3em;height:1.3em;vertical-align:-0.3em;line-height:0}
+.spinner svg{display:block;width:100%;height:100%}
+.center .spinner{display:block;width:60px;height:60px;margin:2px auto 10px;vertical-align:baseline}
 @media (prefers-reduced-motion:reduce){.lumorb,.lumorb-rays{animation:none}}
 .hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
 .hh-league{display:flex;align-items:center;gap:11px}
@@ -2891,8 +2894,22 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
 </div></nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
+/* Diya flame loading spinner — upgrade every .spinner span into the Lottie.
+   Fetched once, reused as animationData; a MutationObserver catches spinners
+   injected by any later render. Falls back silently if lottie/CDN is unavailable. */
+let _diyaData=null;
+function _mountDiya(){
+  if(!window.lottie||!_diyaData)return;
+  document.querySelectorAll('.spinner:not([data-diya])').forEach(elm=>{
+    elm.setAttribute('data-diya','1');
+    try{window.lottie.loadAnimation({container:elm,renderer:'svg',loop:true,autoplay:true,animationData:_diyaData});}catch(e){}
+  });
+}
+fetch('/assets/diya.json').then(r=>r.json()).then(d=>{_diyaData=d;_mountDiya();}).catch(()=>{});
+try{new MutationObserver(()=>_mountDiya()).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
 const el=(h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
 async function api(path,method='GET',body){
   const o={method,headers:{}};
@@ -5651,6 +5668,14 @@ class H(BaseHTTPRequestHandler):
         if p == "/health":
             self._send(200, {"ok": True}); return
         rel = p.lstrip("/")
+        if rel == "assets/diya.json":
+            fp = os.path.join(HERE, "assets", "diya.json")
+            if os.path.isfile(fp):
+                with open(fp, "rb") as f:
+                    self._send(200, f.read(), "application/json",
+                               extra=[("Cache-Control", "public, max-age=604800, immutable")])
+                return
+            self._send(404, {"error": "not found"}); return
         if rel in ("icon.png", "icon-192.png", "icon-512.png", "icon.svg") or \
            (rel.startswith("art/") and re.fullmatch(r"art/[a-z0-9_-]+\.(?:png|jpg|jpeg|webp)", rel)):
             fp = os.path.join(HERE, rel)
