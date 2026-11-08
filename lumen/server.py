@@ -3091,7 +3091,7 @@ const fmt=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':''+n;
 /* ---- inline SVG icon set (no asset files; currentColor-driven) ---- */
 const SVGP={
   lumen:'<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/><g><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.6" y1="5.6" x2="7.3" y2="7.3"/><line x1="16.7" y1="16.7" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="16.7" y2="7.3"/><line x1="7.3" y1="16.7" x2="5.6" y2="18.4"/></g>',
-  meditate:'<circle cx="12" cy="5.4" r="2.6" fill="currentColor" stroke="none"/><path d="M12 9c-2 0-3.3 1.4-3.8 3.2C6.5 12.5 5 13.8 5 15.5 5 16.3 5.6 17 6.5 17h11c.9 0 1.5-.7 1.5-1.5 0-1.7-1.5-3-3.2-3.3C15.3 10.4 14 9 12 9Z" fill="currentColor" stroke="none"/>',
+  meditate:'<circle cx="12" cy="4.8" r="2.4" fill="currentColor" stroke="none"/><path d="M12 8.2c-2.3.2-3.9 1.7-4.2 4.5"/><path d="M12 8.2c2.3.2 3.9 1.7 4.2 4.5"/><path d="M4.6 18c1.9-3.1 4.4-4.1 7.4-4.1s5.5 1 7.4 4.1c.4.6-.1 1.4-.8 1.4H5.4c-.7 0-1.2-.8-.8-1.4Z" fill="currentColor" stroke="none"/><circle cx="7.8" cy="12.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12.9" r="1.05" fill="currentColor" stroke="none"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18"/>',
   trophy:'<path d="M8 4h8v4.5a4 4 0 0 1-8 0V4Z"/><path d="M8 5.2H5a2 2 0 0 0 0 4h1.2M16 5.2h3a2 2 0 0 1 0 4h-1.2"/><path d="M12 12.5V16M9.2 20h5.6M10 20c0-1.4 .9-2 2-2s2 .6 2 2"/>',
   book:'<path d="M5 4.5h10.5a2 2 0 0 1 2 2V20H7a2 2 0 0 1-2-2V4.5Z"/><path d="M17.5 17H7a2 2 0 0 0-2 2"/><path d="M8.5 8.5h6M8.5 11.5h5"/>',
