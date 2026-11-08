@@ -2257,7 +2257,7 @@ nav button.on{color:var(--text);background:#211a37}
 .spot-meta{padding:12px 14px}
 .spot-where{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-top:4px}
 .spot-where .i{width:14px;height:14px}
-.toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:50;background:#1c1630;border:1px solid var(--purple);
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 14px);transform:translateX(-50%);z-index:50;background:#1c1630;border:1px solid var(--purple);
   padding:12px 16px;border-radius:14px;box-shadow:0 10px 40px -10px #000;max-width:92%;text-align:center;font-weight:600}
 .hidden{display:none!important}
 .center{text-align:center}
