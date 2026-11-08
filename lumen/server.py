@@ -6106,6 +6106,12 @@ class H(BaseHTTPRequestHandler):
             if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
                 self._send(403, {"error": "nope"}); return
             import urllib.request as _ur, urllib.error as _ue
+            srch = (q.get("search", "") or "").strip().lower()
+            if srch:
+                rows = c.execute("SELECT id,email,name,created FROM users WHERE LOWER(email) LIKE ? OR LOWER(name) LIKE ? "
+                                 "ORDER BY id DESC LIMIT 25", ("%"+srch+"%", "%"+srch+"%")).fetchall()
+                self._send(200, {"search": srch, "matches": [
+                    {"id": r["id"], "email": r["email"], "name": r["name"], "created": r["created"]} for r in rows]}); return
             em = (q.get("email", "") or "").strip().lower()
             u = user_by_email(c, em) if em else None
             out = {"email": em, "user_exists": bool(u),
