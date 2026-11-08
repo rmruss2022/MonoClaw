@@ -2662,11 +2662,14 @@ a{color:var(--purple)}
 .pp-dot .i{width:14px;height:14px}
 .pp-sn{font-size:10px;color:var(--muted);margin-top:3px}
 /* Pillars redesign — a display case of focus pillars under an arch + pillar cards + Jungian path */
-.pcase{position:relative;overflow:hidden;background:#0b0912;border:1px solid #241d38;border-radius:92px 92px 20px 20px;padding:26px 16px 20px;margin:6px 0 18px;text-align:center;box-shadow:inset 0 0 70px -22px #000,0 14px 36px -18px #000}
-.pcase:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 70% at 50% -4%,rgba(245,201,119,.13),transparent 56%)}
-.pcase-col{position:absolute;bottom:-8px;width:74px;height:168px;opacity:.42;pointer-events:none;z-index:0;filter:drop-shadow(0 0 9px rgba(245,201,119,.25))}
-.pcase-col.left{left:-16px}.pcase-col.right{right:-16px;transform:scaleX(-1)}
-.pcase>.pcase-eyebrow,.pcase>.pcase-row{position:relative;z-index:1}
+.pcase{position:relative;overflow:hidden;background:linear-gradient(180deg,#0c0a16,#080610);border:1px solid #241d38;border-radius:100px 100px 20px 20px;padding:30px 20px 20px;margin:6px 0 18px;text-align:center;box-shadow:inset 0 2px 30px -6px #000,inset 0 0 70px -24px #000,0 14px 36px -18px #000}
+.pcase:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 60% at 50% 0,rgba(245,201,119,.14),transparent 56%)}
+/* faint fluted pilasters down the sides of the niche */
+.pcase:after{content:"";position:absolute;left:14px;right:14px;top:70px;bottom:14px;pointer-events:none;
+  background:linear-gradient(90deg,rgba(245,201,119,.16),transparent 7%,transparent 93%,rgba(245,201,119,.16)),linear-gradient(90deg,transparent 2.5%,rgba(245,201,119,.08) 3%,transparent 3.5%,transparent 96.5%,rgba(245,201,119,.08) 97%,transparent 97.5%)}
+/* inner gold outline tracing the arch */
+.pcase-frame{position:absolute;inset:9px;border:1px solid rgba(245,201,119,.22);border-radius:92px 92px 14px 14px;pointer-events:none;box-shadow:inset 0 0 22px -10px rgba(245,201,119,.4)}
+.pcase-eyebrow,.pcase-row{position:relative;z-index:1}
 .pcase-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin-bottom:17px}
 .pcase-eyebrow .i{width:14px;height:14px}
 .pcase-row{display:flex;justify-content:center;gap:clamp(10px,5vw,24px);flex-wrap:wrap}
@@ -5724,7 +5727,7 @@ async function renderPillarsSection(){
   const jung=[['The Shadow','Meet what you suppress'],['The Persona','The mask you wear'],['Anima &amp; Animus','Your inner opposite'],['The Self','Wholeness &amp; integration']];
   box.innerHTML=
     `<div class="pcase">`
-      +`<div class="jcolumn pcase-col left"></div><div class="jcolumn pcase-col right"></div>`
+      +`<div class="pcase-frame"></div>`
       +`<div class="pcase-eyebrow">${ic('seal')} Your focus pillars</div>`
       +`<div class="pcase-row">${chosen.length?chosen.map(caseItem).join(''):'<span class="muted" style="font-size:12.5px;max-width:30ch">Assign pillars on the compass above to fill your case.</span>'}</div>`
     +`</div>`
