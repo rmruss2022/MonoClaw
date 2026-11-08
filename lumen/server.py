@@ -3047,6 +3047,15 @@ a{color:var(--purple)}
 .i.lg{width:46px;height:46px;filter:drop-shadow(0 0 16px currentColor)}
 @keyframes markpulse{0%,100%{filter:drop-shadow(0 0 5px #f5c97799)}50%{filter:drop-shadow(0 0 12px #f5c977ee)}}
 .brand .mark{display:inline-flex}
+/* lumen brand orb mark (shared logo) */
+.lmark{display:inline-block;vertical-align:-.25em;flex:none}
+.lmark.mark{width:31px;height:31px;filter:drop-shadow(0 0 8px rgba(245,201,119,.5));animation:markpulse 4.5s ease-in-out infinite}
+.lmark.lg{width:48px;height:48px;filter:drop-shadow(0 0 18px rgba(245,201,119,.45))}
+.lmark.xl{width:92px;height:92px;filter:drop-shadow(0 0 30px rgba(245,201,119,.5))}
+.finale-mark .lmark{width:72px;height:72px}
+.onb-ic .lmark{width:96px;height:96px}
+.onb-brand .lmark{width:24px;height:24px}
+.hdr-mark svg.lmark{width:100%;height:100%}
 .chip .big .i{width:26px;height:26px;color:#cbb5e8;transition:transform .2s ease,filter .2s ease}
 .chip.sel .big .i{color:#f0e6ff;filter:drop-shadow(0 0 7px var(--purple));transform:scale(1.12)}
 .lb-row .rk .i{width:18px;height:18px}
@@ -3221,6 +3230,11 @@ const RARITY=[['Common','#9aa3b8','#232233','rgba(154,163,184,.20)'],['Rare','#5
 const ACH_RARITY={first_light:0,centurion:0,marathoner:1,moon_child:1,dawn_patrol:1,week_warrior:2,globetrotter:2,deep_diver:2,constellation:3,luminary:3,scribe:1,chronicler:2,pilgrim:2};
 function rarityOf(code){return ACH_RARITY[code]!=null?ACH_RARITY[code]:0;}
 function ic(name,cls){return `<svg class="i ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SVGP[name]||''}</svg>`;}
+// The Lumen brand mark: a dimensional ringed light-orb (mini of the home hero orb).
+// This is the app logo everywhere — the old line-art sun (SVGP.lumen) is kept as the
+// legacy "light motif" glyph for inline, in-text uses (Keeper notes, map points, etc.).
+let __lmN=0;
+function lumenMark(cls){const u='lm'+(++__lmN);return `<svg class="lmark ${cls||''}" viewBox="0 0 44 44" aria-hidden="true"><defs><radialGradient id="${u}c" cx="46%" cy="40%" r="60%"><stop offset="0" stop-color="#fffdf6"/><stop offset=".2" stop-color="#fff0c6"/><stop offset=".5" stop-color="#f7c972"/><stop offset=".82" stop-color="#e49b38"/><stop offset="1" stop-color="#9a5e1c"/></radialGradient><radialGradient id="${u}h" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6c977" stop-opacity=".55"/><stop offset=".6" stop-color="#f0a84a" stop-opacity=".18"/><stop offset="1" stop-color="#f0a84a" stop-opacity="0"/></radialGradient><linearGradient id="${u}r" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e49b38" stop-opacity=".12"/><stop offset=".5" stop-color="#ffe7b0"/><stop offset="1" stop-color="#e49b38" stop-opacity=".12"/></linearGradient><clipPath id="${u}f"><rect x="0" y="22" width="44" height="22"/></clipPath></defs><circle cx="22" cy="22" r="21" fill="url(#${u}h)"/><ellipse cx="22" cy="22" rx="18" ry="5.6" fill="none" stroke="url(#${u}r)" stroke-width="1.3" transform="rotate(-20 22 22)"/><circle cx="22" cy="22" r="11" fill="url(#${u}c)"/><circle cx="22" cy="22" r="11" fill="none" stroke="#ffe7b0" stroke-width=".6" opacity=".35"/><ellipse cx="18.4" cy="18" rx="3.1" ry="2.1" fill="#fffdf4" opacity=".8" transform="rotate(-25 18.4 18)"/><g clip-path="url(#${u}f)"><ellipse cx="22" cy="22" rx="18" ry="5.6" fill="none" stroke="url(#${u}r)" stroke-width="1.5" transform="rotate(-20 22 22)"/></g><circle cx="38.6" cy="15.9" r="1.2" fill="#fff3d0"/><circle cx="5.4" cy="28.1" r="1.05" fill="#fff3d0" opacity=".9"/></svg>`;}
 const ACH_ICON={first_light:'lumen',marathoner:'flag',week_warrior:'flame',constellation:'spark',moon_child:'moon',dawn_patrol:'sunrise',globetrotter:'globe',centurion:'target',deep_diver:'ocean',luminary:'spark',scribe:'book',chronicler:'book',pilgrim:'lotus'};
 // each facet is coloured by the kind of act it represents
 const ACH_CAT_COLOR={
@@ -3329,9 +3343,9 @@ function go(tab){TAB=tab;document.querySelectorAll('.jny-finale').forEach(x=>x.r
 function renderAuth(){
   $('#nav').classList.add('hidden');
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>
   <div class="center" style="margin:26px 0 10px">
-    <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${ic('lumen','lg grad-gold')}</div>
+    <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${lumenMark('lg')}</div>
     <h1 style="margin:14px 0 4px">Light up the world</h1>
     <p class="muted" style="margin:0 28px">Meditate, earn Light, and watch the planet glow with everyone practicing today.</p>
   </div>
@@ -3365,7 +3379,7 @@ function renderReset(prefill){
   let stage='request';
   const draw=()=>{
     $('#app').innerHTML=`
-    <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+    <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>
     <div class="center" style="margin:26px 0 10px">
       <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${ic('lock','lg grad-gold')}</div>
       <h1 style="margin:14px 0 4px">Reset your password</h1>
@@ -3449,7 +3463,7 @@ async function renderOnboarding(){
       <div class="onb-grid">${ONB_LEVELS.map(([label,k,icn])=>`<button class="onb-chip wide ${onb.level===k?'sel':''}" data-l="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
   }else{
     let live=0;try{live=(await api('presence')).now;}catch(e){}
-    body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-ic">${ic('lumen','lg grad-gold')}</div>
+    body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-ic">${lumenMark('lg')}</div>
       <h1 class="onb-h">Save your light</h1>
       <p class="onb-p">${live>0?`<b>${live}</b> meditating right now. `:''}Create your account to start a streak, keep your journal, and claim your place on the map.</p></div>
       <div class="card" style="margin-top:4px">
@@ -3465,7 +3479,7 @@ async function renderOnboarding(){
       </div>`;
   }
   $('#app').innerHTML=`
-    <div class="onb-top"><span class="onb-brand">${ic('lumen','mark')} Lumen</span>
+    <div class="onb-top"><span class="onb-brand">${lumenMark('mark')} Lumen</span>
       ${s<NSL?'<a class="onb-signin" id="toSignin">Sign in</a>':''}</div>
     <div class="onb-body">${body}</div>
     <div class="onb-foot">
@@ -3682,7 +3696,7 @@ function renderMeditatePledge(){
   if(ME&&ME.goal_days&&!mediGoal_touched)mediGoal=ME.goal_days;
   const dayword=mediGoal===1?'day':'days';
   const chips=[1,2,3,4,5,6,7].map(n=>`<button class="mgc${n===mediGoal?' on':''}" data-d="${n}">${n}</button>`).join('');
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>`
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>`
   +`<div class="jwelc">`
     +`<div class="jwelc-hero"><div class="jwelc-halo">${ic('lotus','g')}</div>`
       +`<h2 class="jwelc-h">A promise to your practice</h2>`
@@ -3796,7 +3810,7 @@ async function renderMeditate(){
   $('#app').innerHTML=`
   <header class="hdr">
     <div class="hdr-l">
-      <span class="hdr-mark"><svg viewBox="0 0 44 44" aria-hidden="true"><defs><radialGradient id="loCore" cx="46%" cy="40%" r="60%"><stop offset="0" stop-color="#fffdf6"/><stop offset=".2" stop-color="#fff0c6"/><stop offset=".5" stop-color="#f7c972"/><stop offset=".82" stop-color="#e49b38"/><stop offset="1" stop-color="#9a5e1c"/></radialGradient><radialGradient id="loHalo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6c977" stop-opacity=".55"/><stop offset=".6" stop-color="#f0a84a" stop-opacity=".18"/><stop offset="1" stop-color="#f0a84a" stop-opacity="0"/></radialGradient><linearGradient id="loRing" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e49b38" stop-opacity=".12"/><stop offset=".5" stop-color="#ffe7b0"/><stop offset="1" stop-color="#e49b38" stop-opacity=".12"/></linearGradient><clipPath id="loFront"><rect x="0" y="22" width="44" height="22"/></clipPath></defs><circle cx="22" cy="22" r="21" fill="url(#loHalo)"/><ellipse cx="22" cy="22" rx="18" ry="5.6" fill="none" stroke="url(#loRing)" stroke-width="1.3" transform="rotate(-20 22 22)"/><circle cx="22" cy="22" r="11" fill="url(#loCore)"/><circle cx="22" cy="22" r="11" fill="none" stroke="#ffe7b0" stroke-width=".6" opacity=".35"/><ellipse cx="18.4" cy="18" rx="3.1" ry="2.1" fill="#fffdf4" opacity=".8" transform="rotate(-25 18.4 18)"/><g clip-path="url(#loFront)"><ellipse cx="22" cy="22" rx="18" ry="5.6" fill="none" stroke="url(#loRing)" stroke-width="1.5" transform="rotate(-20 22 22)"/></g><circle cx="38.6" cy="15.9" r="1.2" fill="#fff3d0"/><circle cx="5.4" cy="28.1" r="1.05" fill="#fff3d0" opacity=".9"/></svg></span>
+      <span class="hdr-mark">${lumenMark('')}</span>
       <div class="hdr-wm"><span class="hdr-name">lumen</span><span class="hdr-tag">light, one breath at a time</span></div>
     </div>
     <div class="hdr-r">
@@ -3897,7 +3911,7 @@ async function renderLessons(){
     </button>`;
   };
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journeys</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journeys</b></div>
   <button class="btn ghost" id="lesback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
   <p class="muted" style="font-size:13px;margin:0 2px 14px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
   <div class="jrny-grid">${TRACKS.map(card).join('')}</div>
@@ -3931,7 +3945,7 @@ function renderJourney(key){
   const soonRows=(ROADMAP[key]||[]).map(r=>`<div class="lj-row soon"><span class="lj-ico lock">${ic('lock')}</span>`
     +`<span class="lj-main"><span class="lj-title">${esc(r.title)}</span><span class="lj-sub">${esc(r.sub)}</span></span></div>`).join('');
   $('#app').innerHTML=`
-  <div class="brand"><button class="back-btn" id="jrback" title="All journeys">‹</button><span class="mark">${ic('lumen','mark')}</span><b>${esc(t.name)}</b></div>
+  <div class="brand"><button class="back-btn" id="jrback" title="All journeys">‹</button><span class="mark">${lumenMark('mark')}</span><b>${esc(t.name)}</b></div>
   <p class="muted" style="font-size:13px;margin:0 2px 12px">${esc(t.sub)}</p>
   <div class="pp-top"><div class="pp-count">${done} of ${total} lessons complete</div><div class="pp-bar"><i style="width:${pct}%"></i></div></div>
   ${next?`<button class="btn gold" id="jrnext" style="margin:14px 0 6px">${ic('play')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:14px 0">✦ You've completed this journey. Revisit any lesson below.</div>`}
@@ -3973,7 +3987,7 @@ const mm=(s)=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 
 function completeFlow(minutes){
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Session complete</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Session complete</b></div>
   <div class="card center"><div style="color:var(--gold)">${ic('lotus','lg grad-gold')}</div>
     <h2 style="margin:8px 0 2px">${minutes} minutes</h2>
     <p class="muted" style="margin:0">How do you feel?</p>
@@ -4060,7 +4074,7 @@ function showRewards(res){
   $('#nav').classList.remove('hidden');bindNav();
   const ach=(res.new_achievements||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'star')} ${a.title}</div>`).join(' ');
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>
   <div class="card center">
     <div style="color:var(--gold);filter:drop-shadow(0 0 20px var(--gold))">${ic('spark','lg grad-aur')}</div>
     <div style="font-size:34px;font-weight:800;color:var(--gold)">+${res.light_earned} Light</div>
@@ -4191,7 +4205,7 @@ function lessonDetail(code){
   if(window.speechSynthesis)speechSynthesis.cancel();try{Sound.stop();}catch(e){}
   const nSeg=l.segments.length, rs=lessonResumeSi(l), pr=lessonProg(l.code), done=pr&&pr.count>0;
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journey</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journey</b></div>
   <button class="btn ghost" id="dback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
   <div class="card jdetail" style="--a:${l.accent}">
     <div class="jd-art">${deityEmblem(l,'lg')}</div>
@@ -4659,7 +4673,7 @@ async function renderMap(){
   // not the community "Today" map, so it never looks like you meditated elsewhere.
   if(!window._mapScopeInit){window._mapScopeInit=1;if(ME&&(ME.total_sessions||0)===0)mapScope='mine';}
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>World</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>World</b></div>
   <div class="seg" id="scope"><button class="${mapScope==='today'?'on':''}" data-s="today">Today</button><button class="${mapScope==='all'?'on':''}" data-s="all">All time</button><button class="${mapScope==='mine'?'on':''}" data-s="mine">My places</button></div>
   <div class="map-view"><button class="map-vbtn ${mapPhotos?'on':''}" id="mvphoto">${ic('camera')} Photos</button><button class="map-vbtn ${mapPhotos?'':'on'}" id="mvicon">${ic('lumen')} Icons</button></div>
   <div id="pres" class="muted center" style="margin:10px 0"></div>
@@ -4783,7 +4797,7 @@ function showFinale(points){
   if(ME){lines.push([ic('spark','g'),`Level ${ME.level} · ${fmt(ME.light)} Light`,`best streak ${ME.best_streak||ME.streak||0} days`]);}
   const ov=el(`<div class="jny-finale"><div class="fspk">${spk}</div>
     <div class="finale-card">
-      <div class="finale-mark">${ic('lumen','lg grad-gold')}</div>
+      <div class="finale-mark">${lumenMark('lg')}</div>
       <div class="finale-sub">Your journey around the world</div>
       <h1 class="finale-h">Congratulations,<br>${esc(name)}</h1>
       <p class="finale-poem">You carried stillness to ${places} corners of the earth — one breath at a time.</p>
@@ -4805,7 +4819,7 @@ function stopJourney(){
 /* ---- leagues & leaderboards ---- */
 let lbScope='week',lbBy='light',leagueView='league';
 async function renderLeagues(){
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Leagues</b></div>
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Leagues</b></div>
     <div class="seg" id="lv"><button class="${leagueView==='league'?'on':''}" data-v="league">My league</button><button class="${leagueView==='global'?'on':''}" data-v="global">Global ranks</button></div>
     <div id="lbody"></div>`;
   $('#lv').querySelectorAll('button').forEach(b=>b.onclick=()=>{leagueView=b.dataset.v;renderLeagues();});
@@ -5109,7 +5123,7 @@ async function renderJournalBody(){
     body.innerHTML=`<div class="card center muted"><span class="spinner"></span> The Keeper is reading your letters…</div>`;
     let di;try{di=await api('journal/insights');}catch(e){di=null;}
     if(!di||!di.ready){
-      body.innerHTML=`<div class="card center muted"><div style="color:var(--gold);margin-bottom:6px">${ic('lumen','lg')}</div>${(di&&di.reason==='few')?'Write a couple of letters and the Keeper will start noticing the throughline.':'Insights need the companion — try again in a moment.'}</div>`;
+      body.innerHTML=`<div class="card center muted"><div style="color:var(--gold);margin-bottom:6px">${lumenMark('lg')}</div>${(di&&di.reason==='few')?'Write a couple of letters and the Keeper will start noticing the throughline.':'Insights need the companion — try again in a moment.'}</div>`;
     }else{
       body.innerHTML=`<div class="insights">
         ${(di.themes&&di.themes.length)?`<div class="ins-themes">${di.themes.map(t=>`<span class="ins-chip">${esc(t)}</span>`).join('')}</div>`:''}
@@ -5147,7 +5161,7 @@ function _jwCard(icn,title,desc,stat,cite){
 }
 function renderJournalWelcome(){
   const nm=(ME&&ME.name)?esc(ME.name):'';
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b></div>`
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b></div>`
   +`<div class="jwelc">`
     +`<div class="jwelc-hero"><div class="jwelc-halo">${ic('book','g')}</div>`
       +`<h2 class="jwelc-h">Three ways to meet yourself</h2>`
@@ -5196,7 +5210,7 @@ async function renderJournalHome(){
       +`<span class="jbig-txt"><span class="jbig-t">${lbl}${isRec?`<span class="jbig-badge">Today</span>`:''}</span>`
       +`<span class="jbig-b">${J_MODE_BLURB[k]||''}</span></span><span class="jbig-go">›</span></button>`;};
   const doneN=(pp&&pp.done)||0;const totalP=(pp&&pp.total)||8;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Journal</b>`
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b>`
     +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button></div>`
     +jWeekRing()
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
@@ -5241,7 +5255,7 @@ async function renderPillarsProgress(){
       +`<span class="pp-desc">${esc(p.title||pdesc(p.name))}</span></span>`
       +`<span class="pp-stat${isDone?' done':''}"><span class="pp-dot">${isDone?ic('check'):ic(picon(p.name))}</span>`
       +`<span class="pp-sn">${n?n+(n===1?' sitting':' sittings'):'start'}</span></span></button>`;};
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Pillars</b>`
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Pillars</b>`
     +`<button class="lo-btn" id="ppback" style="margin-left:auto">${ic('book')} Journal</button></div>`
     +`<div class="pp-top"><div class="pp-count">You've explored <b>${done}</b> of ${total} pillars</div>`
       +`<div class="pp-bar"><i style="width:${pct}%"></i></div></div>`
@@ -5262,7 +5276,7 @@ async function renderJournalCompose(){
   listening=false;rec=null;
   const lbl={deep:'Deep',daily:'Daily',season:'Season'}[journalMode]||'Journal';
   const backTo=(journalMode==='deep')?'pillars':'home';
-  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="jback" title="Back">‹</button><span class="mark">${ic('lumen','mark')}</span><b>${lbl}</b>`
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="jback" title="Back">‹</button><span class="mark">${lumenMark('mark')}</span><b>${lbl}</b>`
     +`<button class="lo-btn" id="jhome" style="margin-left:auto">${ic('book')} Journal</button></div>`
     +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
     +`<div id="jcompose"></div>`;
@@ -5372,7 +5386,7 @@ async function renderLifeOS(){
   let d;try{d=await api('lifeos');LO=d.lifeos;LO_PILLARS=d.pillars;}catch(e){toast(e);return;}
   LO.pillars=LO.pillars||{};LO.focus=LO.focus||[];
   const chosen=DIRS.map(([k])=>LO.pillars[k]).filter(Boolean);
-  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="loback" title="Back to journal">‹</button><span class="mark">${ic('lumen','mark')}</span><b>Pillars</b></div>
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="loback" title="Back to journal">‹</button><span class="mark">${lumenMark('mark')}</span><b>Pillars</b></div>
   <p class="muted" style="font-size:13px;margin:0 0 10px">Your base at the center, four pillars at the cardinal directions. Choose two to focus on day to day.</p>
   <div class="compass2" id="compass">
     <svg class="crays" viewBox="0 0 300 300" aria-hidden="true">
@@ -5512,7 +5526,7 @@ let chatMsgs=[];let chatRec=null;let chatListening=false;let chatBusy=false;
 function renderChat(){
   if(window.speechSynthesis)speechSynthesis.cancel();
   if(!chatMsgs.length)chatMsgs=[{role:'model',text:`Hello${ME&&ME.name?', '+ME.name.split(' ')[0]:''}. I'm the Keeper. Talk to me about your day, ask about your practice, or say "write this down" and I'll keep it for you.`}];
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>The Keeper</b>
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>The Keeper</b>
     <button class="lp-speak ${speakOn?'on':''}" id="cspeak" title="Read replies aloud" style="margin-left:auto">${ic(speakOn?'sound':'mute')}</button>
     <button class="lo-btn" id="cback" style="margin-left:8px">${ic('book')} Journal</button></div>
   <div id="chatbox" class="chatbox"></div>
@@ -5573,7 +5587,7 @@ async function renderProfile(){
   const starLine = (horo&&!horo.need_sign)
     ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6"><span class="zsym">${horo.glyph}︎</span> <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
     : `<p class="muted" style="font-size:13px;margin:0 0 12px">Add your birthday to receive your daily Vedic reading.</p>`;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>${esc(p.name)}</b></div>
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>${esc(p.name)}</b></div>
   <div class="card">
     <div class="row" style="align-items:center"><div><div class="muted" style="font-size:12px">LEVEL</div><div style="font-size:40px;font-weight:800">${p.level}</div></div>
     <div style="text-align:right"><div class="pill" style="border-color:${p.league.color};color:${p.league.color}">${p.league.name} league</div></div></div>
@@ -5704,7 +5718,7 @@ const ELEMENT_COL={Light:'#f5c977',Fire:'#fb923c',Water:'#5fb0fa',Air:'#67e8f9',
 // each altar piece is placed when you unlock its achievement
 async function renderCollection(){
   const r=await api('me');ME=r.profile;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Collect</b>
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Collect</b>
     <span class="motebal">${ic('spark','g glow')} ${fmt(ME.motes)}</span></div>
   <div class="seg" id="cv">
     <button class="${collectView!=='artifacts'?'on':''}" data-v="altar">Mandala</button>
@@ -5724,11 +5738,20 @@ function buildAltar(achs){
   const P=[`<defs>
     <radialGradient id="aglow" cx="50%" cy="50%" r="64%"><stop offset="0" stop-color="#ffffff14"/><stop offset="100%" stop-color="transparent"/></radialGradient>
     <radialGradient id="acore" cx="50%" cy="40%" r="62%"><stop offset="0" stop-color="#fff6df"/><stop offset="1" stop-color="#e0953a"/></radialGradient>
+    <radialGradient id="aradiance" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffe7b8"/><stop offset="45%" stop-color="#e0953a" stop-opacity=".4"/><stop offset="100%" stop-color="transparent"/></radialGradient>
     <filter id="apg" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="2.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>`,`<rect width="300" height="300" fill="url(#aglow)"/>`];
-  // slowly turning outer bead ring
+  // breathing central radiance — the mandala "inhales" like the orb
+  const gLo=(0.07+0.22*frac).toFixed(2), gHi=(0.16+0.42*frac).toFixed(2);
+  P.push(`<circle cx="150" cy="150" r="90" fill="url(#aradiance)">
+    <animate attributeName="opacity" values="${gLo};${gHi};${gLo}" dur="6.5s" repeatCount="indefinite"/>
+    <animate attributeName="r" values="66;104;66" dur="6.5s" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.45 0 0.2 1;0.45 0 0.2 1" repeatCount="indefinite"/></circle>`);
+  // slow rotating sun-rays behind the facets (faint gold radiance)
+  let rays='';for(let i=0;i<24;i++){const a=i*15*Math.PI/180;rays+=`<line x1="${(C+30*Math.sin(a)).toFixed(1)}" y1="${(C-30*Math.cos(a)).toFixed(1)}" x2="${(C+134*Math.sin(a)).toFixed(1)}" y2="${(C-134*Math.cos(a)).toFixed(1)}" stroke="#f5c977" stroke-width="${i%2?1.1:0.5}" stroke-linecap="round" opacity="0.10"/>`;}
+  P.push(`<g opacity="${(0.5+0.5*frac).toFixed(2)}">${rays}<animateTransform attributeName="transform" type="rotate" from="0 150 150" to="360 150 150" dur="120s" repeatCount="indefinite"/></g>`);
+  // slowly turning outer bead ring (counter-rotates the rays)
   let dots='';for(let i=0;i<48;i++){const a=i*7.5*Math.PI/180;dots+=`<circle cx="${(C+131*Math.sin(a)).toFixed(1)}" cy="${(C-131*Math.cos(a)).toFixed(1)}" r="${i%2?1.4:0.9}" fill="#4a4168"/>`;}
-  P.push(`<g><animateTransform attributeName="transform" type="rotate" from="0 150 150" to="360 150 150" dur="140s" repeatCount="indefinite"/>${dots}</g>`);
+  P.push(`<g><animateTransform attributeName="transform" type="rotate" from="360 150 150" to="0 150 150" dur="140s" repeatCount="indefinite"/>${dots}</g>`);
   // structural rings (stained-glass leading)
   P.push(`<circle cx="150" cy="150" r="121" fill="none" stroke="#2e2747" stroke-width="1.3"/><circle cx="150" cy="150" r="78" fill="none" stroke="#241f38"/>`);
   // radial leading lines between facets
@@ -5737,20 +5760,29 @@ function buildAltar(achs){
   // decorative inner fronds between the facets (faint, same hue family)
   achs.forEach((a,i)=>{const ang=i*step+step/2;const col=a.unlocked?catColor(a.code):'#3a3550';
     P.push(`<g transform="rotate(${ang} 150 150)"><path d="${petalInner}" fill="none" stroke="${col}" stroke-width="1" opacity="${a.unlocked?0.5:0.22}"/></g>`);});
-  // the facets — one coloured petal per achievement
+  // the facets — one coloured petal per achievement, unlocked ones gently shimmer
   achs.forEach((a,i)=>{const ang=i*step;const on=a.unlocked;const col=catColor(a.code);
+    const sh=on?`<animate attributeName="opacity" values="0.9;1;0.9" dur="${(4.5+(i%5)*0.7).toFixed(1)}s" begin="${(i*0.3).toFixed(1)}s" repeatCount="indefinite"/>`:'';
     P.push(`<g class="apiece" data-ach="${a.code}" transform="rotate(${ang} 150 150)" style="cursor:pointer">`+
-      `<path d="${petalOuter}" fill="${on?col:'none'}" fill-opacity="${on?0.8:0}" stroke="${on?col:'#3a3550'}" stroke-width="${on?1.2:1.3}" stroke-linejoin="round" opacity="${on?0.98:0.45}" ${on?'filter="url(#apg)"':''}/>`+
+      `<path d="${petalOuter}" fill="${on?col:'none'}" fill-opacity="${on?0.8:0}" stroke="${on?col:'#3a3550'}" stroke-width="${on?1.2:1.3}" stroke-linejoin="round" opacity="${on?0.98:0.45}" ${on?'filter="url(#apg)"':''}>${sh}</path>`+
       `<path d="${petalOuter}" fill="none" stroke="${on?'#ffffffaa':'transparent'}" stroke-width="0.5" opacity="0.5"/></g>`);
   });
+  // twinkling motes drifting through the ring (golden-angle scatter)
+  let motes='';for(let i=0;i<16;i++){const a=(i*137.5)*Math.PI/180;const rr=48+(i%5)*17;const x=(C+rr*Math.sin(a)).toFixed(1),y=(C-rr*Math.cos(a)).toFixed(1);const d=(3.4+(i%4)*0.9).toFixed(1),dl=(i*0.37).toFixed(1);
+    motes+=`<circle cx="${x}" cy="${y}" r="1.2" fill="#ffe7b8"><animate attributeName="opacity" values="0;0.95;0" dur="${d}s" begin="${dl}s" repeatCount="indefinite"/><animate attributeName="r" values="0.5;1.7;0.5" dur="${d}s" begin="${dl}s" repeatCount="indefinite"/></circle>`;}
+  P.push(`<g opacity="${(0.35+0.65*frac).toFixed(2)}">${motes}</g>`);
   // inner jewel ring — a coloured gem per facet
   achs.forEach((a,i)=>{const ang=i*step*Math.PI/180,r=60,x=C+r*Math.sin(ang),y=C-r*Math.cos(ang);const on=a.unlocked;
     P.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${on?3:1.8}" fill="${on?catColor(a.code):'#3a3550'}" ${on?'filter="url(#apg)"':''}/>`);
   });
-  // faceted crystal core — gold, radiating with completion
+  // pulsing halo breathing out of the core
+  P.push(`<circle cx="150" cy="150" r="30" fill="none" stroke="${complete?'#f5c977':'#8a7bbf'}" stroke-width="1">
+    <animate attributeName="r" values="27;42;27" dur="4.6s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="${complete?0.55:0.3};0;${complete?0.55:0.3}" dur="4.6s" repeatCount="indefinite"/></circle>`);
+  // faceted crystal core — gold, radiating with completion, gently breathing
   P.push(`<circle cx="150" cy="150" r="30" fill="#140f24" stroke="${complete?'#f5c977':'#3a3550'}" stroke-width="1.4" ${complete?'filter="url(#apg)"':''}/>`);
   const gem=(SVGP['crystal']||'').replace(/currentColor/g,'url(#acore)');
-  P.push(`<g opacity="${(0.3+0.7*frac).toFixed(2)}" ${frac>0.5?'filter="url(#apg)"':''}><g transform="translate(135,134) scale(1.3)" fill="none" stroke="url(#acore)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${gem}</g></g>`);
+  P.push(`<g opacity="${(0.3+0.7*frac).toFixed(2)}" ${frac>0.5?'filter="url(#apg)"':''}><g transform="translate(135,134) scale(1.3)" fill="none" stroke="url(#acore)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${gem}<animate attributeName="opacity" values="0.75;1;0.75" dur="5.5s" repeatCount="indefinite"/></g></g>`);
   return `<svg viewBox="0 0 300 300" class="altar-svg">${P.join('')}</svg>`;
 }
 async function renderAltar(){
