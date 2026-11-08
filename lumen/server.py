@@ -253,7 +253,8 @@ def send_email(to, subject, text, html=None):
                 "text": text, "html": html or ("<pre style='font:15px/1.6 -apple-system,system-ui,sans-serif'>" + text + "</pre>"),
             }).encode()
             req = urllib.request.Request("https://api.resend.com/emails", data=payload, method="POST",
-                                         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+                                         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
+                                                  "User-Agent": "Lumen-mailer/1.0 (+https://lumen.app)"})
             with urllib.request.urlopen(req, timeout=12) as r:
                 return 200 <= r.status < 300
         except Exception as e:
@@ -6159,7 +6160,8 @@ class H(BaseHTTPRequestHandler):
                                       "subject": "Lumen email check",
                                       "text": "Lumen email delivery check — if you see this, sending works."}).encode()
                 req = _ur.Request("https://api.resend.com/emails", data=payload, method="POST",
-                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
+                                           "User-Agent": "Lumen-mailer/1.0 (+https://lumen.app)"})
                 try:
                     with _ur.urlopen(req, timeout=12) as r:
                         out["send_status"] = r.status; out["send_body"] = r.read().decode()[:400]
