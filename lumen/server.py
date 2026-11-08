@@ -2099,6 +2099,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .journal-cta .jc-txt{font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;letter-spacing:.01em;
   background:linear-gradient(180deg,#fff0cf 0%,#f3d79a 45%,#e0ad52 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
   text-shadow:0 1px 10px rgba(245,201,119,.18)}
+.journal-cta>.jbook,.journal-cta>.jc-txt,.journal-cta>.i{position:relative;z-index:1}
 .journal-cta .jbook{width:40px;height:40px;filter:drop-shadow(0 0 8px rgba(245,201,119,.55))}
 .journal-cta .i{width:26px;height:26px;color:var(--gold);transform:rotate(45deg);filter:drop-shadow(0 0 7px rgba(245,201,119,.6));animation:sealpulse 3.6s ease-in-out infinite}
 .journal-cta:active{transform:translateY(1px)}
@@ -3684,23 +3685,27 @@ function ctaSparks(){
   btn.style.position='relative';
   const PAD=46,BOT=12;
   const cv=document.createElement('canvas');
-  cv.style.cssText='position:absolute;left:0;top:-'+PAD+'px;width:100%;height:calc(100% + '+(PAD+BOT)+'px);pointer-events:none;z-index:2';
-  btn.appendChild(cv);
+  cv.style.cssText='position:absolute;left:0;top:-'+PAD+'px;width:100%;height:calc(100% + '+(PAD+BOT)+'px);pointer-events:none;z-index:0';
+  btn.insertBefore(cv, btn.firstChild);
   const ctx=cv.getContext('2d'); const dpr=Math.min(window.devicePixelRatio||1,2);
-  let W=0,H=0,topY=0,botY=0;
+  let W=0,H=0,topY=0,botY=0,tx=0,ty=0,tw=0;
   function size(){const r=btn.getBoundingClientRect(); if(!r.width)return;
-    W=cv.width=Math.round(r.width*dpr); H=cv.height=Math.round((r.height+PAD+BOT)*dpr); topY=PAD*dpr; botY=(PAD+r.height)*dpr;}
+    W=cv.width=Math.round(r.width*dpr); H=cv.height=Math.round((r.height+PAD+BOT)*dpr); topY=PAD*dpr; botY=(PAD+r.height)*dpr;
+    const tm=btn.querySelector('.jbook'); if(tm){const q=tm.getBoundingClientRect(); tx=(q.left-r.left+q.width/2)*dpr; ty=(q.top-r.top+PAD+q.height*0.58)*dpr; tw=q.width*dpr;} else {tx=W*0.28; ty=topY+34*dpr; tw=40*dpr;}}
   size();
-  const P=[]; const grav=0.03*dpr; let raf=0,dead=false,last=performance.now(),nextBurst=500,inBurst=0,tick=0,visible=true;
+  const P=[]; const grav=0.03*dpr; let raf=0,dead=false,last=performance.now(),nextBurst=500,inBurst=0,tick=0,bAcc=0,visible=true;
   function spark(){const x=(0.08+Math.random()*0.84)*W; const vx=(Math.random()-0.5)*1.3*dpr; const vy=-(1.15+Math.random()*0.95)*dpr;
-    P.push({x:x,y:topY,vx:vx,vy:vy,life:1,r:(0.8+Math.random()*1.1)*dpr,tw:Math.random()*6.28});}
+    P.push({x:x,y:topY,vx:vx,vy:vy,life:1,r:(0.8+Math.random()*1.1)*dpr,tw:Math.random()*6.28,g:1});}
+  function behindSpark(){const a=-Math.PI/2+(Math.random()-0.5)*1.25; const sp=(0.7+Math.random()*1.35)*dpr;
+    P.push({x:tx+(Math.random()-0.5)*tw*1.05, y:ty+(Math.random()-0.2)*tw*0.5, vx:Math.cos(a)*sp*0.6, vy:Math.sin(a)*sp-0.5*dpr, life:1, r:(0.7+Math.random()*1.0)*dpr, tw:Math.random()*6.28, g:0.42});}
   function frame(now){raf=0; if(dead||!visible)return; const dt=Math.min(now-last,50); last=now; const f=dt/16;
+    bAcc+=dt; if(bAcc>70){bAcc=0; behindSpark(); behindSpark(); if(Math.random()<0.5)behindSpark();}
     nextBurst-=dt;
     if(inBurst>0){ tick-=dt; if(tick<=0){ spark(); inBurst--; tick=90+Math.random()*80; } }
     else if(nextBurst<=0){ inBurst=1+Math.floor(Math.random()*3); tick=0; nextBurst=2000+Math.random()*2200; }
     ctx.clearRect(0,0,W,H); ctx.globalCompositeOperation='lighter';
     for(let i=P.length-1;i>=0;i--){const p=P[i];
-      p.vy+=grav*f; p.x+=p.vx*f; p.y+=p.vy*f; p.life-=dt/2400;
+      p.vy+=grav*p.g*f; p.x+=p.vx*f; p.y+=p.vy*f; p.life-=dt/2400;
       if(p.life<=0 || p.y>botY+8*dpr){P.splice(i,1);continue;}
       const al=Math.max(0,Math.min(1,p.life*1.1))*(0.6+0.3*Math.sin(now*0.013+p.tw)); const R=p.r;
       const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*5);
