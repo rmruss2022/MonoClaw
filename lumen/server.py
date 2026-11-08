@@ -2249,7 +2249,7 @@ nav button.on{color:var(--text);background:#211a37}
 .atlas-card>*{position:relative;z-index:1}
 .atlas-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .atlas-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold)}
-.atlas-eyebrow .i{width:14px;height:14px}
+.atlas-eyebrow .i{width:19px;height:19px}
 .atlas-streak{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--gold)}
 .atlas-streak .i{width:15px;height:15px}
 .atlas-tag{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--muted);margin:6px 0 8px}
