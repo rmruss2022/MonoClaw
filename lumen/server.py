@@ -2475,11 +2475,11 @@ nav button.on{color:var(--text);background:#211a37}
 .seg{display:flex;background:#13101f;border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px}
 .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:8px;border-radius:9px;font-weight:600;cursor:pointer;font-size:13px}
 .seg button.on{background:#271f42;color:var(--text)}
-.ctoggle{position:fixed;left:0;right:0;bottom:calc(80px + env(safe-area-inset-bottom));z-index:6;display:flex;justify-content:center;padding:0 14px;pointer-events:none}
-.ctoggle .seg{pointer-events:auto;max-width:560px;width:100%;box-shadow:0 12px 30px -12px #000;background:#15111f}
+.ctoggle{display:flex;justify-content:center;margin:20px 2px calc(96px + env(safe-area-inset-bottom))}
+.ctoggle .seg{max-width:560px;width:100%;background:#15111f}
 .ctoggle .seg button{display:flex;align-items:center;justify-content:center;gap:6px}
 .ctoggle .seg button .i{width:15px;height:15px}
-.cbody-art{padding-bottom:150px}
+.cbody-art{padding-top:4px}
 .feed-item{border-left:2px solid var(--purple);padding:4px 0 4px 12px;margin:12px 0}
 .feed-item .who{font-size:12px;color:var(--muted)}
 a{color:var(--purple)}
@@ -6164,13 +6164,19 @@ function buildAltar(achs){
   P.push(`<g opacity="${(0.3+0.7*frac).toFixed(2)}" ${frac>0.5?'filter="url(#apg)"':''}><g transform="translate(135,134) scale(1.3)" fill="none" stroke="url(#acore)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${gem}<animate attributeName="opacity" values="0.75;1;0.75" dur="5.5s" repeatCount="indefinite"/></g></g>`);
   return `<svg viewBox="0 0 300 300" class="altar-svg">${P.join('')}</svg>`;
 }
+function _onMandalaMsg(e){
+  if(e&&e.data&&e.data.lumenMandalaHeight){
+    const f=document.getElementById('mandalaFrame');
+    if(f)f.style.height=(Math.ceil(e.data.lumenMandalaHeight)+6)+'px';}}
 async function renderAltar(){
-  // Fixed-height frame: the mandala stays put on top while the detail panel
-  // scrolls inside it, with the prev/next bar pinned to the panel's top.
+  // The mandala renders at full length (no inner scroll); the whole page scrolls.
+  // The iframe auto-sizes to its content via the lumenMandalaHeight postMessage.
+  window.removeEventListener('message',_onMandalaMsg);
+  window.addEventListener('message',_onMandalaMsg);
   $('#cbody').innerHTML=`
   <div class="mandala-wrap">
-    <iframe id="mandalaFrame" src="assets/mandala.html?v=4" title="Your mandala" loading="eager"
-      style="width:100%;height:calc(100dvh - 250px);min-height:430px;border:0;display:block;background:transparent"></iframe>
+    <iframe id="mandalaFrame" src="assets/mandala.html?v=5" title="Your mandala" loading="eager" scrolling="no"
+      style="width:100%;height:600px;min-height:560px;border:0;display:block;background:transparent"></iframe>
   </div>`;
 }
 async function renderItems(){
@@ -7808,7 +7814,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v9';
+const CACHE = 'lumen-v10';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();

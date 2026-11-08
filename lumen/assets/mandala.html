@@ -83,17 +83,16 @@
   .prev iframe{display:block;width:100%;height:1300px;border:0;background:transparent;color-scheme:dark}
 
   /* --- embedded-in-app overrides (Lumen Collect screen) --- */
-  html,body{background:transparent!important;padding:0!important;margin:0!important;height:100%!important;overflow:hidden!important;display:block!important}
-  .app{max-width:none!important;width:100%!important;height:100%!important;display:flex!important;flex-direction:column!important}
+  /* The whole piece renders at full length; the outer app page does the scrolling
+     (no nested scroll inside the iframe). The parent auto-sizes the iframe to .card. */
+  html,body{background:transparent!important;padding:0!important;margin:0!important;height:auto!important;overflow:visible!important;display:block!important}
+  .app{max-width:none!important;width:100%!important;height:auto!important;display:block!important}
   header,.controls,.prev{display:none!important}
-  .card{background:transparent!important;border:none!important;border-radius:0!important;padding:2px 6px 0!important;overflow:hidden!important;flex:1 1 auto!important;display:flex!important;flex-direction:column!important;min-height:0!important}
+  .card{background:transparent!important;border:none!important;border-radius:0!important;padding:2px 6px 0!important;overflow:visible!important;display:block!important}
   .card::before{display:none!important}
-  .stage{flex:0 0 auto!important}
-  /* panel scrolls on its own; the prev/back/next bar stays pinned flush at the top,
-     with a solid backing so scrolling content never bleeds through behind it */
-  .panel{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding-bottom:18px!important}
-  .panel .nav{position:sticky!important;top:0!important;z-index:6;margin:0 0 12px!important;padding:12px 2px 12px!important;
-    background:#0b0a12!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
+  .panel{min-height:0!important;overflow:visible!important;padding-bottom:4px!important}
+  .panel .nav{position:static!important;margin:0 0 12px!important;padding:10px 2px 12px!important;
+    background:transparent!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
 </style>
 </head>
 <body>
