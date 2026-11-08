@@ -2213,22 +2213,38 @@ nav button.on{color:var(--text);background:#211a37}
 .switch input:checked+.sl{background:linear-gradient(135deg,var(--gold),var(--pink))}
 .switch input:checked+.sl:before{transform:translateX(19px)}
 .chal-streak-u{font-size:11px;color:var(--muted);margin-left:2px}
-/* atlas: photo passport */
-.pilg-stats{display:flex;gap:10px;margin:12px 0 2px}
-.pilg-stat{flex:1;background:#1a1330;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
-.pilg-stat b{display:block;font-size:22px;font-weight:800;color:var(--gold);line-height:1.1}
-.pilg-stat label{font-size:11px;color:var(--muted)}
-.pilg-strip{display:flex;gap:7px;align-items:center;margin:11px 0 2px;overflow-x:auto;cursor:pointer;-webkit-overflow-scrolling:touch}
-.pilg-strip.empty{background:#1a1330;border:1px dashed var(--line);border-radius:12px;padding:10px 12px;gap:11px}
-.pilg-thumb{flex:none;width:52px;height:52px;border-radius:12px;background:#231a3c center/cover no-repeat;border:1px solid var(--line)}
-.pilg-thumb.ph{display:grid;place-items:center;color:var(--gold)}
-.pilg-thumb.ph .i{width:22px;height:22px}
-.pilg-thumb.more{display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--gold);background:#231a3c}
-.pilg-ms{margin-top:12px}
-.pilg-ms .bar{height:6px;border-radius:4px;background:#241b3b;overflow:hidden}
-.pilg-ms .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink))}
-.pilg-comm{margin-top:13px;display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:var(--gold);cursor:pointer;border-top:1px solid var(--line);padding-top:12px}
-.pilg-comm .i{width:15px;height:15px}
+/* Atlas — photo passport, rebuilt to the home-screen card standard */
+.atlas-card{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--gold) 26%,var(--line));
+  background:linear-gradient(165deg,color-mix(in srgb,var(--gold) 8%,#15111f),#110d1b 72%)}
+.atlas-card:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:radial-gradient(120% 85% at 90% -12%,color-mix(in srgb,var(--gold) 22%,transparent),transparent 55%)}
+.atlas-card>*{position:relative;z-index:1}
+.atlas-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
+.atlas-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold)}
+.atlas-eyebrow .i{width:14px;height:14px}
+.atlas-streak{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--gold)}
+.atlas-streak .i{width:15px;height:15px}
+.atlas-stats{display:flex;align-items:stretch;margin:0 0 15px}
+.atlas-stat{flex:1;text-align:center}
+.atlas-stat b{display:block;font-family:var(--serif);font-size:30px;font-weight:600;color:#f3eeff;line-height:1}
+.atlas-stat span{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;display:block}
+.atlas-vr{width:1px;background:#ffffff14;margin:3px 0}
+.atlas-strip{display:flex;gap:8px;align-items:center;overflow-x:auto;cursor:pointer;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.atlas-strip.empty{background:#ffffff06;border:1px dashed color-mix(in srgb,var(--gold) 30%,var(--line));border-radius:16px;padding:14px;gap:12px}
+.atlas-thumb{flex:none;width:58px;height:58px;border-radius:15px;background:#231a3c center/cover no-repeat;border:1px solid #ffffff1a;box-shadow:0 6px 16px -10px #000}
+.atlas-thumb.ph{display:grid;place-items:center;color:var(--gold);width:48px;height:48px}
+.atlas-thumb.ph .i{width:22px;height:22px}
+.atlas-thumb.more{display:grid;place-items:center;font-weight:800;font-size:14px;color:var(--gold);background:#ffffff0c}
+.atlas-status{margin-top:14px;font-size:12px;line-height:1.5;color:var(--muted);text-align:center}
+.atlas-status .i{width:13px;height:13px;vertical-align:-2px}
+.atlas-status.kept{color:var(--gold);font-weight:600}
+.atlas-ms{margin-top:14px}
+.atlas-ms .bar{height:6px;border-radius:999px;background:#ffffff12;overflow:hidden}
+.atlas-ms .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));box-shadow:0 0 10px -3px var(--pink)}
+.atlas-ms .lbl{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+.atlas-foot{margin-top:15px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--gold);cursor:pointer;border-top:1px solid #ffffff12;padding-top:13px}
+.atlas-foot .i{width:14px;height:14px}
+.atlas-foot .rt{transform:rotate(90deg)}
 /* daily horoscope card */
 /* zodiac symbols render as monochrome text, never emoji */
 .zsym{font-variant-emoji:text}
@@ -3326,24 +3342,27 @@ async function onbCreate(){
 /* ---- meditate ---- */
 function challengeCardHTML(ch){
   if(!ch||!ch.title||ch.places===undefined)return '';
-  const streak=ch.streak>0?`<span class="chal-streak">${ic('flame','flame grad-flame glow')}<b>${ch.streak}</b><span class="chal-streak-u">day photo streak</span></span>`:'';
+  const streak=ch.streak>0?`<span class="atlas-streak">${ic('flame','flame grad-flame glow')}<b>${ch.streak}</b> day streak</span>`:'';
   const thumbs=(ch.thumbs&&ch.thumbs.length)
-    ? `<div class="pilg-strip" onclick="go('map')">${ch.thumbs.map(t=>`<span class="pilg-thumb" style="background-image:url('${esc(t.photo)}')" title="${esc(t.city||'')}"></span>`).join('')}${ch.places>ch.thumbs.length?`<span class="pilg-thumb more">+${ch.places-ch.thumbs.length}</span>`:''}</div>`
-    : `<div class="pilg-strip empty" onclick="go('map')"><span class="pilg-thumb ph">${ic('camera')}</span><span class="muted" style="font-size:12px;line-height:1.35">Sit somewhere, snap your spot — begin your passport</span></div>`;
+    ? `<div class="atlas-strip" onclick="go('map')">${ch.thumbs.map(t=>`<span class="atlas-thumb" style="background-image:url('${esc(t.photo)}')" title="${esc(t.city||'')}"></span>`).join('')}${ch.places>ch.thumbs.length?`<span class="atlas-thumb more">+${ch.places-ch.thumbs.length}</span>`:''}</div>`
+    : `<div class="atlas-strip empty" onclick="go('map')"><span class="atlas-thumb ph">${ic('camera')}</span><span class="muted" style="font-size:12px;line-height:1.35">Sit somewhere, snap your spot — begin your passport</span></div>`;
   const status = ch.photo_today
-    ? `<div class="chal-done-banner">${ic('spark','g')} Spot kept today${ch.new_today?' · new place discovered':''}${ch.streak>0?` · ${ch.streak}-day streak`:''}</div>`
-    : `<div class="chal-bonus">${ic('camera','g')} Keep a photo of today's spot to ${ch.streak>0?`hold your ${ch.streak}-day streak`:'start your streak'} — <b>+${ch.new_bonus}</b> Light for a new place, <b>+${ch.photo_bonus}</b> for a familiar one.</div>`;
+    ? `<div class="atlas-status kept">${ic('spark','g')} Spot kept today${ch.new_today?' · new place discovered':''}${ch.streak>0?` · ${ch.streak}-day streak`:''}</div>`
+    : `<div class="atlas-status">${ic('camera','g')} Keep a photo of today's spot to ${ch.streak>0?`hold your ${ch.streak}-day streak`:'start your streak'} — <b style="color:var(--gold)">+${ch.new_bonus}</b> for a new place, <b style="color:var(--gold)">+${ch.photo_bonus}</b> for a familiar one.</div>`;
   const milestone = ch.next_milestone
-    ? `<div class="pilg-ms"><div class="bar"><i style="width:${Math.min(100,Math.round(100*ch.places/ch.next_milestone))}%"></i></div><div class="muted" style="font-size:11px;margin-top:4px">${ch.next_milestone-ch.places} more place${(ch.next_milestone-ch.places)===1?'':'s'} to your ${ch.next_milestone}-spot badge</div></div>`
+    ? `<div class="atlas-ms"><div class="bar"><i style="width:${Math.min(100,Math.round(100*ch.places/ch.next_milestone))}%"></i></div><div class="lbl">${ch.next_milestone-ch.places} more place${(ch.next_milestone-ch.places)===1?'':'s'} to your ${ch.next_milestone}-spot badge</div></div>`
     : '';
-  return `<div class="card chal-card">
-    <div class="chal-head"><span class="chal-title">${ic('globe')} ${esc(ch.title)}</span>${streak}</div>
-    <div class="pilg-stats"><div class="pilg-stat"><b>${ch.places}</b><label>place${ch.places===1?'':'s'} collected</label></div><div class="pilg-stat"><b>${ch.best||ch.streak||0}</b><label>best streak</label></div></div>
-    <div class="chal-blurb">${esc(ch.blurb)}</div>
+  return `<div class="card atlas-card">
+    <div class="atlas-head"><span class="atlas-eyebrow">${ic('globe','g')} ${esc(ch.title)}</span>${streak}</div>
+    <div class="atlas-stats">
+      <div class="atlas-stat"><b>${ch.places}</b><span>place${ch.places===1?'':'s'} collected</span></div>
+      <span class="atlas-vr"></span>
+      <div class="atlas-stat"><b>${ch.best||ch.streak||0}</b><span>best streak</span></div>
+    </div>
     ${thumbs}
     ${status}
     ${milestone}
-    <div class="pilg-comm" onclick="go('map')">${ic('globe','g')} ${ch.shared_today>0?`<b>${ch.shared_today}</b> spot${ch.shared_today===1?'':'s'} shared to the map today — see where the world is sitting`:'See where the world is meditating'} &rarr;</div>
+    <div class="atlas-foot" onclick="go('map')">${ic('globe','g')} ${ch.shared_today>0?`${ch.shared_today} spot${ch.shared_today===1?'':'s'} shared today — see the world`:'See where the world is meditating'} ${ic('up','rt')}</div>
   </div>`;
 }
 function horoscopeCardHTML(h){
