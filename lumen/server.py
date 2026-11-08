@@ -2052,6 +2052,12 @@ h1,h2,h3{font-weight:700;letter-spacing:-.02em}
 .btn:active{transform:translateY(1px)}
 .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);box-shadow:none}
 .btn.gold{background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;box-shadow:0 6px 24px -8px var(--gold)}
+/* luxe-gold Continue/Begin — taller, richer, larger seal */
+.btn.jrnext-btn{display:flex;align-items:center;justify-content:center;gap:10px;padding:19px 18px;font-size:16px;font-weight:800;letter-spacing:.01em;color:#3a2408;border-radius:16px;
+  background:linear-gradient(135deg,#ffeeb8 0%,#f7cf84 32%,#e7a94f 64%,#cf8c33 100%);
+  box-shadow:0 14px 32px -10px rgba(226,153,62,.8),inset 0 1px 0 rgba(255,247,220,.8),inset 0 -3px 8px -3px rgba(120,76,20,.55)}
+.btn.jrnext-btn:active{transform:translateY(1px)}
+.btn.jrnext-btn .i{width:22px;height:22px;filter:drop-shadow(0 1px 1px rgba(90,56,12,.4))}
 /* luxe "seal" CTA — gold-on-dark, sticks out, bigger gold seal */
 .btn.seal-cta{background:linear-gradient(135deg,#2b2010,#1d1408 55%,#120c05);color:#f7d488;
   border:1px solid rgba(245,201,119,.58);
@@ -4108,7 +4114,7 @@ function renderJourney(key){
     <div class="jrh-bar"><i style="width:${pct}%"></i></div>
     <div class="jrh-count">${done} of ${total} lessons complete</div>
   </div>
-  ${next?`<button class="btn gold" id="jrnext" style="margin:2px 0 16px">${ic('seal')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:6px 0 14px">${ic('check','g')} You've completed this journey — revisit any lesson below.</div>`}
+  ${next?`<button class="btn jrnext-btn" id="jrnext" style="margin:2px 0 16px">${ic('seal')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:6px 0 14px">${ic('check','g')} You've completed this journey — revisit any lesson below.</div>`}
   <div class="lj-list">${ls.map(row).join('')}</div>
   ${soonRows?`<div class="trk-head" style="--a:${t.accent};margin-top:18px"><div class="trk-name">Coming soon</div></div>${soonRows}`:''}`;
   $('#jrback').onclick=()=>go('lessons');
