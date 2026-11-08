@@ -6091,7 +6091,7 @@ const ELEMENT_COL={Light:'#f5c977',Fire:'#fb923c',Water:'#5fb0fa',Air:'#67e8f9',
 // each altar piece is placed when you unlock its achievement
 async function renderCollection(){
   const r=await api('me');ME=r.profile;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Collect</b>
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Your Mandala</b>
     <span class="motebal">${ic('spark','g glow')} ${fmt(ME.motes)}</span></div>
   <div class="seg" id="cv">
     <button class="${collectView!=='artifacts'?'on':''}" data-v="altar">Mandala</button>
@@ -7802,7 +7802,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v7';
+const CACHE = 'lumen-v8';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
