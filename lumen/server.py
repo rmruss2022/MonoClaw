@@ -5743,6 +5743,21 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/admin/africa":
             if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
                 self._send(403, {"error": "nope"}); return
+            if q.get("do") == "recompute":
+                # self-heal: recompute every real user's aggregates from their sessions
+                fixed = []
+                for u in c.execute("SELECT id FROM users WHERE COALESCE(is_bot,0)=0").fetchall():
+                    uid = u["id"]
+                    agg = c.execute("SELECT COUNT(*) n, COALESCE(SUM(minutes),0) m, COALESCE(SUM(light),0) l "
+                                    "FROM sessions WHERE user_id=?", (uid,)).fetchone()
+                    last = c.execute("SELECT MAX(day) d FROM sessions WHERE user_id=?", (uid,)).fetchone()["d"]
+                    c.execute("UPDATE users SET total_sessions=?, total_minutes=?, light=?, last_day=? WHERE id=?",
+                              (agg["n"], agg["m"], agg["l"], last, uid))
+                    if agg["n"] == 0:
+                        continue
+                    fixed.append({"id": uid, "sessions": agg["n"]})
+                c.commit()
+                self._send(200, {"recomputed": len(fixed)}); return
             afr_cities = ("Cape Town", "Nairobi", "Cairo")
             def _isafr(lat, lon, city):
                 if city in afr_cities:
