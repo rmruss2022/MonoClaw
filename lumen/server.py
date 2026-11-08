@@ -2042,7 +2042,9 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .hh-live{position:relative;z-index:1;display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);
   border-top:1px solid #ffffff10;margin-top:2px;padding-top:12px}
 .hh-live b{color:var(--text)}
-.live-dot{width:9px;height:9px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px var(--purple);flex:none}
+.live-globe{width:18px;height:18px;flex:none;color:var(--purple);filter:drop-shadow(0 0 5px var(--purple));animation:liveglow 2.4s ease-in-out infinite}
+@keyframes liveglow{0%,100%{filter:drop-shadow(0 0 3px var(--purple));opacity:.82}50%{filter:drop-shadow(0 0 10px var(--purple));opacity:1}}
+@media (prefers-reduced-motion:reduce){.live-globe{animation:none}}
 /* bottom nav */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;justify-content:center;
   background:linear-gradient(0deg,#0b0a12 60%,transparent);padding:8px 10px calc(10px + env(safe-area-inset-bottom))}
@@ -3455,15 +3457,10 @@ async function renderMeditate(){
         <div class="muted" style="font-size:12px">Lv ${ME.level} · ${fmt(ME.light)} light</div></div></div>
       <div class="hh-streak">${ic('flame','flame grad-flame glow')}<b>${ME.streak}</b><span>day${ME.streak===1?'':'s'}</span></div>
     </div>
-    <div class="hh-stats">
-      <div class="hh-stat"><span>${fmt(ME.weekly_light)}</span><label>light this week</label></div>
-      <div class="hh-stat"><span>${fmt(ME.motes)}</span><label>motes</label></div>
-      <div class="hh-stat"><span>${ME.total_sessions}</span><label>sessions</label></div>
-    </div>
     ${ME.league.next?`<div class="bar hh-bar"><i style="width:${Math.min(100,Math.round(100*(ME.weekly_light-ME.league.at)/((ME.league.next_at-ME.league.at)||1)))}%;background:${ME.league.color}"></i></div>
       <div class="muted" style="font-size:12px;margin-top:5px">${fmt(Math.max(0,ME.league.next_at-ME.weekly_light))} light to <b style="color:var(--text)">${leagueIcon(ME.league.next,'g')} ${ME.league.next}</b></div>`
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
-    <div class="hh-live"><span class="live-dot"></span> <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
+    <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
   </div>
   <div class="card">
     <div class="sec-head"><span class="sec-ic">${ic('clock')}</span><h3>Duration</h3></div>
