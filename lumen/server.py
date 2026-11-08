@@ -3683,6 +3683,7 @@ async function renderMeditate(){
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
     <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
   </div>
+  <button class="journal-cta" id="journalCta" type="button">${ic('seal')}<span>Unlock today’s journal entry</span></button>
   ${PICK?`<div class="rec-feature">${lessonCardHTML(PICK)}</div>
   <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
   <button class="quick-med" id="quickMed" type="button">
@@ -3690,9 +3691,8 @@ async function renderMeditate(){
     <span class="qm-body"><span class="qm-title">Quick meditate</span><span class="qm-sub" id="quickSummary">${sessionSummary()}</span></span>
     <span class="qm-go">${ic('play')}</span>
   </button>
-  ${challengeCardHTML(chal)}
   ${horoscopeCardHTML(horo)}
-  <button class="journal-cta" id="journalCta" type="button">${ic('seal')}<span>Unlock today’s journal entry</span></button>`;
+  ${challengeCardHTML(chal)}`;
   {const qm=$('#quickMed');if(qm)qm.onclick=openSessionSheet;}
   document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
   {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
