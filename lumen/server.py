@@ -2004,13 +2004,16 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .dur-chip.sel .big{color:var(--gold)}
 .dur-chip.sel .chip-sub{color:#f3d8a0}
 .snd-chip{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px}
-.quick-sit{display:flex;gap:10px;align-items:stretch;margin:4px 0 2px}
-.quick-pick{flex:1;min-width:0;display:flex;align-items:center;gap:9px;background:#ffffff0a;border:1px solid var(--line);border-radius:14px;padding:13px 14px;color:var(--text);font-weight:600;font-size:14px;cursor:pointer}
-.quick-pick .i{width:18px;height:18px;color:var(--gold);flex:none}
-.quick-pick span:not(.caret){flex:1;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.quick-pick .caret{color:var(--muted);font-size:13px;flex:none}
-.quick-pick:active{background:#ffffff14}
-.quick-begin{flex:0 0 auto;width:auto;padding:13px 22px;margin:0;white-space:nowrap}
+.quick-med{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;color:var(--text);
+  background:linear-gradient(135deg,#1c1626,#141019);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin:16px 0 0}
+.quick-med:active{transform:translateY(1px)}
+.qm-ic{flex:none;width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:radial-gradient(circle at 50% 34%,rgba(245,201,119,.22),transparent 72%);box-shadow:inset 0 0 0 1px rgba(245,201,119,.28)}
+.qm-ic .i{width:27px;height:27px;color:var(--gold);filter:drop-shadow(0 0 6px rgba(245,201,119,.45))}
+.qm-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.qm-title{font-weight:800;font-size:16px}
+.qm-sub{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qm-go{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#ffffff0d;color:var(--gold)}
+.qm-go .i{width:16px;height:16px}
 .sheet-ov{position:fixed;inset:0;z-index:60;background:rgba(5,4,10,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .24s}
 .sheet-ov.on{opacity:1}
 .sheet{width:100%;max-width:560px;background:linear-gradient(180deg,#18131f,#120d18);border:1px solid var(--line);border-bottom:0;border-radius:22px 22px 0 0;padding:10px 18px calc(24px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.85,.25,1);box-shadow:0 -24px 70px -24px #000}
@@ -3680,18 +3683,17 @@ async function renderMeditate(){
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
     <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
   </div>
-  <div class="quick-sit">
-    <button class="quick-pick" id="quickPick" type="button">${ic('clock')}<span id="quickSummary">${sessionSummary()}</span><span class="caret">&#9662;</span></button>
-    <button class="btn gold quick-begin" id="start" type="button">Begin &rarr;</button>
-  </div>
-  <p class="muted center" style="font-size:12px;margin:9px 0 0">${ic('flame','flame grad-flame glow')} ${ME.streak}-day streak · ${ME.league.name} league${ME.equipped&&ITEM_NAME[ME.equipped]?` · with your ${ITEM_NAME[ME.equipped]}`:(ME.companion&&COMP_NAME[ME.companion]?` · ${COMP_NAME[ME.companion]} sits with you`:'')}</p>
   ${PICK?`<div class="rec-feature">${lessonCardHTML(PICK)}</div>
   <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
+  <button class="quick-med" id="quickMed" type="button">
+    <span class="qm-ic">${ic('meditate')}</span>
+    <span class="qm-body"><span class="qm-title">Quick meditate</span><span class="qm-sub" id="quickSummary">${sessionSummary()}</span></span>
+    <span class="qm-go">${ic('play')}</span>
+  </button>
   ${challengeCardHTML(chal)}
   ${horoscopeCardHTML(horo)}
   <button class="journal-cta" id="journalCta" type="button">${ic('seal')}<span>Unlock today’s journal entry</span></button>`;
-  {const qp=$('#quickPick');if(qp)qp.onclick=openSessionSheet;}
-  $('#start').onclick=startSession;
+  {const qm=$('#quickMed');if(qm)qm.onclick=openSessionSheet;}
   document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
   {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
    const hl=document.querySelector('.horo-listen:not(.pick-listen)');if(hl&&horo&&horo.text)hl.onclick=()=>playHoroscope(hl,horo.text);
