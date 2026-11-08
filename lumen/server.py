@@ -2017,11 +2017,13 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .orb-fallback{display:none;border-radius:50%}
 .journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 6px;
   background:transparent;color:var(--gold);font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;
-  border:0;padding:14px 18px;cursor:pointer;letter-spacing:.01em}
+  border:1px solid rgba(245,201,119,.5);border-radius:16px;padding:14px 18px;cursor:pointer;letter-spacing:.01em;
+  box-shadow:0 0 16px rgba(245,201,119,.22),inset 0 0 14px rgba(245,201,119,.05);animation:ctaglow 3.6s ease-in-out infinite}
 .journal-cta .i{width:36px;height:36px;filter:drop-shadow(0 0 7px rgba(245,201,119,.55));animation:sealpulse 3.6s ease-in-out infinite}
 .journal-cta:active{transform:translateY(1px)}
 @keyframes sealpulse{0%,100%{filter:drop-shadow(0 0 5px rgba(245,201,119,.4))}50%{filter:drop-shadow(0 0 12px rgba(245,201,119,.72))}}
-@media (prefers-reduced-motion:reduce){.journal-cta .i{animation:none}}
+@keyframes ctaglow{0%,100%{border-color:rgba(245,201,119,.42);box-shadow:0 0 13px rgba(245,201,119,.18),inset 0 0 12px rgba(245,201,119,.04)}50%{border-color:rgba(245,201,119,.72);box-shadow:0 0 26px rgba(245,201,119,.38),inset 0 0 16px rgba(245,201,119,.07)}}
+@media (prefers-reduced-motion:reduce){.journal-cta,.journal-cta .i{animation:none}}
 .spinner{display:inline-block;width:1.3em;height:1.3em;vertical-align:-0.3em;line-height:0}
 .spinner svg{display:block;width:100%;height:100%}
 .center .spinner{display:block;width:60px;height:60px;margin:2px auto 10px;vertical-align:baseline}
