@@ -2532,6 +2532,29 @@ a{color:var(--purple)}
 .jwk .i{width:12px;height:12px}
 .jwk-o{width:8px;height:8px;border-radius:50%;border:1.5px solid #5b5280;display:inline-block}
 .jwk-cap{font-size:11.5px;color:var(--muted);font-style:italic;font-family:var(--serif)}
+/* journal hero — three journaling facets that glow when tended this week (mandala-inspired) */
+.jhero{position:relative;overflow:hidden;border:1px solid #2e2747;border-radius:20px;padding:18px 16px 16px;margin:2px 2px 16px;text-align:center;
+  background:linear-gradient(165deg,#1b1530,#120d1f 74%)}
+.jhero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:radial-gradient(120% 82% at 50% -12%,rgba(168,85,247,.22),rgba(56,189,248,.13) 42%,transparent 64%)}
+.jhero>*{position:relative;z-index:1}
+.jhero-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin-bottom:15px}
+.jhero-eyebrow .i{width:13px;height:13px}
+.jhero-facets{display:flex;justify-content:center;gap:clamp(18px,8vw,34px)}
+.jfacet{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:0;padding:0;font-family:inherit}
+.jfacet:active{transform:scale(.96)}
+.jfacet-med{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;position:relative;color:var(--fc);transition:.2s;
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--fc) 18%,#1a1330),#140e26);border:1px solid color-mix(in srgb,var(--fc) 22%,#ffffff12)}
+.jfacet-med .i{width:25px;height:25px}
+.jfacet.lit .jfacet-med{border-color:color-mix(in srgb,var(--fc) 50%,transparent);
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--fc) 56%,transparent),color-mix(in srgb,var(--fc2,var(--fc)) 26%,transparent) 64%,#140e26);
+  animation:jfpulse 4.2s ease-in-out infinite}
+@keyframes jfpulse{0%,100%{box-shadow:0 0 15px -5px color-mix(in srgb,var(--fc) 70%,transparent)}50%{box-shadow:0 0 26px -3px color-mix(in srgb,var(--fc) 88%,transparent)}}
+.jfacet-check{position:absolute;bottom:-2px;right:-2px;width:19px;height:19px;border-radius:50%;background:#0f2a20;border:1px solid #6ee7b7;display:grid;place-items:center;color:#6ee7b7}
+.jfacet-check .i{width:11px;height:11px}
+.jfacet-lbl{font-size:11.5px;font-weight:600;color:var(--muted)}
+.jfacet.lit .jfacet-lbl{color:var(--fc)}
+.jhero-cap{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--muted);margin-top:16px}
 .jmodes{display:flex;gap:7px;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:6px}
 .jmode{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:0;cursor:pointer;
   color:var(--muted);padding:9px 6px;border-radius:10px;font-size:12px;font-weight:700;transition:.18s}
@@ -2593,7 +2616,10 @@ a{color:var(--purple)}
 .mgoal-echo b{color:var(--gold);font-style:normal}
 /* journal home — three full-width doors + links + community feed */
 .jbigs{display:flex;flex-direction:column;gap:8px;margin:4px 2px 10px}
-.jbig{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;background:linear-gradient(135deg,#1a1430,#141021);border:1px solid var(--line);border-radius:14px;padding:11px 13px;transition:.16s;color:var(--text)}
+.jbig{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;border-radius:16px;padding:14px 14px;transition:.16s;color:var(--text);
+  border:1px solid color-mix(in srgb,var(--jc,#a855f7) 28%,var(--line));
+  background:linear-gradient(135deg,color-mix(in srgb,var(--jc,#a855f7) 12%,#15111f),#110d1b 74%);
+  box-shadow:0 10px 26px -18px color-mix(in srgb,var(--jc,#a855f7) 85%,#000)}
 .jbig:active{transform:scale(.99)}
 .jbig.rec{border-color:rgba(245,201,119,.45);background:linear-gradient(135deg,rgba(245,201,119,.10),#141021);box-shadow:0 8px 26px -16px var(--gold)}
 .jbig-ico{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--jc,#a855f7);
@@ -2608,12 +2634,12 @@ a{color:var(--purple)}
 .jlinks{display:flex;gap:10px;margin:0 2px 20px}
 .jlink{flex:1;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:12px;color:var(--text);transition:.15s}
 .jlink:active{transform:scale(.98)}
-.jlink-ico{flex:none;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(245,201,119,.1);border:1px solid rgba(245,201,119,.2)}
+.jlink-ico{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:radial-gradient(circle at 34% 30%,rgba(245,201,119,.32),#1a1330);border:1px solid rgba(245,201,119,.26);box-shadow:0 0 12px -5px var(--gold)}
 .jlink-ico .i{width:16px;height:16px}
 .jlink-txt{display:flex;flex-direction:column;min-width:0}
 .jlink-txt b{font-size:13px}
 .jlink-txt span{font-size:11px;color:var(--muted)}
-.jfeed-h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:4px 2px 10px}
+.jfeed-h{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:var(--gold);margin:6px 2px 10px}
 .jfeed-h .i{width:14px;height:14px}
 /* pillars & progress */
 .pp-top{background:#13101f;border:1px solid var(--line);border-radius:16px;padding:16px;margin:4px 2px 14px;text-align:center}
@@ -5128,6 +5154,19 @@ function jWeekRing(){
   return `<div class="jweekbar"><div class="jwk-row">${dot('deep','Deep')}${dot('daily','Daily')}${dot('season','Season')}</div>`
     +`<span class="jwk-cap">${n>=3?'all three tended this week ✦':n+' of 3 this week'}</span></div>`;
 }
+// Journal hero — the three facets as glowing medallions, lit when tended this week.
+const JFACETS=[['deep','Deep','compass','#a855f7','#c084fc'],['daily','Daily','book','#38bdf8','#0ea5e9'],['season','Season','sunrise','#f59e0b','#f97316']];
+function jWeekHero(){
+  const cts=(jWeek&&jWeek.counts)||{};
+  const n=JFACETS.filter(f=>(cts[f[0]]||0)>0).length;
+  const facet=([k,lbl,icn,c1,c2])=>{const on=(cts[k]||0)>0;
+    return `<button class="jfacet${on?' lit':''}" data-m="${k}" style="--fc:${c1};--fc2:${c2}">`
+      +`<span class="jfacet-med">${ic(icn)}${on?`<span class="jfacet-check">${ic('check')}</span>`:''}</span>`
+      +`<span class="jfacet-lbl">${lbl}</span></button>`;};
+  return `<div class="jhero"><div class="jhero-eyebrow">${ic('book')} Your journal</div>`
+    +`<div class="jhero-facets">${JFACETS.map(facet).join('')}</div>`
+    +`<div class="jhero-cap">${n>=3?'all three facets tended this week':n+' of 3 facets tended this week'}</div></div>`;
+}
 
 // Today's recommended journaling — one pick (Deep · Daily · Season) chosen by the
 // server, shown as a gold hero card at the top of the journal. Tapping Begin jumps
@@ -5381,7 +5420,7 @@ async function renderJournalHome(){
   const doneN=(pp&&pp.done)||0;const totalP=(pp&&pp.total)||8;
   $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b>`
     +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button></div>`
-    +jWeekRing()
+    +jWeekHero()
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
     +`<div class="jlinks">`
       +`<button class="jlink" id="pill-link"><span class="jlink-ico">${ic('compass','g')}</span><span class="jlink-txt"><b>Pillars &amp; Life OS</b><span>Your compass, focus &amp; ${doneN} of ${totalP} explored</span></span></button>`
@@ -5402,11 +5441,11 @@ async function renderJournalHome(){
   };
   $('#talkbtn').onclick=renderChat;
   $('#pill-link').onclick=()=>{jScreen='pillars';renderJournal();};
-  document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>{const k=b.dataset.m;
-    journalMode=k;journalPillar=null;if(k==='season')jSeason='';
+  const openMode=(k)=>{journalMode=k;journalPillar=null;if(k==='season')jSeason='';
     if(k==='deep'){const pil=nextDeepPillar();if(pil){journalPillar=pil;jScreen='compose';}else{jScreen='pillars';}}
     else{jScreen='compose';}
-    renderJournal();});
+    renderJournal();};
+  document.querySelectorAll('.jbig,.jfacet').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
   journalView='feed';renderJournalBody();
 }
 
