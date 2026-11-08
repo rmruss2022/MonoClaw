@@ -2229,23 +2229,42 @@ nav button.on{color:var(--text);background:#211a37}
 .pilg-comm{margin-top:13px;display:flex;align-items:center;gap:7px;justify-content:center;font-size:12.5px;color:var(--gold);cursor:pointer;border-top:1px solid var(--line);padding-top:12px}
 .pilg-comm .i{width:15px;height:15px}
 /* daily horoscope card */
-.horo-card{position:relative;overflow:hidden;background:#140f26 radial-gradient(130% 95% at 100% 0,#271b44 0,transparent 55%)}
-.horo-head{display:flex;align-items:center;gap:12px;margin-bottom:11px}
-.horo-glyph{font-size:30px;line-height:1;color:var(--gold);filter:drop-shadow(0 0 10px var(--gold));min-width:34px;text-align:center}
-.horo-glyph .i{width:28px;height:28px}
-.horo-title{font-weight:700;font-size:15px}
-.horo-text{font-family:var(--serif);font-size:15.5px;line-height:1.7;color:#e7e0f5}
-.horo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-.horo-sit,.horo-listen{width:auto;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;margin:0}
+/* zodiac symbols render as monochrome text, never emoji */
+.zsym{font-variant-emoji:text}
+.horo-card{position:relative;overflow:hidden;border:1px solid #2a2048;
+  background:linear-gradient(165deg,#191130,#120d22 74%)}
+.horo-card:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
+  background:radial-gradient(120% 85% at 92% -12%,#3a2866,transparent 55%)}
+.horo-card>*{position:relative;z-index:1}
+.horo-eyebrow{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold)}
+.horo-eyebrow .i{width:13px;height:13px}
+.horo-intro{font-size:12.5px;line-height:1.5;margin:8px 0 14px;max-width:40ch}
+.horo-head{display:flex;align-items:center;gap:14px;margin:13px 0}
+.horo-medallion{flex:none;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 34%,#2d2256,#160f2b);border:1px solid #ffffff1c;
+  box-shadow:0 0 0 4px #ffffff07,0 10px 26px -14px #000}
+.horo-sym{font-size:29px;line-height:1;color:var(--gold);filter:drop-shadow(0 0 9px #f5c97788);font-variant-emoji:text}
+.horo-medallion .i{width:26px;height:26px;color:var(--gold)}
+.horo-name{font-family:var(--serif);font-size:21px;font-weight:600;color:#f1ecff;line-height:1.12}
+.horo-rashi-en{font-size:12.5px;color:var(--muted);margin-top:2px}
+.horo-nak{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-top:7px}
+.horo-nak .i{width:13px;height:13px;flex:none}
+.horo-text{font-family:var(--serif);font-size:16px;line-height:1.75;color:#e9e2f7;margin:0;
+  padding-top:15px;border-top:1px solid #ffffff12}
+.horo-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.horo-sit{flex:1 1 170px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;margin:0}
+.horo-listen{flex:none;display:inline-flex;align-items:center;gap:8px;padding:11px 15px;margin:0}
 .horo-sit .i,.horo-listen .i{width:16px;height:16px}
-.horo-signs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.horo-sign{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;background:#1a1330;border:1px solid var(--line);border-radius:12px;color:var(--text);cursor:pointer;font-family:inherit;transition:.15s}
-.horo-sign:hover,.horo-sign:active{border-color:var(--gold);background:#221839}
-.hs-glyph{font-size:22px;color:var(--gold)}
-.hs-nm{font-size:12px;color:var(--text)}
-.hs-sub{font-size:10px;color:var(--muted)}
-.horo-foot{margin-top:12px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px;opacity:.8}
-.horo-foot .i{width:13px;height:13px}
+.horo-signs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:2px}
+.horo-sign{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 4px 11px;background:#17112e;border:1px solid var(--line);border-radius:16px;color:var(--text);cursor:pointer;font-family:inherit;transition:.15s}
+.horo-sign:hover,.horo-sign:active{border-color:var(--gold);background:#201839;transform:translateY(-1px)}
+.hs-med{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 34%,#2d2256,#160f2b);border:1px solid #ffffff16}
+.hs-glyph{font-size:21px;line-height:1;color:var(--gold);font-variant-emoji:text}
+.hs-nm{font-size:12.5px;font-weight:600;color:var(--text)}
+.hs-sub{font-size:10px;color:var(--muted);letter-spacing:.02em}
+.horo-foot{margin-top:14px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;opacity:.85}
+.horo-foot .i{width:13px;height:13px;flex:none}
+.horo-foot.horo-addnatal{color:var(--gold);opacity:1;font-weight:600}
 .spot-x{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:5px;background:#000000b3;color:#fff;
   border:0;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
 .spot-x .i{width:13px;height:13px}
@@ -3323,17 +3342,27 @@ function horoscopeCardHTML(h){
   if(!h)return '';
   if(h.need_sign){
     return `<div class="card horo-card">
-      <div class="horo-head"><span class="horo-glyph">${ic('nova','g glow')}</span><div><div class="horo-title">Today's sky</div><div class="muted" style="font-size:12px">Choose your rāśi (Moon sign) for a Vedic daily reading</div></div></div>
-      <div class="horo-signs">${h.signs.map(s=>`<button class="horo-sign" data-sign="${esc(s.key)}"><span class="hs-glyph">${s.glyph}</span><span class="hs-nm">${esc(s.sanskrit||s.name)}</span><span class="hs-sub">${esc(s.name)}</span></button>`).join('')}</div>
+      <div class="horo-eyebrow">${ic('nova','g')} Today's sky</div>
+      <div class="horo-intro muted">Choose your rāśi — your Vedic Moon sign — for a daily reading grounded in the nakshatra of the day.</div>
+      <div class="horo-signs">${h.signs.map(s=>`<button class="horo-sign" data-sign="${esc(s.key)}"><span class="hs-med"><span class="hs-glyph">${s.glyph}︎</span></span><span class="hs-nm">${esc(s.sanskrit||s.name)}</span><span class="hs-sub">${esc(s.name)}</span></button>`).join('')}</div>
     </div>`;
   }
   const SS={rain:'Rain',forest:'Forest',ocean:'Ocean',space:'Deep Space',silence:'Silence'};
   const mins=h.minutes||10;
+  const snd=SS[h.soundscape]||esc(h.soundscape||'');
   return `<div class="card horo-card">
-    <div class="horo-head"><span class="horo-glyph">${h.glyph}</span><div><div class="horo-title">${esc(h.sanskrit||h.name)} <span class="muted" style="font-weight:400;font-size:13px">${esc(h.name)}</span></div>${h.nakshatra?`<div class="muted" style="font-size:12px;margin-top:1px">${ic('moon','p')} Moon in ${esc(h.nakshatra)}${h.pada?' · pada '+h.pada:''} · ${esc(h.deity||'')}</div>`:''}</div></div>
+    <div class="horo-eyebrow">${ic('nova','g')} Today's sky</div>
+    <div class="horo-head">
+      <span class="horo-medallion"><span class="horo-sym">${h.glyph}︎</span></span>
+      <div>
+        <div class="horo-name">${esc(h.sanskrit||h.name)}</div>
+        <div class="horo-rashi-en">${esc(h.name)}${h.lord?' · ruled by '+esc(h.lord):''}</div>
+        ${h.nakshatra?`<div class="horo-nak">${ic('moon','p')} Moon in ${esc(h.nakshatra)}${h.pada?' · pada '+h.pada:''}${h.deity?' · '+esc(h.deity):''}</div>`:''}
+      </div>
+    </div>
     <div class="horo-text">${esc(h.text)}</div>
     <div class="horo-actions">
-      <button class="btn ghost horo-sit" data-snd="${esc(h.soundscape)}" data-min="${mins}">${ic(h.soundscape||'silence')} Sit with this · ${mins} min ${SS[h.soundscape]||esc(h.soundscape)}</button>
+      <button class="btn gold horo-sit" data-snd="${esc(h.soundscape)}" data-min="${mins}">${ic(h.soundscape||'silence')} Sit with this · ${mins} min${snd?' · '+snd:''}</button>
       <button class="btn ghost horo-listen" title="Hear it aloud">${ic('sound')} Listen</button>
     </div>
     ${h.janma?`<div class="horo-foot">${ic('lotus','g')} Birth star ${esc(h.janma)} · daśā ${esc(h.maha)}–${esc(h.antar)}</div>`
@@ -5251,7 +5280,7 @@ async function renderProfile(){
   let horo=null;try{horo=await api('horoscope?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
   let np=null;try{np=await api('notif/prefs');}catch(e){}
   const starLine = (horo&&!horo.need_sign)
-    ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6">${horo.glyph} <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
+    ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6"><span class="zsym">${horo.glyph}︎</span> <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
     : `<p class="muted" style="font-size:13px;margin:0 0 12px">Add your birthday to receive your daily Vedic reading.</p>`;
   $('#app').innerHTML=`<div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>${esc(p.name)}</b></div>
   <div class="card">
