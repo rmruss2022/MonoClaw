@@ -2032,8 +2032,8 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
 .hh-league{display:flex;align-items:center;gap:11px}
 .hh-badge{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;
-  background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--lc) 34%,transparent),transparent 72%);
-  filter:drop-shadow(0 0 11px color-mix(in srgb,var(--lc) 55%,transparent))}
+  background:radial-gradient(circle at 32% 28%,color-mix(in srgb,var(--lc) 60%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 32%,transparent) 62%,transparent 82%);
+  filter:drop-shadow(0 0 11px color-mix(in srgb,var(--lc) 52%,transparent))}
 .hh-badge .i{width:25px;height:25px}
 .hh-lg-name{font-weight:800;font-size:15px}
 .hh-streak{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);flex:none}
@@ -3512,7 +3512,7 @@ async function renderMeditate(){
         <div class="muted" style="font-size:12px">Lv ${ME.level} · ${fmt(ME.light)} light</div></div></div>
       <div class="hh-streak">${ic('flame','flame grad-flame glow')}<b>${ME.streak}</b><span>day${ME.streak===1?'':'s'}</span></div>
     </div>
-    ${ME.league.next?`<div class="bar hh-bar"><i style="width:${Math.min(100,Math.round(100*(ME.weekly_light-ME.league.at)/((ME.league.next_at-ME.league.at)||1)))}%;background:${ME.league.color}"></i></div>
+    ${ME.league.next?`<div class="bar hh-bar"><i style="width:${Math.min(100,Math.round(100*(ME.weekly_light-ME.league.at)/((ME.league.next_at-ME.league.at)||1)))}%;background:linear-gradient(90deg,${ME.league.color},${ME.league.color2||ME.league.color})"></i></div>
       <div class="muted" style="font-size:12px;margin-top:5px">${fmt(Math.max(0,ME.league.next_at-ME.weekly_light))} light to <b style="color:var(--text)">${leagueIcon(ME.league.next,'g')} ${ME.league.next}</b></div>`
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
     <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
