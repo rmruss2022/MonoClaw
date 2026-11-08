@@ -3488,6 +3488,8 @@ function renderAuth(){
     try{if(mode==='signup'){await api('signup','POST',{email,password,name:$('#nm').value,birth_date:($('#bd')&&$('#bd').value)||''});}else{await api('login','POST',{email,password});}
       const r=await api('me');ME=r.profile;$('#nav').classList.remove('hidden');bindNav();go('meditate');
     }catch(e){er.textContent=e;}};
+  // Enter submits from any field
+  ['em','pw','nm'].forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#go').click();}});});
 }
 // Password reset — request a 6-digit code by email, then enter it with a new password.
 function renderReset(prefill){
@@ -3512,6 +3514,7 @@ function renderReset(prefill){
     </div>`;
     $('#rback').onclick=renderAuth;
     const rr=$('#rresend');if(rr)rr.onclick=()=>{stage='request';draw();};
+    ['rem','rcode','rpw'].forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#rgo').click();}});});
     $('#rgo').onclick=async()=>{const er=$('#rer');er.textContent='';
       const email=($('#rem').value||'').trim();
       if(!email){er.textContent='Enter your email.';return;}
