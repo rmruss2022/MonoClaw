@@ -213,13 +213,13 @@ def session_email(tok):
 
 # (name, weekly_light_threshold, color, color2) — color2 is the gradient partner
 LEAGUES = [
-    ("Ember",     0,    "#b45309", "#f59e0b"),
-    ("Spark",     50,   "#d97706", "#f59e0b"),
-    ("Glow",      150,  "#eab308", "#f59e0b"),
-    ("Flare",     350,  "#f97316", "#ef4444"),
-    ("Beacon",    700,  "#a855f7", "#ec4899"),
-    ("Nova",      1200, "#8b5cf6", "#6366f1"),
-    ("Supernova", 2000, "#ec4899", "#a855f7"),
+    ("Ember",     0,    "#ef4444", "#f97316"),
+    ("Spark",     50,   "#f97316", "#fbbf24"),
+    ("Glow",      150,  "#eab308", "#a3e635"),
+    ("Flare",     350,  "#22c55e", "#2dd4bf"),
+    ("Beacon",    700,  "#06b6d4", "#38bdf8"),
+    ("Nova",      1200, "#6366f1", "#818cf8"),
+    ("Supernova", 2000, "#d946ef", "#ec4899"),
 ]
 
 def league_for(weekly_light):
