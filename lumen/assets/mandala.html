@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen — Wholeness Mandala v2 (ornate)</title>
+<style>
+  :root{ --bg:#0d0c14; --card:#14131d; --line:rgba(255,255,255,.07); --text:#f6f1ea; --muted:#8f8a9d; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  body{min-height:100vh;display:flex;justify-content:center;padding:28px 16px 40px}
+  .app{width:100%;max-width:440px}
+  header{display:flex;align-items:baseline;gap:10px;margin:0 4px 18px}
+  header h1{font-size:24px;font-weight:700;letter-spacing:-.02em}
+  header span{color:var(--muted);font-size:14px}
+  .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:12px 10px 20px;overflow:hidden}
+  .card::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 42% at 50% 33%,rgba(255,80,170,.06),transparent 70%);pointer-events:none}
+  .stage{position:relative;width:100%;aspect-ratio:1/1;-webkit-tap-highlight-color:transparent;user-select:none}
+  .stage canvas,.stage svg{position:absolute;inset:0;width:100%;height:100%}
+  .stage #pearlGL{inset:auto;pointer-events:none}
+  svg .hit{fill:rgba(0,0,0,0);cursor:pointer;outline:none}
+  svg .hit:focus-visible{stroke:rgba(255,255,255,.5);stroke-width:1;stroke-dasharray:3 3}
+  .shim{mix-blend-mode:screen;pointer-events:none}
+  #glow{mix-blend-mode:screen}
+  .core{cursor:pointer}
+
+  .toast{position:absolute;left:50%;top:14px;transform:translate(-50%,-12px);opacity:0;pointer-events:none;z-index:5;
+    background:rgba(26,24,36,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);
+    border-radius:999px;padding:9px 16px 9px 10px;display:flex;align-items:center;gap:10px;font-size:13px;white-space:nowrap;
+    transition:opacity .45s, transform .6s cubic-bezier(.2,.9,.2,1.2)}
+  .toast.on{opacity:1;transform:translate(-50%,0)}
+  .toast i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;color:#14121a;background:var(--c)}
+  .toast b{font-weight:650}
+
+  .panel{position:relative;margin-top:4px;padding:4px 8px 0;min-height:236px}
+  .panel .fade{animation:fin .45s ease both}
+  @keyframes fin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .ph{display:flex;align-items:center;gap:12px}
+  .ph .sw{width:34px;height:34px;border-radius:50%;flex:0 0 auto;background:radial-gradient(circle at 38% 35%,#fff 0,var(--c) 45%,color-mix(in srgb,var(--c) 40%,#000) 100%);box-shadow:0 0 0 2px #0d0b14, 0 0 0 3.5px var(--a), 0 0 18px color-mix(in srgb,var(--c) 50%,transparent)}
+  .ph .mini{width:42px;height:42px;flex:0 0 auto;border-radius:50%;margin:-4px}
+  .ph h3{font-size:19px;font-weight:700;letter-spacing:-.01em}
+  .ph p{color:var(--muted);font-size:13px}
+  .ph .pct{margin-left:auto;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .bar{height:6px;border-radius:9px;background:rgba(255,255,255,.07);margin:14px 0 8px;overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--a),var(--c));box-shadow:0 0 12px var(--c);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .sub{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .ach{list-style:none;margin-top:14px;display:grid;gap:8px}
+  .ach li{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}
+  .ach li.got{background:color-mix(in srgb,var(--c) 10%,transparent);border-color:color-mix(in srgb,var(--c) 32%,transparent)}
+  .ach .ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font-size:12px;border:1px solid rgba(255,255,255,.12);color:var(--muted)}
+  .ach li.got .ic{background:var(--c);border-color:transparent;color:#14121a;font-weight:800;box-shadow:0 0 0 2px var(--a), 0 0 12px color-mix(in srgb,var(--c) 60%,transparent)}
+  .ach li.next .ic{border-color:var(--c);color:var(--c)}
+  .ach .t{flex:1;min-width:0}
+  .ach .t b{display:block;font-size:14px;font-weight:600}
+  .ach .t span{color:var(--muted);font-size:12px}
+  .ach .r{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  .ach li.got .r{color:color-mix(in srgb,var(--c) 70%,#fff)}
+  .chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
+  .chip{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);cursor:pointer;color:var(--text);font:inherit;font-size:13px;text-align:left}
+  .chip:hover{background:rgba(255,255,255,.06)}
+  .chip .d{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px #0d0b14,0 0 0 2.6px var(--a),0 0 8px var(--c)}
+  .chip .v{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:16px}
+  .navb{appearance:none;display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--n) 35%,transparent);background:color-mix(in srgb,var(--n) 8%,transparent);color:var(--text);font:600 12.5px/1 inherit;padding:9px 12px;border-radius:999px;cursor:pointer;max-width:46%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .navb span{color:var(--n);font-size:16px;line-height:0}
+  .navb:hover{background:color-mix(in srgb,var(--n) 16%,transparent)}
+  .navb.next{background:color-mix(in srgb,var(--n) 18%,transparent);border-color:color-mix(in srgb,var(--n) 55%,transparent);box-shadow:0 0 14px color-mix(in srgb,var(--n) 25%,transparent)}
+  .back{margin-top:0 !important}
+  .back{appearance:none;border:0;background:none;color:var(--muted);font:inherit;font-size:12.5px;cursor:pointer;margin-top:14px}
+  .back:hover{color:var(--text)}
+
+  .controls{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px 16px}
+  .controls h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px}
+  .btns{display:flex;flex-wrap:wrap;gap:8px}
+  button.b{appearance:none;border:1px solid var(--line);background:#1d1c28;color:var(--text);font:600 13px/1 inherit;padding:10px 14px;border-radius:999px;cursor:pointer}
+  button.b:hover{background:#262534}
+  button.b.primary{background:linear-gradient(180deg,#ff5fb8,#e0207a);border-color:transparent;color:#1a0710}
+  .hint{color:var(--muted);font-size:12px;margin-top:10px}
+  .prev{margin-top:28px}
+  .prevh{display:flex;align-items:baseline;gap:10px;margin:0 4px 12px}
+  .prevh h2{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .prevh span{color:var(--muted);font-size:13px}
+  .prev iframe{display:block;width:100%;height:1300px;border:0;background:transparent;color-scheme:dark}
+
+  /* --- embedded-in-app overrides (Lumen Collect screen) --- */
+  html,body{background:transparent!important;padding:0!important;margin:0!important;min-height:0!important;display:block!important}
+  .app{max-width:none!important;width:100%!important}
+  header,.controls,.prev{display:none!important}
+  .card{background:transparent!important;border:none!important;border-radius:0!important;padding:4px 6px 10px!important;overflow:visible!important}
+  .card::before{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Wholeness</h1><span>your mandala</span></header>
+
+  <section class="card">
+    <div class="toast" id="toast"></div>
+    <div class="stage" id="stage">
+      <canvas id="fx"></canvas>
+      <svg id="svg" viewBox="-215 -215 430 430" role="group" aria-label="Wholeness mandala">
+        <defs id="defs">
+          <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="8"/></filter>
+          <filter id="blurS" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter>
+          <filter id="blurTiny" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".9"/></filter>
+          <filter id="lanternBlur" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.4"/></filter>
+          <filter id="ringGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <radialGradient id="lanternG"><stop offset="0" stop-color="#fff1d6"/><stop offset=".35" stop-color="#ffb35a" stop-opacity=".9"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
+          <radialGradient id="coreGlow"><stop offset="0" stop-color="#ffc173" stop-opacity=".7"/><stop offset=".22" stop-color="#ff5fb8" stop-opacity=".25"/><stop offset=".6" stop-color="#a45bff" stop-opacity=".07"/><stop offset="1" stop-color="#a45bff" stop-opacity="0"/></radialGradient>
+          <radialGradient id="coreFill"><stop offset="0" stop-color="#1d1a28"/><stop offset=".9" stop-color="#15131f"/><stop offset="1" stop-color="#15131f" stop-opacity="0"/></radialGradient>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".5" stop-color="#ff5fb8"/><stop offset="1" stop-color="#2ee6c5"/></linearGradient>
+          <radialGradient id="pearlTeal" cx=".38" cy=".34"><stop offset="0" stop-color="#eafffb"/><stop offset=".35" stop-color="#5ff2d8"/><stop offset="1" stop-color="#0c8f7e"/></radialGradient>
+          <linearGradient id="roseG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9f1c"/><stop offset=".5" stop-color="#ffd23f"/><stop offset="1" stop-color="#fff6c2"/></linearGradient>
+          <linearGradient id="curlG" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#c2187a"/><stop offset=".55" stop-color="#ff5fb8"/><stop offset="1" stop-color="#ffc2e4"/></linearGradient>
+          <linearGradient id="daisyG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9f1c"/><stop offset=".55" stop-color="#ffe135"/><stop offset="1" stop-color="#fffbe0"/></linearGradient>
+        </defs>
+        <g id="mand">
+          <g id="geo"></g>
+          <g id="spin"></g>
+          <circle r="160" fill="url(#coreGlow)" id="coreHalo"/>
+          <g id="flower">
+            <g id="glow" filter="url(#blur)"></g>
+            <g id="ghosts"></g>
+            <g id="curls"></g>
+            <g id="petals"></g>
+            <g id="rare"></g>
+            <path id="selArc" fill="none" stroke-width="2" stroke-linecap="round" opacity="0"/>
+            <g id="hits"></g>
+          </g>
+          <g class="core" id="core" role="button" tabindex="0" aria-label="Overview">
+            <circle r="49" fill="url(#coreFill)"/>
+            <g id="rose"></g>
+            <circle r="39.5" fill="none" stroke="#0d0b14" stroke-width="4.5"/>
+            <circle r="39.5" fill="none" stroke="#2ee6c5" stroke-width="2.2"/>
+            <circle r="44" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="1.4"/>
+            <circle id="wring" r="44" fill="none" stroke="url(#ringGrad)" stroke-width="1.8" stroke-linecap="round" transform="rotate(-90)" pathLength="1000" stroke-dasharray="0 1000" filter="url(#ringGlow)"/>
+            <circle id="pearlHalo" r="20" fill="url(#coreGlow)"/>
+          </g>
+        </g>
+      </svg>
+      <canvas id="pearlGL" aria-hidden="true"></canvas>
+    </div>
+    <div class="panel" id="panel" aria-live="polite"></div>
+  </section>
+
+  <section class="controls">
+    <h2>Prototype controls</h2>
+    <div class="btns">
+      <button class="b primary" id="sim">Complete a session ✦</button>
+      <button class="b" id="bloom">Replay bloom</button>
+      <button class="b" id="fresh">New member</button>
+      <button class="b" id="auto">Auto-cycle: on</button>
+    </div>
+    <p class="hint">Each achievement adds a layer to its petal: shell → inner petal → jewel and beads → a blossom at the tip. Tap a petal, a blossom between petals, or the center.</p>
+  </section>
+
+  <section class="prev">
+    <div class="prevh"><h2>Previous design</h2><span>v1 · glow petals</span></div>
+    <iframe id="v1" src="v1.html#embed" title="Previous mandala design" loading="lazy"></iframe>
+  </section>
+</div>
+
+<script>
+(() => {
+const NS = 'http://www.w3.org/2000/svg';
+const $ = id => document.getElementById(id);
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const INK = '#0d0b14';
+
+// ---------------- data ----------------
+const DIMS = [
+  { id:'stillness',   name:'Stillness',   tag:'Time spent in quiet sitting', color:'#FFC83D', accent:'#FF2E93', unit:'minutes',         step:40, value:420,
+    tiers:[['First sit','Complete your first session',1],['An hour of quiet','Sit for 60 minutes in total',60],['Steady mind','Sit for 300 minutes in total',300],['Thousand minutes','Sit for 1,000 minutes in total',1000]] },
+  { id:'depth',       name:'Depth',       tag:'Longer, deeper sits',         color:'#8C5CFF', accent:'#2EE6C5', unit:'sits of 20+ min', step:2, value:14,
+    tiers:[['Going deeper','Your first 20-minute sit',1],['Settling in','10 sits of 20+ minutes',10],['Deep water','25 sits of 20+ minutes',25],['The long sit','50 sits of 20+ minutes',50]] },
+  { id:'exploration', name:'Exploration', tag:'Journeys and new practices',  color:'#9BE564', accent:'#A45BFF', unit:'journeys',        step:1, value:1,
+    tiers:[['First journey','Complete a journey',1],['Wayfinder','Complete 3 journeys',3],['Cartographer','Complete 8 journeys',8],['Whole map','Complete 15 journeys',15]] },
+  { id:'breath',      name:'Breath',      tag:'Breathwork practice',         color:'#22D3B6', accent:'#FFE135', unit:'breath sessions', step:4, value:130,
+    tiers:[['First breath','Complete a breathwork session',1],['Rhythm','15 breathwork sessions',15],['Tidal','40 breathwork sessions',40],['Ocean','120 breathwork sessions',120]] },
+  { id:'connection',  name:'Connection',  tag:'Sitting alongside others',    color:'#4D7CFF', accent:'#FF7AC6', unit:'group sits',      step:1, value:0,
+    tiers:[['Not alone','Sit while others are meditating',1],['Kindred','5 group sits',5],['Sangha','20 group sits',20],['Lantern','50 group sits',50]] },
+  { id:'reflection',  name:'Reflection',  tag:'Journaling what you notice',  color:'#FF2E93', accent:'#FFD23F', unit:'reflections',     step:2, value:12,
+    tiers:[['First page','Write your first reflection',1],['Noticing','10 reflections',10],['Inner voice','30 reflections',30],['A life examined','100 reflections',100]] },
+  { id:'consistency', name:'Consistency', tag:'Showing up, day after day',   color:'#FF8A1F', accent:'#2EE6C5', unit:'day best streak', step:2, value:12,
+    tiers:[['Three in a row','A 3-day streak',3],['A full week','A 7-day streak',7],['Moon cycle','A 30-day streak',30],['Unbroken','A 100-day streak',100]] },
+];
+const RARE = [
+  { name:'Dawn sitter',    desc:'Meditate before 6 a.m.',                 got:true  },
+  { name:'Full moon',      desc:'Sit on the night of a full moon',        got:false },
+  { name:'Century',        desc:'Complete 100 sessions',                  got:false },
+  { name:'Perfect week',   desc:'Meditate every day of a calendar week',  got:true  },
+  { name:'Silent hour',    desc:'A single 60-minute sit',                 got:false },
+  { name:'Night owl',      desc:'Meditate after midnight',                got:true  },
+  { name:'Kindred spirit', desc:'Sit at the same moment as a friend',     got:false },
+];
+const START = DIMS.map(d => d.value), START_R = RARE.map(r => r.got);
+
+// ---------------- geometry ----------------
+const N = DIMS.length, STEP = 360 / N;
+const R0 = 48, LMAX = 124, W = 31;
+const ringR = 192, LANT_R = 203, BLOSSOM_R = 166;
+const rad = d => d * Math.PI / 180;
+const polar = (deg, r) => [Math.sin(rad(deg)) * r, -Math.cos(rad(deg)) * r];
+const f2 = v => v.toFixed(2);
+
+// onion-dome petal (bulb, then a concave flare into a point), with optional sideways bend
+function ogee(r0, len, w, bend = 0){
+  len = Math.max(len, .6);
+  const b = -r0, ox = bend * len;
+  const P = (x, f) => `${f2(x + ox * f * f)} ${f2(b - len * f)}`;
+  return `M${P(0,0)} C ${P(w*.55,.02)} ${P(w*1.15,.3)} ${P(w*.82,.58)} C ${P(w*.55,.78)} ${P(w*.07,.85)} ${P(0,1)}`
+       + ` C ${P(-w*.07,.85)} ${P(-w*.55,.78)} ${P(-w*.82,.58)} C ${P(-w*1.15,.3)} ${P(-w*.55,.02)} ${P(0,0)} Z`;
+}
+// teardrop: round bottom, pointed top. f-coordinates measured along the parent petal
+function drop(r0, len, w, bend, parentLen){
+  parentLen = Math.max(parentLen, 1); len = Math.max(len, .5);
+  const b = -r0, B = bend * parentLen, base = (r0 - R0) / parentLen;
+  const P = (x, f) => { const g = base + f * len / parentLen; return `${f2(x + B * g * g)} ${f2(b - len * f)}`; };
+  return `M${P(0,0)} C ${P(w,0)} ${P(w*.95,.55)} ${P(0,1)} C ${P(-w*.95,.55)} ${P(-w,0)} ${P(0,0)} Z`;
+}
+const widthFor = len => Math.min(W, 10 + len * .29);
+const spineX = (bend, len, r) => { const f = Math.max(0, (r - R0) / Math.max(len, 1)); return bend * len * f * f; };
+
+function mix(hex, to, t){
+  const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16);
+  const c = [16, 8, 0].map(s => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t));
+  return '#' + c.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+const hexRgb = h => [16, 8, 0].map(s => (parseInt(h.slice(1), 16) >> s) & 255);
+
+function fillOf(d){
+  const n = d.tiers.length, earned = d.tiers.filter(t => d.value >= t[2]).length;
+  if (earned >= n) return 1;
+  const prev = earned ? d.tiers[earned - 1][2] : 0, next = d.tiers[earned][2];
+  return (earned + Math.max(0, Math.min(1, (d.value - prev) / (next - prev)))) / n;
+}
+const earnedOf = d => d.tiers.filter(t => d.value >= t[2]).length;
+function wholeness(){
+  const main = DIMS.reduce((s, d) => s + fillOf(d), 0) / N;
+  return main * .88 + RARE.filter(r => r.got).length / RARE.length * .12;
+}
+
+// ---------------- static geometry ----------------
+const geo = $('geo'), spin = $('spin'), defs = $('defs');
+const LANTERNS = [];
+el('circle', { r:ringR, fill:'none', stroke:'rgba(255,255,255,.08)', 'stroke-width':.8, id:'outerC' }, geo);
+el('circle', { r:100, fill:'none', stroke:'rgba(255,255,255,.07)', 'stroke-width':.7, id:'innerC' }, geo);
+for (let i = 0; i < 84; i++){
+  if (i % 12 === 0) continue;
+  const [x, y] = polar(i * 360 / 84, LANT_R);
+  el('circle', { cx:f2(x), cy:f2(y), r:.9, fill: i % 2 ? '#7ff0dc' : '#ff9fd2', opacity: .18 + .2 * ((i * 37) % 7) / 7 }, spin);
+}
+for (let i = 0; i < 7; i++){
+  const a = i * 360 / 7, [x, y] = polar(a, LANT_R);
+  LANTERNS.push({ a,
+    trail: el('path', { fill:'none', stroke:'#ffc77a', 'stroke-linecap':'round', 'stroke-width':2.2, filter:'url(#lanternBlur)' }, spin),
+    glow:  el('circle', { cx:x, cy:y, r:6, fill:'url(#lanternG)', filter:'url(#lanternBlur)' }, spin),
+    core:  el('circle', { cx:x, cy:y, r:2, fill:'#fff3dc' }, spin) });
+}
+
+// ---------------- petals ----------------
+const L = { glow:$('glow'), ghosts:$('ghosts'), curls:$('curls'), petals:$('petals'), rare:$('rare'), hits:$('hits') };
+let hoverId = -1, sel = null;
+function grad(id, stops, x1 = 0, y1 = 1, x2 = 0, y2 = 0){
+  const g = el('linearGradient', { id, x1, y1, x2, y2 }, defs);
+  stops.forEach(([o, c, a = 1]) => el('stop', { offset:o, 'stop-color':c, 'stop-opacity':a }, g));
+}
+DIMS.forEach((d, i) => {
+  d.angle = i * STEP; d.disp = 0; d.vel = 0; d.scale = 1; d.delay = 0; d.bend = 0; d.bv = 0; d.sway = 0;
+  d.lay = [0, 0, 0, 0]; d.layV = [0, 0, 0, 0];
+  const dark = mix(d.color, '#000000', .45), light = mix(d.color, '#ffffff', .6);
+  const aDark = mix(d.accent, '#000000', .4), aLight = mix(d.accent, '#ffffff', .55);
+  d.light = light;
+  grad(`sh${i}`, [[0, dark], [.45, d.color], [1, light]]);
+  grad(`in${i}`, [[0, aDark], [.5, d.accent], [1, aLight]]);
+  grad(`dr${i}`, [[0, d.color], [1, '#ffffff']]);
+  const shim = el('linearGradient', { id:`sm${i}`, x1:0, y1:1, x2:0, y2:0 }, defs);
+  [[0,0],[.4,0],[.5,.42],[.6,0],[1,0]].forEach(([o, a]) => el('stop', { offset:o, 'stop-color':'#fff', 'stop-opacity':a }, shim));
+  if (!reduced) el('animateTransform', { attributeName:'gradientTransform', type:'translate', values:'0 .75; 0 -.75; 0 -.75', keyTimes:'0;.3;1', dur:'9s', begin:`${1.5 + i * 1.1}s`, repeatCount:'indefinite' }, shim);
+
+  const rot = `rotate(${d.angle})`;
+  const gG = el('g', { transform:rot }, L.glow), ghG = el('g', { transform:rot }, L.ghosts), pG = el('g', { transform:rot }, L.petals);
+  d.el = { gG, ghG, pG };
+  d.el.glow  = el('path', { fill:d.color, opacity:.85 }, gG);
+  d.el.ghost = el('path', { d:ogee(R0, LMAX, W), fill:d.color, 'fill-opacity':.05, stroke:d.color, 'stroke-opacity':.38, 'stroke-width':1, 'stroke-dasharray':'3 3.5' }, ghG);
+  // layer 1: shell
+  d.el.shell = el('path', { fill:`url(#sh${i})`, stroke:INK, 'stroke-width':2.2, 'stroke-linejoin':'round' }, pG);
+  d.el.shellHi = el('path', { fill:'none', stroke:'#fff', 'stroke-opacity':.35, 'stroke-width':1, filter:'url(#blurTiny)' }, pG);
+  // layer 2: inner petal in the accent color
+  d.el.inner = el('path', { fill:`url(#in${i})`, stroke:INK, 'stroke-width':1.8, 'stroke-linejoin':'round' }, pG);
+  // layer 3: jewel teardrop + bead chain on each side
+  d.el.drop = el('path', { fill:`url(#dr${i})`, stroke:INK, 'stroke-width':1.6 }, pG);
+  d.el.jewel = el('circle', { r:3.4, fill:'url(#pearlTeal)', stroke:INK, 'stroke-width':1.3 }, pG);
+  d.el.beads = [...Array(6)].map((_, k) => el('circle', { r:2.1, fill: k % 2 ? light : '#ffffff', stroke:INK, 'stroke-width':1 }, pG));
+  // layer 4: blossom at the tip
+  const bl = el('g', {}, pG);
+  for (let k = 0; k < 6; k++) el('ellipse', { cx:0, cy:-6.2, rx:3.4, ry:5.6, fill:'url(#daisyG)', stroke:INK, 'stroke-width':1.1, transform:`rotate(${k * 60})` }, bl);
+  el('circle', { r:3.3, fill:d.accent, stroke:INK, 'stroke-width':1.2 }, bl);
+  d.el.bloom = bl;
+  d.el.shim = el('path', { fill:`url(#sm${i})`, class:'shim' }, pG);
+  // achievement markers on the axis (visible past the petal, on the ghost)
+  d.el.marks = d.tiers.map(() => ({ halo: el('circle', { r:5.5, fill:d.color, opacity:0, filter:'url(#blurS)' }, pG), dot: el('circle', { r:2.2 }, pG) }));
+
+  const hit = el('path', { d:ogee(R0 - 2, LMAX + 14, W + 4), class:'hit', transform:rot, tabindex:0, role:'button' }, L.hits);
+  hit.addEventListener('click', e => { e.stopPropagation(); select({ kind:'main', i }); });
+  hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); select({ kind:'main', i }); } });
+  hit.addEventListener('pointerenter', () => hoverId = i);
+  hit.addEventListener('pointerleave', () => { if (hoverId === i) hoverId = -1; });
+  d.el.hit = hit;
+});
+
+// curls + dot chains in each gap between petals
+const CURLS = [];
+for (let g = 0; g < N; g++){
+  const a = (g + .5) * STEP;
+  const G = el('g', { transform:`rotate(${a})` }, L.curls);
+  const sides = [1, -1].map(sx => {
+    const s = el('g', { transform:`scale(${sx} 1)` }, G);
+    const dpath = 'M3 -104 C 16 -110 30 -122 27 -138 C 24 -152 8 -151 9 -141 C 10 -133 19 -134 19 -140';
+    el('path', { d:dpath, fill:'none', stroke:INK, 'stroke-width':8.5, 'stroke-linecap':'round' }, s);
+    el('path', { d:dpath, fill:'none', stroke:'url(#curlG)', 'stroke-width':5.4, 'stroke-linecap':'round' }, s);
+    el('path', { d:dpath, fill:'none', stroke:'#fff', 'stroke-opacity':.35, 'stroke-width':1.1, 'stroke-linecap':'round', transform:'translate(-.8 -.8)' }, s);
+    return s;
+  });
+  const dots = [
+    el('circle', { cy:-90, r:3.6, fill:'url(#pearlTeal)', stroke:INK, 'stroke-width':1.3 }, G),
+    el('circle', { cy:-78, r:2.5, fill:'#b8f36b', stroke:INK, 'stroke-width':1.1 }, G),
+    el('circle', { cy:-68, r:1.8, fill:'#ffe135', stroke:INK, 'stroke-width':1 }, G),
+  ];
+  CURLS.push({ a, G, sides, dots, s:0, sv:0 });
+}
+
+// rare blossoms sit between the petals, beyond the curls, and spin on their own axis
+RARE.forEach((r, i) => {
+  r.angle = (i + .5) * STEP; r.scale = 0; r.pop = 0; r.spin = Math.random() * 60;
+  const [x, y] = polar(r.angle, BLOSSOM_R);
+  const G = el('g', { transform:`translate(${f2(x)} ${f2(y)})` }, L.rare);
+  const glow = el('circle', { r:14, fill:'#ffe135', filter:'url(#blurS)', opacity:0 }, G);
+  const flower = el('g', {}, G);
+  const petals = [...Array(8)].map((_, k) => el('ellipse', { cx:0, cy:-7.5, rx:3.6, ry:6.4, transform:`rotate(${k * 45})` }, flower));
+  const ctr = el('circle', { r:4.2, stroke:INK, 'stroke-width':1.3 }, flower);
+  const q = el('text', { y:.5, 'text-anchor':'middle', 'dominant-baseline':'middle', 'font-size':6.5, 'font-weight':800, fill:'rgba(255,240,220,.55)' }, G);
+  q.textContent = '?';
+  r.el = { G, glow, flower, petals, ctr, q, x, y };
+  const hit = el('circle', { cx:f2(x), cy:f2(y), r:17, class:'hit', tabindex:0, role:'button' }, L.hits);
+  hit.addEventListener('click', e => { e.stopPropagation(); select({ kind:'rare', i }); });
+  hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); select({ kind:'rare', i }); } });
+  r.el.hit = hit;
+});
+function styleRare(r){
+  r.el.petals.forEach(p => {
+    if (r.got){ p.setAttribute('fill', 'url(#daisyG)'); p.setAttribute('stroke', INK); p.setAttribute('stroke-width', 1.1); p.removeAttribute('stroke-dasharray'); }
+    else { p.setAttribute('fill', 'rgba(255,255,255,.03)'); p.setAttribute('stroke', 'rgba(255,220,240,.35)'); p.setAttribute('stroke-width', .8); p.setAttribute('stroke-dasharray', '2 2'); }
+  });
+  r.el.ctr.setAttribute('fill', r.got ? 'url(#pearlTeal)' : 'rgba(20,18,30,.9)');
+  r.el.ctr.setAttribute('stroke', r.got ? INK : 'rgba(255,220,240,.3)');
+  r.el.q.setAttribute('opacity', r.got ? 0 : 1);
+}
+
+// center rosette: 14 small petals, each pair lit by one dimension
+const rose = $('rose'); const ROSE = [];
+for (let k = 0; k < 14; k++){
+  const p = el('path', { d:ogee(13, 22, 6.2), fill:k % 2 ? '#2ee6c5' : 'url(#roseG)', stroke:INK, 'stroke-width':1.3, transform:`rotate(${k * 360 / 14})` }, rose);
+  ROSE.push(p);
+}
+$('core').addEventListener('click', () => select(null));
+$('core').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); select(null); } });
+
+// ---------------- panel ----------------
+function labels(){
+  DIMS.forEach(d => d.el.hit.setAttribute('aria-label', `${d.name}: ${Math.round(fillOf(d)*100)}%, ${earnedOf(d)} of ${d.tiers.length} achievements`));
+  RARE.forEach(r => r.el.hit.setAttribute('aria-label', r.got ? `Rare: ${r.name}, earned` : 'Rare: hidden achievement'));
+}
+function select(s){ sel = s; renderPanel(); updateSelArc(); }
+function updateSelArc(){
+  const arc = $('selArc');
+  if (!sel){ arc.setAttribute('opacity', 0); return; }
+  const a = sel.kind === 'main' ? DIMS[sel.i].angle : RARE[sel.i].angle;
+  const c = sel.kind === 'main' ? DIMS[sel.i].color : '#ffe135';
+  const [x1, y1] = polar(a - 11, ringR), [x2, y2] = polar(a + 11, ringR);
+  arc.setAttribute('d', `M${x1} ${y1} A ${ringR} ${ringR} 0 0 1 ${x2} ${y2}`);
+  arc.setAttribute('stroke', c); arc.setAttribute('opacity', 1);
+  arc.style.filter = `drop-shadow(0 0 5px ${c})`;
+}
+const LAYER_NAMES = ['the petal', 'its inner petal', 'its jewel and beads', 'a blossom at its tip'];
+const fmt = n => n.toLocaleString('en-US');
+// ---- next / previous category ----
+function stepSel(dir){
+  if (!sel) return select({ kind:'main', i: dir > 0 ? 0 : N - 1 });
+  if (sel.kind === 'main'){
+    const j = sel.i + dir;
+    if (j >= N) return select({ kind:'rare', i:0 });
+    if (j < 0) return select(null);
+    return select({ kind:'main', i:j });
+  }
+  const j = sel.i + dir;
+  if (j >= RARE.length) return select(null);
+  if (j < 0) return select({ kind:'main', i:N - 1 });
+  select({ kind:'rare', i:j });
+}
+function labelFor(s){
+  if (!s) return 'Overview';
+  return s.kind === 'main' ? DIMS[s.i].name : (RARE[s.i].got ? RARE[s.i].name : 'Hidden ' + (typeof BLOSSOM_R !== 'undefined' ? 'blossom' : 'petal'));
+}
+function peek(dir){
+  const save = sel; let out;
+  const fake = { main:(i) => ({ kind:'main', i }), rare:(i) => ({ kind:'rare', i }) };
+  if (!save) out = dir > 0 ? fake.main(0) : fake.main(N - 1);
+  else if (save.kind === 'main'){ const j = save.i + dir; out = j >= N ? fake.rare(0) : j < 0 ? null : fake.main(j); }
+  else { const j = save.i + dir; out = j >= RARE.length ? null : j < 0 ? fake.main(N - 1) : fake.rare(j); }
+  return out;
+}
+function colorFor(s){ return !s ? '#ffa640' : s.kind === 'main' ? DIMS[s.i].color : '#ffe2b0'; }
+function navRow(){
+  const p = peek(-1), n = peek(1);
+  return `<div class="nav">
+    <button class="navb" id="prevB" style="--n:${colorFor(p)}"><span>‹</span> ${labelFor(p)}</button>
+    ${sel ? '<button class="back" id="back">All petals</button>' : ''}
+    <button class="navb next" id="nextB" style="--n:${colorFor(n)}">${sel ? 'Next' : 'Start'}: ${labelFor(n)} <span>›</span></button>
+  </div>`;
+}
+
+function renderPanel(){
+  const p = $('panel'); let h = '';
+  if (!sel){
+    const tot = DIMS.reduce((s, d) => s + d.tiers.length, 0) + RARE.length;
+    const got = DIMS.reduce((s, d) => s + earnedOf(d), 0) + RARE.filter(r => r.got).length;
+    const w = Math.round(wholeness() * 100);
+    h = `<div class="fade" style="--c:#ff5fb8;--a:#ffc83d">
+      <div class="ph"><canvas class="mini" id="mini" width="96" height="96"></canvas><div><h3>Wholeness</h3><p>${got} of ${tot} achievements grown</p></div><div class="pct">${w}%</div></div>
+      <div class="bar"><i style="width:${w}%"></i></div>
+      <div class="sub">Every achievement adds a layer to a petal. Tap one to see what's next.</div>
+      <div class="chips">${DIMS.map((d, i) => `<button class="chip" data-i="${i}" style="--c:${d.color};--a:${d.accent}"><span class="d"></span>${d.name}<span class="v">${Math.round(fillOf(d)*100)}%</span></button>`).join('')}
+        <button class="chip" data-r="1" style="--c:#ffe135;--a:#2ee6c5"><span class="d"></span>Rare<span class="v">${RARE.filter(r => r.got).length}/${RARE.length}</span></button></div>
+      ${navRow()}
+    </div>`;
+  } else if (sel.kind === 'main'){
+    const d = DIMS[sel.i], f = fillOf(d), e = earnedOf(d), next = d.tiers[e];
+    h = `<div class="fade" style="--c:${d.color};--a:${d.accent}">
+      <div class="ph"><div class="sw"></div><div><h3>${d.name}</h3><p>${d.tag}</p></div><div class="pct">${Math.round(f*100)}%</div></div>
+      <div class="bar"><i style="width:${f*100}%"></i></div>
+      <div class="sub">${fmt(d.value)} ${d.unit} · ${next ? `next: <b style="color:var(--text);font-weight:600">${next[0]}</b> at ${fmt(next[2])}` : 'petal complete ✦'}</div>
+      <ul class="ach">${d.tiers.map((t, k) => {
+        const got = d.value >= t[2], isNext = k === e;
+        return `<li class="${got ? 'got' : isNext ? 'next' : ''}"><div class="ic">${got ? '✓' : k + 1}</div>
+          <div class="t"><b>${t[0]}</b><span>${t[1]} · adds ${LAYER_NAMES[k]}</span></div>
+          <div class="r">${got ? 'Earned' : isNext ? `${fmt(d.value)} / ${fmt(t[2])}` : '—'}</div></li>`;
+      }).join('')}</ul>
+      ${navRow()}
+    </div>`;
+  } else {
+    const r = RARE[sel.i];
+    h = `<div class="fade" style="--c:#ffe135;--a:#2ee6c5">
+      <div class="ph"><div class="sw"></div><div><h3>${r.got ? r.name : 'Hidden blossom'}</h3><p>Rare achievement</p></div><div class="pct">${r.got ? '✦' : '?'}</div></div>
+      <ul class="ach"><li class="${r.got ? 'got' : ''}"><div class="ic">${r.got ? '✓' : '?'}</div>
+        <div class="t"><b>${r.got ? r.name : 'Not yet revealed'}</b><span>${r.got ? r.desc : 'Rare blossoms open when you practice in unusual ways. Keep exploring.'}</span></div>
+        <div class="r">${r.got ? 'Earned' : 'Hidden'}</div></li></ul>
+      <div class="sub" style="margin-top:12px">${RARE.filter(x => x.got).length} of ${RARE.length} rare blossoms found</div>
+      ${navRow()}
+    </div>`;
+  }
+  p.innerHTML = h;
+  p.querySelectorAll('.chip').forEach(c => c.onclick = () => select(c.dataset.r ? { kind:'rare', i: Math.max(0, RARE.findIndex(r => r.got)) } : { kind:'main', i:+c.dataset.i }));
+  const b = $('back'); if (b) b.onclick = () => select(null);
+  const pb = $('prevB'), nb = $('nextB'); if (pb) pb.onclick = () => stepSel(-1); if (nb) nb.onclick = () => stepSel(1);
+  labels();
+}
+
+// ---------------- canvas fx ----------------
+const cv = $('fx'), ctx = cv.getContext('2d');
+let scale = 1;
+function resize(){ const w = $('stage').clientWidth, dpr = Math.min(devicePixelRatio || 1, 2); cv.width = cv.height = Math.round(w * dpr); scale = cv.width / 430; }
+addEventListener('resize', resize); resize();
+const ambient = [...Array(64)].map(() => ({ r: 55 + Math.random() * 155, a: Math.random() * 6.283, sp: (Math.random() - .5) * .05, s: .35 + Math.random() * 1.0, o: .08 + Math.random() * .3, tw: Math.random() * 6, c: Math.random() < .5 ? [255,170,220] : [170,255,235] }));
+const sparks = [];
+function spark(x, y, vx, vy, life, s, rgb){ sparks.push({ x, y, vx, vy, life, max:life, s, rgb }); }
+function burst(x, y, color, n = 30){
+  const rgb = hexRgb(color);
+  for (let i = 0; i < n; i++){ const a = Math.random() * 6.283, v = 18 + Math.random() * 55; spark(x, y, Math.cos(a) * v, Math.sin(a) * v, 1 + Math.random() * 1.2, .8 + Math.random() * 1.7, rgb); }
+}
+
+// ---------------- the pearl: real-time 3D sun at the center ----------------
+const pc = $('pearlGL');
+const pgl = pc.getContext('webgl2', { premultipliedAlpha:true, alpha:true, antialias:false, preserveDrawingBuffer:true });
+const PEARL_UNITS = 40; let pearlU = null;
+if (pgl){
+  const VS = `#version 300 es
+  in vec2 a; out vec2 v; void main(){ v = a; gl_Position = vec4(a, 0., 1.); }`;
+  const FS = `#version 300 es
+  precision highp float; in vec2 v; out vec4 o;
+  uniform float uT, uR, uB, uRes;
+  float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+  float nz(vec3 x){ vec3 i = floor(x), f = fract(x); f = f*f*f*(f*(f*6.-15.)+10.);
+    return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
+               mix(mix(h3(i+vec3(0,0,1)),h3(i+vec3(1,0,1)),f.x),mix(h3(i+vec3(0,1,1)),h3(i+vec3(1,1,1)),f.x),f.y),f.z); }
+  float fbm(vec3 p){ float s = 0., a = .5; for(int i=0;i<4;i++){ s += a*nz(p); p = p*2.02 + 3.1; a *= .5; } return s; }
+  mat3 rY(float a){ float c=cos(a), s=sin(a); return mat3(c,0,-s, 0,1,0, s,0,c); }
+  mat3 rX(float a){ float c=cos(a), s=sin(a); return mat3(1,0,0, 0,c,s, 0,-s,c); }
+  void main(){
+    vec2 p = v / uR; float r = length(p);
+    float px = 2. / (uRes * uR);
+    float atm = r > 1. ? exp(-(r - 1.) * 9.) * .5 * (.8 + .3*uB) : 0.;
+    if (r > 1.6){ o = vec4(0); return; }
+    float edge = smoothstep(1. + px*1.5, 1. - px*1.5, r);
+    float z = sqrt(max(1. - r*r, 0.));
+    vec3 n = vec3(p, z);
+    vec3 q = rY(uT*.32) * rX(-.4) * n;
+    float gran = fbm(q*8.5 + vec3(0., uT*.04, 0.));
+    float big  = fbm(q*1.5 + 7.3);
+    float limb = pow(z, .5);
+    float heat = limb * (.88 + .12*gran) * (.86 + .22*big) * (.93 + .1*uB);
+    vec3 c = mix(vec3(.55,.08,.2), vec3(1.,.38,.2), smoothstep(.12,.58,heat));
+    c = mix(c, vec3(1.,.78,.36), smoothstep(.52,.86,heat));
+    c = mix(c, vec3(1.,.95,.78), smoothstep(.86,1.08,heat) * .8);
+    c += vec3(1.,.72,.42) * .1 * smoothstep(.75, 0., length(p - vec2(-.28,.32)));
+    c += vec3(1.,.5,.6) * pow(1. - z, 3.) * .3 * edge;
+    vec3 ac = vec3(1.,.5,.4);
+    o = vec4(c*edge + ac*atm*(1. - edge), max(edge, atm));
+  }`;
+  const mk = (t, src) => { const sh = pgl.createShader(t); pgl.shaderSource(sh, src); pgl.compileShader(sh); if (!pgl.getShaderParameter(sh, pgl.COMPILE_STATUS)) { console.error(pgl.getShaderInfoLog(sh)); return null; } return sh; };
+  const vs = mk(pgl.VERTEX_SHADER, VS), fs = mk(pgl.FRAGMENT_SHADER, FS);
+  if (vs && fs){
+    const pr = pgl.createProgram(); pgl.attachShader(pr, vs); pgl.attachShader(pr, fs); pgl.linkProgram(pr); pgl.useProgram(pr);
+    const buf = pgl.createBuffer(); pgl.bindBuffer(pgl.ARRAY_BUFFER, buf);
+    pgl.bufferData(pgl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), pgl.STATIC_DRAW);
+    const loc = pgl.getAttribLocation(pr, 'a'); pgl.enableVertexAttribArray(loc); pgl.vertexAttribPointer(loc, 2, pgl.FLOAT, false, 0, 0);
+    pearlU = {}; ['uT','uR','uB','uRes'].forEach(k => pearlU[k] = pgl.getUniformLocation(pr, k));
+  }
+}
+if (!pearlU){ el('circle', { r:10, fill:'url(#roseG)', stroke:INK, 'stroke-width':1.2 }, $('core')); }
+function sizePearl(){
+  const w = $('stage').clientWidth, unit = w / 430, css = PEARL_UNITS * unit;
+  Object.assign(pc.style, { width: css + 'px', height: css + 'px', left: (w - css) / 2 + 'px', top: (w - css) / 2 + 'px' });
+  const px = Math.round(css * Math.min(devicePixelRatio || 1, 2));
+  if (pc.width !== px){ pc.width = pc.height = px; if (pgl) pgl.viewport(0, 0, px, px); }
+}
+addEventListener('resize', sizePearl); sizePearl();
+function drawPearl(now, bIn, pScale){
+  if (!pearlU) return;
+  pgl.uniform1f(pearlU.uT, reduced ? 0 : now);
+  pgl.uniform1f(pearlU.uR, (10.5 / (PEARL_UNITS / 2)) * pScale);
+  pgl.uniform1f(pearlU.uB, bIn);
+  pgl.uniform1f(pearlU.uRes, pc.width);
+  pgl.clearColor(0, 0, 0, 0); pgl.clear(pgl.COLOR_BUFFER_BIT);
+  pgl.drawArrays(pgl.TRIANGLE_STRIP, 0, 4);
+  const mini = document.getElementById('mini');
+  if (mini){
+    const m = mini.getContext('2d'); m.clearRect(0, 0, 96, 96);
+    m.drawImage(pc, 0, 0, pc.width, pc.height, -12, -12, 120, 120);
+    mini.style.filter = `drop-shadow(0 0 ${6 + 10 * bIn}px rgba(255,95,184,${.35 + .3 * bIn}))`;
+  }
+}
+
+// ---------------- breath + wind (one clock) ----------------
+const INH = 5, EXH = 7, CYCLE = INH + EXH;
+const easeIO = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+function breathCurve(t){ const x = t % CYCLE; return x < INH ? easeIO(x / INH) : 1 - easeIO((x - INH) / EXH); }
+const WIND = (() => { const x = 1, y = .62, m = Math.hypot(x, y); return [x / m, y / m]; })();
+const GUST_SPEED = 85;
+const smooth01 = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+function windAt(now, x, y){
+  if (reduced) return 0;
+  const s = x * WIND[0] + y * WIND[1];
+  const tl = now - INH - (s + 215) / GUST_SPEED;
+  const ph = ((tl % CYCLE) + CYCLE) % CYCLE, RISE = 1.8;
+  const gust = ph < RISE ? Math.pow(Math.sin(ph / RISE * Math.PI / 2), 2) : Math.exp(-(ph - RISE) * .5) * (1 - smooth01((ph - (CYCLE - 2.2)) / 2.2));
+  const breeze = .5 + .5 * Math.sin(now * .9 - s * .018);
+  return gust * .85 + breeze * .18;
+}
+const sideOf = deg => WIND[0] * Math.cos(rad(deg)) + WIND[1] * Math.sin(rad(deg));
+const windStreaks = []; let streakT = 0, flowerRot = 0, flowerVel = 0, spinA = 0, bOut = 0, lightR = 140, wDisp = 0;
+const innerR = b => 116 - 44 * b, outerR = b => 182 + 9 * b;
+
+// the web between the circles
+const WP = 84, WK = [7, -7, 13, -13];
+const webSeed = [...Array(WP * WK.length)].map(() => Math.random());
+const dimRgb = DIMS.map(d => hexRgb(d.color));
+const lit = r => Math.exp(-Math.pow(r / (lightR * 1.12), 2) * 1.1);
+function drawWeb(now, b, C, bo){
+  const rot = reduced ? 0 : now * 1.2;
+  const rIn = innerR(b), rOut = outerR(bo), twist = (b - .5) * 5;
+  ctx.lineWidth = Math.max(.6, .55 * scale);
+  let j = 0;
+  for (const k of WK){
+    const layer = Math.abs(k) === 13 ? .38 : .75;
+    for (let i = 0; i < WP; i++, j++){
+      const a1 = i * 360 / WP + rot, a2 = (i + k) * 360 / WP + rot;
+      const mid = ((((a1 + a2) / 2 - rot) % 360) + 360) % 360;
+      const di = Math.round(mid / STEP) % N, d = DIMS[di];
+      const grow = Math.max(0, Math.min(1, (wDisp * 1.35 + .12 - webSeed[j]) * 5));
+      if (grow <= 0) continue;
+      const f = Math.max(0, Math.min(1, d.disp));
+      const al = (.02 + .14 * f) * grow * (.25 + 2.1 * lit((rOut + rIn) / 2) * (.35 + .65 * b)) * layer;
+      const [r, g, bl] = dimRgb[di];
+      ctx.strokeStyle = `rgba(${(r + 255) >> 1},${(g + 236) >> 1},${(bl + 236) >> 1},${al.toFixed(3)})`;
+      const x1 = C + Math.sin(rad(a1)) * rOut * scale, y1 = C - Math.cos(rad(a1)) * rOut * scale;
+      const r2 = rOut + (rIn - rOut) * grow, a2t = a2 + twist * Math.sign(k);
+      const x2 = C + Math.sin(rad(a2t)) * r2 * scale, y2 = C - Math.cos(rad(a2t)) * r2 * scale;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+  }
+}
+
+// ---------------- simulate / reset ----------------
+let toastT = 0;
+function toast(color, title, sub){
+  const t = $('toast'); t.style.setProperty('--c', color);
+  t.innerHTML = `<i>✦</i><span><b>${title}</b> · ${sub}</span>`;
+  t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2800);
+}
+$('sim').onclick = () => {
+  const open = DIMS.map((d, i) => i).filter(i => fillOf(DIMS[i]) < 1);
+  const picks = new Set([0, open[Math.floor(Math.random() * open.length)]].filter(i => i != null && fillOf(DIMS[i]) < 1));
+  let unlocked = null;
+  picks.forEach(i => { const d = DIMS[i], before = earnedOf(d); d.value += d.step; const after = earnedOf(d); if (after > before) unlocked = { d, k: after - 1 }; });
+  if (!unlocked && Math.random() < .3){
+    const hidden = RARE.map((r, i) => i).filter(i => !RARE[i].got);
+    if (hidden.length){
+      const i = hidden[Math.floor(Math.random() * hidden.length)]; const r = RARE[i];
+      r.got = true; r.pop = 1; styleRare(r);
+      const [x, y] = polar(r.angle + flowerRot, BLOSSOM_R); burst(x, y, '#ffe135', 40);
+      toast('#ffe135', r.name, 'rare blossom opened'); select({ kind:'rare', i }); return;
+    }
+  }
+  if (unlocked){
+    const { d, k } = unlocked;
+    const [x, y] = polar(d.angle + flowerRot, R0 + LMAX * fillOf(d) * .6);
+    burst(x, y, d.color, 38); burst(x, y, d.accent, 18);
+    toast(d.color, d.tiers[k][0], `${d.name} gained ${LAYER_NAMES[k]}`);
+    select({ kind:'main', i: DIMS.indexOf(d) });
+  } else { $('toast').classList.remove('on'); select({ kind:'main', i:[...picks].pop() }); }
+};
+// ---- bloom / unbloom cycle ----
+// in:  petals one by one, then their layers (shell → inner → jewel → tip blossom), then curls, then rare blossoms
+// out: the exact reverse — blossoms close, curls curl away, layers peel off outside-in, shells shrink back to the core
+const CYCLE_HOLD = 1;            // full breaths the finished mandala rests before popping out again
+let auto = true, collapsing = false, nextOutAt = Infinity, rebloomAt = Infinity, lastTouch = -99;
+addEventListener('pointerdown', () => lastTouch = performance.now() / 1000, true);
+addEventListener('keydown', () => lastTouch = performance.now() / 1000, true);
+function bloom(){
+  const t = performance.now() / 1000;
+  collapsing = false;
+  DIMS.forEach((d, i) => { d.out = Infinity; d.disp = 0; d.vel = 0; d.lay = [0,0,0,0]; d.layV = [0,0,0,0]; d.delay = t + .2 + i * .2; });
+  CURLS.forEach((c, i) => { c.out = Infinity; c.s = 0; c.delay = t + 1.6 + i * .12; });
+  RARE.forEach((r, i) => { r.out = Infinity; r.scale = 0; r.delayR = t + 2.5 + i * .14; });
+  // rest for a couple of breaths after the bloom settles, then pop out right as an exhale ends
+  const settled = t + 4.5 + CYCLE_HOLD * CYCLE;
+  nextOutAt = auto ? Math.ceil(settled / CYCLE) * CYCLE : Infinity;
+}
+function unbloom(){
+  const t = performance.now() / 1000;
+  collapsing = true;
+  RARE.forEach((r, i) => r.out = t + (RARE.length - 1 - i) * .1);
+  CURLS.forEach((c, i) => c.out = t + .6 + (N - 1 - i) * .09);
+  DIMS.forEach((d, i) => d.out = t + 1.1 + (N - 1 - i) * .18);
+  rebloomAt = t + 1.1 + (N - 1) * .18 + 2.0;     // all gone, a quiet beat, then bloom again
+}
+$('bloom').onclick = bloom;
+$('auto').onclick = () => {
+  auto = !auto; if (!auto) $('auto').textContent = 'Auto-cycle: off';
+  if (auto && !collapsing){ const t = performance.now() / 1000; nextOutAt = Math.ceil((t + CYCLE) / CYCLE) * CYCLE; }
+  if (!auto) nextOutAt = Infinity;
+};
+$('fresh').onclick = () => {
+  const fresh = DIMS[0].value <= 1;
+  DIMS.forEach((d, i) => d.value = fresh ? START[i] : (i === 0 ? 1 : 0));
+  RARE.forEach((r, i) => { r.got = fresh ? START_R[i] : false; styleRare(r); });
+  $('fresh').textContent = fresh ? 'New member' : 'Restore demo member';
+  select(null); bloom();
+};
+
+// ---------------- loop ----------------
+const springTo = (o, k, target, dt, kS = 70, kD = 12) => { const a = (target - o[k]) * kS - o[k + 'V'] * kD; o[k + 'V'] += a * dt; o[k] += o[k + 'V'] * dt; };
+let last = performance.now() / 1000, emitT = 0;
+function frame(ms){
+  const now = ms / 1000, dt = Math.min(now - last, .05); last = now;
+  const bIn = reduced ? .5 : breathCurve(now), breath = bIn * 2 - 1;
+  if (auto && !collapsing && now >= nextOutAt){
+    if (now - lastTouch < 6) nextOutAt += CYCLE;       // only waits if you touched it in the last few seconds
+    else unbloom();
+  }
+  // live countdown on the button so the cycle is visible
+  if (auto && Math.floor(now * 2) !== (window.__lbl || 0)){
+    window.__lbl = Math.floor(now * 2);
+    $('auto').textContent = collapsing ? 'Auto-cycle: blooming…' : `Auto-cycle: on · next in ${Math.max(0, Math.ceil(nextOutAt - now))}s`;
+  }
+  if (collapsing && now >= rebloomAt){ rebloomAt = Infinity; bloom(); }
+  const bVel = Math.abs(breathCurve(now + .02) - breathCurve(now)) / .02 / (1.5 / INH);
+  $('mand').setAttribute('transform', `scale(${1 + breath * .012})`);
+  if (!reduced){ geo.setAttribute('transform', `rotate(${now * 1.2})`); $('rose').setAttribute('transform', `rotate(${-now * 4}) scale(${(1 + .05 * bIn).toFixed(3)})`); }
+
+  if (!reduced){
+    const gc = windAt(now, 0, 0);
+    flowerVel += (gc * 2.4 - flowerVel) * (1 - Math.exp(-dt * 1.5));
+    flowerRot += flowerVel * dt;
+  }
+  $('flower').setAttribute('transform', `rotate(${flowerRot.toFixed(3)})`);
+
+  DIMS.forEach((d, i) => {
+    const gone = now > (d.out ?? Infinity);
+    const target = gone ? 0 : fillOf(d);
+    if (reduced) d.disp = target;
+    else if (now > d.delay){ const a = (target - d.disp) * 70 - d.vel * 12; d.vel += a * dt; d.disp += d.vel * dt; }
+    const len = gone ? LMAX * Math.max(d.disp, 0) : (now > d.delay || reduced ? Math.max(LMAX * Math.max(d.disp, 0), 6) : 0);
+    const w = widthFor(len);
+    // wind
+    const ea = d.angle + flowerRot, [mx, my] = polar(ea, R0 + len * .6);
+    const push = windAt(now, mx, my) * sideOf(ea);
+    const bendT = push * .17 + Math.sin(now * 3.1 + i * 1.7) * .012 * Math.abs(push);
+    d.bv += ((bendT - d.bend) * 14 - d.bv * 3.4) * dt; d.bend += d.bv * dt; d.sway = d.bend * 20;
+    // layers reveal as tiers are earned, with a springy pop
+    const e = earnedOf(d);
+    for (let k = 0; k < 4; k++){
+      const peel = gone || now > (d.out ?? Infinity) - (3 - k) * .22 + .66;      // outer layers peel off first
+      const tgt = peel ? 0 : (now > d.delay + .45 + k * .32 || reduced) && e > k ? 1 : (k === 0 && len > 0 ? 1 : 0);
+      const a = (tgt - d.lay[k]) * 60 - d.layV[k] * 9; d.layV[k] += a * dt; d.lay[k] += d.layV[k] * dt;
+      if (reduced) d.lay[k] = tgt;
+    }
+    const pulse = 1 + .035 * bIn;
+    const B = d.bend;
+    const shell = ogee(R0, len, w, B);
+    d.el.shell.setAttribute('d', shell); d.el.glow.setAttribute('d', shell); d.el.shim.setAttribute('d', shell);
+    d.el.shellHi.setAttribute('d', ogee(R0 + len * .06, len * .86, w * .84, B));
+    const L2 = Math.max(0, d.lay[1]), L3 = Math.max(0, d.lay[2]), L4 = Math.max(0, d.lay[3]);
+    d.el.inner.setAttribute('d', ogee(R0 + len * .09, len * .74 * (.55 + .45 * L2) * pulse, w * .64 * (.5 + .5 * L2) * pulse, B * 1.05));
+    d.el.inner.setAttribute('opacity', Math.min(1, L2 * 1.4).toFixed(3));
+    const dr0 = R0 + len * .3, dLen = len * .36 * (.5 + .5 * L3) * pulse;
+    d.el.drop.setAttribute('d', drop(dr0, dLen, w * .27 * (.5 + .5 * L3), B, len));
+    d.el.drop.setAttribute('opacity', Math.min(1, L3 * 1.4).toFixed(3));
+    const jr = R0 + len * .3 + dLen * .3;
+    d.el.jewel.setAttribute('cx', f2(spineX(B, len, jr))); d.el.jewel.setAttribute('cy', f2(-jr));
+    d.el.jewel.setAttribute('r', (3.2 * (.4 + .6 * L3) * (1 + .1 * bIn)).toFixed(2)); d.el.jewel.setAttribute('opacity', Math.min(1, L3 * 1.4).toFixed(3));
+    d.el.beads.forEach((bd, k) => {
+      const side = k < 3 ? 1 : -1, j = k % 3, fr = .3 + j * .13, r = R0 + len * fr;
+      const half = w * .6 * Math.sin(Math.PI * Math.min(1, fr * 1.25)) * .78;
+      bd.setAttribute('cx', f2(spineX(B, len, r) + side * half)); bd.setAttribute('cy', f2(-r));
+      const v = Math.max(0, Math.min(1, (L3 - j * .15) * 1.6));
+      bd.setAttribute('opacity', v.toFixed(3)); bd.setAttribute('r', (2.1 * (.3 + .7 * v)).toFixed(2));
+    });
+    const tipR = R0 + len + 5;
+    d.el.bloom.setAttribute('transform', `translate(${f2(spineX(B, len, tipR) * 1.05)} ${f2(-tipR)}) rotate(${(now * 25 * (reduced ? 0 : 1)).toFixed(1)}) scale(${(Math.max(0, L4) * (1 + .06 * bIn)).toFixed(3)})`);
+    d.el.bloom.setAttribute('opacity', Math.min(1, L4 * 1.5).toFixed(3));
+
+    const isSel = sel && sel.kind === 'main' && sel.i === i;
+    d.scale += ((isSel ? 1.05 : hoverId === i ? 1.025 : 1) - d.scale) * (1 - Math.exp(-dt * 10));
+    d.op = (d.op ?? 1) + ((sel && !isSel ? .4 : 1) - (d.op ?? 1)) * (1 - Math.exp(-dt * 8));
+    const tf = `rotate(${(d.angle + d.sway).toFixed(3)}) scale(${d.scale.toFixed(4)})`;
+    d.el.pG.setAttribute('transform', tf); d.el.gG.setAttribute('transform', tf);
+    d.el.ghG.setAttribute('transform', `rotate(${(d.angle + d.sway * .35).toFixed(3)})`);
+    const vis = gone ? Math.min(1, Math.max(0, d.disp) / .06) : 1;
+    d.el.pG.setAttribute('opacity', (d.op * vis).toFixed(3));
+    d.el.gG.setAttribute('opacity', (d.op * vis * (.35 + .55 * bIn) * (isSel ? 1.3 : 1)).toFixed(3));
+    d.el.ghG.setAttribute('opacity', sel && !isSel ? .4 : 1);
+    d.el.marks.forEach((m, k) => {
+      const got = k < e, nxt = k === e, r = R0 + LMAX * (k + 1) / 4;
+      const inside = r <= len - 4;
+      const x = f2(spineX(B, len, Math.min(r, len + R0)) * (r <= R0 + len ? 1 : .35));
+      m.dot.setAttribute('cx', x); m.halo.setAttribute('cx', x); m.dot.setAttribute('cy', -r); m.halo.setAttribute('cy', -r);
+      m.dot.setAttribute('fill', nxt ? 'rgba(0,0,0,0)' : got ? '#fff' : d.color);
+      m.dot.setAttribute('stroke', nxt ? d.color : 'none'); m.dot.setAttribute('stroke-width', 1.2);
+      m.dot.setAttribute('r', nxt ? 3 : got ? 0 : 1.2);          // earned tiers are shown by their layer, not a dot
+      m.dot.setAttribute('opacity', inside && !nxt ? 0 : (nxt ? .95 : .4));
+      m.halo.setAttribute('opacity', nxt ? .4 + .3 * Math.sin(now * 2 + i) : 0);
+    });
+  });
+
+  // curls grow with the two petals beside them and flutter in the wind
+  CURLS.forEach((c, i) => {
+    const a = DIMS[i], b = DIMS[(i + 1) % N];
+    const tgt = now > (c.out ?? Infinity) ? 0 : (now > (c.delay || 0) || reduced) ? .45 + .55 * Math.min(1, (Math.max(a.disp, 0) + Math.max(b.disp, 0)) / 1.2) : 0;
+    c.s += (tgt - c.s) * (1 - Math.exp(-dt * 4));
+    const ea = c.a + flowerRot, [x, y] = polar(ea, 125);
+    const push = windAt(now, x, y) * sideOf(ea);
+    c.sv += ((push * 9 - (c.w || 0)) * 12 - c.sv * 3) * dt; c.w = (c.w || 0) + c.sv * dt;
+    const sc = (c.s * (1 + .04 * bIn)).toFixed(3);
+    c.G.setAttribute('transform', `rotate(${(c.a + (c.w || 0) * .4).toFixed(2)})`);
+    c.sides.forEach((s, k) => s.setAttribute('transform', `translate(0 -104) rotate(${(c.w * (k ? .6 : 1)).toFixed(2)}) scale(${k ? -sc : sc} ${sc}) translate(0 104)`));
+    c.dots.forEach((dt_, k) => { dt_.setAttribute('opacity', Math.min(1, c.s * 1.6).toFixed(3)); dt_.setAttribute('r', ([3.6, 2.5, 1.8][k] * (1 + .15 * bIn * (k === 0 ? 1 : 0))).toFixed(2)); });
+  });
+
+  // rare blossoms spin on their own axis, faster in each gust
+  if (sel && sel.kind === 'rare') updateSelArc();
+  RARE.forEach((r, i) => {
+    if (reduced) r.scale = 1;
+    else if (now > (r.out ?? Infinity)) r.scale += (0 - r.scale) * (1 - Math.exp(-dt * 7));
+    else if (now > (r.delayR || 0)) r.scale += (1 - r.scale) * (1 - Math.exp(-dt * 5));
+    r.pop *= Math.exp(-dt * 2.2);
+    const ea = r.angle + flowerRot, [x, y] = polar(ea, BLOSSOM_R);
+    if (!reduced) r.spin += dt * (24 + windAt(now, x, y) * 70) * (r.got ? 1 : .5);
+    const isSel = sel && sel.kind === 'rare' && sel.i === i;
+    const s = r.scale * (isSel ? 1.18 : 1) * (1 + r.pop * .4) * (1 + .05 * bIn);
+    r.el.flower.setAttribute('transform', `rotate(${r.spin.toFixed(1)}) scale(${s.toFixed(3)})`);
+    r.el.glow.setAttribute('opacity', (((r.got ? .25 + .35 * bIn : 0) + r.pop * .8) * Math.max(0, Math.min(1, r.scale))).toFixed(3));
+    r.el.glow.setAttribute('r', (11 * Math.max(.01, r.scale)).toFixed(2));
+    r.el.G.setAttribute('opacity', sel && !isSel ? .5 : 1);
+  });
+
+  // center
+  const w = wholeness(); wDisp += (w - wDisp) * (1 - Math.exp(-dt * 3));
+  $('wring').setAttribute('stroke-dasharray', `${Math.max(wDisp * 1000, 1)} 1000`);
+  lightR = 112 + 80 * bIn;
+  $('coreHalo').setAttribute('r', Math.min(lightR * 1.02, 200));
+  $('coreHalo').setAttribute('opacity', Math.min(1, (.45 + wDisp * .8) * (.5 + .75 * bIn)));
+  $('pearlHalo').setAttribute('r', 16 + 8 * bIn); $('pearlHalo').setAttribute('opacity', .6 + .4 * bIn);
+  ROSE.forEach((p, k) => p.setAttribute('opacity', (.35 + .65 * Math.max(0, Math.min(1, DIMS[Math.floor(k / 2)].disp))).toFixed(3)));
+  const pScale = .92 + .1 * bIn + wDisp * .1;
+  drawPearl(now, bIn, pScale * (1 + breath * .012));
+
+  // inner/outer circles + lanterns
+  bOut += (bIn - bOut) * (1 - Math.exp(-dt * 1.1));
+  $('innerC').setAttribute('r', f2(innerR(bIn))); $('innerC').setAttribute('stroke-opacity', (.6 + .8 * bIn).toFixed(3));
+  $('outerC').setAttribute('r', f2(ringR + 7 * bOut));
+  if (!reduced) spinA += dt * 11 * (.06 + .94 * Math.min(1, bVel));
+  spin.setAttribute('transform', `rotate(${spinA.toFixed(3)}) scale(${(1 + .03 * bOut).toFixed(4)})`);
+  const mv = reduced ? .3 : Math.min(1, bVel);
+  LANTERNS.forEach((Ln, i) => {
+    const fl = .06 * Math.sin(now * 6.3 + i * 1.9) + .04 * Math.sin(now * 11.7 + i);
+    Ln.glow.setAttribute('r', f2(4.5 + 5 * mv)); Ln.glow.setAttribute('opacity', Math.max(0, .22 + .78 * mv + fl).toFixed(3));
+    Ln.core.setAttribute('r', f2(1.6 + .9 * mv)); Ln.core.setAttribute('opacity', (.6 + .4 * mv).toFixed(3));
+    const tr = 1 + 13 * mv, [x1, y1] = polar(Ln.a - tr, LANT_R), [x2, y2] = polar(Ln.a, LANT_R);
+    Ln.trail.setAttribute('d', `M${f2(x1)} ${f2(y1)} A ${LANT_R} ${LANT_R} 0 0 1 ${f2(x2)} ${f2(y2)}`);
+    Ln.trail.setAttribute('stroke-opacity', (.08 + .5 * mv * mv).toFixed(3));
+  });
+
+  // canvas
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.globalCompositeOperation = 'lighter';
+  const C = 215 * scale;
+  const lg = ctx.createRadialGradient(C, C, 0, C, C, lightR * scale);
+  lg.addColorStop(0, `rgba(255,140,120,${(.08 + .11 * bIn) * (.6 + wDisp)})`);
+  lg.addColorStop(.5, `rgba(200,90,255,${(.025 + .045 * bIn) * (.6 + wDisp)})`);
+  lg.addColorStop(1, 'rgba(160,80,255,0)');
+  ctx.fillStyle = lg; ctx.fillRect(0, 0, cv.width, cv.height);
+  drawWeb(now, bIn, C, bOut);
+
+  if (!reduced){
+    const g0 = windAt(now, -150, -90);
+    streakT -= dt * g0;
+    if (g0 > .45 && streakT <= 0){
+      streakT = .07 + Math.random() * .12;
+      const off = (Math.random() - .5) * 360;
+      windStreaks.push({ x: -205 - Math.random() * 30 + WIND[1] * off, y: -135 - Math.random() * 30 - WIND[0] * off, life: 2.4 + Math.random(), max: 3.4, ph: Math.random() * 6, len: 14 + Math.random() * 22, pink: Math.random() < .5 });
+    }
+    emitT -= dt;
+    if (emitT <= 0){
+      emitT = .18 + Math.random() * .35;
+      const live = DIMS.filter(d => d.disp > .08);
+      if (live.length){
+        const d = live[Math.floor(Math.random() * live.length)];
+        const r = R0 + LMAX * d.disp * (.75 + Math.random() * .25);
+        const [x, y] = polar(d.angle + flowerRot + (Math.random() - .5) * 6, r), [ux, uy] = polar(d.angle + flowerRot, 1);
+        const v = 7 + Math.random() * 9;
+        spark(x, y, ux * v + (Math.random() - .5) * 4, uy * v + (Math.random() - .5) * 4, 2.5 + Math.random() * 2.5, .6 + Math.random() * .9, hexRgb(Math.random() < .6 ? d.color : d.accent));
+      }
+    }
+  }
+  ctx.lineCap = 'round';
+  for (let j = windStreaks.length - 1; j >= 0; j--){
+    const s = windStreaks[j]; s.life -= dt;
+    if (s.life <= 0 || Math.abs(s.x) > 235 || Math.abs(s.y) > 235){ windStreaks.splice(j, 1); continue; }
+    const v = 120 * (.4 + windAt(now, s.x, s.y)), curl = Math.sin(now * 2.2 + s.ph) * .35;
+    const dx = WIND[0] - WIND[1] * curl, dy = WIND[1] + WIND[0] * curl;
+    s.x += dx * v * dt; s.y += dy * v * dt;
+    const f = Math.min(1, s.life / .6) * Math.min(1, (s.max - s.life) / .4);
+    const hx = C + s.x * scale, hy = C + s.y * scale;
+    const g = ctx.createLinearGradient(hx - dx * s.len * scale, hy - dy * s.len * scale, hx, hy);
+    const col = s.pink ? '255,170,220' : '170,255,235';
+    g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(1, `rgba(${col},${(.34 * f).toFixed(3)})`);
+    ctx.strokeStyle = g; ctx.lineWidth = .9 * scale;
+    ctx.beginPath(); ctx.moveTo(hx - dx * s.len * scale, hy - dy * s.len * scale); ctx.lineTo(hx, hy); ctx.stroke();
+  }
+  for (const p of ambient){
+    if (!reduced) p.a += p.sp * dt;
+    let x = Math.sin(p.a) * p.r, y = -Math.cos(p.a) * p.r;
+    const wv = windAt(now, x, y);
+    p.ox = ((p.ox || 0) + WIND[0] * wv * 14 * dt) * Math.exp(-dt * .9);
+    p.oy = ((p.oy || 0) + WIND[1] * wv * 14 * dt) * Math.exp(-dt * .9);
+    x += p.ox; y += p.oy;
+    ctx.fillStyle = `rgba(${p.c},${(p.o * (.6 + .4 * Math.sin(now * 1.1 + p.tw))).toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(C + x * scale, C + y * scale, p.s * scale * .9, 0, 6.283); ctx.fill();
+  }
+  for (let j = sparks.length - 1; j >= 0; j--){
+    const p = sparks[j]; p.life -= dt;
+    if (p.life <= 0){ sparks.splice(j, 1); continue; }
+    p.vx *= Math.exp(-dt * .9); p.vy *= Math.exp(-dt * .9);
+    const wv = windAt(now, p.x, p.y); p.vx += WIND[0] * wv * 30 * dt; p.vy += WIND[1] * wv * 30 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    const f = p.life / p.max, al = Math.min(1, f * 1.6) * .9;
+    const [r, g, b] = p.rgb, px = C + p.x * scale, py = C + p.y * scale, rr = p.s * scale;
+    const grd = ctx.createRadialGradient(px, py, 0, px, py, rr * 3.5);
+    grd.addColorStop(0, `rgba(255,248,236,${al})`); grd.addColorStop(.3, `rgba(${r},${g},${b},${al * .6})`); grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(px, py, rr * 3.5, 0, 6.283); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  requestAnimationFrame(frame);
+}
+
+RARE.forEach(styleRare);
+addEventListener('keydown', e => { if (e.target.closest && e.target.closest('input,textarea')) return; if (e.key === 'ArrowRight') stepSel(1); if (e.key === 'ArrowLeft') stepSel(-1); });
+renderPanel(); bloom(); requestAnimationFrame(frame);
+window.__m = { DIMS, RARE, select, unbloom };
+addEventListener('message', e => { if (e.data && e.data.mandalaV1Height) $('v1').style.height = Math.ceil(e.data.mandalaV1Height) + 'px'; });
+})();
+</script>
+
+<script>
+(function(){
+  function post(){ try{ var c=document.querySelector('.card'); if(!c)return;
+    parent.postMessage({lumenMandalaHeight: Math.ceil(c.getBoundingClientRect().height)}, '*'); }catch(e){} }
+  try{ new ResizeObserver(post).observe(document.body); }catch(e){}
+  addEventListener('load', post); setTimeout(post,250); setTimeout(post,900); setTimeout(post,2000);
+})();
+</script>
+</body>
+</html>

@@ -5955,20 +5955,15 @@ function buildAltar(achs){
   return `<svg viewBox="0 0 300 300" class="altar-svg">${P.join('')}</svg>`;
 }
 async function renderAltar(){
-  let ach={achievements:[]};try{ach=await api('achievements');}catch(e){}
-  window._ACH=ach.achievements;
-  const achs=ach.achievements;
-  const n=achs.filter(a=>a.unlocked).length, total=achs.length||1, complete=n>=total&&n>0;
   $('#cbody').innerHTML=`
-  <div class="card center" style="padding:12px">
-    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.1em">Your mandala</div>
-    <div style="font-size:26px;font-weight:800;margin:2px 0">${n}<span class="muted" style="font-size:16px">/${total} facets</span></div>
-    <div class="bar" style="max-width:220px;margin:4px auto 0"><i style="width:${Math.round(100*n/total)}%"></i></div>
-    ${complete?`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Your mandala is whole</div>`:`<div class="muted" style="font-size:12px;margin-top:8px">Every achievement reveals one facet of the whole</div>`}
+  <div class="mandala-wrap">
+    <iframe id="mandalaFrame" src="assets/mandala.html" title="Your mandala" scrolling="no" loading="eager"
+      style="width:100%;height:560px;border:0;display:block;background:transparent;overflow:hidden"></iframe>
   </div>
-  <div class="altar-stage ${complete?'complete':''}">${buildAltar(achs)}</div>
-  <p class="muted center" style="font-size:12px;margin-top:2px">Tap a facet to see the achievement that reveals it.</p>`;
-  document.querySelectorAll('.apiece').forEach(g=>g.addEventListener('click',()=>openAchCard(g.getAttribute('data-ach'))));
+  <p class="muted center" style="font-size:12px;margin:2px 0 84px">Your mandala blooms as you practice — each dimension of your path a living petal. Tap one to look closer.</p>`;
+  if(!window.__mandalaMsg){ window.__mandalaMsg=1;
+    window.addEventListener('message',e=>{ const h=e&&e.data&&e.data.lumenMandalaHeight;
+      const fr=document.getElementById('mandalaFrame'); if(h&&fr&&h>200&&h<2200) fr.style.height=h+'px'; }); }
 }
 async function renderItems(){
   let d={items:[],equipped:null};try{d=await api('collection');}catch(e){}
@@ -6259,10 +6254,12 @@ class H(BaseHTTPRequestHandler):
         if p == "/health":
             self._send(200, {"ok": True}); return
         rel = p.lstrip("/")
-        if rel in ("assets/diya.json", "assets/orb.js"):
+        if rel in ("assets/diya.json", "assets/orb.js", "assets/mandala.html"):
             fp = os.path.join(HERE, "assets", os.path.basename(rel))
             if os.path.isfile(fp):
-                ct = "application/javascript; charset=utf-8" if rel.endswith(".js") else "application/json"
+                if rel.endswith(".js"): ct = "application/javascript; charset=utf-8"
+                elif rel.endswith(".html"): ct = "text/html; charset=utf-8"
+                else: ct = "application/json"
                 with open(fp, "rb") as f:
                     self._send(200, f.read(), ct,
                                extra=[("Cache-Control", "public, max-age=604800")])
