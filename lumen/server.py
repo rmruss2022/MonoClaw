@@ -2280,7 +2280,10 @@ nav button.on{color:var(--text);background:#211a37}
 .horo-card:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
   background:radial-gradient(120% 85% at 92% -12%,#3a2866,transparent 55%)}
 .horo-card>*{position:relative;z-index:1}
-.horo-eyebrow{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold)}
+.horo-eyebrow{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold)}
+.horo-eyebrow>span:first-child{display:flex;align-items:center;gap:7px}
+.horo-constell{flex:none;line-height:0;filter:drop-shadow(0 0 5px rgba(245,201,119,.5))}
+.horo-constell svg{display:block}
 .horo-eyebrow .i{width:13px;height:13px}
 .horo-intro{font-size:12.5px;line-height:1.5;margin:8px 0 14px;max-width:40ch}
 .horo-head{display:flex;align-items:center;gap:14px;margin:13px 0}
@@ -3413,7 +3416,7 @@ function horoscopeCardHTML(h){
   if(!h)return '';
   if(h.need_sign){
     return `<div class="card horo-card">
-      <div class="horo-eyebrow">${ic('nova','g')} Today's sky</div>
+      <div class="horo-eyebrow"><span>${ic('nova','g')} Today's sky</span><span class="horo-constell"><svg viewBox="0 0 56 26" width="54" height="25" fill="none" aria-hidden="true"><path d="M5 18 L15 9 L25 15 L35 6 L46 12 L50 19" stroke="rgba(245,201,119,.4)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><g fill="#f5c977"><circle cx="5" cy="18" r="1.5"/><circle cx="15" cy="9" r="2.1"/><circle cx="25" cy="15" r="1.3"/><circle cx="35" cy="6" r="1.8"/><circle cx="46" cy="12" r="1.5"/><circle cx="50" cy="19" r="1.1"/></g></svg></span></div>
       <div class="horo-intro muted">Choose your rāśi — your Vedic Moon sign — for a daily reading grounded in the nakshatra of the day.</div>
       <div class="horo-signs">${h.signs.map(s=>`<button class="horo-sign" data-sign="${esc(s.key)}"><span class="hs-med"><span class="hs-glyph">${s.glyph}︎</span></span><span class="hs-nm">${esc(s.sanskrit||s.name)}</span><span class="hs-sub">${esc(s.name)}</span></button>`).join('')}</div>
     </div>`;
@@ -3422,7 +3425,7 @@ function horoscopeCardHTML(h){
   const mins=h.minutes||10;
   const snd=SS[h.soundscape]||esc(h.soundscape||'');
   return `<div class="card horo-card">
-    <div class="horo-eyebrow">${ic('nova','g')} Today's sky</div>
+    <div class="horo-eyebrow"><span>${ic('nova','g')} Today's sky</span><span class="horo-constell"><svg viewBox="0 0 56 26" width="54" height="25" fill="none" aria-hidden="true"><path d="M5 18 L15 9 L25 15 L35 6 L46 12 L50 19" stroke="rgba(245,201,119,.4)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><g fill="#f5c977"><circle cx="5" cy="18" r="1.5"/><circle cx="15" cy="9" r="2.1"/><circle cx="25" cy="15" r="1.3"/><circle cx="35" cy="6" r="1.8"/><circle cx="46" cy="12" r="1.5"/><circle cx="50" cy="19" r="1.1"/></g></svg></span></div>
     <div class="horo-head">
       <span class="horo-medallion"><span class="horo-sym">${h.glyph}︎</span></span>
       <div>
