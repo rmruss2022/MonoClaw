@@ -2615,22 +2615,19 @@ a{color:var(--purple)}
 .mgoal-echo{font-size:12px;color:var(--muted);margin-top:14px;font-style:italic;font-family:var(--serif)}
 .mgoal-echo b{color:var(--gold);font-style:normal}
 /* journal home — three full-width doors + links + community feed */
-.jbigs{display:flex;flex-direction:column;gap:8px;margin:4px 2px 10px}
-.jbig{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;border-radius:16px;padding:14px 14px;transition:.16s;color:var(--text);
-  border:1px solid color-mix(in srgb,var(--jc,#a855f7) 28%,var(--line));
-  background:linear-gradient(135deg,color-mix(in srgb,var(--jc,#a855f7) 12%,#15111f),#110d1b 74%);
-  box-shadow:0 10px 26px -18px color-mix(in srgb,var(--jc,#a855f7) 85%,#000)}
+.jbigs{display:flex;flex-direction:column;gap:9px;margin:4px 2px 18px}
+.jbig{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;border-radius:15px;padding:15px;transition:.16s;color:var(--text);
+  border:1px solid rgba(255,255,255,.07);background:linear-gradient(165deg,#17131f,#110d17 82%)}
 .jbig:active{transform:scale(.99)}
-.jbig.rec{border-color:rgba(245,201,119,.45);background:linear-gradient(135deg,rgba(245,201,119,.10),#141021);box-shadow:0 8px 26px -16px var(--gold)}
-.jbig-ico{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--jc,#a855f7);
-  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--jc,#a855f7) 34%,transparent),color-mix(in srgb,var(--jc2,var(--jc,#a855f7)) 15%,transparent) 70%,transparent);
-  border:1px solid color-mix(in srgb,var(--jc,#a855f7) 30%,transparent);box-shadow:0 0 14px -6px color-mix(in srgb,var(--jc,#a855f7) 80%,transparent)}
-.jbig-ico .i{width:19px;height:19px}
-.jbig-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.jbig-t{font-family:var(--serif);font-size:16.5px;display:flex;align-items:center;gap:8px}
+.jbig.rec{border-color:rgba(245,201,119,.34);background:linear-gradient(165deg,#1c1710,#120d17 82%)}
+.jbig-ico{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--gold) 86%,#fff);
+  background:radial-gradient(circle at 34% 28%,rgba(245,201,119,.18),#17121f 72%);border:1px solid rgba(245,201,119,.16)}
+.jbig-ico .i{width:20px;height:20px}
+.jbig-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.jbig-t{font-family:var(--serif);font-size:17px;display:flex;align-items:center;gap:8px;color:#efe7d6}
 .jbig-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#2a1a05;background:linear-gradient(135deg,#f5c977,#e0953a);border-radius:999px;padding:2px 8px}
 .jbig-b{font-size:12px;color:var(--muted);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.jbig-go{flex:none;color:#6f6794;font-size:22px;font-weight:300;line-height:1}
+.jbig-go{flex:none;color:#6f6794;font-size:20px;font-weight:300;line-height:1}
 .jlinks{display:flex;gap:10px;margin:0 2px 20px}
 .jlink{flex:1;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:12px;color:var(--text);transition:.15s}
 .jlink:active{transform:scale(.98)}
@@ -2716,13 +2713,15 @@ a{color:var(--purple)}
 .pcase-edit .i{width:12px;height:12px;color:var(--gold)}
 .pcase-edit:active{transform:scale(.97)}
 .jgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.jcard{position:relative;display:flex;flex-direction:column;gap:5px;padding:13px 12px 12px;border-radius:14px;background:linear-gradient(165deg,#191230,#100c1b 84%);border:1px dashed #352b54;text-align:left}
-.jcard-top{display:flex;align-items:center;justify-content:space-between}
-.jcard-n{font-family:var(--serif);font-size:21px;font-weight:600;color:#c3b2ee;line-height:1}
-.jcard-lock{color:#7d72a8}
-.jcard-lock .i{width:13px;height:13px}
-.jcard-t{font-weight:700;font-size:13px;color:#dcd3f2;line-height:1.15}
-.jcard-d{font-size:11px;color:var(--muted);line-height:1.35}
+.jcard{position:relative;display:flex;flex-direction:column;gap:5px;padding:14px 13px 13px;border-radius:14px;background:linear-gradient(165deg,#191230,#100c1b 84%);border:1px solid rgba(168,85,247,.16);text-align:left}
+.jcard-top{display:flex;align-items:center;gap:9px;margin-bottom:3px}
+.jcard-med{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#c8b6f5;background:radial-gradient(circle at 34% 30%,rgba(168,85,247,.28),#140e26 72%);border:1px solid rgba(168,85,247,.28)}
+.jcard-med .i{width:18px;height:18px}
+.jcard-n{font-family:var(--serif);font-size:20px;font-weight:600;color:#8f82b8;line-height:1;margin-left:auto}
+.jcard-lk{position:absolute;bottom:12px;right:12px;color:#6b5f93}
+.jcard-lk .i{width:13px;height:13px}
+.jcard-t{font-weight:700;font-size:13.5px;color:#e4dcf6;line-height:1.15}
+.jcard-d{font-size:11px;color:var(--muted);line-height:1.35;padding-right:15px}
 /* localized sparks behind the featured (recommended) journal door */
 .jbig{position:relative;overflow:hidden}
 .jbig-sparks{position:absolute;inset:0;pointer-events:none;z-index:0}
@@ -3334,6 +3333,10 @@ const fmt=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':''+n;
 
 /* ---- inline SVG icon set (no asset files; currentColor-driven) ---- */
 const SVGP={
+  jg_shadow:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17 10 10 0 0 1 0 -17Z" fill="currentColor" stroke="none"/>',
+  jg_persona:'<path d="M12 3.4c3.6 0 5.6 2.9 5.6 7.6 0 5.1-2.9 9.6-5.6 9.6S6.4 16.1 6.4 11s2-7.6 5.6-7.6Z"/><path d="M8.6 10.5c.6-.7 1.7-.7 2.3 0"/><path d="M13.1 10.5c.6-.7 1.7-.7 2.3 0"/><path d="M9.5 14.7c1.5 1.2 3.5 1.2 5 0"/>',
+  jg_anima:'<circle cx="9.4" cy="12" r="5.6"/><circle cx="14.6" cy="12" r="5.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  jg_self:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.3"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M12 3v3.4M12 17.6v3.4M3 12h3.4M17.6 12h3.4"/>',
   lumen:'<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/><g><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.6" y1="5.6" x2="7.3" y2="7.3"/><line x1="16.7" y1="16.7" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="16.7" y2="7.3"/><line x1="7.3" y1="16.7" x2="5.6" y2="18.4"/></g>',
   meditate:'<circle cx="12" cy="4.8" r="2.4" fill="currentColor" stroke="none"/><path d="M12 8.2c-2.3.2-3.9 1.7-4.2 4.5"/><path d="M12 8.2c2.3.2 3.9 1.7 4.2 4.5"/><path d="M4.6 18c1.9-3.1 4.4-4.1 7.4-4.1s5.5 1 7.4 4.1c.4.6-.1 1.4-.8 1.4H5.4c-.7 0-1.2-.8-.8-1.4Z" fill="currentColor" stroke="none"/><circle cx="7.8" cy="12.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="16.2" cy="12.9" r="1.05" fill="currentColor" stroke="none"/>',
   medlotus:'<circle cx="12" cy="4.3" r="2.15" fill="currentColor" stroke="none"/><path d="M12 7c-2.1 0-3.8 1.5-4.9 4"/><path d="M12 7c2.1 0 3.8 1.5 4.9 4"/><path d="M9.3 13c.7.9 1.6 1.4 2.7 1.4s2-.5 2.7-1.4"/><path d="M12 15.4c-1.5-1.7-3.3-2.3-5.4-2 .4 2.4 2.4 4 5.4 4s5-1.6 5.4-4c-2.1-.3-3.9.3-5.4 2Z" fill="currentColor" stroke="none"/><circle cx="6.5" cy="12.6" r=".95" fill="currentColor" stroke="none"/><circle cx="17.5" cy="12.6" r=".95" fill="currentColor" stroke="none"/>',
@@ -5503,9 +5506,8 @@ async function renderJournalHome(){
   const recMode=jRec&&jRec.mode;
   const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
   const JDOOR_COL={deep:['#a855f7','#c084fc'],daily:['#38bdf8','#0ea5e9'],season:['#f59e0b','#f97316']};
-  const door=([k,lbl,icn])=>{const isRec=recMode===k;const c=JDOOR_COL[k]||['#a855f7','#c084fc'];
-    const sparks=isRec?`<span class="jbig-sparks">${[...Array(10)].map(()=>`<span class="jsp" style="left:${Math.round(6+Math.random()*88)}%;animation-delay:${(Math.random()*2.6).toFixed(2)}s;animation-duration:${(2.4+Math.random()*2).toFixed(2)}s"></span>`).join('')}</span>`:'';
-    return `<button class="jbig${isRec?' rec':''}" data-m="${k}" style="--jc:${c[0]};--jc2:${c[1]}">${sparks}<span class="jbig-ico">${ic(icn)}</span>`
+  const door=([k,lbl,icn])=>{const isRec=recMode===k;
+    return `<button class="jbig${isRec?' rec':''}" data-m="${k}"><span class="jbig-ico">${ic(icn)}</span>`
       +`<span class="jbig-txt"><span class="jbig-t">${lbl}${isRec?`<span class="jbig-badge">Today</span>`:''}</span>`
       +`<span class="jbig-b">${J_MODE_BLURB[k]||''}</span></span><span class="jbig-go">›</span></button>`;};
   const pillars=(pp&&pp.pillars)||[];
@@ -5517,8 +5519,8 @@ async function renderJournalHome(){
     +`<span class="pcolumn-base"></span><span class="pcolumn-nm">${esc(p.name)}</span></button>`;
   const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
     +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
-  const jung=[['The Shadow','Meet what you suppress'],['The Persona','The mask you wear'],['Anima &amp; Animus','Your inner opposite'],['The Self','Wholeness &amp; integration']];
-  const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-n">${i+1}</span><span class="jcard-lock">${ic('lock')}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span></div>`;
+  const jung=[['The Shadow','Meet what you suppress','jg_shadow'],['The Persona','The mask you wear','jg_persona'],['Anima &amp; Animus','Your inner opposite','jg_anima'],['The Self','Wholeness &amp; integration','jg_self']];
+  const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-med">${ic(j[2])}</span><span class="jcard-n">${i+1}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span><span class="jcard-lk">${ic('lock')}</span></div>`;
   $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b>`
     +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button></div>`
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
@@ -7731,7 +7733,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v5';
+const CACHE = 'lumen-v6';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
