@@ -3700,7 +3700,7 @@ function ctaSparks(){
   function behindSpark(){const a=-Math.PI/2+(Math.random()-0.5)*1.25; const sp=(0.7+Math.random()*1.35)*dpr;
     P.push({x:tx+(Math.random()-0.5)*tw*1.05, y:ty+(Math.random()-0.2)*tw*0.5, vx:Math.cos(a)*sp*0.6, vy:Math.sin(a)*sp-0.5*dpr, life:1, r:(0.7+Math.random()*1.0)*dpr, tw:Math.random()*6.28, g:0.42});}
   function frame(now){raf=0; if(dead||!visible)return; const dt=Math.min(now-last,50); last=now; const f=dt/16;
-    bAcc+=dt; if(bAcc>70){bAcc=0; behindSpark(); behindSpark(); if(Math.random()<0.5)behindSpark();}
+    bAcc+=dt; if(bAcc>140){bAcc=0; behindSpark(); if(Math.random()<0.4)behindSpark();}
     nextBurst-=dt;
     if(inBurst>0){ tick-=dt; if(tick<=0){ spark(); inBurst--; tick=90+Math.random()*80; } }
     else if(nextBurst<=0){ inBurst=1+Math.floor(Math.random()*3); tick=0; nextBurst=2000+Math.random()*2200; }
@@ -3708,11 +3708,11 @@ function ctaSparks(){
     for(let i=P.length-1;i>=0;i--){const p=P[i];
       p.vy+=grav*p.g*f; p.x+=p.vx*f; p.y+=p.vy*f; p.life-=dt/2400;
       if(p.life<=0 || p.y>botY+8*dpr){P.splice(i,1);continue;}
-      const al=Math.max(0,Math.min(1,p.life*1.1))*(0.6+0.3*Math.sin(now*0.013+p.tw)); const R=p.r;
-      const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*5);
-      rg.addColorStop(0,'rgba(255,238,195,'+(al*0.8)+')'); rg.addColorStop(0.35,'rgba(246,196,104,'+(al*0.4)+')'); rg.addColorStop(1,'rgba(246,196,104,0)');
-      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(p.x,p.y,R*5,0,6.2832); ctx.fill();
-      ctx.fillStyle='rgba(255,248,228,'+al+')'; ctx.beginPath(); ctx.arc(p.x,p.y,R*0.75,0,6.2832); ctx.fill();
+      const al=Math.max(0,Math.min(1,p.life*1.1))*(0.4+0.22*Math.sin(now*0.013+p.tw)); const R=p.r;
+      const rg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,R*4.4);
+      rg.addColorStop(0,'rgba(255,238,195,'+(al*0.55)+')'); rg.addColorStop(0.4,'rgba(246,196,104,'+(al*0.24)+')'); rg.addColorStop(1,'rgba(246,196,104,0)');
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(p.x,p.y,R*4.4,0,6.2832); ctx.fill();
+      ctx.fillStyle='rgba(255,248,228,'+(al*0.55)+')'; ctx.beginPath(); ctx.arc(p.x,p.y,R*0.7,0,6.2832); ctx.fill();
     }
     ctx.globalCompositeOperation='source-over';
     raf=requestAnimationFrame(frame);
