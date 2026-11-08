@@ -2870,6 +2870,36 @@ a{color:var(--purple)}
 .onb-nav{display:flex;gap:10px;align-items:center}
 .onb-nav .btn{flex:1}
 .onb-nav .btn[disabled]{opacity:.4;pointer-events:none}
+/* onboarding animated scenes (replace the old real-people photos) */
+.onb-anim{width:100%;max-width:330px;margin:0 auto 6px;border-radius:22px;overflow:hidden;aspect-ratio:4/3;position:relative;
+  background:radial-gradient(130% 110% at 50% 18%,#241a3a 0%,#181127 52%,#0f0a1e 100%);
+  box-shadow:0 18px 46px rgba(0,0,0,.5),inset 0 0 0 1px rgba(245,201,119,.14),inset 0 -40px 60px -30px rgba(245,201,119,.12)}
+.onb-anim svg{width:100%;height:100%;display:block}
+.onb-enter{animation:onbRise .5s cubic-bezier(.2,.8,.25,1) both}
+.onb-enter.d1{animation-delay:.05s}.onb-enter.d2{animation-delay:.11s}
+@keyframes onbRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes osBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes osTwinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes osSpin{to{transform:rotate(360deg)}}
+@keyframes osSpinR{to{transform:rotate(-360deg)}}
+@keyframes osRise{0%{opacity:0;transform:translateY(8px) scale(.6)}25%{opacity:1}100%{opacity:0;transform:translateY(-26px) scale(1)}}
+@keyframes osRipple{0%{opacity:.7;transform:scale(.2)}100%{opacity:0;transform:scale(1)}}
+@keyframes osDrop{0%{opacity:0;transform:translateY(-22px)}55%{opacity:1;transform:translateY(3px)}72%{transform:translateY(-2px)}100%{transform:translateY(0)}}
+@keyframes osSweep{to{stroke-dashoffset:0}}
+@keyframes osBloom{0%{opacity:0;transform:scale(.3) rotate(-18deg)}100%{opacity:1;transform:none}}
+@keyframes osGlow{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes osShimmer{0%{transform:translateX(-120%)}60%,100%{transform:translateX(220%)}}
+.os-spin{transform-box:fill-box;transform-origin:center;animation:osSpin 26s linear infinite}
+.os-spinr{transform-box:fill-box;transform-origin:center;animation:osSpinR 34s linear infinite}
+.os-breathe{transform-box:fill-box;transform-origin:center;animation:osBreathe 5s ease-in-out infinite}
+.os-tw{animation:osTwinkle 2.6s ease-in-out infinite}
+.os-glow{animation:osGlow 3.4s ease-in-out infinite}
+.os-rise{transform-box:fill-box;transform-origin:center;animation:osRise 3.6s ease-in-out infinite}
+.os-ripple{transform-box:fill-box;transform-origin:center;animation:osRipple 3s ease-out infinite}
+.os-drop{transform-box:fill-box;transform-origin:center bottom;animation:osDrop 3.2s ease-in-out infinite}
+.os-bloom{transform-box:fill-box;transform-origin:center;animation:osBloom .9s cubic-bezier(.2,1.3,.3,1) both}
+.os-sweep{stroke-dasharray:240;stroke-dashoffset:240;animation:osSweep 3.2s ease-in-out infinite alternate}
+@media (prefers-reduced-motion:reduce){.onb-enter,.os-spin,.os-spinr,.os-breathe,.os-tw,.os-glow,.os-rise,.os-ripple,.os-drop,.os-bloom,.os-sweep{animation:none}.os-rise,.os-ripple{opacity:.6}}
 .jcard-art{position:relative;height:148px;display:grid;place-items:center;overflow:hidden;border-bottom:1px solid var(--line);
   background:radial-gradient(circle at 50% 32%,#4a3410,#2a1c46 60%,#140e26)}
 .deity-emblem{position:relative;width:104px;height:104px;border-radius:50%;overflow:hidden;display:grid;place-items:center;
@@ -3317,7 +3347,7 @@ function getGeo(opts){return new Promise(res=>{
     opts||{enableHighAccuracy:true,timeout:15000,maximumAge:120000});});}
 const SOUNDS=[['rain','rain','Rain'],['forest','forest','Forest'],['ocean','ocean','Ocean'],['space','space','Deep Space'],['silence','silence','Silence']];
 const DUR_LABEL={5:'Quick',10:'Daily',20:'Deep',30:'Long'};
-let pick={minutes:10,sound:'rain'};
+let pick={minutes:(()=>{try{return +localStorage.getItem('lumen_pref_min')||10;}catch(e){return 10;}})(),sound:'rain'};
 
 async function boot(){
   try{const r=await api('me');if(r.authed){ME=r.profile;}}catch(e){}
@@ -3418,28 +3448,92 @@ function renderReset(prefill){
 }
 
 /* ---- onboarding (value slides → personalization → account) ---- */
-let onb={step:0,intents:[],timeHour:null,level:null};
+let onb={step:0,intents:[],timeHour:null,level:null,freq:null,minutes:null};
 const ONB_SLIDES=[
-  {icn:'globe',img:'onb1.jpg',h:"Show up with a vibrant community",p:"Thousands are meditating right now, glowing across a living world map. You sit alongside a real, worldwide community — and their momentum keeps you coming back."},
-  {icn:'pin',img:'onb2.jpg',h:"Explore the world, one meditation at a time",p:"Discover the beautiful places people meditate across the globe, claim your own spots on the map, and earn bonus Light every time you sit somewhere new."},
-  {icn:'sunrise',img:'onb3.jpg',h:"Inspire, and be inspired",p:"Wake up to a community that shows up with you — cheer others on, share your own places, and draw daily inspiration from people chasing the same stillness."},
-  {icn:'book',img:'onb4.jpg',h:"Learn from real, deep traditions",p:"Narrated journeys teach genuine technique — breathwork, meditation and sacred knowledge drawn from living spiritual traditions, not watered-down soundbites."},
-  {icn:'glow',img:'onb5.jpg',h:"Collect Light as you grow",p:"Earn Light for every sit, with bonuses for meditating in new places, finishing new lessons, and contributing to your community. Your practice, made visible."},
-  {icn:'nova',img:'onb6.jpg',h:"Your Vedic reading, every day",p:"Each morning brings a horoscope written for you — drawn from ancient Jyotish teachings and your own rāśi and nakshatra — a calm, personal invitation to begin."},
-  {icn:'lotus',img:'onb7.jpg',h:"Watch your mandala bloom",p:"A single sacred mandala grows with you — each milestone revealing one more facet, until it becomes a beautiful record of the journey only you have walked."},
-  {icn:'star',img:'onb8.jpg',h:"Earn badges for the inner path",p:"Every new level awards a unique emblem — merit badges for the soul — a growing collection of honors that mark how far your practice has carried you."},
+  {scene:'world',h:"Show up with a vibrant community",p:"Thousands are meditating right now, glowing across a living world map. You sit alongside a real, worldwide community — and their momentum keeps you coming back."},
+  {scene:'explore',h:"Explore the world, one meditation at a time",p:"Discover the beautiful places people meditate across the globe, claim your own spots on the map, and earn bonus Light every time you sit somewhere new."},
+  {scene:'inspire',h:"Inspire, and be inspired",p:"Wake up to a community that shows up with you — cheer others on, share your own places, and draw daily inspiration from people chasing the same stillness."},
+  {scene:'learn',h:"Learn from real, deep traditions",p:"Narrated journeys teach genuine technique — breathwork, meditation and sacred knowledge drawn from living spiritual traditions, not watered-down soundbites."},
+  {scene:'collect',h:"Collect Light as you grow",p:"Earn Light for every sit, with bonuses for meditating in new places, finishing new lessons, and contributing to your community. Your practice, made visible."},
+  {scene:'vedic',h:"Your Vedic reading, every day",p:"Each morning brings a horoscope written for you — drawn from ancient Jyotish teachings and your own rāśi and nakshatra — a calm, personal invitation to begin."},
+  {scene:'mandala',h:"Watch your mandala bloom",p:"A single sacred mandala grows with you — each milestone revealing one more facet, until it becomes a beautiful record of the journey only you have walked."},
+  {scene:'badges',h:"Earn badges for the inner path",p:"Every new level awards a unique emblem — merit badges for the soul — a growing collection of honors that mark how far your practice has carried you."},
 ];
-const ONB_INTENTS=[['calm','Calm my mind','lotus'],['sleep','Sleep better','glow'],['focus','Focus & clarity','compass'],['habit','Build a habit','flame'],['spirit','Spiritual growth','nova'],['self','Understand myself','crystal']];
+const ONB_INTENTS=[['calm','Calm my mind','lotus'],['sleep','Sleep better','glow'],['focus','Focus & clarity','compass'],['stress','Ease stress & anxiety','ocean'],['habit','Build a habit','flame'],['spirit','Spiritual growth','nova'],['self','Understand myself','crystal'],['grief','Sit with something hard','moon']];
+const ONB_FREQS=[['daily','Every day','flame'],['most','Most days','sunrise'],['few','A few times a week','glow'],['open','Just exploring','compass']];
 const ONB_TIMES=[['Morning',8,'sunrise'],['Afternoon',13,'compass'],['Evening',19,'glow'],['Before sleep',21,'moon']];
+const ONB_DURS=[[5,'Just a taste','5 min','spark'],[10,'A daily sit','10 min','lotus'],[20,'Go deep','20 min','nova'],[30,'A long stillness','30 min','glow']];
 const ONB_LEVELS=[['New to it','new','spark'],['I dabble','some','glow'],['Seasoned','pro','nova']];
 const NSL=ONB_SLIDES.length;                        // value slides are steps 0..NSL-1
-const Q_INTENT=NSL, Q_TIME=NSL+1, Q_LEVEL=NSL+2, ONB_LAST=NSL+3;  // ONB_LAST = signup step
-const ONB_QIC={[Q_INTENT]:'compass',[Q_TIME]:'clock',[Q_LEVEL]:'lotus'};  // header icon per question step
+const Q_INTENT=NSL, Q_FREQ=NSL+1, Q_TIME=NSL+2, Q_DUR=NSL+3, Q_LEVEL=NSL+4, ONB_LAST=NSL+5;  // ONB_LAST = signup step
+const ONB_QIC={[Q_INTENT]:'compass',[Q_FREQ]:'flame',[Q_TIME]:'clock',[Q_DUR]:'meditate',[Q_LEVEL]:'lotus'};  // header icon per question step
 
+function _oStars(list){return list.map(([x,y,r,d])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#fff6dc" class="os-tw" style="filter:drop-shadow(0 0 4px #f5c977);animation-delay:${d}s"/>`).join('');}
+function _oMotes(list){return list.map(([x,y,r,d])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#ffe9bc" class="os-rise" style="filter:drop-shadow(0 0 5px #f5c977);animation-delay:${d}s"/>`).join('');}
+// Animated, on-brand onboarding scenes — built from our own orb/light/mandala language
+// (these replace the legacy real-people photos onb1..8.jpg, which remain on disk unused).
+function onbScene(key){
+  const V='viewBox="0 0 300 225" preserveAspectRatio="xMidYMid meet" aria-hidden="true"';
+  if(key==='world') return `<svg ${V}><defs><radialGradient id="osw" cx="42%" cy="36%" r="68%"><stop offset="0" stop-color="#2f74b6"/><stop offset=".55" stop-color="#1d3f74"/><stop offset="1" stop-color="#0e1830"/></radialGradient></defs>
+    <g class="os-breathe"><circle cx="150" cy="112" r="64" fill="url(#osw)" stroke="rgba(245,201,119,.28)" stroke-width="1"/>
+    <ellipse cx="150" cy="112" rx="64" ry="22" fill="none" stroke="rgba(245,201,119,.18)" stroke-width="1"/>
+    <ellipse cx="150" cy="112" rx="38" ry="64" fill="none" stroke="rgba(245,201,119,.14)" stroke-width="1"/>
+    <ellipse cx="150" cy="112" rx="64" ry="48" fill="none" stroke="rgba(245,201,119,.11)" stroke-width="1"/>
+    <line x1="86" y1="112" x2="214" y2="112" stroke="rgba(245,201,119,.16)" stroke-width="1"/></g>
+    ${_oStars([[112,70,2.6,0],[196,82,3,.5],[210,138,2.4,1.1],[150,52,2.2,1.6],[96,150,2.6,.8],[150,172,3,1.9],[62,112,2.2,1.4],[238,112,2.4,.3]])}
+    </svg>`;
+  if(key==='explore') return `<svg ${V}><rect x="40" y="46" width="220" height="134" rx="16" fill="#141028" stroke="rgba(245,201,119,.16)" stroke-width="1"/>
+    <g stroke="rgba(245,201,119,.08)" stroke-width="1"><line x1="40" y1="90" x2="260" y2="90"/><line x1="40" y1="134" x2="260" y2="134"/><line x1="112" y1="46" x2="112" y2="180"/><line x1="188" y1="46" x2="188" y2="180"/></g>
+    <path d="M78 150 Q120 100 150 118 T228 74" fill="none" stroke="rgba(245,201,119,.5)" stroke-width="1.6" stroke-dasharray="4 6" stroke-linecap="round"/>
+    ${_oStars([[78,150,3,.2],[150,118,2.6,1.2]])}
+    <g style="transform-box:fill-box;transform-origin:228px 74px"><circle class="os-ripple" cx="228" cy="74" r="20" fill="none" stroke="#f5c977" stroke-width="1.5"/></g>
+    <g class="os-drop" style="transform-origin:228px 74px"><path d="M228 50 C216 50 208 59 208 70 C208 82 228 98 228 98 C228 98 248 82 248 70 C248 59 240 50 228 50 Z" fill="#f5c977" stroke="#fff3d0" stroke-width="1"/><circle cx="228" cy="70" r="6" fill="#241a0a"/></g>
+    </svg>`;
+  if(key==='inspire') return `<svg ${V}><defs><radialGradient id="osi" cx="50%" cy="100%" r="80%"><stop offset="0" stop-color="#ffe7a8"/><stop offset=".4" stop-color="#f3a93f"/><stop offset="1" stop-color="#f3a93f" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="150" cy="168" r="96" fill="url(#osi)" class="os-glow"/>
+    <g class="os-spin" style="transform-origin:150px 168px" stroke="#ffdf9a" stroke-width="2" stroke-linecap="round" opacity=".7">
+    ${[0,30,60,90,120,150].map(a=>`<line x1="150" y1="168" x2="${150+Math.cos((a-90)*Math.PI/180)*120}" y2="${168+Math.sin((a-90)*Math.PI/180)*120}"/>`).join('')}</g>
+    <circle cx="150" cy="168" r="34" fill="#fff3d0" class="os-breathe" style="transform-origin:150px 168px"/>
+    <line x1="34" y1="168" x2="266" y2="168" stroke="rgba(245,201,119,.5)" stroke-width="1.5"/>
+    ${_oStars([[70,64,2.2,.3],[228,54,2.6,1],[262,96,2,1.6]])}
+    </svg>`;
+  if(key==='learn') return `<svg ${V}><g class="os-breathe" style="transform-origin:150px 130px">
+    <path d="M150 86 C128 72 98 72 80 80 L80 164 C98 156 128 156 150 170 Z" fill="#241a3a" stroke="rgba(245,201,119,.4)" stroke-width="1.4"/>
+    <path d="M150 86 C172 72 202 72 220 80 L220 164 C202 156 172 156 150 170 Z" fill="#2a1f44" stroke="rgba(245,201,119,.4)" stroke-width="1.4"/>
+    <line x1="150" y1="86" x2="150" y2="170" stroke="rgba(245,201,119,.55)" stroke-width="1.4"/>
+    <g stroke="rgba(245,201,119,.22)" stroke-width="1"><line x1="92" y1="100" x2="138" y2="94"/><line x1="92" y1="114" x2="138" y2="108"/><line x1="92" y1="128" x2="138" y2="122"/><line x1="162" y1="94" x2="208" y2="100"/><line x1="162" y1="108" x2="208" y2="114"/><line x1="162" y1="122" x2="208" y2="128"/></g></g>
+    ${_oMotes([[150,120,2.6,0],[132,120,2,1.1],[168,120,2.2,2],[150,120,1.8,1.6],[140,118,2,.6]])}
+    </svg>`;
+  if(key==='collect') return `<svg ${V}><defs><radialGradient id="osc" cx="46%" cy="40%" r="60%"><stop offset="0" stop-color="#fffdf6"/><stop offset=".45" stop-color="#f7c972"/><stop offset=".85" stop-color="#e49b38"/><stop offset="1" stop-color="#9a5e1c"/></radialGradient><radialGradient id="osch" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6c977" stop-opacity=".5"/><stop offset="1" stop-color="#f0a84a" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="150" cy="112" r="70" fill="url(#osch)"/>
+    <circle cx="150" cy="112" r="40" fill="none" stroke="rgba(245,201,119,.35)" stroke-width="2" stroke-linecap="round" class="os-sweep" style="transform-origin:150px 112px;transform:rotate(-90deg)"/>
+    <circle cx="150" cy="112" r="30" fill="url(#osc)" class="os-breathe" style="transform-origin:150px 112px"/>
+    <ellipse cx="143" cy="104" rx="7" ry="5" fill="#fffdf4" opacity=".8" transform="rotate(-25 143 104)"/>
+    ${_oMotes([[90,150,2.4,0],[214,150,2.2,.9],[96,78,2.2,1.5],[206,74,2.4,.5],[150,182,2,2]])}
+    </svg>`;
+  if(key==='vedic') return `<svg ${V}><g class="os-spinr" style="transform-origin:150px 112px">
+    <circle cx="150" cy="112" r="70" fill="none" stroke="rgba(245,201,119,.22)" stroke-width="1"/>
+    <circle cx="150" cy="112" r="58" fill="none" stroke="rgba(245,201,119,.14)" stroke-width="1" stroke-dasharray="2 8"/>
+    ${Array.from({length:12}).map((_,i)=>{const a=i*30*Math.PI/180;return `<line x1="${150+Math.cos(a)*64}" y1="${112+Math.sin(a)*64}" x2="${150+Math.cos(a)*70}" y2="${112+Math.sin(a)*70}" stroke="rgba(245,201,119,.4)" stroke-width="1.4"/>`;}).join('')}</g>
+    <path d="M110 150 L132 96 L168 120 L196 80" fill="none" stroke="rgba(245,201,119,.45)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${_oStars([[110,150,2.4,.2],[132,96,3,.9],[168,120,2,1.4],[196,80,2.6,.5]])}
+    <circle cx="150" cy="112" r="7" fill="#fff3d0" class="os-glow" style="filter:drop-shadow(0 0 7px #f5c977)"/>
+    </svg>`;
+  if(key==='mandala'){const rings=[64,50,36,22];return `<svg ${V}><g style="transform-origin:150px 112px" class="os-spin">
+    ${rings.map((r,ri)=>`<g class="os-bloom" style="transform-origin:150px 112px;animation-delay:${ri*.18}s">${Array.from({length:8+ri*2}).map((_,i)=>{const n=8+ri*2;const a=i*2*Math.PI/n;const x=150+Math.cos(a)*r,y=112+Math.sin(a)*r;return `<ellipse cx="${x}" cy="${y}" rx="${7-ri}" ry="${13-ri*2}" fill="none" stroke="rgba(245,201,119,${.5-ri*.07})" stroke-width="1.2" transform="rotate(${a*180/Math.PI+90} ${x} ${y})"/>`;}).join('')}</g>`).join('')}
+    <circle cx="150" cy="112" r="7" fill="#f5c977" class="os-glow"/></g></svg>`;}
+  if(key==='badges') return `<svg ${V}><defs><linearGradient id="osb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c6"/><stop offset=".5" stop-color="#f5c977"/><stop offset="1" stop-color="#cf8a2e"/></linearGradient><clipPath id="osbc"><path d="M150 58 L164 92 L200 94 L172 118 L182 154 L150 134 L118 154 L128 118 L100 94 L136 92 Z"/></clipPath></defs>
+    <circle cx="150" cy="112" r="72" fill="none" stroke="rgba(245,201,119,.16)" stroke-width="1" class="os-spin" style="transform-origin:150px 112px;stroke-dasharray:3 10"/>
+    <g class="os-breathe" style="transform-origin:150px 112px"><path d="M150 58 L164 92 L200 94 L172 118 L182 154 L150 134 L118 154 L128 118 L100 94 L136 92 Z" fill="url(#osb)" stroke="#fff3d0" stroke-width="1.2"/>
+    <circle cx="150" cy="110" r="15" fill="#241a0a" opacity=".25"/>
+    <g clip-path="url(#osbc)"><rect x="0" y="40" width="46" height="150" fill="#ffffff" opacity=".45" class="os-shimmer" style="animation:osShimmer 3.4s ease-in-out infinite"/></g></g>
+    ${_oStars([[92,70,2.4,.3],[214,78,2.6,1.1],[206,150,2.2,.7],[96,152,2,1.6]])}
+    </svg>`;
+  return '';
+}
 function onbDots(){let h='<div class="onb-dots">';for(let i=0;i<=ONB_LAST;i++)h+=`<span class="${i===onb.step?'on':''}"></span>`;return h+'</div>';}
-function onbSlideFit(){ // soft gate: value slides free, intents need >=1, practice-time needed, level free
+function onbSlideFit(){ // soft gate: value slides free; the only required answer is >=1 intent
   if(onb.step===Q_INTENT)return onb.intents.length>0;
-  if(onb.step===Q_TIME)return onb.timeHour!==null;
   return true;
 }
 async function renderOnboarding(){
@@ -3449,22 +3543,27 @@ async function renderOnboarding(){
   if(s<NSL){
     const sl=ONB_SLIDES[s];
     body=`<div class="onb-hero">
-      ${sl.img?`<div class="onb-photo"><img src="art/${sl.img}" alt="" onload="this.closest('.onb-hero').classList.add('has-photo')" onerror="const w=this.closest('.onb-photo');if(w)w.remove();"></div>`:''}
-      <div class="onb-ic">${ic(sl.icn,'lg grad-gold')}</div>
-      <h1 class="onb-h">${sl.h}</h1><p class="onb-p">${sl.p}</p></div>`;
+      <div class="onb-anim onb-enter">${onbScene(sl.scene)}</div>
+      <h1 class="onb-h onb-enter d1">${sl.h}</h1><p class="onb-p onb-enter d2">${sl.p}</p></div>`;
   }else if(s===Q_INTENT){
-    body=`<div class="onb-qic">${ic(ONB_QIC[Q_INTENT],'g')}</div><h1 class="onb-h sm">What brings you to Lumen?</h1><p class="onb-p sm">Pick any that feel true — we'll shape your practice around them.</p>
-      <div class="onb-grid">${ONB_INTENTS.map(([k,label,icn])=>`<button class="onb-chip ${onb.intents.includes(k)?'sel':''}" data-k="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+    body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_INTENT],'g')}</div><h1 class="onb-h sm onb-enter">What brings you to Lumen?</h1><p class="onb-p sm onb-enter d1">Pick any that feel true — we'll shape your practice around them.</p>
+      <div class="onb-grid onb-enter d1">${ONB_INTENTS.map(([k,label,icn])=>`<button class="onb-chip ${onb.intents.includes(k)?'sel':''}" data-k="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+  }else if(s===Q_FREQ){
+    body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_FREQ],'g')}</div><h1 class="onb-h sm onb-enter">What rhythm are you hoping for?</h1><p class="onb-p sm onb-enter d1">We'll shape your streak goal around it — nothing's locked in.</p>
+      <div class="onb-grid two onb-enter d1">${ONB_FREQS.map(([k,label,icn])=>`<button class="onb-chip wide ${onb.freq===k?'sel':''}" data-f="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
   }else if(s===Q_TIME){
-    body=`<div class="onb-qic">${ic(ONB_QIC[Q_TIME],'g')}</div><h1 class="onb-h sm">When do you like to practice?</h1><p class="onb-p sm">We'll send a gentle nudge around then — never during your quiet hours.</p>
-      <div class="onb-grid two">${ONB_TIMES.map(([label,hr,icn])=>`<button class="onb-chip ${onb.timeHour===hr?'sel':''}" data-h="${hr}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+    body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_TIME],'g')}</div><h1 class="onb-h sm onb-enter">When do you like to practice?</h1><p class="onb-p sm onb-enter d1">We'll send a gentle nudge around then — never during your quiet hours.</p>
+      <div class="onb-grid two onb-enter d1">${ONB_TIMES.map(([label,hr,icn])=>`<button class="onb-chip ${onb.timeHour===hr?'sel':''}" data-h="${hr}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+  }else if(s===Q_DUR){
+    body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_DUR],'g')}</div><h1 class="onb-h sm onb-enter">How long feels right to sit?</h1><p class="onb-p sm onb-enter d1">We'll set your timer here — one tap changes it before any session.</p>
+      <div class="onb-grid onb-enter d1">${ONB_DURS.map(([m,label,sub,icn])=>`<button class="onb-chip ${onb.minutes===m?'sel':''}" data-d="${m}"><span>${ic(icn,'g')}</span><span style="display:flex;flex-direction:column;line-height:1.14;text-align:left"><b style="font-weight:700">${sub}</b><small class="muted" style="font-size:12px">${label}</small></span></button>`).join('')}</div>`;
   }else if(s===Q_LEVEL){
-    body=`<div class="onb-qic">${ic(ONB_QIC[Q_LEVEL],'g')}</div><h1 class="onb-h sm">How familiar is this for you?</h1><p class="onb-p sm">No wrong answer — it just helps us meet you where you are.</p>
-      <div class="onb-grid">${ONB_LEVELS.map(([label,k,icn])=>`<button class="onb-chip wide ${onb.level===k?'sel':''}" data-l="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+    body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_LEVEL],'g')}</div><h1 class="onb-h sm onb-enter">How familiar is this for you?</h1><p class="onb-p sm onb-enter d1">No wrong answer — it just helps us meet you where you are.</p>
+      <div class="onb-grid onb-enter d1">${ONB_LEVELS.map(([label,k,icn])=>`<button class="onb-chip wide ${onb.level===k?'sel':''}" data-l="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
   }else{
     let live=0;try{live=(await api('presence')).now;}catch(e){}
-    body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-ic">${lumenMark('lg')}</div>
-      <h1 class="onb-h">Save your light</h1>
+    body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-anim onb-enter" style="max-width:210px">${onbScene('collect')}</div>
+      <h1 class="onb-h onb-enter d1">Save your light</h1>
       <p class="onb-p">${live>0?`<b>${live}</b> meditating right now. `:''}Create your account to start a streak, keep your journal, and claim your place on the map.</p></div>
       <div class="card" style="margin-top:4px">
         <label>Email</label><input id="em" type="email" autocomplete="email" placeholder="you@example.com">
@@ -3487,7 +3586,7 @@ async function renderOnboarding(){
       <div class="onb-nav">
         ${s>0&&s<=ONB_LAST?'<button class="btn ghost" id="onbBack" style="flex:0 0 auto;width:auto;padding:12px 18px">Back</button>':''}
         ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s>=Q_INTENT?'Continue':'Next'}</button>`:''}
-        ${(s>=Q_INTENT&&s<ONB_LAST&&onb.step!==Q_TIME)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
+        ${(s>Q_INTENT&&s<ONB_LAST)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
       </div>
     </div>`;
   const si=$('#toSignin');if(si)si.onclick=()=>{try{localStorage.setItem('lumen_onb_done','1');}catch(e){}renderAuth();};
@@ -3496,6 +3595,8 @@ async function renderOnboarding(){
   const sk=$('#onbSkip');if(sk)sk.onclick=()=>{onb.step++;renderOnboarding();};
   document.querySelectorAll('.onb-chip[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;
     onb.intents.includes(k)?onb.intents=onb.intents.filter(x=>x!==k):onb.intents.push(k);renderOnboarding();});
+  document.querySelectorAll('.onb-chip[data-f]').forEach(b=>b.onclick=()=>{onb.freq=b.dataset.f;renderOnboarding();});
+  document.querySelectorAll('.onb-chip[data-d]').forEach(b=>b.onclick=()=>{onb.minutes=+b.dataset.d;renderOnboarding();});
   document.querySelectorAll('.onb-chip[data-h]').forEach(b=>b.onclick=()=>{onb.timeHour=+b.dataset.h;renderOnboarding();});
   document.querySelectorAll('.onb-chip[data-l]').forEach(b=>b.onclick=()=>{onb.level=b.dataset.l;renderOnboarding();});
   const cr=$('#create');if(cr)cr.onclick=onbCreate;
@@ -3513,6 +3614,8 @@ async function onbCreate(){
   try{
     await api('signup','POST',{email,password,name,birth_date,birth_time,birth_place,birth_tz});
     try{localStorage.setItem('lumen_intent',JSON.stringify(onb.intents));
+        if(onb.freq)localStorage.setItem('lumen_freq',onb.freq);
+        if(onb.minutes){localStorage.setItem('lumen_pref_min',String(onb.minutes));pick.minutes=onb.minutes;}
         localStorage.setItem('lumen_onb_done','1');}catch(e){}
     try{const tz=-new Date().getTimezoneOffset();
         await api('notif/prefs','POST',{tz_offset_min:tz,pref_hour:onb.timeHour,sto:true});}catch(e){}
