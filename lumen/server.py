@@ -2141,7 +2141,8 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 @keyframes orbpulse{0%,100%{opacity:.9}50%{opacity:1}}
 .orb-lv{font-weight:800;font-size:17px;letter-spacing:.01em;margin-top:2px}
 .orb-sub{font-size:12px}
-.orb-stage{position:relative;width:272px;height:272px;max-width:82vw;max-height:82vw;margin:-6px 0 -12px;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+.orb-stage{position:relative;width:272px;height:272px;max-width:82vw;max-height:82vw;margin:-6px 0 -12px;touch-action:none;cursor:grab;-webkit-tap-highlight-color:transparent}
+.orb-stage:active{cursor:grabbing}
 .orb-stage canvas,.orb-stage>svg,.orb-stage .orb-fallback{position:absolute;inset:0;width:100%;height:100%}
 .orb-fallback{display:none;border-radius:50%}
 .journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:11px;margin:22px 0 6px;
@@ -7855,7 +7856,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v11';
+const CACHE = 'lumen-v12';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
