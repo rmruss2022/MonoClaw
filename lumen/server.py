@@ -1739,8 +1739,8 @@ def daily_prompts(c, u):
 SEED_CITIES = [
     ("Tokyo", 35.68, 139.69), ("Seoul", 37.57, 126.98), ("Mumbai", 19.08, 72.88),
     ("Bangkok", 13.76, 100.50), ("Bali", -8.65, 115.22), ("Sydney", -33.87, 151.21),
-    ("Auckland", -36.85, 174.76), ("Cape Town", -33.92, 18.42), ("Nairobi", -1.29, 36.82),
-    ("Dubai", 25.20, 55.27), ("Istanbul", 41.01, 28.98), ("Cairo", 30.04, 31.24),
+    ("Auckland", -36.85, 174.76),
+    ("Dubai", 25.20, 55.27), ("Istanbul", 41.01, 28.98),
     ("Berlin", 52.52, 13.40), ("Paris", 48.86, 2.35), ("London", 51.51, -0.13),
     ("Lisbon", 38.72, -9.14), ("Reykjavik", 64.15, -21.94), ("Stockholm", 59.33, 18.07),
     ("New York", 40.71, -74.01), ("Toronto", 43.65, -79.38), ("Mexico City", 19.43, -99.13),
@@ -4251,7 +4251,7 @@ let mapPhotos=(()=>{try{return localStorage.getItem('lumen_mapphotos')==='1';}ca
 const SS_LABEL={rain:'Rain',forest:'Forest',ocean:'Ocean',space:'Deep Space',silence:'Silence'};
 function ago(iso){const s=(Date.now()-new Date(iso).getTime())/1000;if(s<90)return 'just now';if(s<3600)return Math.round(s/60)+'m ago';if(s<86400)return Math.round(s/3600)+'h ago';return Math.round(s/86400)+'d ago';}
 function mapMarker(pt){
-  const mine=pt.bot===0;const color=mine?'#f5c977':'#c084fc';
+  const mine=pt.mine===1;const color=mine?'#f5c977':'#c084fc';
   let icon;
   if(mapPhotos&&pt.photo){
     const sz=mine?40:34;
@@ -4271,6 +4271,9 @@ function mapMarker(pt){
 async function renderMap(){
   journeyTok++;  // cancel any in-flight journey timelapse
   try{Sound.stop();}catch(e){}
+  // A brand-new account has no places of its own — open on "My places" (empty),
+  // not the community "Today" map, so it never looks like you meditated elsewhere.
+  if(!window._mapScopeInit){window._mapScopeInit=1;if(ME&&(ME.total_sessions||0)===0)mapScope='mine';}
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>World</b></div>
   <div class="seg" id="scope"><button class="${mapScope==='today'?'on':''}" data-s="today">Today</button><button class="${mapScope==='all'?'on':''}" data-s="all">All time</button><button class="${mapScope==='mine'?'on':''}" data-s="mine">My places</button></div>
@@ -5737,6 +5740,42 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send(500, {"error": repr(e)}); return
 
+        if p == "/api/admin/africa":
+            if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
+                self._send(403, {"error": "nope"}); return
+            afr_cities = ("Cape Town", "Nairobi", "Cairo")
+            def _isafr(lat, lon, city):
+                if city in afr_cities:
+                    return True
+                try:
+                    return (lat is not None and lon is not None and -36 <= lat <= 38 and -20 <= lon <= 52)
+                except Exception:
+                    return False
+            rows = c.execute("SELECT s.id,s.user_id,s.lat,s.lon,s.city,s.ended,u.name,u.is_bot "
+                             "FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.lat IS NOT NULL").fetchall()
+            afr = [r for r in rows if _isafr(r["lat"], r["lon"], r["city"])]
+            bots = sorted({(r["user_id"], r["name"], r["city"]) for r in afr if r["is_bot"]})
+            real = [{"sid": r["id"], "user": r["name"], "city": r["city"],
+                     "lat": round(r["lat"], 2), "lon": round(r["lon"], 2), "ended": r["ended"]}
+                    for r in afr if not r["is_bot"]]
+            out = {"african_sessions": len(afr),
+                   "bot_users": [{"id": b[0], "name": b[1], "city": b[2]} for b in bots],
+                   "real_sessions": real}
+            if q.get("do") == "delete":
+                ids = [r["id"] for r in afr]
+                for i in range(0, len(ids), 400):
+                    ch = ids[i:i + 400]
+                    c.execute("DELETE FROM sessions WHERE id IN (%s)" % ",".join("?" * len(ch)), ch)
+                deleted_users = 0
+                for uid in sorted({r["user_id"] for r in afr if r["is_bot"]}):
+                    if c.execute("SELECT COUNT(*) n FROM sessions WHERE user_id=?", (uid,)).fetchone()["n"] == 0:
+                        c.execute("DELETE FROM achievements WHERE user_id=?", (uid,))
+                        c.execute("DELETE FROM users WHERE id=? AND is_bot=1", (uid,))
+                        deleted_users += 1
+                c.commit()
+                out["deleted_sessions"] = len(ids); out["deleted_bot_users"] = deleted_users
+            self._send(200, out); return
+
         if p == "/api/challenge":
             u = self._me(c)
             if not u:
@@ -5805,18 +5844,20 @@ class H(BaseHTTPRequestHandler):
 
         if p == "/api/map":
             scope = q.get("scope", "today")
+            me0 = self._me(c)
+            meid = me0["id"] if me0 else -1
             sql = """SELECT s.id id, s.lat lat, s.lon lon, s.city city, s.minutes minutes, s.soundscape soundscape,
-                            s.ended ended, s.photo photo, s.photo_share pshare, u.name name, u.is_bot bot
+                            s.ended ended, s.photo photo, s.photo_share pshare, u.name name, u.is_bot bot,
+                            CASE WHEN s.user_id=? THEN 1 ELSE 0 END mine
                      FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.lat IS NOT NULL"""
-            args = []
+            args = [meid]
             mine_scope = (scope == "mine")
             if scope == "today":
                 sql += " AND s.day=?"; args.append(today_str())
             elif scope == "mine":
-                me = self._me(c)
-                if not me:
+                if not me0:
                     self._send(401, {"error": "sign in"}); return
-                sql += " AND s.user_id=?"; args.append(me["id"])
+                sql += " AND s.user_id=?"; args.append(me0["id"])
             sql += " ORDER BY s.ended DESC LIMIT 1200"
             pts = []
             for r in c.execute(sql, args):
