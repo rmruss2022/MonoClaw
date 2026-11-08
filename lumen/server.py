@@ -1965,6 +1965,61 @@ def seed_world():
             c.execute("INSERT OR IGNORE INTO achievements(user_id,code,created) VALUES(?,?,?)", (uid, code, now_iso()))
     c.commit(); c.close()
 
+
+def seed_live_week(c):
+    """Refresh the community bots' CURRENT-week activity so Leagues, global ranks
+    and the live map all feel alive. seed_world() only runs once, so its bot
+    sessions drift into past weeks and the weekly views go empty. This re-seeds
+    the current ISO week with a believable spread across league tiers (so every
+    league has a cohort), clustered near each bot's home city. Idempotent: it
+    clears this week's bot sessions first, then recomputes bot lifetime stats."""
+    wk = week_str()
+    bots = c.execute("SELECT id,lat,lon,city FROM users WHERE is_bot=1").fetchall()
+    if not bots:
+        return {"bots": 0}
+    rnd = random.Random(hash(wk) & 0xffffffff)
+    ids = [b["id"] for b in bots]
+    qmarks = ",".join("?" * len(ids))
+    c.execute(f"DELETE FROM sessions WHERE week=? AND user_id IN ({qmarks})", (wk, *ids))
+    today = datetime.now(timezone.utc)
+    dow = today.isoweekday()            # 1=Mon .. 7=Sun; valid in-week offsets 0..dow-1
+    order = bots[:]; rnd.shuffle(order)
+    n = len(order)
+    # weekly-light target bands, as cumulative fractions of the shuffled pool, chosen
+    # to populate each tier (Ember..Supernova) and give a real cohort around Nova.
+    bands = [(0.20, 20, 130), (0.42, 150, 340), (0.60, 360, 680),
+             (0.76, 720, 1150), (0.90, 1250, 1950), (1.01, 2050, 3400)]
+    added = 0
+    for i, b in enumerate(order):
+        frac = (i + 0.5) / n
+        lo, hi = next((lo, hi) for cut, lo, hi in bands if frac < cut)
+        target = rnd.randint(lo, hi)
+        nsess = rnd.randint(3, 8)
+        # at least one sit today (offset 0) for map liveness; rest spread across the week
+        offsets = [0] + [rnd.randint(0, max(0, dow - 1)) for _ in range(nsess - 1)]
+        shares = [rnd.random() + 0.3 for _ in offsets]
+        tot = sum(shares)
+        for off, sh in zip(offsets, shares):
+            lgt = max(5, round(target * sh / tot))
+            day_d = today.date() - timedelta(days=off)
+            dt = datetime(day_d.year, day_d.month, day_d.day,
+                          rnd.randint(5, 22), rnd.randint(0, 59), tzinfo=timezone.utc)
+            mins = rnd.choice([5, 10, 10, 15, 20, 30])
+            c.execute("""INSERT INTO sessions(user_id,minutes,soundscape,light,lat,lon,city,mood,note,started,ended,day,week)
+                         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                      (b["id"], mins, rnd.choice(SOUNDSCAPES), lgt, _fuzz(b["lat"]), _fuzz(b["lon"]),
+                       b["city"], rnd.choice(["calm", "energized", "", ""]), "",
+                       dt.isoformat(), dt.isoformat(), dt.date().isoformat(), wk))
+            added += 1
+    # recompute each bot's lifetime stats from all its sessions (keeps all-time ranks + idempotency)
+    for b in bots:
+        r = c.execute("SELECT COALESCE(SUM(light),0) l, COALESCE(SUM(minutes),0) m, COUNT(*) n "
+                      "FROM sessions WHERE user_id=?", (b["id"],)).fetchone()
+        c.execute("UPDATE users SET light=?, total_minutes=?, total_sessions=? WHERE id=?",
+                  (r["l"], r["m"], r["n"], b["id"]))
+    c.commit()
+    return {"bots": n, "sessions_added": added, "week": wk}
+
 # ---------------------------------------------------------------------------
 # data access helpers
 # ---------------------------------------------------------------------------
@@ -2142,7 +2197,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 @media (prefers-reduced-motion:reduce){.sheet,.sheet-ov{transition:none}}
 .stat{text-align:center}.stat .n{font-size:26px;font-weight:800}.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .bar{height:9px;border-radius:999px;background:#241d3a;overflow:hidden}
-.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));box-shadow:0 0 10px -3px var(--pink)}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#e0953a,var(--gold));box-shadow:0 0 12px -2px rgba(245,201,119,.65)}
 .home-hero{display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
 .home-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.6;
   background:linear-gradient(135deg,color-mix(in srgb,var(--lc) 30%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 22%,transparent) 55%,transparent 78%)}
@@ -2370,7 +2425,7 @@ nav button.on{color:var(--text);background:#211a37}
 .switch input{opacity:0;width:0;height:0}
 .switch .sl{position:absolute;inset:0;background:#2a2442;border-radius:999px;transition:.2s;cursor:pointer}
 .switch .sl:before{content:"";position:absolute;width:21px;height:21px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
-.switch input:checked+.sl{background:linear-gradient(135deg,var(--gold),var(--pink))}
+.switch input:checked+.sl{background:linear-gradient(135deg,#e0953a,var(--gold))}
 .switch input:checked+.sl:before{transform:translateX(19px)}
 .chal-streak-u{font-size:11px;color:var(--muted);margin-left:2px}
 /* Atlas — a map of your whole practice (progress across every facet) */
@@ -2481,6 +2536,12 @@ nav button.on{color:var(--text);background:#211a37}
   background:radial-gradient(circle at 32% 28%,color-mix(in srgb,var(--lc) 62%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 34%,transparent) 60%,transparent 80%);
   filter:drop-shadow(0 0 16px color-mix(in srgb,var(--lc) 55%,transparent))}
 .league-badge .i{width:34px;height:34px}
+.lemblem{display:block;margin:0 auto;filter:drop-shadow(0 6px 20px rgba(0,0,0,.45))}
+.lemblem .lem-ring{transform-origin:60px 60px;animation:lemSpin 26s linear infinite}
+.lemblem .lem-motes{transform-origin:60px 60px;animation:lemSpin 40s linear infinite reverse}
+.lemblem .lem-glyph .i{width:26px;height:26px}
+@keyframes lemSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.lemblem .lem-ring,.lemblem .lem-motes{animation:none}}
 .ach{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin:8px 0}
 .ach .e{color:var(--muted);opacity:.5;display:flex}
 .ach .e .i{width:26px;height:26px}
@@ -3577,6 +3638,47 @@ async function boot(){
 const NAV_ICON={meditate:'meditate',lessons:'lotus',map:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
 const LEAGUE_ICON={Ember:'flame',Spark:'spark',Glow:'glow',Flare:'flare',Beacon:'beacon',Nova:'star',Supernova:'nova'};
 const leagueIcon=(name,cls)=>ic(LEAGUE_ICON[name]||'trophy',cls||'');
+// Premium league emblem: a glowing tiered medallion themed to the league colour —
+// concentric light-rings, a radiant halo, orbiting motes, and the tier glyph at
+// the core. Riffs on the home orb so Leagues reads as one system. SVG = crisp +
+// re-colours per tier with no raster assets.
+let _lemUID=0;
+function leagueEmblem(lg,size){
+  size=size||120;const c1=lg.color||'#f5c977',c2=lg.color2||c1;const id='lem'+(_lemUID++);
+  const g=leagueIcon(lg.name);
+  return `<svg class="lemblem" viewBox="0 0 120 120" width="${size}" height="${size}" aria-hidden="true">
+    <defs>
+      <radialGradient id="${id}h" cx="50%" cy="42%" r="60%">
+        <stop offset="0%" stop-color="${c1}" stop-opacity=".55"/>
+        <stop offset="55%" stop-color="${c2}" stop-opacity=".16"/>
+        <stop offset="100%" stop-color="${c2}" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="${id}d" cx="38%" cy="30%" r="75%">
+        <stop offset="0%" stop-color="#fff" stop-opacity=".9"/>
+        <stop offset="26%" stop-color="${c1}"/>
+        <stop offset="100%" stop-color="${c2}"/>
+      </radialGradient>
+      <linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/>
+      </linearGradient>
+    </defs>
+    <circle cx="60" cy="60" r="58" fill="url(#${id}h)"/>
+    <g fill="none" stroke="url(#${id}r)" class="lem-ring">
+      <circle cx="60" cy="60" r="46" stroke-opacity=".30" stroke-width="1"/>
+      <circle cx="60" cy="60" r="39" stroke-opacity=".55" stroke-width="1.4" stroke-dasharray="3 7" stroke-linecap="round"/>
+    </g>
+    <circle cx="60" cy="60" r="29" fill="url(#${id}d)"/>
+    <circle cx="60" cy="60" r="29" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1"/>
+    <ellipse cx="52" cy="50" rx="13" ry="8" fill="#fff" opacity=".22"/>
+    <g class="lem-motes" fill="${c1}">
+      <circle cx="60" cy="14" r="2.3"/><circle cx="106" cy="60" r="1.8"/>
+      <circle cx="60" cy="106" r="1.8"/><circle cx="14" cy="60" r="2.1"/>
+    </g>
+    <g transform="translate(60 60)" class="lem-glyph" style="color:#fff">
+      <g transform="translate(-13 -13) scale(1.08)">${g.replace('<svg','<svg width=\"24\" height=\"24\"')}</g>
+    </g>
+  </svg>`;
+}
 function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>{if(b.dataset.tab==='journal')jScreen='home';go(b.dataset.tab);};const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
 function go(tab){TAB=tab;document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
   if(window.speechSynthesis)speechSynthesis.cancel();try{stopNarration();}catch(e){}try{Sound.stop();}catch(e){}
@@ -5203,7 +5305,7 @@ async function renderLeagueView(){
   const prog=lg.next_at?Math.min(100,100*(d.weekly_light-lg.at)/(lg.next_at-lg.at)):100;
   $('#lbody').innerHTML=`
   <div class="card center league-hero" style="border-color:${lg.color};--lc:${lg.color};--lc2:${lg.color2||lg.color}">
-    <div class="league-badge" style="color:${lg.color}">${leagueIcon(lg.name)}</div>
+    <div class="league-emblem-wrap">${leagueEmblem(lg,128)}</div>
     <div class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase">Current league</div>
     <h1 style="margin:6px 0;color:${lg.color}">${lg.name}</h1>
     <div class="muted">${fmt(d.weekly_light)} light this week</div>
@@ -6683,6 +6785,15 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send(500, {"error": repr(e)}); return
 
+        if p == "/api/admin/seed-live":
+            if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
+                self._send(403, {"error": "nope"}); return
+            try:
+                out = seed_live_week(c)
+                self._send(200, {"ok": True, **out}); return
+            except Exception as e:
+                self._send(500, {"error": repr(e)}); return
+
         if p == "/api/admin/emails":
             if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
                 self._send(403, {"error": "nope"}); return
@@ -7998,7 +8109,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v13';
+const CACHE = 'lumen-v14';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -9541,12 +9652,33 @@ def email_loop():
         time.sleep(1800)  # every 30 minutes
 
 
+def community_loop():
+    """Keep the community map/leagues alive: re-seed bot activity whenever the
+    current ISO week has no bot sessions (fresh boot or week rollover)."""
+    while True:
+        try:
+            with _dblock:
+                c = db()
+                try:
+                    wk = week_str()
+                    has = c.execute("SELECT 1 FROM sessions s JOIN users u ON u.id=s.user_id "
+                                    "WHERE u.is_bot=1 AND s.week=? LIMIT 1", (wk,)).fetchone()
+                    if not has:
+                        seed_live_week(c)
+                finally:
+                    c.close()
+        except Exception as e:
+            print("community_loop error:", e, flush=True)
+        time.sleep(6 * 3600)
+
+
 def main():
     init_db()
     seed_world()
     seed_subtasks()
     threading.Thread(target=notif_loop, daemon=True).start()
     threading.Thread(target=email_loop, daemon=True).start()
+    threading.Thread(target=community_loop, daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), H)
     print(f"Lumen on http://{HOST}:{PORT}  (BASE={BASE or '/'})")
     httpd.serve_forever()
