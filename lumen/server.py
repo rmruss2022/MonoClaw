@@ -2040,9 +2040,9 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .orb-stage{position:relative;width:272px;height:272px;max-width:82vw;max-height:82vw;margin:-6px 0 -12px;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
 .orb-stage canvas,.orb-stage>svg,.orb-stage .orb-fallback{position:absolute;inset:0;width:100%;height:100%}
 .orb-fallback{display:none;border-radius:50%}
-.journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 6px;
+.journal-cta{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;margin:22px 0 6px;
   background:linear-gradient(135deg,#33250f 0%,#211607 55%,#140d06 100%);color:var(--gold);
-  border:1px solid rgba(245,201,119,.52);border-radius:16px;padding:15px 18px;cursor:pointer;
+  border:1px solid rgba(245,201,119,.52);border-radius:16px;padding:18px 18px;cursor:pointer;
   box-shadow:0 0 16px rgba(245,201,119,.22),inset 0 0 16px rgba(245,201,119,.06);animation:ctaglow 3.6s ease-in-out infinite}
 .journal-cta span{font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;letter-spacing:.01em;
   background:linear-gradient(180deg,#fff0cf 0%,#f3d79a 45%,#e0ad52 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
@@ -2482,9 +2482,10 @@ a{color:var(--purple)}
 .jbig{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;background:linear-gradient(135deg,#1a1430,#141021);border:1px solid var(--line);border-radius:14px;padding:11px 13px;transition:.16s;color:var(--text)}
 .jbig:active{transform:scale(.99)}
 .jbig.rec{border-color:rgba(245,201,119,.45);background:linear-gradient(135deg,rgba(245,201,119,.10),#141021);box-shadow:0 8px 26px -16px var(--gold)}
-.jbig-ico{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.24)}
+.jbig-ico{flex:none;width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--jc,#a855f7);
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--jc,#a855f7) 34%,transparent),color-mix(in srgb,var(--jc2,var(--jc,#a855f7)) 15%,transparent) 70%,transparent);
+  border:1px solid color-mix(in srgb,var(--jc,#a855f7) 30%,transparent);box-shadow:0 0 14px -6px color-mix(in srgb,var(--jc,#a855f7) 80%,transparent)}
 .jbig-ico .i{width:19px;height:19px}
-.jbig.rec .jbig-ico{background:rgba(245,201,119,.14);border-color:rgba(245,201,119,.3)}
 .jbig-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .jbig-t{font-family:var(--serif);font-size:16.5px;display:flex;align-items:center;gap:8px}
 .jbig-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#2a1a05;background:linear-gradient(135deg,#f5c977,#e0953a);border-radius:999px;padding:2px 8px}
@@ -3686,7 +3687,7 @@ async function renderMeditate(){
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
     <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
   </div>
-  <button class="journal-cta" id="journalCta" type="button">${ic('seal')}<span>Unlock today’s journal entry</span></button>
+  <button class="journal-cta" id="journalCta" type="button">${ic('book')}<span>Unlock today’s journal entry</span></button>
   ${PICK?`<div class="rec-feature">${lessonCardHTML(PICK)}</div>
   <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
   <button class="quick-med" id="quickMed" type="button">
@@ -5035,8 +5036,9 @@ async function renderJournalHome(){
   listening=false;rec=null;
   const recMode=jRec&&jRec.mode;
   const DOORS=[['deep','Deep','compass'],['daily','Daily','book'],['season','Season','sunrise']];
-  const door=([k,lbl,icn])=>{const isRec=recMode===k;
-    return `<button class="jbig${isRec?' rec':''}" data-m="${k}"><span class="jbig-ico">${ic(icn,'g')}</span>`
+  const JDOOR_COL={deep:['#a855f7','#c084fc'],daily:['#38bdf8','#0ea5e9'],season:['#f59e0b','#f97316']};
+  const door=([k,lbl,icn])=>{const isRec=recMode===k;const c=JDOOR_COL[k]||['#a855f7','#c084fc'];
+    return `<button class="jbig${isRec?' rec':''}" data-m="${k}" style="--jc:${c[0]};--jc2:${c[1]}"><span class="jbig-ico">${ic(icn)}</span>`
       +`<span class="jbig-txt"><span class="jbig-t">${lbl}${isRec?`<span class="jbig-badge">Today</span>`:''}</span>`
       +`<span class="jbig-b">${J_MODE_BLURB[k]||''}</span></span><span class="jbig-go">›</span></button>`;};
   const doneN=(pp&&pp.done)||0;const totalP=(pp&&pp.total)||8;
