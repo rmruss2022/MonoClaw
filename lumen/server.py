@@ -2251,7 +2251,7 @@ nav button.on{color:var(--text);background:#211a37}
 .horo-sub .i{width:13px;height:13px;flex:none}
 .horo-text{font-family:var(--serif);font-size:16px;line-height:1.75;color:#e9e2f7;margin:0;
   padding-top:15px;border-top:1px solid #ffffff12}
-.horo-cta{display:flex;flex-direction:row;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:18px}
+.horo-cta{display:flex;flex-direction:column;align-items:center;gap:11px;margin-top:18px}
 .rndbtn{flex:none;width:52px;height:52px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
   border:1px solid color-mix(in srgb,var(--gold) 42%,var(--line));background:#ffffff08;color:var(--gold);transition:.15s}
 .rndbtn:hover{background:color-mix(in srgb,var(--gold) 13%,transparent);box-shadow:0 0 18px -4px var(--gold)}
