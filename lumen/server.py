@@ -5743,7 +5743,7 @@ async function renderPillarsSection(){
     +`</div>`
     +(others.length?`<div class="pgrid-h">${ic('compass','g')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
     +`<div class="jpath">`
-      +`<div class="jpath-h"><span class="jpath-eyebrow">${ic('lock')} The Jungian Path</span><span class="jpath-soon">Coming soon</span></div>`
+      +`<div class="jpath-h"><span class="jpath-eyebrow">${ic('lock')} The Jungian Journal</span><span class="jpath-soon">Coming soon</span></div>`
       +`<p class="jpath-sub">A guided descent through the archetypes — meeting the shadow, the persona, the anima, and the Self.</p>`
       +`<div class="jpath-rows">${jung.map(j=>`<div class="jpath-row"><span class="jpath-ico">${ic('lock')}</span><span class="jpath-main"><span class="jpath-t">${j[0]}</span><span class="jpath-d">${j[1]}</span></span><span class="jpath-lock">Locked</span></div>`).join('')}</div>`
     +`</div>`;
