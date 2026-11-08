@@ -2978,7 +2978,7 @@ a{color:var(--purple)}
 .jrny-go{flex:none;display:grid;place-items:center;width:40px;color:var(--a);opacity:.9}
 .jrny-go .i{width:16px;height:16px}
 /* journey-detail hero — accent-glow header with medallion */
-.jrh{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--a) 34%,var(--line));border-radius:20px;padding:18px 16px;margin:2px 2px 14px;text-align:center;
+.jrh{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--a) 34%,var(--line));border-radius:20px;padding:22px 16px;margin:2px 2px 18px;text-align:center;
   background:linear-gradient(165deg,color-mix(in srgb,var(--a) 14%,#15111f),#110d1b 74%)}
 .jrh:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:radial-gradient(120% 80% at 50% -10%,color-mix(in srgb,var(--a) 34%,transparent),transparent 58%)}
 .jrh>*{position:relative;z-index:1}
@@ -2992,8 +2992,18 @@ a{color:var(--purple)}
 .jrh-bar{height:7px;border-radius:999px;background:#ffffff12;overflow:hidden;max-width:260px;margin:0 auto}
 .jrh-bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--a),color-mix(in srgb,var(--a) 50%,#ffffff));box-shadow:0 0 10px -2px var(--a);transition:width .4s}
 .jrh-count{font-size:12px;color:var(--muted);margin-top:9px;letter-spacing:.02em}
-.lj-list{display:flex;flex-direction:column;gap:8px}
-.lj-row{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:#140f24;border:1px solid var(--line);border-radius:13px;padding:12px 13px;cursor:pointer}
+.lj-list{display:flex;flex-direction:column;gap:11px}
+.lj-row{display:flex;align-items:center;gap:13px;text-align:left;width:100%;background:#140f24;border:1px solid var(--line);border-radius:14px;padding:15px 14px;cursor:pointer}
+/* lesson-detail modal (opened from the journey list) */
+.lmodal-ov{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:16px;overflow-y:auto;
+  background:rgba(5,4,10,.62);backdrop-filter:blur(4px);opacity:0;transition:opacity .22s}
+.lmodal-ov.show{opacity:1}
+.lmodal{position:relative;width:min(440px,94vw);max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(14px) scale(.985);opacity:0;transition:transform .26s cubic-bezier(.2,.85,.25,1),opacity .22s}
+.lmodal-ov.show .lmodal{transform:none;opacity:1}
+.lmodal .card{margin:0}
+.lmodal-x{position:absolute;top:12px;right:12px;z-index:5;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#00000040;color:#d8d0ef;display:grid;place-items:center;cursor:pointer}
+.lmodal-x .i{width:16px;height:16px}
 .lj-row:active{transform:scale(.995)}
 .lj-row.next{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 16px -6px var(--gold)}
 .lj-row.done{opacity:.82}
@@ -4092,7 +4102,7 @@ function renderJourney(key){
     <div class="jrh-bar"><i style="width:${pct}%"></i></div>
     <div class="jrh-count">${done} of ${total} lessons complete</div>
   </div>
-  ${next?`<button class="btn gold" id="jrnext" style="margin:0 0 8px">${ic('play')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:6px 0 10px">${ic('check','g')} You've completed this journey — revisit any lesson below.</div>`}
+  ${next?`<button class="btn gold" id="jrnext" style="margin:2px 0 16px">${ic('seal')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:6px 0 14px">${ic('check','g')} You've completed this journey — revisit any lesson below.</div>`}
   <div class="lj-list">${ls.map(row).join('')}</div>
   ${soonRows?`<div class="trk-head" style="--a:${t.accent};margin-top:18px"><div class="trk-name">Coming soon</div></div>${soonRows}`:''}`;
   $('#jrback').onclick=()=>go('lessons');
@@ -4344,41 +4354,43 @@ function lessonCardHTML(l){
   </div>`;
 }
 // Detail / preview screen shown before a journey begins
+// A lesson preview — opens as a modal over the journey list (or wherever it was tapped).
 function lessonDetail(code){
   const l=LESSONS.find(x=>x.code===code); if(!l)return;
   if(window.speechSynthesis)speechSynthesis.cancel();try{Sound.stop();}catch(e){}
   const nSeg=l.segments.length, rs=lessonResumeSi(l), pr=lessonProg(l.code), done=pr&&pr.count>0;
-  $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journey</b></div>
-  <button class="btn ghost" id="dback" style="width:auto;padding:8px 14px;margin:0 0 12px">&larr; Back</button>
-  <div class="card jdetail" style="--a:${l.accent}">
-    <div class="jd-eyebrow">${ic('lotus')} ${esc((TRACKS.find(x=>x.key===l.track)||{}).name||'Journey')}${l.part?' · Part '+l.part:''}</div>
-    <div class="jd-art">${deityEmblem(l,'lg')}</div>
-    <h1 class="jd-title" style="color:${l.accent}">${esc(l.title)}</h1>
-    <div class="jd-subtitle">${esc(l.subtitle)}</div>
-    <div class="jd-chips">
-      <span>${ic('lotus','g')} ${esc(l.tradition)}</span>
-      <span>${ic('clock','g')} ${lessonMins(l)} min</span>
-      <span>${ic('target','g')} ${nSeg} steps</span>
-      ${l.technique?`<span>${ic('spark','g')} ${esc(l.technique)}</span>`:''}
-    </div>
-    <p class="jd-desc">${esc(l.blurb)}</p>
-    <div class="jd-head">What you'll move through</div>
-    <ol class="jd-steps">${l.segments.map(s=>`<li>${esc(s.title)}</li>`).join('')}</ol>
-    ${l.prompt?`<div class="jd-prompt">${ic('book','g')}<span>Afterward, you'll reflect: &ldquo;${esc(l.prompt)}&rdquo;</span></div>`:''}
-    ${done?`<div class="lesson-done" style="justify-content:center;margin-top:12px">${ic('check')} Completed ${pr.count}×${pr.last?' · last '+ago(pr.last):''}</div>`:''}
-    <button class="btn gold" id="dbegin" style="margin-top:14px">${ic('play')} ${rs>0?('Continue · step '+(rs+1)+' of '+nSeg):(done?'Practice again':'Begin journey')}</button>
-    <div class="jd-sound">
-      <div class="jd-sound-lbl">Background sound</div>
-      <div class="grid3" id="lsnds">${SOUNDS.map(s=>`<div class="chip snd-chip ${s[0]===l.soundscape?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
-    </div>
-    <p class="muted center" style="font-size:12px;margin-top:12px">Earns Light · builds your streak</p>
-  </div>`;
   lessonSoundPick=l.soundscape;
-  $('#dback').onclick=()=>{if(lessonFrom==='journey'&&curJourney)renderJourney(curJourney);else go(lessonFrom);};
-  $('#dbegin').onclick=()=>lessonPlay(l, rs);
-  document.querySelectorAll('#lsnds .snd-chip').forEach(c=>c.onclick=()=>{lessonSoundPick=c.dataset.s;
-    document.querySelectorAll('#lsnds .snd-chip').forEach(x=>x.classList.toggle('sel',x.dataset.s===lessonSoundPick));});
+  const ov=el(`<div class="lmodal-ov"><div class="lmodal">
+    <div class="card jdetail" style="--a:${l.accent}">
+      <button class="lmodal-x" aria-label="Close">${ic('close')}</button>
+      <div class="jd-eyebrow">${ic('lotus')} ${esc((TRACKS.find(x=>x.key===l.track)||{}).name||'Journey')}${l.part?' · Part '+l.part:''}</div>
+      <div class="jd-art">${deityEmblem(l,'lg')}</div>
+      <h1 class="jd-title" style="color:${l.accent}">${esc(l.title)}</h1>
+      <div class="jd-subtitle">${esc(l.subtitle)}</div>
+      <div class="jd-chips">
+        <span>${ic('lotus','g')} ${esc(l.tradition)}</span>
+        <span>${ic('clock','g')} ${lessonMins(l)} min</span>
+        <span>${ic('target','g')} ${nSeg} steps</span>
+        ${l.technique?`<span>${ic('spark','g')} ${esc(l.technique)}</span>`:''}
+      </div>
+      <p class="jd-desc">${esc(l.blurb)}</p>
+      <div class="jd-head">What you'll move through</div>
+      <ol class="jd-steps">${l.segments.map(s=>`<li>${esc(s.title)}</li>`).join('')}</ol>
+      ${l.prompt?`<div class="jd-prompt">${ic('book','g')}<span>Afterward, you'll reflect: &ldquo;${esc(l.prompt)}&rdquo;</span></div>`:''}
+      ${done?`<div class="lesson-done" style="justify-content:center;margin-top:12px">${ic('check')} Completed ${pr.count}×${pr.last?' · last '+ago(pr.last):''}</div>`:''}
+      <button class="btn gold" id="dbegin" style="margin-top:14px">${ic('seal')} ${rs>0?('Continue · step '+(rs+1)+' of '+nSeg):(done?'Practice again':'Begin journey')}</button>
+      <div class="jd-sound">
+        <div class="jd-sound-lbl">Background sound</div>
+        <div class="grid3" id="lsnds">${SOUNDS.map(s=>`<div class="chip snd-chip ${s[0]===l.soundscape?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
+      </div>
+      <p class="muted center" style="font-size:12px;margin-top:12px">Earns Light · builds your streak</p>
+    </div></div></div>`);
+  const close=()=>{ov.classList.remove('show');setTimeout(()=>ov.remove(),240);};
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.lmodal-x'))close();});
+  ov.querySelector('#dbegin').onclick=()=>{ov.remove();lessonPlay(l, rs);};
+  ov.querySelectorAll('#lsnds .snd-chip').forEach(c=>c.onclick=()=>{lessonSoundPick=c.dataset.s;
+    ov.querySelectorAll('#lsnds .snd-chip').forEach(x=>x.classList.toggle('sel',x.dataset.s===lessonSoundPick));});
+  document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
 }
 const LESSONS=[{
   code:'vishnu', title:'Vishnu · I', subtitle:'The Preserver',
