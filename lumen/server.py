@@ -3796,7 +3796,7 @@ async function renderMeditate(){
   $('#app').innerHTML=`
   <header class="hdr">
     <div class="hdr-l">
-      <span class="hdr-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="lmCore" cx="50%" cy="44%" r="55%"><stop offset="0" stop-color="#fff7e4"/><stop offset=".45" stop-color="#f6cd79"/><stop offset="1" stop-color="#dd9430"/></radialGradient><radialGradient id="lmHalo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f5c977" stop-opacity=".5"/><stop offset="1" stop-color="#f5c977" stop-opacity="0"/></radialGradient></defs><circle cx="20" cy="20" r="19" fill="url(#lmHalo)"/><g stroke="#f3c877" stroke-width="1.6" stroke-linecap="round" opacity=".85"><path d="M20 4.5 V8 M20 32 V35.5 M4.5 20 H8 M32 20 H35.5 M9 9 L11.4 11.4 M28.6 28.6 L31 31 M31 9 L28.6 11.4 M9 31 L11.4 28.6"/></g><circle cx="20" cy="20" r="8.2" fill="url(#lmCore)"/><circle cx="20" cy="20" r="3.1" fill="#fff8ec"/></svg></span>
+      <span class="hdr-mark"><svg viewBox="0 0 44 44" aria-hidden="true"><defs><radialGradient id="loCore" cx="46%" cy="40%" r="60%"><stop offset="0" stop-color="#fffdf6"/><stop offset=".2" stop-color="#fff0c6"/><stop offset=".5" stop-color="#f7c972"/><stop offset=".82" stop-color="#e49b38"/><stop offset="1" stop-color="#9a5e1c"/></radialGradient><radialGradient id="loHalo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6c977" stop-opacity=".55"/><stop offset=".6" stop-color="#f0a84a" stop-opacity=".18"/><stop offset="1" stop-color="#f0a84a" stop-opacity="0"/></radialGradient><linearGradient id="loRing" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e49b38" stop-opacity=".12"/><stop offset=".5" stop-color="#ffe7b0"/><stop offset="1" stop-color="#e49b38" stop-opacity=".12"/></linearGradient><clipPath id="loFront"><rect x="0" y="22" width="44" height="22"/></clipPath></defs><circle cx="22" cy="22" r="21" fill="url(#loHalo)"/><ellipse cx="22" cy="22" rx="18" ry="5.6" fill="none" stroke="url(#loRing)" stroke-width="1.3" transform="rotate(-20 22 22)"/><circle cx="22" cy="22" r="11" fill="url(#loCore)"/><circle cx="22" cy="22" r="11" fill="none" stroke="#ffe7b0" stroke-width=".6" opacity=".35"/><ellipse cx="18.4" cy="18" rx="3.1" ry="2.1" fill="#fffdf4" opacity=".8" transform="rotate(-25 18.4 18)"/><g clip-path="url(#loFront)"><ellipse cx="22" cy="22" rx="18" ry="5.6" fill="none" stroke="url(#loRing)" stroke-width="1.5" transform="rotate(-20 22 22)"/></g><circle cx="38.6" cy="15.9" r="1.2" fill="#fff3d0"/><circle cx="5.4" cy="28.1" r="1.05" fill="#fff3d0" opacity=".9"/></svg></span>
       <div class="hdr-wm"><span class="hdr-name">lumen</span><span class="hdr-tag">light, one breath at a time</span></div>
     </div>
     <div class="hdr-r">
@@ -6125,51 +6125,6 @@ class H(BaseHTTPRequestHandler):
                 self._send(200, {"ok": True, **out}); return
             except Exception as e:
                 self._send(500, {"error": repr(e)}); return
-
-        if p == "/api/admin/maildebug":
-            # temporary: confirm whether an email has an account and watch a live send
-            if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
-                self._send(403, {"error": "nope"}); return
-            import urllib.request as _ur, urllib.error as _ue
-            fixo = (q.get("fixemail", "") or "").strip().lower()
-            fixn = (q.get("newemail", "") or "").strip().lower()
-            if fixo and fixn:
-                ou = user_by_email(c, fixo)
-                if not ou:
-                    self._send(404, {"error": "old email not found"}); return
-                if user_by_email(c, fixn):
-                    self._send(409, {"error": "new email already in use"}); return
-                c.execute("UPDATE users SET email=? WHERE id=?", (fixn, ou["id"])); c.commit()
-                self._send(200, {"ok": True, "changed": "%s -> %s" % (fixo, fixn)}); return
-            srch = (q.get("search", "") or "").strip().lower()
-            if srch:
-                rows = c.execute("SELECT id,email,name,created FROM users WHERE LOWER(email) LIKE ? OR LOWER(name) LIKE ? "
-                                 "ORDER BY id DESC LIMIT 25", ("%"+srch+"%", "%"+srch+"%")).fetchall()
-                self._send(200, {"search": srch, "matches": [
-                    {"id": r["id"], "email": r["email"], "name": r["name"], "created": r["created"]} for r in rows]}); return
-            em = (q.get("email", "") or "").strip().lower()
-            u = user_by_email(c, em) if em else None
-            out = {"email": em, "user_exists": bool(u),
-                   "user_created": (u["created"] if u else None),
-                   "env_RESEND_API_KEY": bool(os.environ.get("RESEND_API_KEY")),
-                   "env_MAIL_FROM": os.environ.get("MAIL_FROM"),
-                   "env_SMTP_HOST": bool(os.environ.get("SMTP_HOST"))}
-            if em and q.get("send") == "1":
-                key = os.environ.get("RESEND_API_KEY") or ""
-                payload = json.dumps({"from": MAIL_FROM, "to": [em],
-                                      "subject": "Lumen email check",
-                                      "text": "Lumen email delivery check — if you see this, sending works."}).encode()
-                req = _ur.Request("https://api.resend.com/emails", data=payload, method="POST",
-                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json",
-                                           "User-Agent": "Lumen-mailer/1.0 (+https://lumen.app)"})
-                try:
-                    with _ur.urlopen(req, timeout=12) as r:
-                        out["send_status"] = r.status; out["send_body"] = r.read().decode()[:400]
-                except _ue.HTTPError as e:
-                    out["send_status"] = e.code; out["send_body"] = e.read().decode()[:400]
-                except Exception as e:
-                    out["send_error"] = str(e)
-            self._send(200, out); return
 
         if p == "/api/admin/africa":
             if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
