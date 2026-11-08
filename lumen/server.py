@@ -6101,6 +6101,34 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send(500, {"error": repr(e)}); return
 
+        if p == "/api/admin/maildebug":
+            # temporary: confirm whether an email has an account and watch a live send
+            if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
+                self._send(403, {"error": "nope"}); return
+            import urllib.request as _ur, urllib.error as _ue
+            em = (q.get("email", "") or "").strip().lower()
+            u = user_by_email(c, em) if em else None
+            out = {"email": em, "user_exists": bool(u),
+                   "user_created": (u["created"] if u else None),
+                   "env_RESEND_API_KEY": bool(os.environ.get("RESEND_API_KEY")),
+                   "env_MAIL_FROM": os.environ.get("MAIL_FROM"),
+                   "env_SMTP_HOST": bool(os.environ.get("SMTP_HOST"))}
+            if em and q.get("send") == "1":
+                key = os.environ.get("RESEND_API_KEY") or ""
+                payload = json.dumps({"from": MAIL_FROM, "to": [em],
+                                      "subject": "Lumen email check",
+                                      "text": "Lumen email delivery check — if you see this, sending works."}).encode()
+                req = _ur.Request("https://api.resend.com/emails", data=payload, method="POST",
+                                  headers={"Authorization": "Bearer " + key, "Content-Type": "application/json"})
+                try:
+                    with _ur.urlopen(req, timeout=12) as r:
+                        out["send_status"] = r.status; out["send_body"] = r.read().decode()[:400]
+                except _ue.HTTPError as e:
+                    out["send_status"] = e.code; out["send_body"] = e.read().decode()[:400]
+                except Exception as e:
+                    out["send_error"] = str(e)
+            self._send(200, out); return
+
         if p == "/api/admin/africa":
             if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
                 self._send(403, {"error": "nope"}); return
