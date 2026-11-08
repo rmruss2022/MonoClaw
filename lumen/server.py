@@ -2008,6 +2008,16 @@ h1,h2,h3{font-weight:700;letter-spacing:-.02em}
 .brand{display:flex;align-items:center;gap:10px;padding:18px 2px 8px}
 .brand .mark{font-size:26px;filter:drop-shadow(0 0 10px var(--gold))}
 .brand b{font-size:20px}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 2px 12px}
+.hdr-l{display:flex;align-items:center;gap:11px;min-width:0}
+.hdr-mark{width:40px;height:40px;flex:none;filter:drop-shadow(0 0 9px rgba(245,201,119,.5));animation:markpulse 4.5s ease-in-out infinite}
+.hdr-mark svg{display:block;width:100%;height:100%}
+.hdr-wm{display:flex;flex-direction:column;line-height:1;min-width:0}
+.hdr-name{font-family:var(--serif);font-weight:700;font-size:27px;letter-spacing:.015em;background:linear-gradient(180deg,#fff2d4,#f3cf84 55%,#e0a648);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.hdr-tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr-r{text-align:right;flex:none}
+.hdr-greet{font-size:13px;font-weight:700;color:var(--text)}
+.hdr-date{font-size:11.5px;color:var(--muted);margin-top:2px}
 .brand small{color:var(--muted);font-weight:500;margin-left:auto;font-size:12px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;backdrop-filter:blur(8px);margin:12px 0}
 .muted{color:var(--muted)}
@@ -3754,8 +3764,21 @@ async function renderMeditate(){
   const durs=[5,10,20,30];
   const PICK=todaysPick();
   const REST=recommendedLessons().filter(l=>!PICK||l.code!==PICK.code);
+  const _h=new Date().getHours();
+  const _greet=_h<5?'Rest well':_h<12?'Good morning':_h<17?'Good afternoon':_h<22?'Good evening':'Resting hours';
+  const _nm=(ME&&ME.name)?esc(ME.name.split(' ')[0]):'';
+  const _date=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
+  <header class="hdr">
+    <div class="hdr-l">
+      <span class="hdr-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="lmCore" cx="50%" cy="44%" r="55%"><stop offset="0" stop-color="#fff7e4"/><stop offset=".45" stop-color="#f6cd79"/><stop offset="1" stop-color="#dd9430"/></radialGradient><radialGradient id="lmHalo" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f5c977" stop-opacity=".5"/><stop offset="1" stop-color="#f5c977" stop-opacity="0"/></radialGradient></defs><circle cx="20" cy="20" r="19" fill="url(#lmHalo)"/><g stroke="#f3c877" stroke-width="1.6" stroke-linecap="round" opacity=".85"><path d="M20 4.5 V8 M20 32 V35.5 M4.5 20 H8 M32 20 H35.5 M9 9 L11.4 11.4 M28.6 28.6 L31 31 M31 9 L28.6 11.4 M9 31 L11.4 28.6"/></g><circle cx="20" cy="20" r="8.2" fill="url(#lmCore)"/><circle cx="20" cy="20" r="3.1" fill="#fff8ec"/></svg></span>
+      <div class="hdr-wm"><span class="hdr-name">lumen</span><span class="hdr-tag">light, one breath at a time</span></div>
+    </div>
+    <div class="hdr-r">
+      <div class="hdr-greet">${_greet}${_nm?', '+_nm:''}</div>
+      <div class="hdr-date">${_date}</div>
+    </div>
+  </header>
   <div class="card home-hero" style="--lc:${ME.league.color};--lc2:${ME.league.color2||ME.league.color}">
     <div class="orb-hero">
       <div class="orb-stage" id="lumStage" role="img" aria-label="Your light — Level ${ME.level}">
