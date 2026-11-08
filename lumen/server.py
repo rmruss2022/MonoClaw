@@ -3793,8 +3793,15 @@ function todaysPick(){
   const IK=[].concat(...intents.map(i=>IKW[i]||[]));
   const score=l=>{let s=0;const t=text(l);KW.forEach(k=>{if(t.indexOf(k)!==-1)s+=2;});
     IK.forEach(k=>{if(t.indexOf(k)!==-1)s+=1;});
-    if(SND.indexOf(l.soundscape)!==-1)s+=2; if(!lessonProg(l.code))s+=1; return s;};
-  const ranked=LESSONS.map(l=>({l,s:score(l)})).sort((a,b)=>b.s-a.s||a.l.code.localeCompare(b.l.code));
+    if(SND.indexOf(l.soundscape)!==-1)s+=2; if(lessonResumeSi(l)>0)s+=3; return s;};
+  // Only consider the NEXT lesson in each journey — _journeyNext walks the track
+  // in order and returns the first lesson you haven't finished (or the one you're
+  // mid-way through). So the pick is always the right next step: never Shiva 5
+  // before Shiva 4, and never a lesson you've already completed.
+  let candidates=[];
+  TRACKS.forEach(t=>{const ls=LESSONS.filter(l=>l.track===t.key);const nx=_journeyNext(ls);if(nx)candidates.push(nx);});
+  if(!candidates.length) candidates=LESSONS.slice();   // every journey complete — allow a revisit
+  const ranked=candidates.map(l=>({l,s:score(l)})).sort((a,b)=>b.s-a.s||a.l.code.localeCompare(b.l.code));
   const best=ranked[0].s, top=ranked.filter(x=>x.s===best).map(x=>x.l);
   const day=Math.floor((Date.now()-new Date().getTimezoneOffset()*60000)/86400000);
   return top[day%top.length];
