@@ -5772,8 +5772,18 @@ class H(BaseHTTPRequestHandler):
                         c.execute("DELETE FROM achievements WHERE user_id=?", (uid,))
                         c.execute("DELETE FROM users WHERE id=? AND is_bot=1", (uid,))
                         deleted_users += 1
+                # recompute aggregates for affected REAL users so they don't over-count
+                recomputed = []
+                for uid in sorted({r["user_id"] for r in afr if not r["is_bot"]}):
+                    agg = c.execute("SELECT COUNT(*) n, COALESCE(SUM(minutes),0) m, COALESCE(SUM(light),0) l "
+                                    "FROM sessions WHERE user_id=?", (uid,)).fetchone()
+                    last = c.execute("SELECT MAX(day) d FROM sessions WHERE user_id=?", (uid,)).fetchone()["d"]
+                    c.execute("UPDATE users SET total_sessions=?, total_minutes=?, light=?, last_day=? WHERE id=?",
+                              (agg["n"], agg["m"], agg["l"], last, uid))
+                    recomputed.append({"id": uid, "sessions_left": agg["n"]})
                 c.commit()
                 out["deleted_sessions"] = len(ids); out["deleted_bot_users"] = deleted_users
+                out["recomputed_users"] = recomputed
             self._send(200, out); return
 
         if p == "/api/challenge":
