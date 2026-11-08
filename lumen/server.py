@@ -211,14 +211,15 @@ def session_email(tok):
 # game engine
 # ---------------------------------------------------------------------------
 
+# (name, weekly_light_threshold, color, color2) — color2 is the gradient partner
 LEAGUES = [
-    ("Ember",     0,    "#b45309"),
-    ("Spark",     50,   "#d97706"),
-    ("Glow",      150,  "#eab308"),
-    ("Flare",     350,  "#f97316"),
-    ("Beacon",    700,  "#a855f7"),
-    ("Nova",      1200, "#8b5cf6"),
-    ("Supernova", 2000, "#ec4899"),
+    ("Ember",     0,    "#b45309", "#f59e0b"),
+    ("Spark",     50,   "#d97706", "#f59e0b"),
+    ("Glow",      150,  "#eab308", "#f59e0b"),
+    ("Flare",     350,  "#f97316", "#ef4444"),
+    ("Beacon",    700,  "#a855f7", "#ec4899"),
+    ("Nova",      1200, "#8b5cf6", "#6366f1"),
+    ("Supernova", 2000, "#ec4899", "#a855f7"),
 ]
 
 def league_for(weekly_light):
@@ -229,7 +230,7 @@ def league_for(weekly_light):
             cur = lg
             nxt = LEAGUES[i + 1] if i + 1 < len(LEAGUES) else None
     return {
-        "name": cur[0], "color": cur[2], "at": cur[1],
+        "name": cur[0], "color": cur[2], "color2": cur[3], "at": cur[1],
         "next": (nxt[0] if nxt else None),
         "next_at": (nxt[1] if nxt else None),
     }
@@ -1999,10 +2000,10 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .snd-chip{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px}
 .stat{text-align:center}.stat .n{font-size:26px;font-weight:800}.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .bar{height:9px;border-radius:999px;background:#241d3a;overflow:hidden}
-.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink))}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));box-shadow:0 0 10px -3px var(--pink)}
 .home-hero{display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
-.home-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
-  background:radial-gradient(120% 80% at 88% -25%,color-mix(in srgb,var(--lc) 30%,transparent),transparent 60%)}
+.home-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.6;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--lc) 30%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 22%,transparent) 55%,transparent 78%)}
 .orb-hero{display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;z-index:1;padding:2px 0 6px}
 .orb-wrap{width:168px;height:168px;position:relative;margin-bottom:-10px;filter:drop-shadow(0 0 20px color-mix(in srgb,var(--lc) 42%,transparent))}
 .lumorb{display:block;animation:orbpulse 5.5s ease-in-out infinite}
@@ -2011,6 +2012,9 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 @keyframes orbpulse{0%,100%{opacity:.9}50%{opacity:1}}
 .orb-lv{font-weight:800;font-size:17px;letter-spacing:.01em;margin-top:2px}
 .orb-sub{font-size:12px}
+.orb-stage{position:relative;width:272px;height:272px;max-width:82vw;max-height:82vw;margin:-6px 0 -12px;touch-action:pan-y;-webkit-tap-highlight-color:transparent}
+.orb-stage canvas,.orb-stage>svg,.orb-stage .orb-fallback{position:absolute;inset:0;width:100%;height:100%}
+.orb-fallback{display:none;border-radius:50%}
 .journal-cta{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 0 6px;
   background:linear-gradient(135deg,#f7d891,#e0a94a 70%,#caa047);color:#241a06;font-weight:800;font-size:15px;
   border:0;border-radius:16px;padding:16px 18px;cursor:pointer;letter-spacing:.01em;
@@ -2264,9 +2268,14 @@ nav button.on{color:var(--text);background:#211a37}
 .lb-row .nm{flex:1;font-weight:600}.lb-row .vl{font-weight:800;color:var(--gold)}
 .lb-row.you{background:#1c1636;border-radius:12px;border-bottom-color:transparent}
 .league-hero{position:relative;overflow:hidden}
+.league-hero:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--lc) 26%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 20%,transparent) 55%,transparent 80%)}
+.league-hero>*{position:relative;z-index:1}
+.lg-bar{background:#ffffff14}
+.lg-bar>i{background:linear-gradient(90deg,var(--lc),var(--lc2,var(--lc)))!important;box-shadow:0 0 12px -2px color-mix(in srgb,var(--lc2,var(--lc)) 70%,transparent)}
 .league-badge{margin:2px auto 8px;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;
-  background:radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--lc) 34%,transparent),transparent 70%);
-  filter:drop-shadow(0 0 16px color-mix(in srgb,var(--lc) 60%,transparent))}
+  background:radial-gradient(circle at 32% 28%,color-mix(in srgb,var(--lc) 62%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 34%,transparent) 60%,transparent 80%);
+  filter:drop-shadow(0 0 16px color-mix(in srgb,var(--lc) 55%,transparent))}
 .league-badge .i{width:34px;height:34px}
 .ach{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin:8px 0}
 .ach .e{color:var(--muted);opacity:.5;display:flex}
@@ -2899,6 +2908,7 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+<script src="/assets/orb.js" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 /* Diya flame loading spinner — upgrade every .spinner span into the Lottie.
@@ -3445,9 +3455,29 @@ async function renderMeditate(){
   const REST=recommendedLessons().filter(l=>!PICK||l.code!==PICK.code);
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${ic('lumen','mark')}</span><b>Lumen</b></div>
-  <div class="card home-hero" style="--lc:${ME.league.color}">
+  <div class="card home-hero" style="--lc:${ME.league.color};--lc2:${ME.league.color2||ME.league.color}">
     <div class="orb-hero">
-      <div class="orb-wrap">${lumenOrb(ME)}</div>
+      <div class="orb-stage" id="lumStage" role="img" aria-label="Your light — Level ${ME.level}">
+        <div class="orb-fallback" id="lumFallback"></div>
+        <canvas id="lumOrbCanvas"></canvas>
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <linearGradient id="arcGrad" gradientUnits="userSpaceOnUse" x1="50" y1="4" x2="96" y2="50">
+              <stop id="g0" offset="0" stop-color="#ff6a13" stop-opacity=".15"/>
+              <stop id="g1" offset=".6" stop-color="#ff9a3a" stop-opacity=".85"/>
+              <stop id="g2" offset="1" stop-color="#ffe2b0"/>
+            </linearGradient>
+            <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".9"/></filter>
+            <radialGradient id="head"><stop offset="0" stop-color="#fff6e6"/><stop id="h1" offset=".35" stop-color="#ffc173" stop-opacity=".9"/><stop id="h2" offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
+          </defs>
+          <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.055)" stroke-width=".35"/>
+          <g transform="rotate(-90 50 50)">
+            <circle class="arcGlow" cx="50" cy="50" r="46" fill="none" stroke="url(#arcGrad)" stroke-width="1.6" stroke-linecap="round" filter="url(#soft)" opacity=".55" pathLength="1000" stroke-dasharray="0 1000"/>
+            <circle class="arc" cx="50" cy="50" r="46" fill="none" stroke="url(#arcGrad)" stroke-width=".5" stroke-linecap="round" pathLength="1000" stroke-dasharray="0 1000"/>
+          </g>
+          <g class="headDot"><circle r="3.2" fill="url(#head)"/><circle r=".75" fill="#fff8ec"/></g>
+        </svg>
+      </div>
       <div class="orb-lv">Level ${ME.level}</div>
       <div class="orb-sub muted">${fmt(ME.level_into)} / ${fmt(ME.level_into+ME.level_need)} light to Level ${ME.level+1}</div>
     </div>
@@ -3489,6 +3519,7 @@ async function renderMeditate(){
   {const jc=$('#journalCta');if(jc)jc.onclick=()=>openJournalDaily(dp?dp.focus:undefined);}
   document.querySelectorAll('.lesson-card').forEach(c=>c.onclick=()=>{lessonFrom='meditate';lessonDetail(c.dataset.l);});
   const al=$('#allles');if(al)al.onclick=()=>go('lessons');
+  if(window.mountLumenOrb)mountLumenOrb({level:ME.level,into:ME.level_into,need:ME.level_need,palette:(window.LUM_LEAGUE_PAL&&window.LUM_LEAGUE_PAL[ME.league.name])||'Ember'});
 }
 
 /* ---- guided journeys library ---- */
@@ -4429,12 +4460,12 @@ async function renderLeagueView(){
   const lg=d.league;const toNext=lg.next_at?Math.max(0,lg.next_at-d.weekly_light):0;
   const prog=lg.next_at?Math.min(100,100*(d.weekly_light-lg.at)/(lg.next_at-lg.at)):100;
   $('#lbody').innerHTML=`
-  <div class="card center league-hero" style="border-color:${lg.color}">
-    <div class="league-badge" style="color:${lg.color};--lc:${lg.color}">${leagueIcon(lg.name)}</div>
+  <div class="card center league-hero" style="border-color:${lg.color};--lc:${lg.color};--lc2:${lg.color2||lg.color}">
+    <div class="league-badge" style="color:${lg.color}">${leagueIcon(lg.name)}</div>
     <div class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase">Current league</div>
     <h1 style="margin:6px 0;color:${lg.color}">${lg.name}</h1>
     <div class="muted">${fmt(d.weekly_light)} light this week</div>
-    ${lg.next?`<div class="bar" style="margin:14px 0 6px"><i style="width:${prog}%"></i></div><div class="muted" style="font-size:13px">${toNext} light to <b style="color:var(--text)">${leagueIcon(lg.next,'g')} ${lg.next}</b></div>`:`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Top league — keep it lit</div>`}
+    ${lg.next?`<div class="bar lg-bar" style="margin:14px 0 6px"><i style="width:${prog}%"></i></div><div class="muted" style="font-size:13px">${toNext} light to <b style="color:var(--text)">${leagueIcon(lg.next,'g')} ${lg.next}</b></div>`:`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Top league — keep it lit</div>`}
   </div>
   <div class="card">
     <h3 style="margin:0 0 6px;display:flex;align-items:center;gap:7px">${leagueIcon(lg.name,'g')} ${lg.name} league · this week</h3>
@@ -5670,12 +5701,13 @@ class H(BaseHTTPRequestHandler):
         if p == "/health":
             self._send(200, {"ok": True}); return
         rel = p.lstrip("/")
-        if rel == "assets/diya.json":
-            fp = os.path.join(HERE, "assets", "diya.json")
+        if rel in ("assets/diya.json", "assets/orb.js"):
+            fp = os.path.join(HERE, "assets", os.path.basename(rel))
             if os.path.isfile(fp):
+                ct = "application/javascript; charset=utf-8" if rel.endswith(".js") else "application/json"
                 with open(fp, "rb") as f:
-                    self._send(200, f.read(), "application/json",
-                               extra=[("Cache-Control", "public, max-age=604800, immutable")])
+                    self._send(200, f.read(), ct,
+                               extra=[("Cache-Control", "public, max-age=604800")])
                 return
             self._send(404, {"error": "not found"}); return
         if rel in ("icon.png", "icon-192.png", "icon-512.png", "icon.svg") or \
