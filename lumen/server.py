@@ -2711,6 +2711,18 @@ a{color:var(--purple)}
 .jpath-t{display:block;font-weight:700;font-size:13.5px;color:#d8cff0}
 .jpath-d{display:block;font-size:11.5px;color:var(--muted)}
 .jpath-lock{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8b7fb5}
+.pcase-editrow{display:flex;justify-content:center;margin:-8px 0 16px}
+.pcase-edit{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#cbbfe6;background:rgba(255,255,255,.05);border:1px solid rgba(245,201,119,.25);border-radius:999px;padding:6px 13px;cursor:pointer;font-family:inherit}
+.pcase-edit .i{width:12px;height:12px;color:var(--gold)}
+.pcase-edit:active{transform:scale(.97)}
+.jgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.jcard{position:relative;display:flex;flex-direction:column;gap:5px;padding:13px 12px 12px;border-radius:14px;background:linear-gradient(165deg,#191230,#100c1b 84%);border:1px dashed #352b54;text-align:left}
+.jcard-top{display:flex;align-items:center;justify-content:space-between}
+.jcard-n{font-family:var(--serif);font-size:21px;font-weight:600;color:#c3b2ee;line-height:1}
+.jcard-lock{color:#7d72a8}
+.jcard-lock .i{width:13px;height:13px}
+.jcard-t{font-weight:700;font-size:13px;color:#dcd3f2;line-height:1.15}
+.jcard-d{font-size:11px;color:var(--muted);line-height:1.35}
 /* localized sparks behind the featured (recommended) journal door */
 .jbig{position:relative;overflow:hidden}
 .jbig-sparks{position:absolute;inset:0;pointer-events:none;z-index:0}
@@ -5496,14 +5508,28 @@ async function renderJournalHome(){
     return `<button class="jbig${isRec?' rec':''}" data-m="${k}" style="--jc:${c[0]};--jc2:${c[1]}">${sparks}<span class="jbig-ico">${ic(icn)}</span>`
       +`<span class="jbig-txt"><span class="jbig-t">${lbl}${isRec?`<span class="jbig-badge">Today</span>`:''}</span>`
       +`<span class="jbig-b">${J_MODE_BLURB[k]||''}</span></span><span class="jbig-go">›</span></button>`;};
-  const doneN=(pp&&pp.done)||0;const totalP=(pp&&pp.total)||8;
+  const pillars=(pp&&pp.pillars)||[];
+  const chosenNames=(pp&&pp.focus)||[];
+  const chosen=chosenNames.map(nm=>pillars.find(p=>p.name===nm)).filter(Boolean);
+  const others=pillars.filter(p=>!chosenNames.includes(p.name));
+  const caseItem=(p)=>`<button class="pcolumn" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
+    +`<span class="pcolumn-glow"></span><span class="pcolumn-art" data-pc="#d8c6a0"></span>`
+    +`<span class="pcolumn-base"></span><span class="pcolumn-nm">${esc(p.name)}</span></button>`;
+  const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
+    +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
+  const jung=[['The Shadow','Meet what you suppress'],['The Persona','The mask you wear'],['Anima &amp; Animus','Your inner opposite'],['The Self','Wholeness &amp; integration']];
+  const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-n">${i+1}</span><span class="jcard-lock">${ic('lock')}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span></div>`;
   $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b>`
     +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button></div>`
-    +jWeekHero()
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
-    +`<div class="jlinks">`
-      +`<button class="jlink" id="pill-link"><span class="jlink-ico">${ic('compass','g')}</span><span class="jlink-txt"><b>Pillars &amp; Life OS</b><span>Your compass, focus &amp; ${doneN} of ${totalP} explored</span></span></button>`
-    +`</div>`
+    +`<div class="pcase"><div class="pcase-frame"></div>`
+      +`<div class="pcase-eyebrow">${ic('seal')} Your focus pillars</div>`
+      +`<div class="pcols">${chosen.length?chosen.map(caseItem).join(''):'<span class="pcase-empty">Tap Edit to set your focus pillars and fill the case.</span>'}</div></div>`
+    +`<div class="pcase-editrow"><button class="pcase-edit" id="loedit">${ic('compass')} Edit focus pillars</button></div>`
+    +(others.length?`<div class="pgrid-h">${ic('compass','g')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
+    +`<div class="jpath"><div class="jpath-h"><span class="jpath-eyebrow">${ic('lock')} The Jungian Journal</span><span class="jpath-soon">Coming soon</span></div>`
+      +`<p class="jpath-sub">A guided descent through the archetypes — meeting the shadow, the persona, the anima, and the Self.</p>`
+      +`<div class="jgrid">${jung.map(jcard).join('')}</div></div>`
     +`<div class="jfeed-h">${ic('globe','g')} From the community</div>`
     +`<div id="jbody"></div>`;
   // The pillar to drop straight into when Deep is tapped: the server's deep
@@ -5519,12 +5545,14 @@ async function renderJournalHome(){
     return pick?pick.name:null;
   };
   $('#talkbtn').onclick=renderChat;
-  $('#pill-link').onclick=()=>{jScreen='pillars';renderJournal();};
+  {const le=$('#loedit');if(le)le.onclick=(e)=>{e.stopPropagation();jScreen='pillars';renderJournal();};}
   const openMode=(k)=>{journalMode=k;journalPillar=null;if(k==='season')jSeason='';
     if(k==='deep'){const pil=nextDeepPillar();if(pil){journalPillar=pil;jScreen='compose';}else{jScreen='pillars';}}
     else{jScreen='compose';}
     renderJournal();};
-  document.querySelectorAll('.jbig,.jfacet').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
+  document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
+  document.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
+  _mountCols();
   journalView='feed';renderJournalBody();
 }
 
@@ -7703,7 +7731,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v4';
+const CACHE = 'lumen-v5';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
