@@ -3002,15 +3002,15 @@ a{color:var(--purple)}
 .lj-list{display:flex;flex-direction:column;gap:11px}
 .lj-row{display:flex;align-items:center;gap:13px;text-align:left;width:100%;background:#140f24;border:1px solid var(--line);border-radius:14px;padding:15px 14px;cursor:pointer}
 /* lesson-detail modal (opened from the journey list) */
-.lmodal-ov{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
-  padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 14px);
-  background:rgba(5,4,10,.62);backdrop-filter:blur(4px);opacity:0;transition:opacity .22s}
+/* lesson preview — a bottom sheet pinned to the bottom edge (can't float off the top) */
+.lmodal-ov{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(5,4,10,.62);backdrop-filter:blur(4px);opacity:0;transition:opacity .24s}
 .lmodal-ov.show{opacity:1}
-.lmodal{position:relative;width:min(440px,94vw);max-height:75vh;max-height:75dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  transform:translateY(14px) scale(.985);opacity:0;transition:transform .26s cubic-bezier(.2,.85,.25,1),opacity .22s}
-.lmodal-ov.show .lmodal{transform:none;opacity:1}
-.lmodal .card{margin:0}
-.lmodal-x{position:absolute;top:12px;right:12px;z-index:5;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#00000040;color:#d8d0ef;display:grid;place-items:center;cursor:pointer}
+.lmodal{position:relative;width:100%;max-width:520px;max-height:76vh;max-height:76dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.85,.25,1)}
+.lmodal-ov.show .lmodal{transform:translateY(0)}
+.lmodal .card{margin:0;border-radius:22px 22px 0 0;border-bottom:0;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.lmodal-x{position:absolute;top:12px;right:12px;z-index:5;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#00000055;color:#d8d0ef;display:grid;place-items:center;cursor:pointer}
 .lmodal-x .i{width:16px;height:16px}
 .lj-row:active{transform:scale(.995)}
 .lj-row.next{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 16px -6px var(--gold)}
