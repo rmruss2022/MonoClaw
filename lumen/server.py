@@ -1890,6 +1890,8 @@ def profile_dict(c, u):
     for r in c.execute("""SELECT lesson, COUNT(*) n, MAX(ended) last FROM sessions
                           WHERE user_id=? AND lesson IS NOT NULL AND lesson!='' GROUP BY lesson""", (u["id"],)):
         lessons[r["lesson"]] = {"count": r["n"], "last": r["last"]}
+    jr = {r["kind"]: r["n"] for r in c.execute(
+        "SELECT kind, COUNT(*) n FROM journal WHERE user_id=? GROUP BY kind", (u["id"],))}
     return {
         "lessons": lessons,
         "name": u["name"], "email": u["email"],
@@ -1906,6 +1908,10 @@ def profile_dict(c, u):
         "motes": u["motes"] or 0,
         "goal_days": u["goal_days"] or 0,   # meditation days/week the user pledged (0 = not set yet)
         "items_owned": c.execute("SELECT COUNT(*) n FROM items WHERE user_id=?", (u["id"],)).fetchone()["n"],
+        # Atlas facets — your whole practice, not just travel
+        "journal": {"daily": jr.get("daily", 0), "season": jr.get("season", 0),
+                    "deep": jr.get("deep", 0), "total": sum(jr.values())},
+        "places": distinct_places(c, u["id"]),
     }
 
 # ---------------------------------------------------------------------------
@@ -2213,36 +2219,33 @@ nav button.on{color:var(--text);background:#211a37}
 .switch input:checked+.sl{background:linear-gradient(135deg,var(--gold),var(--pink))}
 .switch input:checked+.sl:before{transform:translateX(19px)}
 .chal-streak-u{font-size:11px;color:var(--muted);margin-left:2px}
-/* Atlas — photo passport, rebuilt to the home-screen card standard */
+/* Atlas — a map of your whole practice (progress across every facet) */
 .atlas-card{position:relative;overflow:hidden;border:1px solid color-mix(in srgb,var(--gold) 26%,var(--line));
   background:linear-gradient(165deg,color-mix(in srgb,var(--gold) 8%,#15111f),#110d1b 72%)}
 .atlas-card:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
   background:radial-gradient(120% 85% at 90% -12%,color-mix(in srgb,var(--gold) 22%,transparent),transparent 55%)}
 .atlas-card>*{position:relative;z-index:1}
-.atlas-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
+.atlas-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .atlas-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold)}
 .atlas-eyebrow .i{width:14px;height:14px}
 .atlas-streak{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--gold)}
 .atlas-streak .i{width:15px;height:15px}
-.atlas-stats{display:flex;align-items:stretch;margin:0 0 15px}
-.atlas-stat{flex:1;text-align:center}
-.atlas-stat b{display:block;font-family:var(--serif);font-size:30px;font-weight:600;color:#f3eeff;line-height:1}
-.atlas-stat span{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:6px;display:block}
-.atlas-vr{width:1px;background:#ffffff14;margin:3px 0}
-.atlas-strip{display:flex;gap:8px;align-items:center;overflow-x:auto;cursor:pointer;-webkit-overflow-scrolling:touch;padding-bottom:2px}
-.atlas-strip.empty{background:#ffffff06;border:1px dashed color-mix(in srgb,var(--gold) 30%,var(--line));border-radius:16px;padding:14px;gap:12px}
-.atlas-thumb{flex:none;width:58px;height:58px;border-radius:15px;background:#231a3c center/cover no-repeat;border:1px solid #ffffff1a;box-shadow:0 6px 16px -10px #000}
-.atlas-thumb.ph{display:grid;place-items:center;color:var(--gold);width:48px;height:48px}
-.atlas-thumb.ph .i{width:22px;height:22px}
-.atlas-thumb.more{display:grid;place-items:center;font-weight:800;font-size:14px;color:var(--gold);background:#ffffff0c}
-.atlas-status{margin-top:14px;font-size:12px;line-height:1.5;color:var(--muted);text-align:center}
-.atlas-status .i{width:13px;height:13px;vertical-align:-2px}
-.atlas-status.kept{color:var(--gold);font-weight:600}
-.atlas-ms{margin-top:14px}
-.atlas-ms .bar{height:6px;border-radius:999px;background:#ffffff12;overflow:hidden}
-.atlas-ms .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));box-shadow:0 0 10px -3px var(--pink)}
-.atlas-ms .lbl{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
-.atlas-foot{margin-top:15px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--gold);cursor:pointer;border-top:1px solid #ffffff12;padding-top:13px}
+.atlas-tag{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--muted);margin:6px 0 6px}
+.atlas-facets{display:flex;flex-direction:column}
+.atlas-facet{display:flex;align-items:center;gap:13px;padding:12px 0;border-top:1px solid #ffffff10}
+.atlas-fic{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--gold);
+  background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--gold) 24%,#201732),#160f2b);border:1px solid #ffffff14}
+.atlas-fic .i{width:19px;height:19px}
+.atlas-fmain{flex:1;min-width:0}
+.atlas-fname{font-weight:700;font-size:14px;color:#f1ecff}
+.atlas-fsub{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.35}
+.atlas-fval{flex:none;font-family:var(--serif);font-size:23px;font-weight:600;color:#f3eeff;line-height:1;text-align:right;white-space:nowrap}
+.atlas-fval small{font-family:-apple-system,system-ui,sans-serif;font-size:10.5px;font-weight:600;color:var(--muted);margin-left:3px}
+.atlas-fbadge{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 32% 28%,color-mix(in srgb,var(--lc) 60%,transparent),color-mix(in srgb,var(--lc2,var(--lc)) 32%,transparent) 62%,transparent 82%);
+  filter:drop-shadow(0 0 10px color-mix(in srgb,var(--lc) 50%,transparent))}
+.atlas-fbadge .i{width:22px;height:22px}
+.atlas-foot{margin-top:4px;display:flex;align-items:center;justify-content:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--gold);cursor:pointer;border-top:1px solid #ffffff10;padding-top:14px}
 .atlas-foot .i{width:14px;height:14px}
 .atlas-foot .rt{transform:rotate(90deg)}
 /* daily horoscope card */
@@ -3341,28 +3344,29 @@ async function onbCreate(){
 
 /* ---- meditate ---- */
 function challengeCardHTML(ch){
-  if(!ch||!ch.title||ch.places===undefined)return '';
-  const streak=ch.streak>0?`<span class="atlas-streak">${ic('flame','flame grad-flame glow')}<b>${ch.streak}</b> day streak</span>`:'';
-  const thumbs=(ch.thumbs&&ch.thumbs.length)
-    ? `<div class="atlas-strip" onclick="go('map')">${ch.thumbs.map(t=>`<span class="atlas-thumb" style="background-image:url('${esc(t.photo)}')" title="${esc(t.city||'')}"></span>`).join('')}${ch.places>ch.thumbs.length?`<span class="atlas-thumb more">+${ch.places-ch.thumbs.length}</span>`:''}</div>`
-    : `<div class="atlas-strip empty" onclick="go('map')"><span class="atlas-thumb ph">${ic('camera')}</span><span class="muted" style="font-size:12px;line-height:1.35">Sit somewhere, snap your spot — begin your passport</span></div>`;
-  const status = ch.photo_today
-    ? `<div class="atlas-status kept">${ic('spark','g')} Spot kept today${ch.new_today?' · new place discovered':''}${ch.streak>0?` · ${ch.streak}-day streak`:''}</div>`
-    : `<div class="atlas-status">${ic('camera','g')} Keep a photo of today's spot to ${ch.streak>0?`hold your ${ch.streak}-day streak`:'start your streak'} — <b style="color:var(--gold)">+${ch.new_bonus}</b> for a new place, <b style="color:var(--gold)">+${ch.photo_bonus}</b> for a familiar one.</div>`;
-  const milestone = ch.next_milestone
-    ? `<div class="atlas-ms"><div class="bar"><i style="width:${Math.min(100,Math.round(100*ch.places/ch.next_milestone))}%"></i></div><div class="lbl">${ch.next_milestone-ch.places} more place${(ch.next_milestone-ch.places)===1?'':'s'} to your ${ch.next_milestone}-spot badge</div></div>`
-    : '';
+  if(!ME)return '';
+  const J=ME.journal||{total:0,daily:0,season:0,deep:0};
+  const places=(ME.places!=null?ME.places:((ch&&ch.places)||0));
+  const lessonsDone=Object.values(ME.lessons||{}).filter(l=>l&&l.count>0).length;
+  const totalLessons=(typeof LESSONS!=='undefined'?LESSONS.length:0);
+  const mStreak=ME.streak||0, pStreak=(ch&&ch.streak)||0, shared=(ch&&ch.shared_today)||0;
+  const lg=ME.league||{};
+  const streakChip=mStreak>0?`<span class="atlas-streak">${ic('flame','flame grad-flame glow')}<b>${mStreak}</b> day streak</span>`:'';
+  const jsub=[J.daily?J.daily+' daily':'',J.season?J.season+' seasonal':'',J.deep?J.deep+' pillar':''].filter(Boolean).join(' · ')||'Open your first letter';
+  const facet=(icn,name,sub,right)=>`<div class="atlas-facet"><span class="atlas-fic">${ic(icn)}</span><div class="atlas-fmain"><div class="atlas-fname">${name}</div><div class="atlas-fsub">${sub}</div></div>${right}</div>`;
+  const val=(n,u)=>`<div class="atlas-fval">${fmt(n)}${u?`<small>${u}</small>`:''}</div>`;
+  const leagueBadge=`<span class="atlas-fbadge" style="--lc:${lg.color||'#f5c977'};--lc2:${lg.color2||lg.color||'#f5c977'};color:${lg.color||'#f5c977'}">${leagueIcon(lg.name)}</span>`;
   return `<div class="card atlas-card">
-    <div class="atlas-head"><span class="atlas-eyebrow">${ic('globe','g')} ${esc(ch.title)}</span>${streak}</div>
-    <div class="atlas-stats">
-      <div class="atlas-stat"><b>${ch.places}</b><span>place${ch.places===1?'':'s'} collected</span></div>
-      <span class="atlas-vr"></span>
-      <div class="atlas-stat"><b>${ch.best||ch.streak||0}</b><span>best streak</span></div>
+    <div class="atlas-head"><span class="atlas-eyebrow">${ic('compass','g')} Atlas</span>${streakChip}</div>
+    <div class="atlas-tag">A map of your whole practice.</div>
+    <div class="atlas-facets">
+      ${facet('meditate','Meditation',`${fmt(ME.total_minutes||0)} min · ${mStreak}-day streak`,val(ME.total_sessions||0,'sits'))}
+      ${facet('lotus','Journeys','lessons walked in order',`<div class="atlas-fval">${lessonsDone}<small>/ ${totalLessons}</small></div>`)}
+      ${facet('book','Journal',jsub,val(J.total||0,'entries'))}
+      ${facet('globe','Travel',`${places?'places lit around the world':'light a place to begin'}${pStreak>0?' · '+pStreak+'-day photo streak':''}`,val(places,places===1?'place':'places'))}
+      ${facet('trophy','Community',`${esc(lg.name||'Ember')} league · ${shared>0?shared+' spot'+(shared===1?'':'s')+' shared today':fmt(ME.weekly_light||0)+' light this week'}`,leagueBadge)}
     </div>
-    ${thumbs}
-    ${status}
-    ${milestone}
-    <div class="atlas-foot" onclick="go('map')">${ic('globe','g')} ${ch.shared_today>0?`${ch.shared_today} spot${ch.shared_today===1?'':'s'} shared today — see the world`:'See where the world is meditating'} ${ic('up','rt')}</div>
+    <div class="atlas-foot" onclick="go('map')">${ic('globe','g')} See where the world is meditating ${ic('up','rt')}</div>
   </div>`;
 }
 function horoscopeCardHTML(h){
