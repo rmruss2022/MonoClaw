@@ -5955,15 +5955,13 @@ function buildAltar(achs){
   return `<svg viewBox="0 0 300 300" class="altar-svg">${P.join('')}</svg>`;
 }
 async function renderAltar(){
+  // Fixed-height frame: the mandala stays put on top while the detail panel
+  // scrolls inside it, with the prev/next bar pinned to the panel's top.
   $('#cbody').innerHTML=`
   <div class="mandala-wrap">
-    <iframe id="mandalaFrame" src="assets/mandala.html" title="Your mandala" scrolling="no" loading="eager"
-      style="width:100%;height:560px;border:0;display:block;background:transparent;overflow:hidden"></iframe>
-  </div>
-  <p class="muted center" style="font-size:12px;margin:2px 0 84px">Your mandala blooms as you practice — each dimension of your path a living petal. Tap one to look closer.</p>`;
-  if(!window.__mandalaMsg){ window.__mandalaMsg=1;
-    window.addEventListener('message',e=>{ const h=e&&e.data&&e.data.lumenMandalaHeight;
-      const fr=document.getElementById('mandalaFrame'); if(h&&fr&&h>200&&h<2200) fr.style.height=h+'px'; }); }
+    <iframe id="mandalaFrame" src="assets/mandala.html" title="Your mandala" loading="eager"
+      style="width:100%;height:calc(100dvh - 206px);min-height:470px;border:0;display:block;background:transparent"></iframe>
+  </div>`;
 }
 async function renderItems(){
   let d={items:[],equipped:null};try{d=await api('collection');}catch(e){}

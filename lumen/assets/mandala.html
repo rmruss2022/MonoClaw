@@ -83,11 +83,16 @@
   .prev iframe{display:block;width:100%;height:1300px;border:0;background:transparent;color-scheme:dark}
 
   /* --- embedded-in-app overrides (Lumen Collect screen) --- */
-  html,body{background:transparent!important;padding:0!important;margin:0!important;min-height:0!important;display:block!important}
-  .app{max-width:none!important;width:100%!important}
+  html,body{background:transparent!important;padding:0!important;margin:0!important;height:100%!important;overflow:hidden!important;display:block!important}
+  .app{max-width:none!important;width:100%!important;height:100%!important;display:flex!important;flex-direction:column!important}
   header,.controls,.prev{display:none!important}
-  .card{background:transparent!important;border:none!important;border-radius:0!important;padding:4px 6px 10px!important;overflow:visible!important}
+  .card{background:transparent!important;border:none!important;border-radius:0!important;padding:2px 6px 0!important;overflow:hidden!important;flex:1 1 auto!important;display:flex!important;flex-direction:column!important;min-height:0!important}
   .card::before{display:none!important}
+  .stage{flex:0 0 auto!important}
+  /* panel scrolls on its own; the prev/back/next bar stays pinned at the top */
+  .panel{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch;padding-bottom:18px!important}
+  .panel .nav{position:sticky!important;top:0!important;z-index:6;margin:0 0 12px!important;padding:9px 2px 11px!important;
+    background:linear-gradient(to bottom,#0d0b14 60%,rgba(13,11,20,0))!important}
 </style>
 </head>
 <body>
@@ -428,16 +433,17 @@ function renderPanel(){
     const got = DIMS.reduce((s, d) => s + earnedOf(d), 0) + RARE.filter(r => r.got).length;
     const w = Math.round(wholeness() * 100);
     h = `<div class="fade" style="--c:#ff5fb8;--a:#ffc83d">
+      ${navRow()}
       <div class="ph"><canvas class="mini" id="mini" width="96" height="96"></canvas><div><h3>Wholeness</h3><p>${got} of ${tot} achievements grown</p></div><div class="pct">${w}%</div></div>
       <div class="bar"><i style="width:${w}%"></i></div>
       <div class="sub">Every achievement adds a layer to a petal. Tap one to see what's next.</div>
       <div class="chips">${DIMS.map((d, i) => `<button class="chip" data-i="${i}" style="--c:${d.color};--a:${d.accent}"><span class="d"></span>${d.name}<span class="v">${Math.round(fillOf(d)*100)}%</span></button>`).join('')}
         <button class="chip" data-r="1" style="--c:#ffe135;--a:#2ee6c5"><span class="d"></span>Rare<span class="v">${RARE.filter(r => r.got).length}/${RARE.length}</span></button></div>
-      ${navRow()}
     </div>`;
   } else if (sel.kind === 'main'){
     const d = DIMS[sel.i], f = fillOf(d), e = earnedOf(d), next = d.tiers[e];
     h = `<div class="fade" style="--c:${d.color};--a:${d.accent}">
+      ${navRow()}
       <div class="ph"><div class="sw"></div><div><h3>${d.name}</h3><p>${d.tag}</p></div><div class="pct">${Math.round(f*100)}%</div></div>
       <div class="bar"><i style="width:${f*100}%"></i></div>
       <div class="sub">${fmt(d.value)} ${d.unit} · ${next ? `next: <b style="color:var(--text);font-weight:600">${next[0]}</b> at ${fmt(next[2])}` : 'petal complete ✦'}</div>
@@ -447,17 +453,16 @@ function renderPanel(){
           <div class="t"><b>${t[0]}</b><span>${t[1]} · adds ${LAYER_NAMES[k]}</span></div>
           <div class="r">${got ? 'Earned' : isNext ? `${fmt(d.value)} / ${fmt(t[2])}` : '—'}</div></li>`;
       }).join('')}</ul>
-      ${navRow()}
     </div>`;
   } else {
     const r = RARE[sel.i];
     h = `<div class="fade" style="--c:#ffe135;--a:#2ee6c5">
+      ${navRow()}
       <div class="ph"><div class="sw"></div><div><h3>${r.got ? r.name : 'Hidden blossom'}</h3><p>Rare achievement</p></div><div class="pct">${r.got ? '✦' : '?'}</div></div>
       <ul class="ach"><li class="${r.got ? 'got' : ''}"><div class="ic">${r.got ? '✓' : '?'}</div>
         <div class="t"><b>${r.got ? r.name : 'Not yet revealed'}</b><span>${r.got ? r.desc : 'Rare blossoms open when you practice in unusual ways. Keep exploring.'}</span></div>
         <div class="r">${r.got ? 'Earned' : 'Hidden'}</div></li></ul>
       <div class="sub" style="margin-top:12px">${RARE.filter(x => x.got).length} of ${RARE.length} rare blossoms found</div>
-      ${navRow()}
     </div>`;
   }
   p.innerHTML = h;
