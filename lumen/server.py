@@ -3288,13 +3288,6 @@ function _mountDiya(){
 }
 fetch('/assets/diya.json').then(r=>r.json()).then(d=>{_diyaData=d;_mountDiya();}).catch(()=>{});
 try{new MutationObserver(()=>_mountDiya()).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
-// Ancient-column Lottie — fetched once, mounted into any .jcolumn placeholder.
-let _colData=null;
-function _mountCols(){if(!window.lottie||!_colData)return;
-  document.querySelectorAll('.jcolumn:not([data-col])').forEach(elm=>{elm.setAttribute('data-col','1');
-    try{window.lottie.loadAnimation({container:elm,renderer:'svg',loop:true,autoplay:true,animationData:_colData});}catch(e){}});}
-fetch('/assets/column.json').then(r=>r.json()).then(d=>{_colData=d;_mountCols();}).catch(()=>{});
-try{new MutationObserver(()=>_mountCols()).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
 const el=(h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
 async function api(path,method='GET',body){
   const o={method,headers:{}};
@@ -7688,7 +7681,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v2';
+const CACHE = 'lumen-v3';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
