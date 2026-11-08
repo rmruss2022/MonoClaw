@@ -6071,7 +6071,7 @@ async function renderAltar(){
   // scrolls inside it, with the prev/next bar pinned to the panel's top.
   $('#cbody').innerHTML=`
   <div class="mandala-wrap">
-    <iframe id="mandalaFrame" src="assets/mandala.html" title="Your mandala" loading="eager"
+    <iframe id="mandalaFrame" src="assets/mandala.html?v=3" title="Your mandala" loading="eager"
       style="width:100%;height:calc(100dvh - 206px);min-height:470px;border:0;display:block;background:transparent"></iframe>
   </div>`;
 }
@@ -6370,9 +6370,10 @@ class H(BaseHTTPRequestHandler):
                 if rel.endswith(".js"): ct = "application/javascript; charset=utf-8"
                 elif rel.endswith(".html"): ct = "text/html; charset=utf-8"
                 else: ct = "application/json"
+                # mandala html is actively iterated — always revalidate; others cache long
+                cc = "no-cache, must-revalidate" if rel.endswith(".html") else "public, max-age=604800"
                 with open(fp, "rb") as f:
-                    self._send(200, f.read(), ct,
-                               extra=[("Cache-Control", "public, max-age=604800")])
+                    self._send(200, f.read(), ct, extra=[("Cache-Control", cc)])
                 return
             self._send(404, {"error": "not found"}); return
         if rel in ("icon.png", "icon-192.png", "icon-512.png", "icon.svg") or \
@@ -7684,7 +7685,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v1';
+const CACHE = 'lumen-v2';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -7702,6 +7703,11 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.pathname.indexOf('/api/') !== -1) return;           // never cache the API
+  if (url.pathname.indexOf('/assets/mandala.html') !== -1) {  // actively iterated: network-first
+    e.respondWith(fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return r; })
+                            .catch(() => caches.match(req)));
+    return;
+  }
   if (req.mode === 'navigate') {                               // app shell: network-first
     e.respondWith(
       fetch(req).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put(req, cp)); return r; })
