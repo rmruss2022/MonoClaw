@@ -3167,6 +3167,15 @@ a{color:var(--purple)}
 .lesson-step{font-size:12px;margin-top:4px;text-transform:uppercase;letter-spacing:.08em}
 .lesson-teach{font-family:var(--serif);font-size:16px;line-height:1.6;color:#e8e2f2;text-align:center;padding:4px 12px;max-width:540px;margin:4px auto 0;min-height:92px}
 .lesson-foot{display:flex;align-items:center;gap:12px;margin-top:12px}
+/* full-viewport session layouts (nav is hidden during a sit) — break out of #app's
+   nav padding and center the content so nothing floats to the top */
+.sit-screen,.lesson-screen{min-height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1;
+  margin:calc(-1*(env(safe-area-inset-top) + 8px)) -16px calc(-1*(96px + env(safe-area-inset-bottom))) -16px;
+  padding:calc(env(safe-area-inset-top) + 12px) 20px calc(env(safe-area-inset-bottom) + 16px)}
+.sit-screen{justify-content:center;align-items:center;text-align:center}
+.sit-screen .end-wrap{width:100%;max-width:340px;margin-top:28px}
+.lesson-screen .lesson-mid{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-height:0}
+.lesson-screen .lesson-foot{margin-top:auto}
 .companion .cph{width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid #4a3d6e;box-shadow:0 0 8px #f5c97755}
 .motebal{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--gold);
   background:#1a1330;border:1px solid #3a2d5e;border-radius:999px;padding:4px 11px}
@@ -4266,13 +4275,15 @@ async function startSession(){
   const total=pick.minutes*60;let left=total;let ended=false;
   $('#nav').classList.add('hidden');
   $('#app').innerHTML=`
-  <div class="orb-wrap">
-    <div class="ring"></div>
-    <div class="orb"><div class="t" id="clock">${mm(left)}</div></div>
-    <div class="breath-label" id="bl">breathe in</div>
-  </div>
-  <div class="center muted" style="margin-top:-10px">${SOUNDS.find(s=>s[0]===pick.sound)[2]} · ${pick.minutes} min</div>
-  <div style="padding:0 24px;margin-top:22px"><button class="btn ghost" id="end">End session</button></div>`;
+  <div class="sit-screen">
+    <div class="orb-wrap">
+      <div class="ring"></div>
+      <div class="orb"><div class="t" id="clock">${mm(left)}</div></div>
+      <div class="breath-label" id="bl">breathe in</div>
+    </div>
+    <div class="center muted" style="margin-top:-4px">${SOUNDS.find(s=>s[0]===pick.sound)[2]} · ${pick.minutes} min</div>
+    <div class="end-wrap"><button class="btn ghost" id="end">End session</button></div>
+  </div>`;
   const bl=$('#bl');let phase=0;
   const breath=setInterval(()=>{phase=(phase+1)%2;bl.textContent=phase?'breathe out':'breathe in';},5000);
   timerInt=setInterval(()=>{left--;$('#clock')&&($('#clock').textContent=mm(left));if(left<=0){finish(true);}},1000);
@@ -4930,17 +4941,21 @@ async function lessonPlay(lesson, startSi){
   $('#nav').classList.add('hidden');
   $('#app').innerHTML=`
   <div class="lesson-bg" style="background-image:url(${SERIES_ART[lesson.series]||lesson.img||''})"></div>
-  <div class="lesson-top">
-    <div class="lesson-ttl"><span style="color:${lesson.accent}">${esc(lesson.title)}</span> · <span class="muted">${esc(lesson.subtitle)}</span></div>
-    <div class="lesson-step muted" id="lstep"></div>
-    <div class="jny-bar" style="margin-top:7px"><i id="lprog" style="width:0%"></i></div>
-  </div>
-  <div class="orb-wrap lorb-wrap" style="height:220px;--a:${lesson.accent}"><div class="ring"></div><div class="orb" id="lorb"><div class="t" style="font-size:19px">◦</div></div><div class="breath-label" id="lcue"></div></div>
-  <div class="lesson-teach" id="lteach"></div>
-  <div class="lesson-foot">
-    <button class="mic on" id="lmute" title="Narration">${ic('sound')}</button>
-    <div class="muted" id="lrem" style="flex:1;text-align:center;font-size:13px"></div>
-    <button class="btn ghost" id="lend" style="width:auto;padding:11px 18px">End</button>
+  <div class="lesson-screen">
+    <div class="lesson-top">
+      <div class="lesson-ttl"><span style="color:${lesson.accent}">${esc(lesson.title)}</span> · <span class="muted">${esc(lesson.subtitle)}</span></div>
+      <div class="lesson-step muted" id="lstep"></div>
+      <div class="jny-bar" style="margin-top:7px"><i id="lprog" style="width:0%"></i></div>
+    </div>
+    <div class="lesson-mid">
+      <div class="orb-wrap lorb-wrap" style="height:220px;--a:${lesson.accent}"><div class="ring"></div><div class="orb" id="lorb"><div class="t" style="font-size:19px">◦</div></div><div class="breath-label" id="lcue"></div></div>
+      <div class="lesson-teach" id="lteach"></div>
+    </div>
+    <div class="lesson-foot">
+      <button class="mic on" id="lmute" title="Narration">${ic('sound')}</button>
+      <div class="muted" id="lrem" style="flex:1;text-align:center;font-size:13px"></div>
+      <button class="btn ghost" id="lend" style="width:auto;padding:11px 18px">End</button>
+    </div>
   </div>`;
   try{Sound.start(lessonSoundPick||lesson.soundscape);}catch(e){}
   const tick=setInterval(()=>{if(ended)return;elapsed=Math.min(totalEst,elapsed+1);
