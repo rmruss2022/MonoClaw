@@ -2661,6 +2661,55 @@ a{color:var(--purple)}
 .pp-stat.done .pp-dot{border-color:var(--gold);background:rgba(245,201,119,.12);color:var(--gold)}
 .pp-dot .i{width:14px;height:14px}
 .pp-sn{font-size:10px;color:var(--muted);margin-top:3px}
+/* Pillars redesign — a display case of focus pillars under an arch + pillar cards + Jungian path */
+.pcase{position:relative;overflow:hidden;background:#0b0912;border:1px solid #241d38;border-radius:92px 92px 20px 20px;padding:26px 16px 20px;margin:6px 0 18px;text-align:center;box-shadow:inset 0 0 70px -22px #000,0 14px 36px -18px #000}
+.pcase:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 70% at 50% -4%,rgba(245,201,119,.13),transparent 56%)}
+.pcase-col{position:absolute;bottom:-8px;width:74px;height:168px;opacity:.42;pointer-events:none;z-index:0;filter:drop-shadow(0 0 9px rgba(245,201,119,.25))}
+.pcase-col.left{left:-16px}.pcase-col.right{right:-16px;transform:scaleX(-1)}
+.pcase>.pcase-eyebrow,.pcase>.pcase-row{position:relative;z-index:1}
+.pcase-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin-bottom:17px}
+.pcase-eyebrow .i{width:14px;height:14px}
+.pcase-row{display:flex;justify-content:center;gap:clamp(10px,5vw,24px);flex-wrap:wrap}
+.pcase-item{display:flex;flex-direction:column;align-items:center;gap:7px;background:none;border:0;cursor:pointer;font-family:inherit;width:64px}
+.pcase-item:active{transform:scale(.95)}
+.pcase-med{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;color:var(--pc);
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--pc) 55%,transparent),color-mix(in srgb,var(--pc) 24%,transparent) 64%,#120d22);
+  border:1px solid color-mix(in srgb,var(--pc) 50%,transparent);box-shadow:0 0 18px -4px color-mix(in srgb,var(--pc) 85%,transparent)}
+.pcase-med .i{width:25px;height:25px}
+.pcase-nm{font-size:11.5px;font-weight:700;color:#efe6ff;line-height:1.12}
+.pcase-sit{font-size:10px;color:var(--muted)}
+.pgrid-h,.jpath-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
+.pgrid-h{color:var(--gold);margin:2px 2px 10px}
+.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.pgrid-card{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;font-family:inherit;padding:13px 6px 11px;border-radius:15px;
+  background:linear-gradient(165deg,color-mix(in srgb,var(--pc) 15%,#15111f),#110d1b 80%);border:1px solid color-mix(in srgb,var(--pc) 28%,var(--line));box-shadow:0 8px 22px -16px color-mix(in srgb,var(--pc) 85%,#000)}
+.pgrid-card:active{transform:scale(.97)}
+.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--pc);
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--pc) 42%,transparent),#140e26 70%);border:1px solid color-mix(in srgb,var(--pc) 32%,transparent);box-shadow:0 0 12px -4px color-mix(in srgb,var(--pc) 80%,transparent)}
+.pgrid-med .i{width:21px;height:21px}
+.pgrid-nm{font-size:10.5px;font-weight:600;color:#cfc6ea;text-align:center;line-height:1.15}
+.jpath{position:relative;overflow:hidden;border:1px solid #2a2144;border-radius:18px;padding:16px;margin-top:20px;background:linear-gradient(165deg,#171127,#100c1b 78%)}
+.jpath:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:radial-gradient(120% 70% at 92% -10%,rgba(168,85,247,.2),transparent 55%)}
+.jpath>*{position:relative;z-index:1}
+.jpath-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.jpath-eyebrow{color:#c3b2ee}
+.jpath-eyebrow .i{width:13px;height:13px}
+.jpath-soon{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#140f22;background:linear-gradient(135deg,#c084fc,#8b5cf6);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.jpath-sub{font-size:12.5px;color:var(--muted);line-height:1.45;margin:9px 0 12px}
+.jpath-rows{display:flex;flex-direction:column;gap:8px}
+.jpath-row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;background:#120e1e;border:1px dashed #352b54}
+.jpath-ico{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#1a1430;border:1px solid #352b54;color:#8b7fb5}
+.jpath-ico .i{width:15px;height:15px}
+.jpath-main{flex:1;min-width:0}
+.jpath-t{display:block;font-weight:700;font-size:13.5px;color:#d8cff0}
+.jpath-d{display:block;font-size:11.5px;color:var(--muted)}
+.jpath-lock{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8b7fb5}
+/* localized sparks behind the featured (recommended) journal door */
+.jbig{position:relative;overflow:hidden}
+.jbig-sparks{position:absolute;inset:0;pointer-events:none;z-index:0}
+.jbig-ico,.jbig-txt,.jbig-go{position:relative;z-index:1}
+.jsp{position:absolute;bottom:-5px;width:3px;height:3px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold);opacity:0;animation:jsprise linear infinite}
+@keyframes jsprise{0%{transform:translateY(0) scale(.5);opacity:0}16%{opacity:.95}100%{transform:translateY(-68px) scale(1.05);opacity:0}}
 .pp-stat.done .pp-sn{color:var(--gold)}
 .pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .pcard{position:relative;text-align:left;cursor:pointer;color:var(--text);
@@ -3236,6 +3285,13 @@ function _mountDiya(){
 }
 fetch('/assets/diya.json').then(r=>r.json()).then(d=>{_diyaData=d;_mountDiya();}).catch(()=>{});
 try{new MutationObserver(()=>_mountDiya()).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
+// Ancient-column Lottie — fetched once, mounted into any .jcolumn placeholder.
+let _colData=null;
+function _mountCols(){if(!window.lottie||!_colData)return;
+  document.querySelectorAll('.jcolumn:not([data-col])').forEach(elm=>{elm.setAttribute('data-col','1');
+    try{window.lottie.loadAnimation({container:elm,renderer:'svg',loop:true,autoplay:true,animationData:_colData});}catch(e){}});}
+fetch('/assets/column.json').then(r=>r.json()).then(d=>{_colData=d;_mountCols();}).catch(()=>{});
+try{new MutationObserver(()=>_mountCols()).observe(document.documentElement,{childList:true,subtree:true});}catch(e){}
 const el=(h)=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstChild;};
 async function api(path,method='GET',body){
   const o={method,headers:{}};
@@ -5420,7 +5476,8 @@ async function renderJournalHome(){
   const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
   const JDOOR_COL={deep:['#a855f7','#c084fc'],daily:['#38bdf8','#0ea5e9'],season:['#f59e0b','#f97316']};
   const door=([k,lbl,icn])=>{const isRec=recMode===k;const c=JDOOR_COL[k]||['#a855f7','#c084fc'];
-    return `<button class="jbig${isRec?' rec':''}" data-m="${k}" style="--jc:${c[0]};--jc2:${c[1]}"><span class="jbig-ico">${ic(icn)}</span>`
+    const sparks=isRec?`<span class="jbig-sparks">${[...Array(10)].map(()=>`<span class="jsp" style="left:${Math.round(6+Math.random()*88)}%;animation-delay:${(Math.random()*2.6).toFixed(2)}s;animation-duration:${(2.4+Math.random()*2).toFixed(2)}s"></span>`).join('')}</span>`:'';
+    return `<button class="jbig${isRec?' rec':''}" data-m="${k}" style="--jc:${c[0]};--jc2:${c[1]}">${sparks}<span class="jbig-ico">${ic(icn)}</span>`
       +`<span class="jbig-txt"><span class="jbig-t">${lbl}${isRec?`<span class="jbig-badge">Today</span>`:''}</span>`
       +`<span class="jbig-b">${J_MODE_BLURB[k]||''}</span></span><span class="jbig-go">›</span></button>`;};
   const doneN=(pp&&pp.done)||0;const totalP=(pp&&pp.total)||8;
@@ -5653,21 +5710,31 @@ async function renderPillarsSection(){
   const box=$('#ppsection');if(!box)return;
   box.innerHTML=`<div class="card muted center" style="font-size:13px"><span class="spinner"></span> Loading your pillars…</div>`;
   let pp=null;try{pp=await api('pillars');}catch(e){box.innerHTML='';return;}
-  const pillars=(pp&&pp.pillars)||[];const focus=(pp&&pp.focus)||[];
-  const done=(pp&&pp.done)||0;const total=(pp&&pp.total)||pillars.length||8;
-  const pct=total?Math.round(100*done/total):0;
-  const row=(p)=>{const f=focus.includes(p.name);const n=p.sittings||0;const isDone=n>0;
-    return `<button class="pp-row" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
-      +`<span class="pp-ico">${ic(picon(p.name),'grad-gold')}</span>`
-      +`<span class="pp-main"><span class="pp-name">${esc(p.name)}${f?`<span class="pp-fchip">focus</span>`:''}</span>`
-      +`<span class="pp-desc">${esc(p.title||pdesc(p.name))}</span></span>`
-      +`<span class="pp-stat${isDone?' done':''}"><span class="pp-dot">${isDone?ic('check'):ic(picon(p.name))}</span>`
-      +`<span class="pp-sn">${n?n+(n===1?' sitting':' sittings'):'start'}</span></span></button>`;};
-  box.innerHTML=`<div class="pp-top"><div class="pp-count">You've explored <b>${done}</b> of ${total} pillars</div>`
-      +`<div class="pp-bar"><i style="width:${pct}%"></i></div></div>`
-    +`<div class="pp-list">`+pillars.map(row).join('')+`</div>`
-    +`<div class="muted jgrid-hint" style="margin-top:14px;text-align:center">Each pillar is a guided lesson plan. The Keeper opens the next chapter where you last left off.</div>`;
-  box.querySelectorAll('.pp-row').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
+  const pillars=(pp&&pp.pillars)||[];
+  // the pillars assigned to the compass are the "focus" pillars shown in the display case
+  const chosenNames=(typeof LO!=='undefined'&&LO&&LO.pillars)?DIRS.map(([k])=>LO.pillars[k]).filter(Boolean):((pp&&pp.focus)||[]);
+  const chosen=chosenNames.map(nm=>pillars.find(p=>p.name===nm)).filter(Boolean);
+  const others=pillars.filter(p=>!chosenNames.includes(p.name));
+  const caseItem=(p)=>`<button class="pcase-item" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
+    +`<span class="pcase-med">${ic(picon(p.name))}</span>`
+    +`<span class="pcase-nm">${esc(p.name)}</span>`
+    +`<span class="pcase-sit">${(p.sittings||0)?(p.sittings+(p.sittings===1?' sitting':' sittings')):'begin'}</span></button>`;
+  const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
+    +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
+  const jung=[['The Shadow','Meet what you suppress'],['The Persona','The mask you wear'],['Anima &amp; Animus','Your inner opposite'],['The Self','Wholeness &amp; integration']];
+  box.innerHTML=
+    `<div class="pcase">`
+      +`<div class="jcolumn pcase-col left"></div><div class="jcolumn pcase-col right"></div>`
+      +`<div class="pcase-eyebrow">${ic('seal')} Your focus pillars</div>`
+      +`<div class="pcase-row">${chosen.length?chosen.map(caseItem).join(''):'<span class="muted" style="font-size:12.5px;max-width:30ch">Assign pillars on the compass above to fill your case.</span>'}</div>`
+    +`</div>`
+    +(others.length?`<div class="pgrid-h">${ic('compass','g')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
+    +`<div class="jpath">`
+      +`<div class="jpath-h"><span class="jpath-eyebrow">${ic('lock')} The Jungian Path</span><span class="jpath-soon">Coming soon</span></div>`
+      +`<p class="jpath-sub">A guided descent through the archetypes — meeting the shadow, the persona, the anima, and the Self.</p>`
+      +`<div class="jpath-rows">${jung.map(j=>`<div class="jpath-row"><span class="jpath-ico">${ic('lock')}</span><span class="jpath-main"><span class="jpath-t">${j[0]}</span><span class="jpath-d">${j[1]}</span></span><span class="jpath-lock">Locked</span></div>`).join('')}</div>`
+    +`</div>`;
+  box.querySelectorAll('.pcase-item,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;jScreen='compose';renderJournal();});
 }
 function pickPillar(dir,paintDirs,paintFocus){openPillarCard(dir,paintDirs,paintFocus);}
 function openPillarCard(dir,paintDirs,paintFocus){
@@ -6297,7 +6364,7 @@ class H(BaseHTTPRequestHandler):
         if p == "/health":
             self._send(200, {"ok": True}); return
         rel = p.lstrip("/")
-        if rel in ("assets/diya.json", "assets/orb.js", "assets/mandala.html"):
+        if rel in ("assets/diya.json", "assets/orb.js", "assets/mandala.html", "assets/column.json"):
             fp = os.path.join(HERE, "assets", os.path.basename(rel))
             if os.path.isfile(fp):
                 if rel.endswith(".js"): ct = "application/javascript; charset=utf-8"
