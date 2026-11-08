@@ -2019,7 +2019,7 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
   background:transparent;color:var(--gold);font-family:var(--serif);font-style:italic;font-weight:600;font-size:17px;
   border:1px solid rgba(245,201,119,.5);border-radius:16px;padding:14px 18px;cursor:pointer;letter-spacing:.01em;
   box-shadow:0 0 16px rgba(245,201,119,.22),inset 0 0 14px rgba(245,201,119,.05);animation:ctaglow 3.6s ease-in-out infinite}
-.journal-cta .i{width:36px;height:36px;filter:drop-shadow(0 0 7px rgba(245,201,119,.55));animation:sealpulse 3.6s ease-in-out infinite}
+.journal-cta .i{width:48px;height:48px;filter:drop-shadow(0 0 8px rgba(245,201,119,.55));animation:sealpulse 3.6s ease-in-out infinite}
 .journal-cta:active{transform:translateY(1px)}
 @keyframes sealpulse{0%,100%{filter:drop-shadow(0 0 5px rgba(245,201,119,.4))}50%{filter:drop-shadow(0 0 12px rgba(245,201,119,.72))}}
 @keyframes ctaglow{0%,100%{border-color:rgba(245,201,119,.42);box-shadow:0 0 13px rgba(245,201,119,.18),inset 0 0 12px rgba(245,201,119,.04)}50%{border-color:rgba(245,201,119,.72);box-shadow:0 0 26px rgba(245,201,119,.38),inset 0 0 16px rgba(245,201,119,.07)}}
@@ -2251,7 +2251,7 @@ nav button.on{color:var(--text);background:#211a37}
 .horo-sub .i{width:13px;height:13px;flex:none}
 .horo-text{font-family:var(--serif);font-size:16px;line-height:1.75;color:#e9e2f7;margin:0;
   padding-top:15px;border-top:1px solid #ffffff12}
-.horo-cta{display:flex;flex-direction:column;align-items:center;gap:11px;margin-top:18px}
+.horo-cta{display:flex;flex-direction:row;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:18px}
 .rndbtn{flex:none;width:52px;height:52px;border-radius:50%;cursor:pointer;display:grid;place-items:center;
   border:1px solid color-mix(in srgb,var(--gold) 42%,var(--line));background:#ffffff08;color:var(--gold);transition:.15s}
 .rndbtn:hover{background:color-mix(in srgb,var(--gold) 13%,transparent);box-shadow:0 0 18px -4px var(--gold)}
@@ -2269,7 +2269,7 @@ nav button.on{color:var(--text);background:#211a37}
 .hs-glyph{font-size:21px;line-height:1;color:var(--gold);font-variant-emoji:text}
 .hs-nm{font-size:12.5px;font-weight:600;color:var(--text)}
 .hs-sub{font-size:10px;color:var(--muted);letter-spacing:.02em}
-.horo-foot{margin-top:14px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;opacity:.85}
+.horo-foot{margin-top:14px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;justify-content:center;text-align:center;gap:6px;opacity:.85}
 .horo-foot .i{width:13px;height:13px;flex:none}
 .horo-foot.horo-addnatal{color:var(--gold);opacity:1;font-weight:600}
 .spot-x{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:5px;background:#000000b3;color:#fff;
@@ -3025,6 +3025,7 @@ const SVGP={
   play:'<path d="M7 4.5 19 12 7 19.5V4.5Z" fill="currentColor" stroke="none"/>',
   stop:'<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
   sound:'<path d="M4 9.5v5h3.5L12 18V6L7.5 9.5H4Z" fill="currentColor" stroke="none"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+  waveform:'<line x1="3.5" y1="10.5" x2="3.5" y2="13.5"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="10.5" y1="4.5" x2="10.5" y2="19.5"/><line x1="14" y1="7" x2="14" y2="17"/><line x1="17.5" y1="9.5" x2="17.5" y2="14.5"/><line x1="21" y1="11" x2="21" y2="13"/>',
   mute:'<path d="M4 9.5v5h3.5L12 18V6L7.5 9.5H4Z" fill="currentColor" stroke="none"/><line x1="16" y1="9.5" x2="21" y2="14.5"/><line x1="21" y1="9.5" x2="16" y2="14.5"/>',
   compass:'<circle cx="12" cy="12" r="9"/><path d="M15.6 8.4 13.2 13l-4.8 2.6L10.8 11l4.8-2.6Z" fill="currentColor" stroke="none"/>',
   chat:'<path d="M4 5.5h16a1.5 1.5 0 0 1 1.5 1.5v7.5a1.5 1.5 0 0 1-1.5 1.5H9.5L5 20v-4H4a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 4 5.5Z"/><circle cx="8.5" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="11" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="11" r="1" fill="currentColor" stroke="none"/>',
@@ -3368,7 +3369,7 @@ function horoscopeCardHTML(h){
     </div>
     <div class="horo-text">${esc(h.text)}</div>
     <div class="horo-cta">
-      <button class="rndbtn horo-listen" title="Hear it aloud" aria-label="Hear it aloud">${ic('sound')}</button>
+      <button class="rndbtn horo-listen" title="Hear it aloud" aria-label="Hear it aloud">${ic('waveform')}</button>
       <button class="horo-sit" data-snd="${esc(h.soundscape)}" data-min="${mins}">${ic(h.soundscape||'silence')} Meditate with this · ${mins} min${snd?' · '+snd:''}</button>
     </div>
     ${h.janma?`<div class="horo-foot">${ic('lotus','g')} Birth star ${esc(h.janma)} · daśā ${esc(h.maha)}–${esc(h.antar)}</div>`
