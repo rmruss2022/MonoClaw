@@ -7413,7 +7413,8 @@ class H(BaseHTTPRequestHandler):
             # Validate X-Twilio-Signature when an auth token is configured (reject spoofs).
             tok = os.environ.get("TWILIO_AUTH_TOKEN")
             if tok:
-                import hmac, hashlib, base64 as _b64
+                _b64 = base64  # hmac/hashlib/base64 are module-level; a local import here
+                               # would shadow them across this whole function and break login
                 url = os.environ.get("TWILIO_WEBHOOK_URL") or ("https://%s%s" % (self.headers.get("Host", ""), self.path))
                 base = url + "".join(k + v for k, v in sorted(params))
                 mac = _b64.b64encode(hmac.new(tok.encode(), base.encode("utf-8"), hashlib.sha1).digest()).decode()
