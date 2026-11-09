@@ -7426,8 +7426,9 @@ class H(BaseHTTPRequestHandler):
                 form.setdefault(k, v)
             frm = (form.get("From", "") or "").strip()
             body = (form.get("Body", "") or "").strip().lower()
+            body = re.sub(r'[^a-z ]', '', body).strip()
             if frm:
-                if body in ("stop", "stopall", "stop all", "unsubscribe", "cancel", "end", "quit"):
+                if body in ("stop", "stopall", "stop all", "unsubscribe", "cancel", "end", "quit", "optout", "revoke"):
                     c.execute("UPDATE users SET sms_optout=1 WHERE phone=?", (frm,)); c.commit()
                 elif body in ("start", "unstop", "yes"):
                     c.execute("UPDATE users SET sms_optout=0 WHERE phone=?", (frm,)); c.commit()
@@ -10078,9 +10079,10 @@ def _sms_candidate(c, u, lt):
     streak = u["streak"] or 0
     tier = _notif_tier(u)
     today = lt.strftime("%Y-%m-%d")
+    yesterday = (lt - timedelta(days=1)).strftime('%Y-%m-%d')
     last = u["last_day"]
     # streak at risk: evening, a live streak, hasn't sat today — the one text people thank you for
-    if h == SMS_SEND_HOUR_LOCAL and streak >= 1 and last and last != today:
+    if h == SMS_SEND_HOUR_LOCAL and streak >= 1 and last == yesterday:
         dk = "streak_risk:" + today
         if not _sms_has(c, u["id"], dk):
             body = ("%syour %d-day streak on Lumen is still lit — one short sit before midnight keeps it going. 🔥\nReply STOP to opt out."
