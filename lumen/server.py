@@ -4095,35 +4095,22 @@ async function addNatal(){
   catch(e){toast(e);}
 }
 function _btnRound(btn){return btn.classList.contains('rndbtn')||btn.classList.contains('pick-listen');}
-async function playHoroscope(btn,text){
-  if(!text)return; const orig=btn.dataset.orig||btn.innerHTML; btn.dataset.orig=orig;
+// Horoscope + daily-pick narration uses the SAME pipeline as lessons: ElevenLabs
+// via /api/tts, played through the shared Web Audio context (so it never fights the
+// soundscape and works on iOS), with the quote-stripping text policy and the
+// device-voice fallback — all handled by narrate(). One voice, one path (NARRATOR.md).
+let _horoBtn=null;
+function playHoroscope(btn,text){
+  if(!text)return;
+  const orig=btn.dataset.orig||btn.innerHTML; btn.dataset.orig=orig;
   const round=_btnRound(btn);
   const set=(label)=>{if(round)btn.classList.toggle('playing',!!label);else btn.innerHTML=label?ic('sound')+' '+label:orig;};
-  btn.disabled=true; set('Loading…');
-  const done=()=>{btn.disabled=false;if(round)btn.classList.remove('playing');btn.innerHTML=orig;};
-  try{
-    const r=await fetch('api/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
-    if(!r.ok)throw 0;
-    const a=new Audio(URL.createObjectURL(await r.blob()));
-    btn.disabled=false; set('Playing…');
-    a.onended=done; a.onerror=()=>speakLocal(btn,text,orig,done); a.play();
-  }catch(e){ speakLocal(btn,text,orig,done); }
-}
-// On-device voice fallback (Web Speech API) when the server TTS (ElevenLabs) isn't available.
-function speakLocal(btn,text,orig,done){
-  if(!('speechSynthesis'in window)||!window.SpeechSynthesisUtterance){done&&done();toast('Voice unavailable right now');return;}
-  try{
-    speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(text);
-    u.rate=0.9; u.pitch=1.0;
-    const vs=speechSynthesis.getVoices()||[];
-    const pref=vs.find(v=>/^en/i.test(v.lang)&&/(samantha|serena|libby|aria|jenny|sonia|female|google uk english female)/i.test(v.name))
-             ||vs.find(v=>/^en(-|_)?(GB|US)/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang));
-    if(pref)u.voice=pref;
-    if(btn){btn.disabled=false;if(_btnRound(btn))btn.classList.add('playing');else btn.innerHTML=ic('sound')+' Playing…';}
-    u.onend=()=>{done&&done();}; u.onerror=()=>{done&&done();};
-    speechSynthesis.speak(u);
-  }catch(e){done&&done();toast('Voice unavailable right now');}
+  const done=()=>{btn.disabled=false;if(round)btn.classList.remove('playing');btn.innerHTML=orig;if(_horoBtn===btn)_horoBtn=null;};
+  // tap again to stop
+  if(_horoBtn===btn){try{stopNarration();}catch(e){}done();return;}
+  try{stopNarration();}catch(e){}   // stop any other narration first
+  _horoBtn=btn; btn.disabled=false; set('Playing…');
+  narrate(text, done);              // ElevenLabs -> shared Web Audio context, device-voice fallback
 }
 // First-run meditation onboarding: a pledge + how many days/week they want to
 // sit (saved server-side via /api/goal for reminders + record-keeping), then a
@@ -8320,7 +8307,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v17';
+const CACHE = 'lumen-v18';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
