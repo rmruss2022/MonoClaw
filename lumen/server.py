@@ -126,6 +126,9 @@ def init_db():
                      ("tier", "tier TEXT DEFAULT 'free'"),          # free | premium (RevenueCat wires this later)
                      ("email_optout", "email_optout INTEGER DEFAULT 0"),  # 1 = unsubscribed from lifecycle email
                      ("unsub_token", "unsub_token TEXT"),           # per-user unsubscribe token
+                     ("phone", "phone TEXT"),                       # E.164 mobile, if given at signup
+                     ("sms_consent", "sms_consent INTEGER DEFAULT 0"),  # 1 = opted in to SMS notifications
+                     ("sms_optout", "sms_optout INTEGER DEFAULT 0"),    # 1 = texted STOP / unsubscribed
                      ("last_journey", "last_journey TEXT")):        # track key of the most recently practiced journey
         if col not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
@@ -148,6 +151,10 @@ def init_db():
       id INTEGER PRIMARY KEY, user_id INTEGER, kind TEXT, dedupe_key TEXT,
       status TEXT, created TEXT, sent TEXT)""")
     c.execute("CREATE INDEX IF NOT EXISTS idx_email_log_uid ON email_log(user_id)")
+    c.execute("""CREATE TABLE IF NOT EXISTS sms_log(
+      id INTEGER PRIMARY KEY, user_id INTEGER, kind TEXT, dedupe_key TEXT,
+      status TEXT, created TEXT, sent TEXT)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_sms_log_uid ON sms_log(user_id)")
     # premium interest / waitlist (until RevenueCat is live, 'upgrade' CTAs land here)
     c.execute("""CREATE TABLE IF NOT EXISTS premium_waitlist(
       user_id INTEGER PRIMARY KEY, email TEXT, created TEXT)""")
@@ -259,6 +266,46 @@ def email_typo_fix(email):
 # MAIL_FROM must be an address on a domain you've verified with the provider
 # (e.g. "Lumen <noreply@yourdomain>"). Returns True only if actually accepted.
 MAIL_FROM = os.environ.get("MAIL_FROM", "Lumen <onboarding@resend.dev>")
+
+_PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")  # E.164
+
+def normalize_phone(raw, default_cc="1"):
+    """Best-effort E.164 from user input. Returns normalized phone or None."""
+    if not raw:
+        return None
+    s = re.sub(r"[^\d+]", "", str(raw))
+    if not s:
+        return None
+    if s.startswith("+"):
+        return s if _PHONE_RE.match(s) else None
+    digits = re.sub(r"\D", "", s)
+    if len(digits) == 10:            # bare US/CA number
+        digits = default_cc + digits
+    cand = "+" + digits
+    return cand if _PHONE_RE.match(cand) else None
+
+def send_sms(to, body):
+    """Send one SMS via Twilio's Messages API. Returns True only if accepted (2xx).
+    Needs TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_FROM_NUMBER."""
+    import urllib.request, urllib.parse, base64
+    sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    tok = os.environ.get("TWILIO_AUTH_TOKEN")
+    frm = os.environ.get("TWILIO_FROM_NUMBER")
+    if not (sid and tok and frm and to):
+        print("[sms] NOT SENT (missing Twilio env or recipient). To=%s" % to)
+        return False
+    try:
+        data = urllib.parse.urlencode({"To": to, "From": frm, "Body": body[:1500]}).encode()
+        auth = base64.b64encode(("%s:%s" % (sid, tok)).encode()).decode()
+        req = urllib.request.Request(
+            "https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json" % sid,
+            data=data, method="POST",
+            headers={"Authorization": "Basic " + auth, "Content-Type": "application/x-www-form-urlencoded"})
+        with urllib.request.urlopen(req, timeout=12) as r:
+            return 200 <= r.status < 300
+    except Exception as e:
+        print("[sms] twilio failed:", e)
+        return False
 
 def send_email(to, subject, text, html=None):
     import urllib.request
@@ -2562,6 +2609,8 @@ nav button.on{color:var(--text);background:#211a37}
 .ctoggle .seg button .i{width:15px;height:15px}
 .cbody-art{padding-top:4px}
 .cbody-altar{padding-top:26px}
+.sms-consent{display:flex;gap:9px;align-items:flex-start;font-size:12px;color:var(--muted);font-weight:400;margin-top:12px;cursor:pointer;line-height:1.45}
+.sms-consent input{width:17px;height:17px;margin:1px 0 0;flex:none;accent-color:var(--gold)}
 .feed-item{border-left:2px solid var(--purple);padding:4px 0 4px 12px;margin:12px 0}
 .feed-item .who{font-size:12px;color:var(--muted)}
 a{color:var(--purple)}
@@ -3715,7 +3764,9 @@ function renderAuth(){
     <label>Email</label><input id="em" type="email" autocomplete="email" placeholder="you@example.com">
     <label>Password</label><input id="pw" type="password" autocomplete="current-password" placeholder="at least 6 characters">
     <div id="nameWrap" class="hidden"><label>Display name (shown on the map & leagues)</label><input id="nm" placeholder="e.g. Matthew">
-      <label>Birthday <span class="muted" style="font-weight:400">(for your daily reading)</span></label><input id="bd" type="date"></div>
+      <label>Birthday <span class="muted" style="font-weight:400">(for your daily reading)</span></label><input id="bd" type="date">
+      <label>Mobile <span class="muted" style="font-weight:400">(optional — for reminders)</span></label><input id="ph" type="tel" autocomplete="tel" placeholder="+1 555 123 4567">
+      <label class="sms-consent"><input type="checkbox" id="smsok"><span>Text me gentle practice reminders. Msg &amp; data rates may apply; reply STOP anytime to opt out.</span></label></div>
     <div class="err" id="er"></div>
     <button class="btn" id="go">Sign in</button>
     <button class="btn ghost" id="sw" style="margin-top:9px">Create an account</button>
@@ -3731,11 +3782,11 @@ function renderAuth(){
   $('#go').onclick=async()=>{const er=$('#er');er.textContent='';
     const email=$('#em').value.trim(),password=$('#pw').value;
     if(!email||!password){er.textContent='Enter your email and password.';return;}
-    try{if(mode==='signup'){await api('signup','POST',{email,password,name:$('#nm').value,birth_date:($('#bd')&&$('#bd').value)||''});}else{await api('login','POST',{email,password});}
+    try{if(mode==='signup'){await api('signup','POST',{email,password,name:$('#nm').value,birth_date:($('#bd')&&$('#bd').value)||'',phone:($('#ph')&&$('#ph').value)||'',sms_consent:($('#smsok')&&$('#smsok').checked)?1:0});}else{await api('login','POST',{email,password});}
       const r=await api('me');ME=r.profile;$('#nav').classList.remove('hidden');bindNav();go('meditate');
     }catch(e){er.textContent=e;}};
   // Enter submits from any field
-  ['em','pw','nm'].forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#go').click();}});});
+  ['em','pw','nm','ph'].forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#go').click();}});});
 }
 // Password reset — request a 6-digit code by email, then enter it with a new password.
 function renderReset(prefill){
@@ -7327,6 +7378,36 @@ class H(BaseHTTPRequestHandler):
 
     # -- POST api ----------------------------------------------------------
     def _post_api(self, p, q, c):
+        if p == "/api/sms/inbound":
+            # Twilio inbound webhook (form-encoded). Keeps our DB in sync with Twilio's
+            # own carrier-level STOP/START handling so we never try to text an opt-out.
+            try:
+                n = int(self.headers.get("Content-Length", "0"))
+                import urllib.parse as _up
+                form = _up.parse_qs((self.rfile.read(n) or b"").decode("utf-8", "replace"))
+                frm = (form.get("From", [""])[0] or "").strip()
+                body = (form.get("Body", [""])[0] or "").strip().lower()
+            except Exception:
+                frm, body = "", ""
+            if frm:
+                if body in ("stop", "stopall", "stop all", "unsubscribe", "cancel", "end", "quit"):
+                    c.execute("UPDATE users SET sms_optout=1 WHERE phone=?", (frm,)); c.commit()
+                elif body in ("start", "unstop", "yes"):
+                    c.execute("UPDATE users SET sms_optout=0 WHERE phone=?", (frm,)); c.commit()
+            self._send(200, '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+                       "text/xml; charset=utf-8"); return
+
+        if p == "/api/admin/sms/test":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            d = self._body()
+            to = normalize_phone(d.get("to")) or (u["phone"] if "phone" in u.keys() else None)
+            if not to:
+                self._send(400, {"error": "No phone to text. Pass {\"to\":\"+1...\"} or save a phone on your account."}); return
+            ok = send_sms(to, "Lumen — your SMS notification engine is wired up and working. Reply STOP to opt out.")
+            self._send(200, {"ok": ok, "to": to, "mode": SMS_MODE}); return
+
         if p == "/api/waitlist":
             email = (self._body().get("email") or "").strip().lower()
             if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
@@ -7559,10 +7640,12 @@ class H(BaseHTTPRequestHandler):
                 btz = int(d.get("birth_tz")) if d.get("birth_tz") is not None else None
             except Exception:
                 btz = None
+            phone = normalize_phone(d.get("phone"))
+            sms_consent = 1 if (phone and d.get("sms_consent")) else 0
             salt = secrets.token_hex(16)
-            c.execute("INSERT INTO users(email,name,salt,hash,birth_date,birth_time,birth_place,birth_tz,sun_sign,created) "
-                      "VALUES(?,?,?,?,?,?,?,?,?,?)",
-                      (email, name, salt, _hash_pw(pw, salt), bd, bt, bp, btz, sign, now_iso()))
+            c.execute("INSERT INTO users(email,name,salt,hash,birth_date,birth_time,birth_place,birth_tz,sun_sign,phone,sms_consent,created) "
+                      "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                      (email, name, salt, _hash_pw(pw, salt), bd, bt, bp, btz, sign, phone, sms_consent, now_iso()))
             c.commit()
             try:
                 nu = user_by_email(c, email)
@@ -9914,6 +9997,85 @@ def email_tick():
             c.close()
 
 
+# ---- SMS lifecycle engine (opt-in only; mirrors the email engine) --------------
+# GATED by SMS_MODE so it never texts real users until explicitly enabled:
+#   SMS_MODE=off     -> idle
+#   SMS_MODE=dryrun  -> decides + logs who WOULD get what; sends nothing (default)
+#   SMS_MODE=live    -> actually sends via Twilio
+SMS_MODE = os.environ.get("SMS_MODE", "dryrun").strip().lower()
+SMS_SEND_HOUR_LOCAL = 19   # local hour the evening streak nudge goes out
+
+def _sms_has(c, uid, dk):
+    return bool(c.execute("SELECT 1 FROM sms_log WHERE user_id=? AND dedupe_key=? LIMIT 1",
+                          (uid, dk)).fetchone())
+
+def _sms_recent(c, uid, days):
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    return bool(c.execute(
+        "SELECT 1 FROM sms_log WHERE user_id=? AND created>=? AND status IN ('sent','dryrun') LIMIT 1",
+        (uid, since)).fetchone())
+
+def _sms_candidate(c, u, lt):
+    """Pick the single best SMS for a user now, or None. Returns (kind, body, dedupe_key).
+    Deliberately sparse + high-value so texts never feel like spam."""
+    h = lt.hour
+    name = (u["name"] or "").split()[0] if u["name"] else ""
+    hey = (name + ", ") if name else ""
+    streak = u["streak"] or 0
+    tier = _notif_tier(u)
+    today = lt.strftime("%Y-%m-%d")
+    last = u["last_day"]
+    # streak at risk: evening, a live streak, hasn't sat today — the one text people thank you for
+    if h == SMS_SEND_HOUR_LOCAL and streak >= 1 and last and last != today:
+        dk = "streak_risk:" + today
+        if not _sms_has(c, u["id"], dk):
+            body = ("%syour %d-day streak on Lumen is still lit — one short sit before midnight keeps it going. 🔥\nReply STOP to opt out."
+                    % (hey, streak))
+            return ("streak_risk", body, dk)
+    # win-back: dormant/churned, at most once a week, evening
+    if h == SMS_SEND_HOUR_LOCAL and tier in ("dormant", "churned") and not _sms_recent(c, u["id"], 6):
+        dk = "winback:" + week_str()
+        if not _sms_has(c, u["id"], dk):
+            body = ("%syour light has been waiting on Lumen. Two quiet minutes is a real beginning — come sit with us again.\nReply STOP to opt out."
+                    % hey)
+            return ("winback", body, dk)
+    return None
+
+def _sms_deliver(c, u, kind, body, dedupe_key):
+    status, sent = "dryrun", None
+    if SMS_MODE == "live":
+        ok = send_sms(u["phone"], body)
+        status = "sent" if ok else "error"
+        sent = now_iso() if ok else None
+    c.execute("INSERT INTO sms_log(user_id,kind,dedupe_key,status,created,sent) VALUES(?,?,?,?,?,?)",
+              (u["id"], kind, dedupe_key, status, now_iso(), sent))
+    c.commit()
+
+def _sms_pass(c):
+    if SMS_MODE == "off":
+        return
+    users = c.execute("SELECT * FROM users WHERE is_bot=0 AND phone IS NOT NULL "
+                      "AND COALESCE(sms_consent,0)=1 AND COALESCE(sms_optout,0)=0").fetchall()
+    for u in users:
+        try:
+            lt = _email_local(c, u)
+            cand = _sms_candidate(c, u, lt)
+            if cand:
+                _sms_deliver(c, u, cand[0], cand[1], cand[2])
+        except Exception as e:
+            print("[sms] pass error for", u["id"], e, flush=True)
+
+def sms_tick():
+    with _dblock:
+        c = db()
+        try:
+            _sms_pass(c)
+        except Exception as e:
+            print("sms_tick error:", e, flush=True)
+        finally:
+            c.close()
+
+
 def email_admin_stats(c):
     def one(q, a=()):
         r = c.execute(q, a).fetchone(); return (r[0] if r else 0) or 0
@@ -9934,6 +10096,10 @@ def email_loop():
     time.sleep(35)  # settle after boot, after notif_loop
     while True:
         email_tick()
+        try:
+            sms_tick()
+        except Exception as e:
+            print("sms_tick error:", e, flush=True)
         time.sleep(1800)  # every 30 minutes
 
 
