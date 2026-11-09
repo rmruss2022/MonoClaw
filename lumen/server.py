@@ -3402,7 +3402,7 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-<script src="/assets/orb.js" defer></script>
+<script src="/assets/orb.js?v=3" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 /* Diya flame loading spinner — upgrade every .spinner span into the Lottie.
@@ -8181,7 +8181,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v16';
+const CACHE = 'lumen-v17';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -8303,11 +8303,15 @@ const F=[
    hopts:['Push me to practice more','Make it fun','Add healthy pressure','Feel stressful','Don’t affect me'],specs:[
    {k:'motivation',q:'Do the weekly leagues make you want to practice more?',opts:['Yes','A little','No','They stress me out']},
    {k:'fit',q:'Is friendly competition the right vibe for a meditation app?',opts:['Love it','It’s fine','I’d rather it be solo']}]},
- {k:'journeys',ic:'🧭',name:'Journeys',desc:'Guided, narrated courses from real traditions.',
+ {k:'journeys',ic:'🧭',name:'Journeys',desc:'Multi-part narrated courses — each lesson teaches an idea from a real tradition (Stoic, Vedic, breathwork…), then guides you through a meditation on it.',
    hq:'What do the guided journeys give you?',
-   hopts:['Structure to follow','Real depth & teaching','A reason to return','Calm in the moment','Not my thing'],specs:[
-   {k:'return',q:'Are the guided journeys something you’d keep coming back to?',opts:['Yes','Maybe','No']},
-   {k:'want',q:'What kind of journeys do you want more of?',text:true,ph:'Stoic, Vedic, breathwork, sleep, anxiety, focus…'}]},
+   hopts:['I’m learning something real','A deeper, guided sit','Structure to follow','A reason to return','Didn’t land for me'],specs:[
+   {k:'learning',q:'Do the journeys actually teach you something — does it feel like learning, not just listening?',opts:['Yes, I’m learning a lot','A little','Not really','Haven’t gone deep yet']},
+   {k:'teaching',q:'How is the teaching itself — the ideas, traditions and explanations?',opts:['Rich & insightful','Solid','A bit surface-level','Confusing']},
+   {k:'medquality',q:'How are the guided meditations themselves — the pacing, depth, and how they land?',opts:['Excellent','Good','A bit flat','Needs work']},
+   {k:'narration',q:'How does the narration and voice feel during the guided sits?',opts:['Calming & natural','Fine','A little off','Distracting']},
+   {k:'return',q:'Are the journeys something you’d keep coming back to?',opts:['Yes','Maybe','No']},
+   {k:'depth_want',q:'Where should the journeys go deeper or expand?',text:true,ph:'More traditions, longer courses, specific teachers, topics like anxiety or sleep…'}]},
  {k:'journal',ic:'📖',name:'Journal & the Keeper',desc:'Reflective writing with a warm AI companion.',
    hq:'What does journaling with the Keeper give you?',
    hopts:['Clarity on my thoughts','Feeling heard','A record to look back on','Unexpected insight','Didn’t click for me'],specs:[
