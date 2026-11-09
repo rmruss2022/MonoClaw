@@ -8288,31 +8288,49 @@ SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <div class="nav"><div class="navin" id="nav"></div><div class="err" id="err"></div></div>
 <script>
 const F=[
- {k:'orb',ic:'✺',name:'Your light & progress',desc:'The home orb, your Light, levels and streaks.',specs:[
+ {k:'orb',ic:'✺',name:'Your light & progress',desc:'The home orb, your Light, levels and streaks.',
+   hq:'How does tracking your progress — the orb, Light, levels and streaks — help you?',
+   hopts:['Keeps me coming back','Makes it feel rewarding','Shows me I’m growing','Motivates longer sits','Doesn’t do much for me'],specs:[
    {k:'returns',q:'Does seeing your Light, level and streak make you want to come back?',opts:['Yes, a lot','A little','Not really','Haven’t noticed it']},
    {k:'clarity',q:'Is it clear how you earn Light and level up?',opts:['Totally clear','Mostly clear','A bit confusing']}]},
- {k:'map',ic:'🌍',name:'The world map',desc:'Meditating alongside a live global community.',specs:[
+ {k:'map',ic:'🌍',name:'The world map',desc:'Meditating alongside a live global community.',
+   hq:'What does seeing the live world map do for you?',
+   hopts:['Makes me feel less alone','It’s inspiring','Adds accountability','Makes me curious about others','Not much for me'],specs:[
    {k:'belonging',q:'Does seeing a live, worldwide map make you feel less alone in your practice?',opts:['Yes','Somewhat','Not really']},
    {k:'social',q:'Would you want to see friends or people near you on the map?',opts:['Yes — friends','Yes — nearby people','No — keep it anonymous']}]},
- {k:'leagues',ic:'🏆',name:'Leagues',desc:'Weekly tiers, from Ember to Supernova.',specs:[
+ {k:'leagues',ic:'🏆',name:'Leagues',desc:'Weekly tiers, from Ember to Supernova.',
+   hq:'What do the weekly leagues do for your practice?',
+   hopts:['Push me to practice more','Make it fun','Add healthy pressure','Feel stressful','Don’t affect me'],specs:[
    {k:'motivation',q:'Do the weekly leagues make you want to practice more?',opts:['Yes','A little','No','They stress me out']},
    {k:'fit',q:'Is friendly competition the right vibe for a meditation app?',opts:['Love it','It’s fine','I’d rather it be solo']}]},
- {k:'journeys',ic:'🧭',name:'Journeys',desc:'Guided, narrated courses from real traditions.',specs:[
+ {k:'journeys',ic:'🧭',name:'Journeys',desc:'Guided, narrated courses from real traditions.',
+   hq:'What do the guided journeys give you?',
+   hopts:['Structure to follow','Real depth & teaching','A reason to return','Calm in the moment','Not my thing'],specs:[
    {k:'return',q:'Are the guided journeys something you’d keep coming back to?',opts:['Yes','Maybe','No']},
    {k:'want',q:'What kind of journeys do you want more of?',text:true,ph:'Stoic, Vedic, breathwork, sleep, anxiety, focus…'}]},
- {k:'journal',ic:'📖',name:'Journal & the Keeper',desc:'Reflective writing with a warm AI companion.',specs:[
+ {k:'journal',ic:'📖',name:'Journal & the Keeper',desc:'Reflective writing with a warm AI companion.',
+   hq:'What does journaling with the Keeper give you?',
+   hopts:['Clarity on my thoughts','Feeling heard','A record to look back on','Unexpected insight','Didn’t click for me'],specs:[
    {k:'value',q:'Did writing — and the Keeper’s reflections — feel valuable?',opts:['Yes','Somewhat','Not for me','Didn’t try it']},
    {k:'keeper',q:'How did the Keeper’s responses feel?',opts:['Warm & insightful','Okay','A bit generic','Haven’t used it']}]},
- {k:'mandala',ic:'❉',name:'Wholeness mandala',desc:'A sacred artwork that blooms as you practice.',specs:[
+ {k:'mandala',ic:'❉',name:'Wholeness mandala',desc:'A sacred artwork that blooms as you practice.',
+   hq:'What does growing the mandala do for you?',
+   hopts:['Makes practice rewarding','A record of my effort','Motivates consistency','Just decorative to me','Haven’t engaged with it'],specs:[
    {k:'reward',q:'Does watching the mandala grow make practice feel more rewarding?',opts:['Yes','A little','No']},
    {k:'clarity',q:'Do you understand what the mandala represents?',opts:['Clear','Sort of','Confusing']}]},
- {k:'vedic',ic:'☾',name:'Daily Vedic reading',desc:'A personalized reading from your birth star.',specs:[
+ {k:'vedic',ic:'☾',name:'Daily Vedic reading',desc:'A personalized reading from your birth star.',
+   hq:'What does the daily Vedic reading give you?',
+   hopts:['A reason to open the app','Reflection & meaning','Fun & curiosity','Feels off-brand to me','I don’t read it'],specs:[
    {k:'usage',q:'Do you read the daily Vedic reading?',opts:['Most days','Sometimes','Rarely','Didn’t know it was there']},
    {k:'fit',q:'Does the astrology / Vedic angle belong in a meditation app for you?',opts:['Love it','Neutral','Not my thing']}]},
- {k:'freeform',ic:'🪷',name:'Free-form meditation',desc:'Pick a length and a soundscape, and just sit.',specs:[
+ {k:'freeform',ic:'🪷',name:'Free-form meditation',desc:'Pick a length and a soundscape, and just sit.',
+   hq:'What makes free-form meditation work for you?',
+   hopts:['Simplicity','The soundscapes','Control over length','I prefer guided','Didn’t use it'],specs:[
    {k:'enough',q:'Are the soundscapes and timer enough for a free sit?',opts:['Yes','Want more sounds','Want more controls']},
    {k:'sound',q:'A soundscape you’d love us to add?',text:true,ph:'e.g. gentle rain on a tent, singing bowls, a fireplace…'}]},
- {k:'sharing',ic:'↗',name:'Sharing your sit',desc:'The shareable card after a session.',specs:[
+ {k:'sharing',ic:'↗',name:'Sharing your sit',desc:'The shareable card after a session.',
+   hq:'What would make you share your sit — or hold back?',
+   hopts:['Celebrate a streak','Inspire friends','Accountability','I keep practice private','Wouldn’t share'],specs:[
    {k:'would',q:'Would you share your meditation card with friends?',opts:['Yes','Maybe','No']},
    {k:'nudge',q:'What would make you more likely to share it?',text:true,ph:'A nicer card, a streak flex, a reward…'}]}
 ];
@@ -8329,9 +8347,15 @@ STEPS.push({t:'nps'});STEPS.push({t:'email'});
 const LAST=STEPS.length-1;
 const state={};let i=0,sending=false;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function setChip(key,val,row){const on=state[key]===val;row.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+function setChip(key,val,row,multi){
+  if(multi){let a=Array.isArray(state[key])?state[key]:[];
+    a=a.includes(val)?a.filter(x=>x!==val):a.concat([val]);
+    if(a.length)state[key]=a;else delete state[key];
+    row.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',(state[key]||[]).includes(c.dataset.v)));return;}
+  const on=state[key]===val;row.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
   if(on){delete state[key];}else{state[key]=val;row.querySelectorAll('.chip').forEach(c=>{if(c.dataset.v===val)c.classList.add('on');});}}
-function chipsHTML(key,opts){return `<div class="chips" data-key="${key}">${opts.map(o=>`<span class="chip${state[key]===o?' on':''}" data-v="${esc(o)}">${esc(o)}</span>`).join('')}</div>`;}
+function chipsHTML(key,opts,multi){const sel=multi?(Array.isArray(state[key])?state[key]:[]):state[key];
+  return `<div class="chips" data-key="${key}"${multi?' data-multi="1"':''}>${opts.map(o=>`<span class="chip${(multi?sel.includes(o):sel===o)?' on':''}" data-v="${esc(o)}">${esc(o)}</span>`).join('')}</div>`;}
 function render(){
   const s=STEPS[i];const sc=document.getElementById('screen');
   document.getElementById('count').textContent=i===0?'':`Step ${i} of ${LAST}`;
@@ -8347,7 +8371,7 @@ function render(){
       <h1>Your take on <em>${esc(f.name)}</em></h1><p class="sub">${esc(f.desc)}</p>
       <div class="lbl">Your rating</div>
       <div class="stars" data-stars="${f.k}.rating">${[1,2,3,4,5].map(n=>`<span class="star${(state[f.k+'.rating']>=n)?' on':''}" data-n="${n}">★</span>`).join('')}</div>
-      <div class="lbl">How does it feel?</div>${chipsHTML(f.k+'.feel',FEEL)}
+      <div class="lbl">${esc(f.hq)} <span style="text-transform:none;letter-spacing:0;opacity:.7">· pick any</span></div>${chipsHTML(f.k+'.help',f.hopts,true)}
       <div class="lbl">Would you want…</div>${chipsHTML(f.k+'.want',WANT)}
       <div class="lbl">Anything else? (optional)</div>
       <textarea data-text="${f.k}.note" placeholder="A quick note about ${esc(f.name)}…">${esc(state[f.k+'.note']||'')}</textarea>`;
@@ -8373,8 +8397,8 @@ function render(){
   sc.querySelectorAll('[data-stars]').forEach(row=>{const key=row.dataset.stars;
     row.querySelectorAll('.star').forEach(st=>st.onclick=()=>{const n=+st.dataset.n;state[key]=n;
       row.querySelectorAll('.star').forEach(x=>x.classList.toggle('on',+x.dataset.n<=n));});});
-  sc.querySelectorAll('.chips[data-key]').forEach(row=>{const key=row.dataset.key;
-    row.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>setChip(key,ch.dataset.v,row));});
+  sc.querySelectorAll('.chips[data-key]').forEach(row=>{const key=row.dataset.key,multi=!!row.dataset.multi;
+    row.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>setChip(key,ch.dataset.v,row,multi));});
   sc.querySelectorAll('.nps[data-nps]').forEach(row=>row.querySelectorAll('.np').forEach(n=>n.onclick=()=>{
     state.nps=+n.dataset.np;row.querySelectorAll('.np').forEach(x=>x.classList.toggle('on',x===n));}));
   sc.querySelectorAll('[data-text]').forEach(t=>t.oninput=()=>{const v=t.value;if(v.trim())state[t.dataset.text]=v;else delete state[t.dataset.text];});
