@@ -5399,18 +5399,9 @@ async function renderGlobalView(){
 let journalView='mine';
 const SEASON_PROMPTS=["What season of your life are you in right now — and what would you name it?","What is this chapter asking of you, and what is it quietly giving back?","What are you growing toward in this season? What are you ready to let fall away?","If you looked back on this time in five years, what would you want to remember about who you were?","What feels like it’s ending, and what feels like it’s just beginning?","Where are you being asked to be patient with yourself right now?"];
 let speakOn=(typeof localStorage!=='undefined'&&localStorage.getItem('lumen_speak')==='0')?false:true;
-function _pickVoice(u){try{const vs=speechSynthesis.getVoices();
-  const v=vs.find(x=>/Samantha|Serena|Moira|Karen|Google UK English Female|female/i.test(x.name))||vs.find(x=>/en/i.test(x.lang));
-  if(v)u.voice=v;}catch(e){}}
-function speak(text){
-  if(!('speechSynthesis' in window))return;
-  try{const t=(text||'').replace(/[“”"]/g,'');const u=new SpeechSynthesisUtterance(t);
-    u.rate=0.88;u.pitch=1.0;_pickVoice(u);
-    speechSynthesis.cancel();speechSynthesis.speak(u);
-  }catch(e){}
-}
-// --- Lumen's voice: ElevenLabs via the server, played through the shared Web Audio
-// context (so it never fights the soundscape), with a browser-speech fallback ---
+// --- Lumen's voice: ElevenLabs ONLY, played through the shared Web Audio context.
+// There is NO browser-speech fallback: if ElevenLabs is unavailable we stay silent
+// (pacing by reading time) rather than use the robotic device voice. ---
 let _ttsOn=true;               // flips off for the session only if the service is unreachable
 const _ttsBufCache={};         // text -> ArrayBuffer (dedupes repeated lines, enables prefetch)
 let _voiceHandle=null;
@@ -5422,24 +5413,19 @@ function ttsBuf(text){
 }
 let _ttsFails=0;               // consecutive ElevenLabs failures; reset on any success
 function ttsPrefetch(text){if(_ttsOn&&_ttsFails<4&&text)ttsBuf(text).catch(()=>{});}
-function speechNarrate(t,go,rate){
-  if(!('speechSynthesis' in window)){go();return;}
-  try{const u=new SpeechSynthesisUtterance(t);u.rate=rate||0.78;u.pitch=1.0;_pickVoice(u);
-    u.onend=go;u.onerror=go;speechSynthesis.speak(u);}catch(e){go();}
-}
-// narrate one line; calls done() when speech ends (or immediately if unavailable)
+// narrate one line; calls done() when speech ends. ElevenLabs only — if it's
+// unavailable we DON'T speak (no robot voice); we advance after the line's
+// estimated reading time so guided flows still pace correctly.
 function narrate(text,done,rate){
   const t=(text||'').replace(/[“”"]/g,'');
   let fired=false;const go=()=>{if(fired)return;fired=true;done&&done();};
-  // Prefer ElevenLabs. A single failure must NOT disable it for the whole session —
-  // fall back to the device voice for THIS line only, keep retrying ElevenLabs on the
-  // next line, and only stop trying after several consecutive failures (service down).
+  const silent=()=>{if(!fired)setTimeout(go, Math.max(800, estSay(t)*1000));};
   if(_ttsOn && _ttsFails<4){
-    ttsBuf(t).then(buf=>{ _ttsFails=0; _voiceHandle=Sound.say(buf, go, ()=>speechNarrate(t,go,rate)); })
-             .catch(()=>{ _ttsFails++; speechNarrate(t,go,rate); });
+    ttsBuf(t).then(buf=>{ _ttsFails=0; _voiceHandle=Sound.say(buf, go, silent); })
+             .catch(()=>{ _ttsFails++; silent(); });
     return null;
   }
-  speechNarrate(t,go,rate);return null;
+  silent();return null;
 }
 function stopNarration(){try{if(_voiceHandle&&_voiceHandle.stop)_voiceHandle.stop();_voiceHandle=null;}catch(e){}
   if(window.speechSynthesis){try{speechSynthesis.cancel();}catch(e){}}}
@@ -8311,7 +8297,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v19';
+const CACHE = 'lumen-v20';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
