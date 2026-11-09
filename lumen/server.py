@@ -5420,7 +5420,8 @@ function ttsBuf(text){
     .then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();})
     .then(b=>{if(!b||b.byteLength<256)throw 0;_ttsBufCache[text]=b;return b;});
 }
-function ttsPrefetch(text){if(_ttsOn&&text)ttsBuf(text).catch(()=>{});}
+let _ttsFails=0;               // consecutive ElevenLabs failures; reset on any success
+function ttsPrefetch(text){if(_ttsOn&&_ttsFails<4&&text)ttsBuf(text).catch(()=>{});}
 function speechNarrate(t,go,rate){
   if(!('speechSynthesis' in window)){go();return;}
   try{const u=new SpeechSynthesisUtterance(t);u.rate=rate||0.78;u.pitch=1.0;_pickVoice(u);
@@ -5430,9 +5431,12 @@ function speechNarrate(t,go,rate){
 function narrate(text,done,rate){
   const t=(text||'').replace(/[“”"]/g,'');
   let fired=false;const go=()=>{if(fired)return;fired=true;done&&done();};
-  if(_ttsOn){
-    ttsBuf(t).then(buf=>{ _voiceHandle=Sound.say(buf, go, ()=>speechNarrate(t,go,rate)); })
-             .catch(()=>{_ttsOn=false;speechNarrate(t,go,rate);});
+  // Prefer ElevenLabs. A single failure must NOT disable it for the whole session —
+  // fall back to the device voice for THIS line only, keep retrying ElevenLabs on the
+  // next line, and only stop trying after several consecutive failures (service down).
+  if(_ttsOn && _ttsFails<4){
+    ttsBuf(t).then(buf=>{ _ttsFails=0; _voiceHandle=Sound.say(buf, go, ()=>speechNarrate(t,go,rate)); })
+             .catch(()=>{ _ttsFails++; speechNarrate(t,go,rate); });
     return null;
   }
   speechNarrate(t,go,rate);return null;
@@ -8307,7 +8311,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v18';
+const CACHE = 'lumen-v19';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
