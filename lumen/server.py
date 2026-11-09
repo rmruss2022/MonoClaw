@@ -2100,6 +2100,9 @@ def profile_dict(c, u):
         "weekly_light": wl, "league": lg,
         "tier": (u["tier"] if "tier" in u.keys() else "free"),
         "last_journey": (u["last_journey"] if "last_journey" in u.keys() else None),
+        "phone": (u["phone"] if "phone" in u.keys() else None),
+        "sms_consent": (u["sms_consent"] if "sms_consent" in u.keys() else 0),
+        "sms_optout": (u["sms_optout"] if "sms_optout" in u.keys() else 0),
         "lat": u["lat"], "lon": u["lon"], "city": u["city"],
         "birth_date": u["birth_date"], "birth_time": u["birth_time"],
         "birth_place": u["birth_place"], "sun_sign": u["sun_sign"],
@@ -6271,6 +6274,17 @@ async function renderProfile(){
         <span style="display:flex;align-items:center;gap:6px"><select id="nqs" class="nsel">${hoursOpts(np.quiet_start)}</select><span class="muted">to</span><select id="nqe" class="nsel">${hoursOpts(np.quiet_end)}</select></span></div>
     </div>
   </div>`:''}
+  <div class="card">
+    <div class="nrow" style="border-top:0;padding-top:0">
+      <div><b>Text reminders</b><div class="muted" style="font-size:12px">Opt-in SMS for streak saves &amp; gentle nudges. Standard rates apply.</div></div>
+      <label class="switch"><input type="checkbox" id="smsen" ${(p.sms_consent&&!p.sms_optout)?'checked':''}><span class="sl"></span></label>
+    </div>
+    <label style="margin-top:10px">Mobile number</label>
+    <input id="smsph" type="tel" autocomplete="tel" placeholder="+1 555 123 4567" value="${esc(p.phone||'')}">
+    ${p.sms_optout?`<p class="muted" style="font-size:12px;margin:6px 0 0;color:#ff9aa6">You texted STOP, so we won't send texts. Toggle on above to opt back in.</p>`:''}
+    <button class="btn ghost" id="smssave" style="margin-top:10px">Save text settings</button>
+    <p class="muted" style="font-size:11px;margin:8px 0 0">Reply STOP to any text to opt out anytime.</p>
+  </div>
   <a class="btn ghost" href="survey" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:4px;border-color:rgba(245,201,119,.4);color:var(--gold)">${ic('spark','g')} Share feedback — help shape Lumen</a>
   <button class="btn ghost" id="out" style="margin-top:10px">Sign out</button>
   <button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button>
@@ -6309,6 +6323,14 @@ async function renderProfile(){
     NCATS.forEach(cc=>{const el=document.getElementById('nc_'+cc[0]);if(el)el.onchange=saveNotif;});
     ['nqs','nqe'].forEach(id=>{const el=document.getElementById(id);if(el)el.onchange=saveNotif;});
   }
+  {const sb=$('#smssave');if(sb)sb.onclick=async()=>{
+    const phone=$('#smsph').value.trim(),consent=$('#smsen').checked?1:0;
+    if(consent&&!phone){toast('Add a mobile number to get texts');return;}
+    sb.disabled=true;sb.textContent='Saving…';
+    try{await api('sms/prefs','POST',{phone,sms_consent:consent});
+      toast('Text settings saved '+ic('spark','g'));renderProfile();}
+    catch(e){sb.disabled=false;sb.textContent='Save text settings';toast(e);}
+  };}
   {const pb=$('#pro');if(pb)pb.onclick=async()=>{
     pb.disabled=true;const old=pb.innerHTML;pb.innerHTML=ic('live','g')+' Saving…';
     try{await api('premium/interest','POST',{});
@@ -7381,14 +7403,29 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/sms/inbound":
             # Twilio inbound webhook (form-encoded). Keeps our DB in sync with Twilio's
             # own carrier-level STOP/START handling so we never try to text an opt-out.
+            import urllib.parse as _up
             try:
                 n = int(self.headers.get("Content-Length", "0"))
-                import urllib.parse as _up
-                form = _up.parse_qs((self.rfile.read(n) or b"").decode("utf-8", "replace"))
-                frm = (form.get("From", [""])[0] or "").strip()
-                body = (form.get("Body", [""])[0] or "").strip().lower()
+                raw = (self.rfile.read(n) or b"").decode("utf-8", "replace")
             except Exception:
-                frm, body = "", ""
+                raw = ""
+            params = _up.parse_qsl(raw, keep_blank_values=True)
+            # Validate X-Twilio-Signature when an auth token is configured (reject spoofs).
+            tok = os.environ.get("TWILIO_AUTH_TOKEN")
+            if tok:
+                import hmac, hashlib, base64 as _b64
+                url = os.environ.get("TWILIO_WEBHOOK_URL") or ("https://%s%s" % (self.headers.get("Host", ""), self.path))
+                base = url + "".join(k + v for k, v in sorted(params))
+                mac = _b64.b64encode(hmac.new(tok.encode(), base.encode("utf-8"), hashlib.sha1).digest()).decode()
+                sig = self.headers.get("X-Twilio-Signature", "")
+                if not (sig and hmac.compare_digest(mac, sig)):
+                    self._send(403, '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+                               "text/xml; charset=utf-8"); return
+            form = {}
+            for k, v in params:
+                form.setdefault(k, v)
+            frm = (form.get("From", "") or "").strip()
+            body = (form.get("Body", "") or "").strip().lower()
             if frm:
                 if body in ("stop", "stopall", "stop all", "unsubscribe", "cancel", "end", "quit"):
                     c.execute("UPDATE users SET sms_optout=1 WHERE phone=?", (frm,)); c.commit()
@@ -7528,6 +7565,23 @@ class H(BaseHTTPRequestHandler):
                       (enabled, sto, cats, qs, qe, tz, ph, now_iso(), u["id"]))
             c.commit()
             self._send(200, {"ok": True}); return
+
+        if p == "/api/sms/prefs":
+            # Manage SMS reminders after signup: add/change number, opt in/out.
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            phone = normalize_phone(d.get("phone"))
+            if d.get("phone") and not phone:
+                self._send(400, {"error": "That doesn't look like a valid mobile number."}); return
+            consent = 1 if (phone and d.get("sms_consent")) else 0
+            # Explicit in-app opt-in clears any prior STOP flag; opting out sets consent off.
+            optout = 0 if consent else (u["sms_optout"] if "sms_optout" in u.keys() else 0)
+            c.execute("UPDATE users SET phone=?, sms_consent=?, sms_optout=? WHERE id=?",
+                      (phone, consent, optout, u["id"]))
+            c.commit()
+            self._send(200, {"ok": True, "phone": phone, "sms_consent": consent}); return
 
         if p == "/api/notif/opened":
             d = self._body()
