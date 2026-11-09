@@ -151,6 +151,10 @@ def init_db():
     # premium interest / waitlist (until RevenueCat is live, 'upgrade' CTAs land here)
     c.execute("""CREATE TABLE IF NOT EXISTS premium_waitlist(
       user_id INTEGER PRIMARY KEY, email TEXT, created TEXT)""")
+    # new-user feedback survey: one row per submission, full answers stored as JSON
+    c.execute("""CREATE TABLE IF NOT EXISTS survey(
+      id INTEGER PRIMARY KEY, user_id INTEGER, email TEXT, nps INTEGER,
+      data TEXT, created TEXT)""")
     # password-reset codes: a 6-digit code (stored hashed) with expiry + attempt cap
     c.execute("""CREATE TABLE IF NOT EXISTS password_resets(
       email TEXT PRIMARY KEY, code_hash TEXT, expires REAL, tries INTEGER DEFAULT 0, sent REAL)""")
@@ -6216,7 +6220,8 @@ async function renderProfile(){
         <span style="display:flex;align-items:center;gap:6px"><select id="nqs" class="nsel">${hoursOpts(np.quiet_start)}</select><span class="muted">to</span><select id="nqe" class="nsel">${hoursOpts(np.quiet_end)}</select></span></div>
     </div>
   </div>`:''}
-  <button class="btn ghost" id="out" style="margin-top:4px">Sign out</button>
+  <a class="btn ghost" href="survey" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:4px;border-color:rgba(245,201,119,.4);color:var(--gold)">${ic('spark','g')} Share feedback — help shape Lumen</a>
+  <button class="btn ghost" id="out" style="margin-top:10px">Sign out</button>
   <button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button>
   <p class="muted" style="font-size:11px;text-align:center;margin:8px 20px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can't be undone.</p>`;
   $('#loc').onclick=async()=>{
@@ -6677,6 +6682,9 @@ class H(BaseHTTPRequestHandler):
                        extra=[("Cache-Control", "no-cache, no-store, must-revalidate")]); return
         if p in ("/site", "/site.html", "/lp"):
             self._send(200, site_page(), "text/html; charset=utf-8"); return
+        if p in ("/survey", "/survey.html", "/feedback"):
+            self._send(200, SURVEY_PAGE, "text/html; charset=utf-8",
+                       extra=[("Cache-Control", "no-cache")]); return
         if p == "/health":
             self._send(200, {"ok": True}); return
         if p == "/e/unsub":
@@ -6811,6 +6819,26 @@ class H(BaseHTTPRequestHandler):
             try:
                 out = seed_live_week(c)
                 self._send(200, {"ok": True, **out}); return
+            except Exception as e:
+                self._send(500, {"error": repr(e)}); return
+
+        if p == "/api/admin/survey":
+            if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
+                self._send(403, {"error": "nope"}); return
+            try:
+                rows = [dict(r) for r in c.execute(
+                    "SELECT id,user_id,email,nps,data,created FROM survey ORDER BY id DESC LIMIT 500")]
+                for r in rows:
+                    try:
+                        r["answers"] = json.loads(r.pop("data") or "{}")
+                    except Exception:
+                        r["answers"] = {}
+                npses = [r["nps"] for r in rows if isinstance(r["nps"], int)]
+                nps = None
+                if npses:
+                    prom = sum(1 for n in npses if n >= 9); det = sum(1 for n in npses if n <= 6)
+                    nps = round(100 * (prom - det) / len(npses))
+                self._send(200, {"count": len(rows), "nps": nps, "responses": rows}); return
             except Exception as e:
                 self._send(500, {"error": repr(e)}); return
 
@@ -7308,6 +7336,27 @@ class H(BaseHTTPRequestHandler):
                           (email, now_iso())); c.commit()
             except Exception as e:
                 print('[lumen] waitlist insert failed:', e, flush=True)
+                self._send(500, {"error": "Could not save — please try again."}); return
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/survey":
+            d = self._body()
+            answers = d.get("answers")
+            if not isinstance(answers, dict) or not answers:
+                self._send(400, {"error": "No answers provided."}); return
+            me = self._me(c)
+            email = ((d.get("email") or (me["email"] if me else "")) or "").strip().lower()[:200]
+            try:
+                nps = int(d.get("nps")) if d.get("nps") not in (None, "") else None
+            except Exception:
+                nps = None
+            try:
+                payload = json.dumps(answers)[:60000]
+                c.execute("INSERT INTO survey(user_id,email,nps,data,created) VALUES(?,?,?,?,?)",
+                          ((me["id"] if me else None), email or None, nps, payload, now_iso()))
+                c.commit()
+            except Exception as e:
+                print('[lumen] survey insert failed:', e, flush=True)
                 self._send(500, {"error": "Could not save — please try again."}); return
             self._send(200, {"ok": True}); return
 
@@ -8132,7 +8181,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v15';
+const CACHE = 'lumen-v16';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -8179,6 +8228,148 @@ self.addEventListener('fetch', e => {
 # then short-form video + niche communities + a coordinated Product Hunt spike.
 
 APP_STORE_URL = "https://apps.apple.com/app/id6822133425"
+
+SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lumen — tell us what you think</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--gold:#f5c977;--bg:#0b0a12;--panel:#15111f;--line:#2a2440;--muted:#b4acd0;--text:#f6f1ea}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;
+    background-image:radial-gradient(60% 40% at 50% 0%,rgba(36,28,74,.5),transparent 70%)}
+  .wrap{max-width:680px;margin:0 auto;padding:30px 20px 80px}
+  .brand{font-family:Georgia,serif;font-size:30px;font-weight:700;color:var(--gold);text-align:center;letter-spacing:.5px}
+  .tag{text-align:center;color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
+  h1{font-family:Georgia,serif;font-weight:700;font-size:30px;line-height:1.2;text-align:center;margin:26px 0 8px}
+  h1 em{font-style:italic;color:var(--gold)}
+  .lede{text-align:center;color:var(--muted);font-size:16px;max-width:540px;margin:0 auto 10px}
+  .card{background:linear-gradient(160deg,#17121f,#110d1b);border:1px solid var(--line);border-radius:18px;padding:18px 16px;margin:16px 0}
+  .fhead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .fic{font-size:26px;flex:none;width:46px;height:46px;display:grid;place-items:center;border-radius:12px;background:rgba(245,201,119,.09);border:1px solid rgba(245,201,119,.2)}
+  .fname{font-family:Georgia,serif;font-size:20px;font-weight:700}
+  .fdesc{color:var(--muted);font-size:13px}
+  .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:14px 0 7px}
+  .stars{display:flex;gap:8px}
+  .star{font-size:30px;color:#3a3357;cursor:pointer;transition:transform .08s;user-select:none}
+  .star:active{transform:scale(.9)}
+  .star.on{color:var(--gold);text-shadow:0 0 12px rgba(245,201,119,.5)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{font-size:14px;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;transition:.12s}
+  .chip.on{border-color:var(--gold);background:rgba(245,201,119,.12);color:var(--gold)}
+  textarea,input[type=email]{width:100%;background:#0f0b18;border:1px solid var(--line);border-radius:12px;color:var(--text);
+    font-family:inherit;font-size:15px;padding:12px;margin-top:8px;resize:vertical}
+  textarea{min-height:70px}
+  textarea:focus,input:focus{outline:none;border-color:var(--gold)}
+  .nps{display:flex;flex-wrap:wrap;gap:6px}
+  .np{width:40px;height:44px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:700}
+  .np.on{border-color:var(--gold);background:rgba(245,201,119,.14);color:var(--gold)}
+  .npends{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:6px}
+  .btn{display:block;width:100%;background:linear-gradient(135deg,var(--gold),#e0953a);color:#2a1a05;font-weight:700;font-size:17px;
+    border:0;border-radius:14px;padding:16px;margin-top:22px;cursor:pointer}
+  .btn:disabled{opacity:.6}
+  .mut{color:var(--muted);font-size:13px;text-align:center;margin-top:10px}
+  .ok{text-align:center;padding:60px 10px}
+  .ok .big{font-size:52px}
+  .ok h2{font-family:Georgia,serif;font-size:28px;margin:14px 0 8px}
+  .err{color:#ff9aa6;text-align:center;margin-top:10px;font-size:14px}
+</style></head>
+<body><div class="wrap" id="wrap">
+  <div class="brand">lumen</div>
+  <div class="tag">light, one breath at a time</div>
+  <h1>Help shape <em>Lumen</em></h1>
+  <p class="lede">You're one of the first to try it. Tell us what landed, what didn't, and what you'd love to see — it genuinely steers what we build next. Takes about 3 minutes.</p>
+  <div id="features"></div>
+
+  <div class="card">
+    <div class="fhead"><div class="fic">✦</div><div><div class="fname">Overall</div><div class="fdesc">The big picture</div></div></div>
+    <div class="lbl">What did you like most?</div>
+    <textarea data-k="like_most" placeholder="The thing that made you want to keep using it…"></textarea>
+    <div class="lbl">What frustrated you, confused you, or felt off?</div>
+    <textarea data-k="disliked" placeholder="Be honest — this is the most useful part for us."></textarea>
+    <div class="lbl">What would you want more of? Less of?</div>
+    <textarea data-k="more_less" placeholder="More guided journeys? Less gamification? Tell us."></textarea>
+    <div class="lbl">Anything missing you'd love to see — or that you'd do differently?</div>
+    <textarea data-k="wishlist" placeholder="A feature, a change, a different direction…"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="lbl">How likely are you to recommend Lumen to a friend?</div>
+    <div class="nps" id="nps"></div>
+    <div class="npends"><span>Not likely</span><span>Very likely</span></div>
+    <div class="lbl" style="margin-top:18px">Open to a follow-up? Leave your email (optional)</div>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+  </div>
+
+  <button class="btn" id="submit">Send my feedback</button>
+  <div class="err" id="err"></div>
+  <p class="mut">Thank you for helping Lumen grow. 🙏</p>
+</div>
+<script>
+const FEATURES=[
+ ['orb','✺','Your light & progress','The home orb, Light, levels and streaks.'],
+ ['map','🌍','The world map','Meditating alongside a live global community.'],
+ ['leagues','🏆','Leagues','Weekly tiers, from Ember to Supernova.'],
+ ['journeys','🧭','Journeys','Guided, narrated courses from real traditions.'],
+ ['journal','📖','Journal & the Keeper','Reflective writing with a warm companion.'],
+ ['mandala','❉','Wholeness mandala','A sacred artwork that blooms as you practice.'],
+ ['vedic','☾','Daily Vedic reading','A personalized reading from your birth star.'],
+ ['freeform','🪷','Free-form meditation','Pick a length and a soundscape, and just sit.'],
+ ['sharing','↗','Sharing your sit','The shareable card after a session.']
+];
+const SENT=['Love it','It\'s okay','Not for me','Didn\'t try it'];
+const WANT=['More of this','Just right','Less of this','Do it differently'];
+const state={};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function card(f){
+  const [k,ic,name,desc]=f; state[k]={};
+  return `<div class="card" data-f="${k}">
+    <div class="fhead"><div class="fic">${ic}</div><div><div class="fname">${esc(name)}</div><div class="fdesc">${esc(desc)}</div></div></div>
+    <div class="lbl">Your rating</div>
+    <div class="stars" data-stars="${k}">${[1,2,3,4,5].map(n=>`<span class="star" data-n="${n}">★</span>`).join('')}</div>
+    <div class="lbl">How does it feel?</div>
+    <div class="chips" data-sent="${k}">${SENT.map(s=>`<span class="chip" data-v="${esc(s)}">${esc(s)}</span>`).join('')}</div>
+    <div class="lbl">Would you want…</div>
+    <div class="chips" data-want="${k}">${WANT.map(s=>`<span class="chip" data-v="${esc(s)}">${esc(s)}</span>`).join('')}</div>
+    <textarea data-note="${k}" placeholder="Anything else about ${esc(name)}? (optional)"></textarea>
+  </div>`;
+}
+document.getElementById('features').innerHTML=FEATURES.map(card).join('');
+document.getElementById('nps').innerHTML=[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="np" data-np="${n}">${n}</span>`).join('');
+// star ratings
+document.querySelectorAll('[data-stars]').forEach(row=>{const k=row.dataset.stars;
+  row.querySelectorAll('.star').forEach(st=>st.onclick=()=>{const n=+st.dataset.n;state[k].rating=n;
+    row.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',+s.dataset.n<=n));});});
+// single-select chip rows
+function singleSel(sel,field){document.querySelectorAll(sel).forEach(row=>{const k=row.dataset[field==='sentiment'?'sent':'want'];
+  row.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{
+    const on=ch.classList.contains('on');row.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+    if(!on){ch.classList.add('on');state[k][field]=ch.dataset.v;}else{delete state[k][field];}});});}
+singleSel('[data-sent]','sentiment');singleSel('[data-want]','want');
+// nps
+let nps=null;document.querySelectorAll('.np').forEach(n=>n.onclick=()=>{nps=+n.dataset.np;
+  document.querySelectorAll('.np').forEach(x=>x.classList.toggle('on',x===n));});
+// submit
+document.getElementById('submit').onclick=async()=>{
+  const btn=document.getElementById('submit'),err=document.getElementById('err');err.textContent='';
+  document.querySelectorAll('[data-note]').forEach(t=>{const v=t.value.trim();if(v)state[t.dataset.note].note=v;});
+  const overall={};document.querySelectorAll('[data-k]').forEach(t=>{const v=t.value.trim();if(v)overall[t.dataset.k]=v;});
+  const answers={features:state,overall:overall};
+  const any=Object.values(state).some(o=>Object.keys(o).length)||Object.keys(overall).length||nps!=null;
+  if(!any){err.textContent='Add at least one rating or note before sending.';return;}
+  const email=document.getElementById('email').value.trim();
+  btn.disabled=true;btn.textContent='Sending…';
+  try{
+    const r=await fetch('api/survey',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({answers,nps,email})});
+    if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Could not send');}
+    document.getElementById('wrap').innerHTML='<div class="ok"><div class="big">🌟</div><h2>Thank you</h2>'+
+      '<p class="lede">Your feedback goes straight to the people building Lumen. It means a lot.</p>'+
+      '<a class="btn" href="'+("https://apps.apple.com/app/id6822133425")+'" style="max-width:320px;margin:24px auto 0;text-decoration:none;text-align:center">Back to Lumen</a></div>';
+    window.scrollTo(0,0);
+  }catch(e){btn.disabled=false;btn.textContent='Send my feedback';err.textContent=e.message||'Something went wrong — please try again.';}
+};
+</script></body></html>"""
+
 SITE_URL      = os.environ.get("LUMEN_SITE_URL", "https://lumen.app")
 IG_HANDLE     = "@lumen.meditation"
 
