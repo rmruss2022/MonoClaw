@@ -8296,7 +8296,7 @@ const F=[
  {k:'map',ic:'🌍',name:'The world map',desc:'Meditating alongside a live global community.',
    hq:'What does seeing the live world map do for you?',
    hopts:['Makes me feel less alone','It’s inspiring','Adds accountability','Makes me curious about others','Not much for me'],specs:[
-   {k:'belonging',q:'Does seeing a live, worldwide map make you feel less alone in your practice?',opts:['Yes','Somewhat','Not really']},
+   {k:'belonging',q:'Does seeing a live world map give you a sense of connection that improves your practice?',opts:['Yes','Somewhat','Not really']},
    {k:'social',q:'Would you want to see friends or people near you on the map?',opts:['Yes — friends','Yes — nearby people','No — keep it anonymous']}]},
  {k:'leagues',ic:'🏆',name:'Leagues',desc:'Weekly tiers, from Ember to Supernova.',
    hq:'What do the weekly leagues do for your practice?',
