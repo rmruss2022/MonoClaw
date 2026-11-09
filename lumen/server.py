@@ -8317,11 +8317,12 @@ const F=[
    hopts:['Clarity on my thoughts','Feeling heard','A record to look back on','Unexpected insight','Didn’t click for me'],specs:[
    {k:'value',q:'Did writing — and the Keeper’s reflections — feel valuable?',opts:['Yes','Somewhat','Not for me','Didn’t try it']},
    {k:'keeper',q:'How did the Keeper’s responses feel?',opts:['Warm & insightful','Okay','A bit generic','Haven’t used it']}]},
- {k:'mandala',ic:'❉',name:'Wholeness mandala',desc:'A sacred artwork that blooms as you practice.',
-   hq:'What does growing the mandala do for you?',
-   hopts:['Makes practice rewarding','A record of my effort','Motivates consistency','Just decorative to me','Haven’t engaged with it'],specs:[
-   {k:'reward',q:'Does watching the mandala grow make practice feel more rewarding?',opts:['Yes','A little','No']},
-   {k:'clarity',q:'Do you understand what the mandala represents?',opts:['Clear','Sort of','Confusing']}]},
+ {k:'mandala',ic:'❉',name:'Wholeness mandala',desc:'A sacred artwork you restore as you practice — each achievement fills in another part, until it blooms whole.',
+   hq:'How does the mandala make you feel about your progress and achievements?',
+   hopts:['Proud of what I’ve built','Motivated to keep going','It makes effort visible','Rewarded for showing up','Doesn’t do much for me'],specs:[
+   {k:'effective',q:'Does growing and filling in your mandala feel like a satisfying way to see your progress and achievements?',opts:['Yes, very','Somewhat','Not really']},
+   {k:'metaphor',q:'Does the metaphor — restoring the mandala as restoring yourself — resonate with you?',opts:['Deeply','A little','Not really','Didn’t catch that meaning']},
+   {k:'clarity',q:'Is it clear what the mandala represents and how it fills in?',opts:['Clear','Sort of','Confusing']}]},
  {k:'vedic',ic:'☾',name:'Daily Vedic reading',desc:'A personalized reading from your birth star.',
    hq:'What does the daily Vedic reading give you?',
    hopts:['A reason to open the app','Reflection & meaning','Fun & curiosity','Feels off-brand to me','I don’t read it'],specs:[
