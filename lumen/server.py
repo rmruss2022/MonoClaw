@@ -8235,140 +8235,182 @@ SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{--gold:#f5c977;--bg:#0b0a12;--panel:#15111f;--line:#2a2440;--muted:#b4acd0;--text:#f6f1ea}
+  html,body{height:100%}
   body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;
-    background-image:radial-gradient(60% 40% at 50% 0%,rgba(36,28,74,.5),transparent 70%)}
-  .wrap{max-width:680px;margin:0 auto;padding:30px 20px 80px}
-  .brand{font-family:Georgia,serif;font-size:30px;font-weight:700;color:var(--gold);text-align:center;letter-spacing:.5px}
-  .tag{text-align:center;color:var(--muted);font-size:13px;letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
-  h1{font-family:Georgia,serif;font-weight:700;font-size:30px;line-height:1.2;text-align:center;margin:26px 0 8px}
+    background-image:radial-gradient(70% 45% at 50% 0%,rgba(36,28,74,.55),transparent 70%);display:flex;flex-direction:column;min-height:100%}
+  .top{position:sticky;top:0;z-index:5;background:linear-gradient(#0b0a12,rgba(11,10,18,.85));backdrop-filter:blur(6px);padding:14px 18px 10px}
+  .brandrow{display:flex;align-items:center;justify-content:space-between;max-width:620px;margin:0 auto}
+  .brand{font-family:Georgia,serif;font-size:22px;font-weight:700;color:var(--gold)}
+  .count{font-size:12px;color:var(--muted);letter-spacing:.06em}
+  .pbar{max-width:620px;margin:10px auto 0;height:5px;border-radius:99px;background:#241d3a;overflow:hidden}
+  .pbar>i{display:block;height:100%;background:linear-gradient(90deg,#e0953a,var(--gold));border-radius:99px;transition:width .3s}
+  .stage{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 20px}
+  .screen{max-width:600px;width:100%;animation:rise .32s cubic-bezier(.2,.8,.25,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--gold);margin-bottom:12px;display:flex;align-items:center;gap:9px}
+  .eyebrow .fic{font-size:20px}
+  h1{font-family:Georgia,serif;font-weight:700;font-size:30px;line-height:1.22;margin-bottom:8px}
   h1 em{font-style:italic;color:var(--gold)}
-  .lede{text-align:center;color:var(--muted);font-size:16px;max-width:540px;margin:0 auto 10px}
-  .card{background:linear-gradient(160deg,#17121f,#110d1b);border:1px solid var(--line);border-radius:18px;padding:18px 16px;margin:16px 0}
-  .fhead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-  .fic{font-size:26px;flex:none;width:46px;height:46px;display:grid;place-items:center;border-radius:12px;background:rgba(245,201,119,.09);border:1px solid rgba(245,201,119,.2)}
-  .fname{font-family:Georgia,serif;font-size:20px;font-weight:700}
-  .fdesc{color:var(--muted);font-size:13px}
-  .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:14px 0 7px}
-  .stars{display:flex;gap:8px}
-  .star{font-size:30px;color:#3a3357;cursor:pointer;transition:transform .08s;user-select:none}
+  .sub{color:var(--muted);font-size:16px;margin-bottom:22px}
+  .stars{display:flex;gap:12px;margin:6px 0}
+  .star{font-size:46px;color:#3a3357;cursor:pointer;transition:transform .08s;user-select:none}
   .star:active{transform:scale(.9)}
-  .star.on{color:var(--gold);text-shadow:0 0 12px rgba(245,201,119,.5)}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{font-size:14px;padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;transition:.12s}
-  .chip.on{border-color:var(--gold);background:rgba(245,201,119,.12);color:var(--gold)}
-  textarea,input[type=email]{width:100%;background:#0f0b18;border:1px solid var(--line);border-radius:12px;color:var(--text);
-    font-family:inherit;font-size:15px;padding:12px;margin-top:8px;resize:vertical}
-  textarea{min-height:70px}
+  .star.on{color:var(--gold);text-shadow:0 0 16px rgba(245,201,119,.55)}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+  .chip{font-size:16px;padding:13px 18px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;transition:.12s}
+  .chip:hover{border-color:#4a4270}
+  .chip.on{border-color:var(--gold);background:rgba(245,201,119,.13);color:var(--gold);box-shadow:0 0 18px -6px rgba(245,201,119,.5)}
+  textarea,input[type=email]{width:100%;background:#0f0b18;border:1px solid var(--line);border-radius:14px;color:var(--text);
+    font-family:inherit;font-size:17px;padding:15px;resize:vertical}
+  textarea{min-height:130px}
   textarea:focus,input:focus{outline:none;border-color:var(--gold)}
-  .nps{display:flex;flex-wrap:wrap;gap:6px}
-  .np{width:40px;height:44px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:700}
-  .np.on{border-color:var(--gold);background:rgba(245,201,119,.14);color:var(--gold)}
-  .npends{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:6px}
-  .btn{display:block;width:100%;background:linear-gradient(135deg,var(--gold),#e0953a);color:#2a1a05;font-weight:700;font-size:17px;
-    border:0;border-radius:14px;padding:16px;margin-top:22px;cursor:pointer}
-  .btn:disabled{opacity:.6}
-  .mut{color:var(--muted);font-size:13px;text-align:center;margin-top:10px}
-  .ok{text-align:center;padding:60px 10px}
-  .ok .big{font-size:52px}
-  .ok h2{font-family:Georgia,serif;font-size:28px;margin:14px 0 8px}
-  .err{color:#ff9aa6;text-align:center;margin-top:10px;font-size:14px}
+  .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:20px 0 8px}
+  .nps{display:flex;flex-wrap:wrap;gap:8px}
+  .np{width:50px;height:54px;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:700;font-size:18px}
+  .np.on{border-color:var(--gold);background:rgba(245,201,119,.15);color:var(--gold)}
+  .npends{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:8px}
+  .nav{position:sticky;bottom:0;background:linear-gradient(rgba(11,10,18,0),rgba(11,10,18,.9) 35%);padding:16px 20px calc(16px + env(safe-area-inset-bottom))}
+  .navin{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  .btn{flex:1;background:linear-gradient(135deg,var(--gold),#e0953a);color:#2a1a05;font-weight:700;font-size:17px;border:0;border-radius:14px;padding:16px;cursor:pointer}
+  .btn.ghost{flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--text);padding:16px 20px}
+  .btn:disabled{opacity:.55}
+  .finish{display:block;text-align:center;color:var(--muted);font-size:13px;margin-top:12px;text-decoration:underline;cursor:pointer}
+  .ok{text-align:center;padding:40px 16px}
+  .ok .big{font-size:60px}
+  .ok h2{font-family:Georgia,serif;font-size:30px;margin:16px 0 10px}
+  .err{color:#ff9aa6;text-align:center;font-size:14px;margin-top:8px;min-height:18px}
+  .hero-ic{font-size:60px;text-align:center;margin-bottom:10px}
 </style></head>
-<body><div class="wrap" id="wrap">
-  <div class="brand">lumen</div>
-  <div class="tag">light, one breath at a time</div>
-  <h1>Help shape <em>Lumen</em></h1>
-  <p class="lede">You're one of the first to try it. Tell us what landed, what didn't, and what you'd love to see — it genuinely steers what we build next. Takes about 3 minutes.</p>
-  <div id="features"></div>
-
-  <div class="card">
-    <div class="fhead"><div class="fic">✦</div><div><div class="fname">Overall</div><div class="fdesc">The big picture</div></div></div>
-    <div class="lbl">What did you like most?</div>
-    <textarea data-k="like_most" placeholder="The thing that made you want to keep using it…"></textarea>
-    <div class="lbl">What frustrated you, confused you, or felt off?</div>
-    <textarea data-k="disliked" placeholder="Be honest — this is the most useful part for us."></textarea>
-    <div class="lbl">What would you want more of? Less of?</div>
-    <textarea data-k="more_less" placeholder="More guided journeys? Less gamification? Tell us."></textarea>
-    <div class="lbl">Anything missing you'd love to see — or that you'd do differently?</div>
-    <textarea data-k="wishlist" placeholder="A feature, a change, a different direction…"></textarea>
-  </div>
-
-  <div class="card">
-    <div class="lbl">How likely are you to recommend Lumen to a friend?</div>
-    <div class="nps" id="nps"></div>
-    <div class="npends"><span>Not likely</span><span>Very likely</span></div>
-    <div class="lbl" style="margin-top:18px">Open to a follow-up? Leave your email (optional)</div>
-    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
-  </div>
-
-  <button class="btn" id="submit">Send my feedback</button>
-  <div class="err" id="err"></div>
-  <p class="mut">Thank you for helping Lumen grow. 🙏</p>
-</div>
+<body>
+<div class="top"><div class="brandrow"><span class="brand">lumen</span><span class="count" id="count"></span></div>
+  <div class="pbar"><i id="pbar" style="width:0%"></i></div></div>
+<div class="stage"><div class="screen" id="screen"></div></div>
+<div class="nav"><div class="navin" id="nav"></div><div class="err" id="err"></div></div>
 <script>
-const FEATURES=[
- ['orb','✺','Your light & progress','The home orb, Light, levels and streaks.'],
- ['map','🌍','The world map','Meditating alongside a live global community.'],
- ['leagues','🏆','Leagues','Weekly tiers, from Ember to Supernova.'],
- ['journeys','🧭','Journeys','Guided, narrated courses from real traditions.'],
- ['journal','📖','Journal & the Keeper','Reflective writing with a warm companion.'],
- ['mandala','❉','Wholeness mandala','A sacred artwork that blooms as you practice.'],
- ['vedic','☾','Daily Vedic reading','A personalized reading from your birth star.'],
- ['freeform','🪷','Free-form meditation','Pick a length and a soundscape, and just sit.'],
- ['sharing','↗','Sharing your sit','The shareable card after a session.']
+const F=[
+ {k:'orb',ic:'✺',name:'Your light & progress',desc:'The home orb, your Light, levels and streaks.',specs:[
+   {k:'returns',q:'Does seeing your Light, level and streak make you want to come back?',opts:['Yes, a lot','A little','Not really','Haven’t noticed it']},
+   {k:'clarity',q:'Is it clear how you earn Light and level up?',opts:['Totally clear','Mostly clear','A bit confusing']}]},
+ {k:'map',ic:'🌍',name:'The world map',desc:'Meditating alongside a live global community.',specs:[
+   {k:'belonging',q:'Does seeing a live, worldwide map make you feel less alone in your practice?',opts:['Yes','Somewhat','Not really']},
+   {k:'social',q:'Would you want to see friends or people near you on the map?',opts:['Yes — friends','Yes — nearby people','No — keep it anonymous']}]},
+ {k:'leagues',ic:'🏆',name:'Leagues',desc:'Weekly tiers, from Ember to Supernova.',specs:[
+   {k:'motivation',q:'Do the weekly leagues make you want to practice more?',opts:['Yes','A little','No','They stress me out']},
+   {k:'fit',q:'Is friendly competition the right vibe for a meditation app?',opts:['Love it','It’s fine','I’d rather it be solo']}]},
+ {k:'journeys',ic:'🧭',name:'Journeys',desc:'Guided, narrated courses from real traditions.',specs:[
+   {k:'return',q:'Are the guided journeys something you’d keep coming back to?',opts:['Yes','Maybe','No']},
+   {k:'want',q:'What kind of journeys do you want more of?',text:true,ph:'Stoic, Vedic, breathwork, sleep, anxiety, focus…'}]},
+ {k:'journal',ic:'📖',name:'Journal & the Keeper',desc:'Reflective writing with a warm AI companion.',specs:[
+   {k:'value',q:'Did writing — and the Keeper’s reflections — feel valuable?',opts:['Yes','Somewhat','Not for me','Didn’t try it']},
+   {k:'keeper',q:'How did the Keeper’s responses feel?',opts:['Warm & insightful','Okay','A bit generic','Haven’t used it']}]},
+ {k:'mandala',ic:'❉',name:'Wholeness mandala',desc:'A sacred artwork that blooms as you practice.',specs:[
+   {k:'reward',q:'Does watching the mandala grow make practice feel more rewarding?',opts:['Yes','A little','No']},
+   {k:'clarity',q:'Do you understand what the mandala represents?',opts:['Clear','Sort of','Confusing']}]},
+ {k:'vedic',ic:'☾',name:'Daily Vedic reading',desc:'A personalized reading from your birth star.',specs:[
+   {k:'usage',q:'Do you read the daily Vedic reading?',opts:['Most days','Sometimes','Rarely','Didn’t know it was there']},
+   {k:'fit',q:'Does the astrology / Vedic angle belong in a meditation app for you?',opts:['Love it','Neutral','Not my thing']}]},
+ {k:'freeform',ic:'🪷',name:'Free-form meditation',desc:'Pick a length and a soundscape, and just sit.',specs:[
+   {k:'enough',q:'Are the soundscapes and timer enough for a free sit?',opts:['Yes','Want more sounds','Want more controls']},
+   {k:'sound',q:'A soundscape you’d love us to add?',text:true,ph:'e.g. gentle rain on a tent, singing bowls, a fireplace…'}]},
+ {k:'sharing',ic:'↗',name:'Sharing your sit',desc:'The shareable card after a session.',specs:[
+   {k:'would',q:'Would you share your meditation card with friends?',opts:['Yes','Maybe','No']},
+   {k:'nudge',q:'What would make you more likely to share it?',text:true,ph:'A nicer card, a streak flex, a reward…'}]}
 ];
-const SENT=['Love it','It\'s okay','Not for me','Didn\'t try it'];
+const FEEL=['Love it','It’s okay','Not for me','Didn’t try it'];
 const WANT=['More of this','Just right','Less of this','Do it differently'];
-const state={};
+const OVER=[['like_most','What did you like most about Lumen?','The thing that made you want to keep going…'],
+ ['disliked','What frustrated you, confused you, or felt off?','Be honest — this is the most useful part for us.'],
+ ['more_less','What do you want more of? What would you cut?',''],
+ ['wishlist','Anything missing you’d love to see — or you’d do differently?','A feature, a change, a whole different direction…']];
+const STEPS=[{t:'intro'}];
+F.forEach(f=>{STEPS.push({t:'take',f});f.specs.forEach(sp=>STEPS.push({t:'spec',f,sp}));});
+OVER.forEach(o=>STEPS.push({t:'text',k:'overall.'+o[0],q:o[1],ph:o[2]}));
+STEPS.push({t:'nps'});STEPS.push({t:'email'});
+const LAST=STEPS.length-1;
+const state={};let i=0,sending=false;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function card(f){
-  const [k,ic,name,desc]=f; state[k]={};
-  return `<div class="card" data-f="${k}">
-    <div class="fhead"><div class="fic">${ic}</div><div><div class="fname">${esc(name)}</div><div class="fdesc">${esc(desc)}</div></div></div>
-    <div class="lbl">Your rating</div>
-    <div class="stars" data-stars="${k}">${[1,2,3,4,5].map(n=>`<span class="star" data-n="${n}">★</span>`).join('')}</div>
-    <div class="lbl">How does it feel?</div>
-    <div class="chips" data-sent="${k}">${SENT.map(s=>`<span class="chip" data-v="${esc(s)}">${esc(s)}</span>`).join('')}</div>
-    <div class="lbl">Would you want…</div>
-    <div class="chips" data-want="${k}">${WANT.map(s=>`<span class="chip" data-v="${esc(s)}">${esc(s)}</span>`).join('')}</div>
-    <textarea data-note="${k}" placeholder="Anything else about ${esc(name)}? (optional)"></textarea>
-  </div>`;
+function setChip(key,val,row){const on=state[key]===val;row.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  if(on){delete state[key];}else{state[key]=val;row.querySelectorAll('.chip').forEach(c=>{if(c.dataset.v===val)c.classList.add('on');});}}
+function chipsHTML(key,opts){return `<div class="chips" data-key="${key}">${opts.map(o=>`<span class="chip${state[key]===o?' on':''}" data-v="${esc(o)}">${esc(o)}</span>`).join('')}</div>`;}
+function render(){
+  const s=STEPS[i];const sc=document.getElementById('screen');
+  document.getElementById('count').textContent=i===0?'':`Step ${i} of ${LAST}`;
+  document.getElementById('pbar').style.width=(100*i/LAST)+'%';
+  document.getElementById('err').textContent='';
+  let h='';
+  if(s.t==='intro'){
+    h=`<div class="hero-ic">🌟</div><h1 style="text-align:center">Help shape <em>Lumen</em></h1>
+      <p class="sub" style="text-align:center">You’re one of the first to try it. We’ll go module by module — rate what you tried, skip what you didn’t, and tell us what you’d change. About 3–4 minutes, and you can finish early anytime.</p>`;
+  } else if(s.t==='take'){
+    const f=s.f;
+    h=`<div class="eyebrow"><span class="fic">${f.ic}</span> ${esc(f.name)}</div>
+      <h1>Your take on <em>${esc(f.name)}</em></h1><p class="sub">${esc(f.desc)}</p>
+      <div class="lbl">Your rating</div>
+      <div class="stars" data-stars="${f.k}.rating">${[1,2,3,4,5].map(n=>`<span class="star${(state[f.k+'.rating']>=n)?' on':''}" data-n="${n}">★</span>`).join('')}</div>
+      <div class="lbl">How does it feel?</div>${chipsHTML(f.k+'.feel',FEEL)}
+      <div class="lbl">Would you want…</div>${chipsHTML(f.k+'.want',WANT)}
+      <div class="lbl">Anything else? (optional)</div>
+      <textarea data-text="${f.k}.note" placeholder="A quick note about ${esc(f.name)}…">${esc(state[f.k+'.note']||'')}</textarea>`;
+  } else if(s.t==='spec'){
+    const f=s.f,sp=s.sp,key=f.k+'.'+sp.k;
+    h=`<div class="eyebrow"><span class="fic">${f.ic}</span> ${esc(f.name)}</div><h1>${esc(sp.q)}</h1>`;
+    h+= sp.text ? `<textarea data-text="${key}" placeholder="${esc(sp.ph||'')}">${esc(state[key]||'')}</textarea>`
+               : chipsHTML(key,sp.opts);
+  } else if(s.t==='text'){
+    h=`<div class="eyebrow">Overall</div><h1>${esc(s.q)}</h1>
+      <textarea data-text="${s.k}" placeholder="${esc(s.ph||'')}">${esc(state[s.k]||'')}</textarea>`;
+  } else if(s.t==='nps'){
+    h=`<div class="eyebrow">Overall</div><h1>How likely are you to recommend <em>Lumen</em> to a friend?</h1>
+      <div class="nps" data-nps="1">${[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="np${state.nps===n?' on':''}" data-np="${n}">${n}</span>`).join('')}</div>
+      <div class="npends"><span>Not likely</span><span>Very likely</span></div>`;
+  } else if(s.t==='email'){
+    h=`<div class="eyebrow">Last one</div><h1>Open to a follow-up?</h1>
+      <p class="sub">Leave your email if you’re happy for us to reach out about your feedback. Totally optional.</p>
+      <input type="email" data-text="email" placeholder="you@example.com" autocomplete="email" value="${esc(state.email||'')}">`;
+  }
+  sc.innerHTML=h;
+  // bind
+  sc.querySelectorAll('[data-stars]').forEach(row=>{const key=row.dataset.stars;
+    row.querySelectorAll('.star').forEach(st=>st.onclick=()=>{const n=+st.dataset.n;state[key]=n;
+      row.querySelectorAll('.star').forEach(x=>x.classList.toggle('on',+x.dataset.n<=n));});});
+  sc.querySelectorAll('.chips[data-key]').forEach(row=>{const key=row.dataset.key;
+    row.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>setChip(key,ch.dataset.v,row));});
+  sc.querySelectorAll('.nps[data-nps]').forEach(row=>row.querySelectorAll('.np').forEach(n=>n.onclick=()=>{
+    state.nps=+n.dataset.np;row.querySelectorAll('.np').forEach(x=>x.classList.toggle('on',x===n));}));
+  sc.querySelectorAll('[data-text]').forEach(t=>t.oninput=()=>{const v=t.value;if(v.trim())state[t.dataset.text]=v;else delete state[t.dataset.text];});
+  // nav
+  const nav=document.getElementById('nav');
+  const primary = i===LAST ? 'Send feedback' : (i===0 ? 'Begin' : 'Continue');
+  nav.innerHTML = (i>0?`<button class="btn ghost" id="back">Back</button>`:'')+
+    `<button class="btn" id="next">${primary}</button>`;
+  const back=document.getElementById('back');if(back)back.onclick=()=>{i--;render();window.scrollTo(0,0);};
+  document.getElementById('next').onclick=()=>{ if(i===LAST){submit();} else {i++;render();window.scrollTo(0,0);} };
+  // finish-early link (after the intro)
+  document.querySelectorAll('.finish').forEach(x=>x.remove());
+  if(i>0 && i<LAST){const f=document.createElement('div');f.className='finish';f.textContent='Finish & send now';
+    f.onclick=submit;document.querySelector('.nav').insertBefore(f,document.getElementById('err'));}
 }
-document.getElementById('features').innerHTML=FEATURES.map(card).join('');
-document.getElementById('nps').innerHTML=[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="np" data-np="${n}">${n}</span>`).join('');
-// star ratings
-document.querySelectorAll('[data-stars]').forEach(row=>{const k=row.dataset.stars;
-  row.querySelectorAll('.star').forEach(st=>st.onclick=()=>{const n=+st.dataset.n;state[k].rating=n;
-    row.querySelectorAll('.star').forEach(s=>s.classList.toggle('on',+s.dataset.n<=n));});});
-// single-select chip rows
-function singleSel(sel,field){document.querySelectorAll(sel).forEach(row=>{const k=row.dataset[field==='sentiment'?'sent':'want'];
-  row.querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{
-    const on=ch.classList.contains('on');row.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
-    if(!on){ch.classList.add('on');state[k][field]=ch.dataset.v;}else{delete state[k][field];}});});}
-singleSel('[data-sent]','sentiment');singleSel('[data-want]','want');
-// nps
-let nps=null;document.querySelectorAll('.np').forEach(n=>n.onclick=()=>{nps=+n.dataset.np;
-  document.querySelectorAll('.np').forEach(x=>x.classList.toggle('on',x===n));});
-// submit
-document.getElementById('submit').onclick=async()=>{
-  const btn=document.getElementById('submit'),err=document.getElementById('err');err.textContent='';
-  document.querySelectorAll('[data-note]').forEach(t=>{const v=t.value.trim();if(v)state[t.dataset.note].note=v;});
-  const overall={};document.querySelectorAll('[data-k]').forEach(t=>{const v=t.value.trim();if(v)overall[t.dataset.k]=v;});
-  const answers={features:state,overall:overall};
-  const any=Object.values(state).some(o=>Object.keys(o).length)||Object.keys(overall).length||nps!=null;
-  if(!any){err.textContent='Add at least one rating or note before sending.';return;}
-  const email=document.getElementById('email').value.trim();
-  btn.disabled=true;btn.textContent='Sending…';
+async function submit(){
+  if(sending)return;const err=document.getElementById('err');
+  const nps=(typeof state.nps==='number')?state.nps:null;
+  const email=state.email||'';
+  const answers={};Object.keys(state).forEach(k=>{if(k!=='nps'&&k!=='email')answers[k]=state[k];});
+  if(!Object.keys(answers).length && nps==null){err.textContent='Answer at least one thing before sending.';return;}
+  sending=true;document.getElementById('next').disabled=true;document.getElementById('next').textContent='Sending…';
   try{
-    const r=await fetch('api/survey',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({answers,nps,email})});
+    const r=await fetch('api/survey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers,nps,email})});
     if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Could not send');}
-    document.getElementById('wrap').innerHTML='<div class="ok"><div class="big">🌟</div><h2>Thank you</h2>'+
-      '<p class="lede">Your feedback goes straight to the people building Lumen. It means a lot.</p>'+
-      '<a class="btn" href="'+("https://apps.apple.com/app/id6822133425")+'" style="max-width:320px;margin:24px auto 0;text-decoration:none;text-align:center">Back to Lumen</a></div>';
+    document.querySelector('.top').style.display='none';document.querySelector('.nav').style.display='none';
+    document.getElementById('screen').innerHTML='<div class="ok"><div class="big">🌟</div><h2>Thank you</h2>'+
+      '<p class="sub">Your feedback goes straight to the people building Lumen. It genuinely shapes what comes next.</p>'+
+      '<a class="btn" href="https://apps.apple.com/app/id6822133425" style="display:inline-block;text-decoration:none;max-width:300px;margin:18px auto 0">Back to Lumen</a></div>';
     window.scrollTo(0,0);
-  }catch(e){btn.disabled=false;btn.textContent='Send my feedback';err.textContent=e.message||'Something went wrong — please try again.';}
-};
-</script></body></html>"""
+  }catch(e){sending=false;document.getElementById('next').disabled=false;
+    document.getElementById('next').textContent=i===LAST?'Send feedback':'Continue';err.textContent=e.message||'Something went wrong — try again.';}
+}
+render();
+</script></body></html>
+"""
 
 SITE_URL      = os.environ.get("LUMEN_SITE_URL", "https://lumen.app")
 IG_HANDLE     = "@lumen.meditation"
