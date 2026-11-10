@@ -9198,6 +9198,30 @@ def _mkt_state(c):
     return {r["key"]: {"status": r["status"], "note": r["note"], "updated": r["updated"]} for r in rows}
 
 
+# Canonical onboarding-step labels for the admin funnel. Derived from ONB_SLIDES
+# (the value slides) + the question steps. Display is keyed by STEP NUMBER so the
+# funnel always shows current titles, even for events captured before a title change.
+# Keep the slide titles in sync with ONB_SLIDES in the app bundle.
+_ONB_SLIDE_TITLES = [
+    "Show up with a vibrant community",
+    "Explore the world, one meditation at a time",
+    "Inspire, and be inspired",
+    "Learn from real, deep traditions",
+    "Collect Light as you grow",
+    "Your Vedic reading, every day",
+    "Watch your mandala bloom",
+    "Earn badges for the inner path",
+    "Grounded in real science",
+    "The price of a coffee",
+]
+_NSL = len(_ONB_SLIDE_TITLES)
+ONB_STEP_LABELS = {i: "Slide %d · %s" % (i + 1, t) for i, t in enumerate(_ONB_SLIDE_TITLES)}
+ONB_STEP_LABELS.update({
+    _NSL: "Q: Intent", _NSL + 1: "Q: Frequency", _NSL + 2: "Q: Time",
+    _NSL + 3: "Q: Duration", _NSL + 4: "Q: Level", _NSL + 5: "Signup",
+})
+
+
 def admin_analytics(c, days=30):
     """First-party product analytics: onboarding funnel + most-visited screens."""
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
@@ -9212,7 +9236,8 @@ def admin_analytics(c, days=30):
             "GROUP BY step ORDER BY step", (since,)).fetchall():
             if r["step"] is None:
                 continue
-            funnel.append({"step": r["step"], "label": r["label"] or ("Step %d" % r["step"]),
+            funnel.append({"step": r["step"],
+                           "label": ONB_STEP_LABELS.get(r["step"], r["label"] or ("Step %d" % r["step"])),
                            "users": r["users"]})
     except Exception:
         agg = {}
@@ -9227,7 +9252,7 @@ def admin_analytics(c, days=30):
                 continue
             agg.setdefault(st, {"label": pj.get("label") or ("Step %d" % st), "users": set()})
             agg[st]["users"].add(r["anon_id"])
-        funnel = [{"step": s, "label": v["label"], "users": len(v["users"])}
+        funnel = [{"step": s, "label": ONB_STEP_LABELS.get(s, v["label"]), "users": len(v["users"])}
                   for s, v in sorted(agg.items())]
     out["onboarding_funnel"] = funnel
     if funnel:
