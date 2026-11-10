@@ -3454,7 +3454,7 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
-<script src="/assets/orb.js?v=3" defer></script>
+<script src="/assets/orb.js?v=4" defer></script>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 /* Diya flame loading spinner — upgrade every .spinner span into the Lottie.
@@ -8297,7 +8297,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v20';
+const CACHE = 'lumen-v21';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
