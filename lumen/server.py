@@ -3814,7 +3814,8 @@ function track(name,props,screen){try{_evq.push({name:name,props:props||null,scr
 try{addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')_evflush();});}catch(e){}
 function onbLabel(s){if(typeof Q_INTENT==='undefined')return 'Slide '+(s+1);
   const m={};m[Q_INTENT]='Q: Intent';m[Q_FREQ]='Q: Frequency';m[Q_TIME]='Q: Time';m[Q_DUR]='Q: Duration';m[Q_LEVEL]='Q: Level';m[ONB_LAST]='Signup';
-  return (s>=Q_INTENT)?(m[s]||('Step '+s)):('Slide '+(s+1));}
+  const title=(typeof ONB_SLIDES!=='undefined'&&ONB_SLIDES[s])?ONB_SLIDES[s].h:'';
+  return (s>=Q_INTENT)?(m[s]||('Step '+s)):('Slide '+(s+1)+(title?' · '+title:''));}
 async function boot(){
   try{const r=await api('me');if(r.authed){ME=r.profile;}}catch(e){}
   try{if(window.Sentry&&Sentry.setUser)Sentry.setUser(ME?{id:String(ME.id||''),email:ME.email}:null);}catch(e){}
