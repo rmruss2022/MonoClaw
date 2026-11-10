@@ -6241,7 +6241,7 @@ function renderChat(){
   </div>`;
   $('#cback').onclick=()=>renderJournal();
   $('#cspeak').onclick=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
-    $('#cspeak').classList.toggle('on',speakOn);$('#cspeak').innerHTML=ic(speakOn?'sound':'mute');if(!speakOn&&window.speechSynthesis)speechSynthesis.cancel();};
+    $('#cspeak').classList.toggle('on',speakOn);$('#cspeak').innerHTML=ic(speakOn?'sound':'mute');if(!speakOn){try{stopNarration();}catch(e){}}};
   $('#csend').onclick=()=>sendChat();
   $('#cfield').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
   $('#cmic').onclick=chatVoice;
@@ -9844,8 +9844,10 @@ def _notif_candidate(c, u, prefs, lt):
     h, wd = lt.hour, lt.weekday()           # Mon=0 … Sun=6
     tier = _notif_tier(u)
     sat_today = (u["last_day"] or "")[:10] == today_str()
+    yesterday = (date.fromisoformat(today_str()) - timedelta(days=1)).isoformat()
+    streak_alive = (u["last_day"] or "")[:10] == yesterday
     # 1) streak-save (highest)
-    if cats.get("streak", 1) and (u["streak"] or 0) >= 2 and not sat_today and h >= 18:
+    if cats.get("streak", 1) and (u["streak"] or 0) >= 2 and streak_alive and h >= 18:
         return ("streak_save", *notif_copy("streak_save", u), f"streak_save:{today_str()}")
     # 2) weekly recap — Sunday evening
     if cats.get("progress", 1) and wd == 6 and 18 <= h < 22:
