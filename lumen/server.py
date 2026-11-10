@@ -12,7 +12,7 @@ Storage lives in ./data (sqlite). Mount under the command hub with LUMEN_BASE=/l
 Soundscapes are synthesized client-side (Web Audio) so there are no audio assets.
 """
 import os, json, re, sqlite3, hashlib, hmac, secrets, time, math, random, threading, base64
-import urllib.request, urllib.error
+import urllib.request, urllib.error, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime, timezone, date, timedelta
 
@@ -1462,6 +1462,33 @@ def _gemini_key():
     return ""
 
 GEMINI_KEY = _gemini_key()
+
+# RevenueCat (server-side secret; verifies App Store purchases + webhook sync)
+RC_SECRET = os.environ.get("REVENUECAT_SECRET_KEY")
+RC_WEBHOOK_AUTH = os.environ.get("REVENUECAT_WEBHOOK_AUTH")
+
+def rc_premium_active(app_user_id):
+    """True if the RevenueCat subscriber has the 'premium' entitlement active."""
+    if not RC_SECRET or not app_user_id:
+        return False
+    try:
+        url = "https://api.revenuecat.com/v1/subscribers/" + urllib.parse.quote(str(app_user_id), safe="")
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + RC_SECRET})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            d = json.loads(r.read().decode("utf-8", "replace"))
+        pe = (((d.get("subscriber") or {}).get("entitlements") or {}).get("premium"))
+        if not pe:
+            return False
+        exp = pe.get("expires_date")
+        if not exp:
+            return True
+        try:
+            return datetime.fromisoformat(exp.replace("Z", "+00:00")) > datetime.now(timezone.utc)
+        except Exception:
+            return True
+    except Exception as e:
+        print("[rc] subscriber check failed:", e, flush=True)
+        return False
 
 # ---------------------------------------------------------------------------
 # ElevenLabs narration (server-side; key never reaches the client). Audio is
@@ -3799,8 +3826,23 @@ async function boot(){
   }
   $('#nav').classList.remove('hidden');
   bindNav();
+  try{ if(window.__lumenIdentify && ME.email) window.__lumenIdentify(ME.email); }catch(e){}  // tie RevenueCat purchases to this user
   go('meditate');
 }
+// Native StoreKit purchase results come back here via the iOS bridge.
+window.__lumenPremiumResult=async function(ok){
+  const pb=window.__premBtn;
+  if(ok){
+    try{await api('premium/activate','POST',{});}catch(e){}
+    if(ME)ME.tier='premium';
+    try{toast(ic('spark','g')+' Premium unlocked ✦');}catch(e){}
+    if(typeof TAB!=='undefined'&&TAB==='profile')renderProfile();
+  }else if(pb){pb.disabled=false;pb.innerHTML=ic('spark')+' Get founding-member access';}
+};
+window.__lumenPremiumError=function(m){
+  const pb=window.__premBtn;if(pb){pb.disabled=false;pb.innerHTML=ic('spark')+' Get founding-member access';}
+  try{toast(m||'Purchase didn’t complete');}catch(e){}
+};
 const NAV_ICON={meditate:'meditate',lessons:'lotus',map:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
 const LEAGUE_ICON={Ember:'flame',Spark:'spark',Glow:'glow',Flare:'flare',Beacon:'beacon',Nova:'star',Supernova:'nova'};
 const leagueIcon=(name,cls)=>ic(LEAGUE_ICON[name]||'trophy',cls||'');
@@ -6433,7 +6475,12 @@ async function renderProfile(){
     catch(e){sb.disabled=false;sb.textContent='Save text settings';toast(e);}
   };}
   {const pb=$('#pro');if(pb)pb.onclick=async()=>{
-    pb.disabled=true;const old=pb.innerHTML;pb.innerHTML=ic('live','g')+' Saving…';
+    if(window.__lumenNativeIAP){           // in the iOS app → native StoreKit purchase ($7/mo)
+      pb.disabled=true;pb.innerHTML=ic('live','g')+' Opening…';
+      window.__premBtn=pb;try{window.__lumenBuyPremium();}catch(e){pb.disabled=false;pb.innerHTML=ic('spark')+' Get founding-member access';}
+      return;
+    }
+    pb.disabled=true;const old=pb.innerHTML;pb.innerHTML=ic('live','g')+' Saving…';   // web → interest capture
     try{await api('premium/interest','POST',{});
       pb.style.display='none';
       const st=$('#prostate');if(st){st.innerHTML=ic('check','g')+' You’re on the founding-member list. We’ll reach out when Premium opens.';st.style.color='#f5c977';}
@@ -7640,6 +7687,41 @@ class H(BaseHTTPRequestHandler):
                 self._send(500, {"error": "Could not save — please try again."}); return
             self._send(200, {"ok": True, "waitlisted": True}); return
 
+        if p == "/api/premium/activate":
+            # After a native StoreKit purchase, the client calls this; we verify
+            # the RevenueCat 'premium' entitlement server-side before unlocking.
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            if rc_premium_active(u["email"]):
+                c.execute("UPDATE users SET tier='premium' WHERE id=?", (u["id"],)); c.commit()
+                self._send(200, {"ok": True, "tier": "premium"}); return
+            self._send(200, {"ok": False, "tier": (u["tier"] if "tier" in u.keys() else "free") or "free"}); return
+
+        if p == "/api/rc/webhook":
+            # RevenueCat server webhook → keep tier in sync on renew/expire.
+            if RC_WEBHOOK_AUTH and self.headers.get("Authorization", "") != RC_WEBHOOK_AUTH:
+                self._send(401, {"error": "nope"}); return
+            try:
+                ev = (self._body().get("event") or {})
+            except Exception:
+                ev = {}
+            aid = (ev.get("app_user_id") or ev.get("original_app_user_id") or "").strip().lower()
+            etype = ev.get("type", "")
+            ents = ev.get("entitlement_ids") or ([ev["entitlement_id"]] if ev.get("entitlement_id") else [])
+            if aid:
+                try:
+                    row = c.execute("SELECT id FROM users WHERE lower(email)=?", (aid,)).fetchone()
+                    if row:
+                        if etype in ("INITIAL_PURCHASE", "RENEWAL", "PRODUCT_CHANGE", "UNCANCELLATION",
+                                     "NON_RENEWING_PURCHASE", "SUBSCRIPTION_EXTENDED") and "premium" in (ents or []):
+                            c.execute("UPDATE users SET tier='premium' WHERE id=?", (row["id"],)); c.commit()
+                        elif etype in ("EXPIRATION",):
+                            c.execute("UPDATE users SET tier='free' WHERE id=?", (row["id"],)); c.commit()
+                except Exception as e:
+                    print("[rc] webhook error:", e, flush=True)
+            self._send(200, {"ok": True}); return
+
         if p == "/api/feed/report":
             u = self._me(c)
             if not u:
@@ -8466,7 +8548,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v23';
+const CACHE = 'lumen-v24';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
