@@ -1503,6 +1503,65 @@ def eleven_tts(text):
         pass
     return audio
 
+# ---------------------------------------------------------------------------
+# Sentry (zero-dep). Backend errors are posted to Sentry's envelope endpoint via
+# stdlib urllib — no sentry-sdk dependency, so the tiny reboot-safe image stays
+# dependency-free. Best-effort: never raises, never blocks a request meaningfully.
+# ---------------------------------------------------------------------------
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
+SENTRY_ENV = os.environ.get("SENTRY_ENV", "production")
+SENTRY_REL = os.environ.get("SENTRY_REL", "lumen-prod")
+
+def _sentry_parse_dsn(dsn):
+    # https://<key>@<host>/<project_id>
+    try:
+        m = re.match(r"https://([0-9a-f]+)@([^/]+)/(\d+)", dsn)
+        if not m:
+            return None
+        return {"key": m.group(1), "host": m.group(2), "project": m.group(3)}
+    except Exception:
+        return None
+
+_SENTRY = _sentry_parse_dsn(SENTRY_DSN) if SENTRY_DSN else None
+
+def sentry_capture(exc, request=None, level="error"):
+    if not _SENTRY:
+        return
+    try:
+        import traceback as _tb
+        frames = []
+        for fr in _tb.extract_tb(exc.__traceback__)[-25:]:
+            frames.append({"filename": fr.filename, "function": fr.name,
+                           "lineno": fr.lineno, "context_line": (fr.line or "")[:200]})
+        event = {
+            "event_id": secrets.token_hex(16),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "platform": "python",
+            "level": level,
+            "environment": SENTRY_ENV,
+            "release": SENTRY_REL,
+            "server_name": "lumen",
+            "exception": {"values": [{
+                "type": type(exc).__name__,
+                "value": str(exc)[:500],
+                "stacktrace": {"frames": frames},
+            }]},
+        }
+        if request:
+            event["request"] = request
+        hdr = json.dumps({"event_id": event["event_id"], "dsn": SENTRY_DSN})
+        item_hdr = json.dumps({"type": "event"})
+        payload = json.dumps(event)
+        body = ("%s\n%s\n%s" % (hdr, item_hdr, payload)).encode("utf-8")
+        url = "https://%s/api/%s/envelope/" % (_SENTRY["host"], _SENTRY["project"])
+        auth = ("Sentry sentry_version=7, sentry_client=lumen-stdlib/1.0, sentry_key=%s"
+                % _SENTRY["key"])
+        req = urllib.request.Request(url, data=body, method="POST", headers={
+            "Content-Type": "application/x-sentry-envelope", "X-Sentry-Auth": auth})
+        urllib.request.urlopen(req, timeout=4).read()
+    except Exception:
+        pass  # monitoring must never break the app
+
 def gemini_json(prompt, timeout=20):
     if not GEMINI_KEY:
         return None
@@ -2287,8 +2346,8 @@ label{font-size:13px;color:var(--muted);display:block;margin:10px 0 5px}
 .spinner{display:inline-block;width:1.3em;height:1.3em;vertical-align:-0.3em;line-height:0}
 .spinner svg{display:block;width:100%;height:100%}
 .center .spinner{display:block;width:60px;height:60px;margin:2px auto 10px;vertical-align:baseline}
-.boot-load{min-height:74vh;display:flex;align-items:center;justify-content:center}
-.boot-load .spinner{display:block;width:92px;height:92px;vertical-align:baseline}
+.boot-load{min-height:100vh;display:flex;align-items:center;justify-content:center}
+.boot-load .spinner{display:block;width:200px;height:200px;vertical-align:baseline}
 @media (prefers-reduced-motion:reduce){.lumorb,.lumorb-rays{animation:none}}
 .hh-top{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative;z-index:1}
 .hh-league{display:flex;align-items:center;gap:11px}
@@ -3430,6 +3489,25 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
 .ins-arc{font-family:var(--serif);font-size:15px;line-height:1.5}
 .ins-nudge{border-color:rgba(245,201,119,.3);background:rgba(245,201,119,.05)}
 </style>
+<!-- Sentry error monitoring (project loader auto-injects the DSN; buffers errors
+     from first paint so onboarding/auth are covered). Release = deploy version. -->
+<script src="https://js.sentry-cdn.com/7ace4c4f0dca0ac2f91f436fcb17929d.min.js" crossorigin="anonymous"></script>
+<script>
+  (function(){
+    if(!(window.Sentry&&Sentry.onLoad))return;
+    Sentry.onLoad(function(){
+      Sentry.init({
+        environment:"production",
+        release:"__SENTRY_REL__",
+        tracesSampleRate:0.0,
+        ignoreErrors:["ResizeObserver loop limit exceeded","AbortError"]
+      });
+      Sentry.setTag("screen","boot");
+    });
+  })();
+  // call on every screen change so an error names the screen (incl. onboarding/auth)
+  window.__screen=function(name){try{window.Sentry&&Sentry.setTag&&Sentry.setTag("screen",name);}catch(e){}};
+</script>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -3694,8 +3772,10 @@ let pick={minutes:(()=>{try{return +localStorage.getItem('lumen_pref_min')||10;}
 
 async function boot(){
   try{const r=await api('me');if(r.authed){ME=r.profile;}}catch(e){}
+  try{if(window.Sentry&&Sentry.setUser)Sentry.setUser(ME?{id:String(ME.id||''),email:ME.email}:null);}catch(e){}
   if(!ME){
     let done=false;try{done=localStorage.getItem('lumen_onb_done')==='1';}catch(e){}
+    try{window.__screen&&window.__screen(done?'auth':'onboarding');}catch(e){}
     if(done){renderAuth();}else{renderOnboarding();}
     return;
   }
@@ -3748,7 +3828,7 @@ function leagueEmblem(lg,size){
   </svg>`;
 }
 function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>{if(b.dataset.tab==='journal')jScreen='home';go(b.dataset.tab);};const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
-function go(tab){TAB=tab;document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
+function go(tab){TAB=tab;try{window.__screen&&window.__screen(tab);}catch(e){}document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
   if(window.speechSynthesis)speechSynthesis.cancel();try{stopNarration();}catch(e){}try{Sound.stop();}catch(e){}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
   ({meditate:renderMeditate,map:renderMap,leagues:renderLeagues,journal:renderJournal,collect:renderCollection,profile:renderProfile,lessons:renderLessons}[tab])();}
@@ -6718,7 +6798,7 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         p, q = self._path()
         if p in ("/", "/index.html"):
-            self._send(200, PAGE, "text/html; charset=utf-8",
+            self._send(200, PAGE.replace("__SENTRY_REL__", SENTRY_REL), "text/html; charset=utf-8",
                        extra=[("Cache-Control", "no-cache, no-store, must-revalidate")]); return
         if p == "/manifest.webmanifest":
             self._send(200, MANIFEST, "application/manifest+json"); return
@@ -6831,6 +6911,9 @@ class H(BaseHTTPRequestHandler):
             c = db()
             try:
                 self._get_api(p, q, c)
+            except Exception as _e:
+                sentry_capture(_e, request={"url": p, "method": "GET"})
+                raise
             finally:
                 c.close()
 
@@ -6840,6 +6923,9 @@ class H(BaseHTTPRequestHandler):
             c = db()
             try:
                 self._post_api(p, q, c)
+            except Exception as _e:
+                sentry_capture(_e, request={"url": p, "method": "POST"})
+                raise
             finally:
                 c.close()
 
@@ -8297,7 +8383,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v21';
+const CACHE = 'lumen-v22';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
