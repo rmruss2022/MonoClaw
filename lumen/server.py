@@ -3945,6 +3945,8 @@ const ONB_SLIDES=[
   {scene:'vedic',h:"Your Vedic reading, every day",p:"Each morning brings a horoscope written for you — drawn from ancient Jyotish teachings and your own rāśi and nakshatra — a calm, personal invitation to begin."},
   {scene:'mandala',h:"Watch your mandala bloom",p:"A single sacred mandala grows with you — each milestone revealing one more facet, until it becomes a beautiful record of the journey only you have walked."},
   {scene:'badges',h:"Earn badges for the inner path",p:"Every new level awards a unique emblem — merit badges for the soul — a growing collection of honors that mark how far your practice has carried you."},
+  {scene:'research',h:"Grounded in real science",p:"The self-authoring and reflection exercises draw on published research from leading institutions — Harvard, Stanford and MIT — translated into a daily practice you can actually keep."},
+  {scene:'price',h:"The price of a coffee",p:"Lumen Premium is just $7 a month — about what you’d pay for a single coffee. Unlock the full library of journeys, deeper readings and everything that helps your practice grow."},
 ];
 const ONB_INTENTS=[['calm','Calm my mind','lotus'],['sleep','Sleep better','glow'],['focus','Focus & clarity','compass'],['stress','Ease stress & anxiety','ocean'],['habit','Build a habit','flame'],['spirit','Spiritual growth','nova'],['self','Understand myself','crystal'],['grief','Sit with something hard','moon']];
 const ONB_FREQS=[['daily','Every day','flame'],['most','Most days','sunrise'],['few','A few times a week','glow'],['open','Just exploring','compass']];
@@ -4015,6 +4017,29 @@ function onbScene(key){
     <circle cx="150" cy="110" r="15" fill="#241a0a" opacity=".25"/>
     <g clip-path="url(#osbc)"><rect x="0" y="40" width="46" height="150" fill="#ffffff" opacity=".45" class="os-shimmer" style="animation:osShimmer 3.4s ease-in-out infinite"/></g></g>
     ${_oStars([[92,70,2.4,.3],[214,78,2.6,1.1],[206,150,2.2,.7],[96,152,2,1.6]])}
+    </svg>`;
+  if(key==='research') return `<svg ${V}><defs><radialGradient id="osr" cx="50%" cy="46%" r="62%"><stop offset="0" stop-color="#f6c977" stop-opacity=".30"/><stop offset="1" stop-color="#f0a84a" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="150" cy="104" r="86" fill="url(#osr)"/>
+    <g class="os-breathe" style="transform-origin:150px 104px">
+    ${[['H',70],['S',150],['M',230]].map(([ltr,cx])=>`<g><path d="M${cx-30} 62 h60 v38 q0 34 -30 48 q-30 -14 -30 -48 z" fill="#161030" stroke="#f5c977" stroke-width="2"/><path d="M${cx-30} 62 h60 v10 h-60 z" fill="rgba(245,201,119,.18)"/><text x="${cx}" y="100" text-anchor="middle" font-family="Georgia,serif" font-size="30" font-weight="700" fill="#f5c977">${ltr}</text></g>`).join('')}
+    </g>
+    <text x="70" y="186" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="13" fill="#cfc8e8">Harvard</text>
+    <text x="150" y="186" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="13" fill="#cfc8e8">Stanford</text>
+    <text x="230" y="186" text-anchor="middle" font-family="-apple-system,Segoe UI,sans-serif" font-size="13" fill="#cfc8e8">MIT</text>
+    ${_oStars([[40,58,2.2,.3],[262,64,2.4,1],[150,204,2,1.6]])}
+    </svg>`;
+  if(key==='price') return `<svg ${V}><defs><radialGradient id="ospr" cx="50%" cy="58%" r="60%"><stop offset="0" stop-color="#f6c977" stop-opacity=".42"/><stop offset="1" stop-color="#f0a84a" stop-opacity="0"/></radialGradient></defs>
+    <circle cx="150" cy="118" r="82" fill="url(#ospr)"/>
+    <g fill="none" stroke="rgba(245,201,119,.6)" stroke-width="2.6" stroke-linecap="round" class="os-rise" style="transform-origin:150px 72px">
+      <path d="M132 86 q-9 -14 0 -26 q9 -12 0 -24"/><path d="M150 84 q-10 -16 0 -30 q10 -14 0 -26"/><path d="M168 86 q-9 -14 0 -26 q9 -12 0 -24"/></g>
+    <g class="os-breathe" style="transform-origin:150px 134px">
+    <ellipse cx="150" cy="170" rx="56" ry="11" fill="#241a0a" opacity=".5"/>
+    <path d="M106 106 h88 v26 a44 28 0 0 1 -88 0 z" fill="#1a1330" stroke="#f5c977" stroke-width="2.6"/>
+    <path d="M194 112 h12 a15 15 0 0 1 0 30 h-9" fill="none" stroke="#f5c977" stroke-width="2.6"/>
+    <ellipse cx="150" cy="106" rx="44" ry="11" fill="#2a1f0c" stroke="#f5c977" stroke-width="2.6"/>
+    <ellipse cx="150" cy="106" rx="35" ry="7" fill="#6b4418"/></g>
+    <g class="os-glow" style="transform-origin:224px 70px"><circle cx="224" cy="70" r="22" fill="#f5c977" stroke="#fff3d0" stroke-width="1.5"/><text x="224" y="79" text-anchor="middle" font-family="Georgia,serif" font-size="22" font-weight="700" fill="#241a0a">$7</text></g>
+    ${_oStars([[66,78,2.2,.4],[80,158,2,1.5],[246,138,2.2,1]])}
     </svg>`;
   return '';
 }
@@ -8441,7 +8466,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v22';
+const CACHE = 'lumen-v23';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
