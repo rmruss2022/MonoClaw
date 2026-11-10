@@ -22,6 +22,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # MonoClaw/
 # (name, emoji, admin_url_or_None, description, status, docs_url_or_None)
 #   status: "live" (hosted) · "hub" (served here) · "source" (code, not hosted)
 APP_PANELS = [
+    ("Lumen", "🌕", "https://lumen-production-a8c6.up.railway.app/admin",
+     "Meditation app. Owner-gated admin — live metrics, launch pipeline, and the Analytics tab (onboarding funnel, most-visited screens, DAU). Served by the Lumen backend on Railway.",
+     "live", None),
     ("Ora", "🧘", "https://ora-backend-production.up.railway.app/admin",
      "Meditation / community app. Live token-gated admin — the 'Volume Browser': browse generated meditation volumes, files and DB records. Served by the Ora backend on Railway.",
      "live", None),
