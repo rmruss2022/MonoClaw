@@ -3742,11 +3742,12 @@ const Sound=(function(){
   function ctx(){if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)();}return ac;}
   function noiseBuf(a){const b=a.createBuffer(1,a.sampleRate*2,a.sampleRate);const d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b;}
   function stopAll(){nodes.forEach(n=>{try{n.stop&&n.stop();n.disconnect&&n.disconnect();}catch(e){}});nodes=[];}
-  function start(kind){
+  function start(kind,vol){
     const a=ctx();if(a.state==='suspended')a.resume();
     stopAll();
+    const V=(typeof vol==='number')?vol:0.5;
     master=a.createGain();master.gain.value=0;master.connect(a.destination);
-    master.gain.linearRampToValueAtTime(0.5,a.currentTime+2);
+    master.gain.linearRampToValueAtTime(V,a.currentTime+2);
     nodes.push(master);
     if(kind==='silence')return;
     if(kind==='rain'||kind==='ocean'){
@@ -3772,6 +3773,26 @@ const Sound=(function(){
   }
   function bell(){const a=ctx();if(a.state==='suspended')a.resume();const o=a.createOscillator();o.type='sine';o.frequency.value=528;const g=a.createGain();g.gain.value=0.0;g.gain.linearRampToValueAtTime(0.5,a.currentTime+0.01);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+3.5);const o2=a.createOscillator();o2.type='sine';o2.frequency.value=1056;const g2=a.createGain();g2.gain.value=0;g2.gain.linearRampToValueAtTime(0.18,a.currentTime+0.01);g2.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+2.5);o.connect(g);o2.connect(g2);g.connect(a.destination);g2.connect(a.destination);o.start();o2.start();o.stop(a.currentTime+3.6);o2.stop(a.currentTime+2.6);}
   function stop(){if(master){try{master.gain.linearRampToValueAtTime(0,ac.currentTime+1.2);}catch(e){}}setTimeout(stopAll,1300);}
+  function active(){return !!master;}
+  // A gentle ambient bed played UNDER narration (journal/horoscope/keeper) so the
+  // voice never sits on dead silence. Only used when no meditation soundscape is
+  // already running; Sound.say() ducks it just like a soundscape, so the music
+  // stays softly present behind the speech.
+  let _bed=false;
+  function bed(){ if(master)return; _bed=true; start('space',0.34); }
+  function bedStop(){ if(_bed){_bed=false; stop();} }
+  // --- short UI sound effects (synthesized, no assets) ---
+  let _sfxOn=true; try{_sfxOn=(localStorage.getItem('lumen_sfx')!=='0');}catch(e){}
+  function sfxOn(v){ if(v===undefined)return _sfxOn; _sfxOn=!!v; try{localStorage.setItem('lumen_sfx',_sfxOn?'1':'0');}catch(e){} }
+  function blip(freq,dur,vol,type){ if(!_sfxOn)return; try{const a=ctx();if(a.state==='suspended')a.resume();
+    const o=a.createOscillator();o.type=type||'sine';o.frequency.value=freq;
+    const g=a.createGain();g.gain.value=0;g.gain.linearRampToValueAtTime(vol||0.06,a.currentTime+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+(dur||0.12));
+    o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+(dur||0.12)+0.02);}catch(e){} }
+  function tap(){ blip(660,0.07,0.035,'sine'); }            // soft tap for buttons
+  function tick(){ blip(880,0.06,0.045,'triangle'); }        // tab / selection
+  function chime(){ if(!_sfxOn)return; [523.25,659.25,783.99].forEach((f,i)=>setTimeout(()=>blip(f,0.5,0.06,'sine'),i*90)); } // reward
+  function unlock(){ if(!_sfxOn)return; [659.25,880,1046.5,1318.5].forEach((f,i)=>setTimeout(()=>blip(f,0.45,0.055,'triangle'),i*70)); } // achievement
   // Play a narration clip THROUGH the same context as the soundscape so iOS keeps one
   // audio session (fixes the music cutting out) and duck the music under the voice.
   let curVoice=null;
@@ -3788,8 +3809,32 @@ const Sound=(function(){
     }catch(e){fin(true);}
     return {stop:()=>{try{curVoice&&curVoice.stop();}catch(e){}curVoice=null;duck(0.5,0.4);}};
   }
-  return {start,stop,bell,say};
+  return {start,stop,bell,say,active,bed,bedStop,sfxOn,tap,tick,chime,unlock};
 })();
+// Haptics bridge: native expo-haptics via the WebView postMessage bridge
+// (window.__lumenHaptic set by the native shell); falls back to the Vibration
+// API on web/Android where available. iOS WKWebView ignores navigator.vibrate,
+// so on-device feedback comes through the native bridge.
+const Haptics=(function(){
+  function fire(k){
+    try{ if(window.__lumenHaptic){ window.__lumenHaptic(k); return; } }catch(e){}
+    try{ if(navigator.vibrate){ navigator.vibrate(k==='heavy'?28:k==='success'?[10,36,16]:k==='warning'?[18,50]:8); } }catch(e){}
+  }
+  return {light:()=>fire('light'),medium:()=>fire('medium'),heavy:()=>fire('heavy'),
+          success:()=>fire('success'),warning:()=>fire('warning'),select:()=>fire('select')};
+})();
+// One global tap cue across the whole app: a soft click + light haptic on every
+// interactive control. Capture-phase pointerdown so it fires before handlers and
+// never blocks them. Bottom-nav gets a brighter selection cue instead.
+(function(){ try{
+  document.addEventListener('pointerdown',function(e){
+    const t=e.target; if(!t||!t.closest)return;
+    const el=t.closest('button,.btn,.tab,.chip,.ach,[data-tab],[role="button"]');
+    if(!el||el.disabled)return;
+    if(el.closest('nav')){ try{Sound.tick();}catch(_){ } try{Haptics.select();}catch(_){ } }
+    else { try{Sound.tap();}catch(_){ } try{Haptics.light();}catch(_){ } }
+  },{passive:true,capture:true});
+}catch(e){} })();
 
 /* ---- app state ---- */
 let ME=null, TAB='meditate', map=null, mapLayer=null, MARKERS=null, JPATH=null, journeyTok=0;
@@ -4618,7 +4663,7 @@ let timerInt=null;
 async function startSession(){
   try{await api('session/start','POST',{});}catch(e){}
   getGeo();  // capture location now (user gesture) so it's ready by the time the sit ends
-  Sound.bell();Sound.start(pick.sound);
+  Sound.bell();Sound.start(pick.sound);try{Haptics.medium();}catch(e){}
   const total=pick.minutes*60;let left=total;let ended=false;
   $('#nav').classList.add('hidden');
   $('#app').innerHTML=`
@@ -4636,7 +4681,7 @@ async function startSession(){
   timerInt=setInterval(()=>{left--;$('#clock')&&($('#clock').textContent=mm(left));if(left<=0){finish(true);}},1000);
   function stopTimers(){clearInterval(timerInt);clearInterval(breath);}
   async function finish(complete){
-    if(ended)return;ended=true;stopTimers();Sound.stop();if(complete)Sound.bell();
+    if(ended)return;ended=true;stopTimers();Sound.stop();if(complete){Sound.bell();try{Haptics.success();}catch(e){}}
     const done=complete?pick.minutes:Math.max(1,Math.round((total-left)/60));
     completeFlow(done);
   }
@@ -4769,6 +4814,9 @@ async function shareMeditation(d){
 }
 function showRewards(res,minutes){
   $('#nav').classList.remove('hidden');bindNav();
+  // Celebrate: a rising achievement arpeggio + success haptic when something was
+  // unlocked/leveled, otherwise a soft reward chime for the Light earned.
+  try{ if(res&&((res.new_achievements&&res.new_achievements.length)||res.leveled_up)){Sound.unlock();try{Haptics.success();}catch(_){}} else {Sound.chime();} }catch(e){}
   const ach=(res.new_achievements||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'star')} ${a.title}</div>`).join(' ');
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>
@@ -5305,6 +5353,7 @@ async function lessonPlay(lesson, startSi){
     </div>
   </div>`;
   try{Sound.start(lessonSoundPick||lesson.soundscape);}catch(e){}
+  try{Haptics.medium();}catch(e){}
   const tick=setInterval(()=>{if(ended)return;elapsed=Math.min(totalEst,elapsed+1);
     const p=$('#lprog');if(p)p.style.width=Math.round(100*elapsed/totalEst)+'%';
     const rem=Math.max(0,Math.round(totalEst-elapsed));const r=$('#lrem');if(r)r.textContent=`${Math.floor(rem/60)}:${String(rem%60).padStart(2,'0')} left`;},1000);
@@ -5444,6 +5493,7 @@ async function playJourney(points){
   const btn=$('#jplay'); if(btn){btn.innerHTML=`${ic('stop')} Stop`; btn.onclick=()=>stopJourney();}
   const ov=$('#jov'); if(ov)ov.classList.add('show');
   try{Sound.bell();Sound.start('space');}catch(e){}
+  try{Haptics.medium();}catch(e){}
   const total=points.length;
   const step=total>24?650:(total>10?850:1100);
   const line=[];
@@ -5585,7 +5635,11 @@ function ttsPrefetch(text){if(_ttsOn&&_ttsFails<4&&text)ttsBuf(text).catch(()=>{
 // estimated reading time so guided flows still pace correctly.
 function narrate(text,done,rate){
   const t=(text||'').replace(/[“”"]/g,'');
-  let fired=false;const go=()=>{if(fired)return;fired=true;done&&done();};
+  // If nothing is already playing (journal / horoscope / keeper screens), bring
+  // up a soft ambient bed so the voice has music under it — not bare speech.
+  let startedBed=false;
+  try{ if(Sound.active && !Sound.active()){ Sound.bed(); startedBed=true; } }catch(e){}
+  let fired=false;const go=()=>{if(fired)return;fired=true;if(startedBed){try{Sound.bedStop();}catch(e){}}done&&done();};
   const silent=()=>{if(!fired)setTimeout(go, Math.max(800, estSay(t)*1000));};
   if(_ttsOn && _ttsFails<4){
     ttsBuf(t).then(buf=>{ _ttsFails=0; _voiceHandle=Sound.say(buf, go, silent); })
@@ -5595,6 +5649,7 @@ function narrate(text,done,rate){
   silent();return null;
 }
 function stopNarration(){try{if(_voiceHandle&&_voiceHandle.stop)_voiceHandle.stop();_voiceHandle=null;}catch(e){}
+  try{Sound.bedStop();}catch(e){}   // tear down any narration bed (no-op during meditations)
   if(window.speechSynthesis){try{speechSynthesis.cancel();}catch(e){}}}
 // rough spoken-duration estimate in seconds (calm pace ~2.4 words/sec)
 function estSay(text){const w=(text||'').trim().split(/\s+/).filter(Boolean).length;return w/2.4+0.9;}
@@ -6110,6 +6165,9 @@ function showJournalSealed(res,words,shared){
   const close=()=>{ov.remove();jScreen='home';renderJournal();};
   ov.querySelector('#sdone').onclick=close;
   ov.addEventListener('click',e=>{if(e.target===ov)close();});
+  // Seal celebration cue: achievement arpeggio if a badge unlocked, else a soft
+  // chime — with a success haptic to mark the moment the letter is kept.
+  try{ if(res&&res.new_achievements&&res.new_achievements.length){Sound.unlock();}else{Sound.chime();} try{Haptics.success();}catch(_){}}catch(e){}
   document.body.appendChild(ov);requestAnimationFrame(()=>ov.classList.add('show'));
 }
 
@@ -8549,7 +8607,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v24';
+const CACHE = 'lumen-v25';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
