@@ -155,6 +155,13 @@ def init_db():
       id INTEGER PRIMARY KEY, user_id INTEGER, kind TEXT, dedupe_key TEXT,
       status TEXT, created TEXT, sent TEXT)""")
     c.execute("CREATE INDEX IF NOT EXISTS idx_sms_log_uid ON sms_log(user_id)")
+    # first-party product analytics — screen views, onboarding steps, etc.
+    c.execute("""CREATE TABLE IF NOT EXISTS events(
+      id INTEGER PRIMARY KEY, anon_id TEXT, user_id INTEGER, name TEXT,
+      props TEXT, screen TEXT, created TEXT)""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_events_name ON events(name, created)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_events_anon ON events(anon_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_events_created ON events(created)")
     # premium interest / waitlist (until RevenueCat is live, 'upgrade' CTAs land here)
     c.execute("""CREATE TABLE IF NOT EXISTS premium_waitlist(
       user_id INTEGER PRIMARY KEY, email TEXT, created TEXT)""")
@@ -3770,13 +3777,24 @@ const SOUNDS=[['rain','rain','Rain'],['forest','forest','Forest'],['ocean','ocea
 const DUR_LABEL={5:'Quick',10:'Daily',20:'Deep',30:'Long'};
 let pick={minutes:(()=>{try{return +localStorage.getItem('lumen_pref_min')||10;}catch(e){return 10;}})(),sound:'rain'};
 
+// --- first-party product analytics: batched events -> /api/ev (admin dashboard) ---
+const _AID=(function(){try{let a=localStorage.getItem('lumen_aid');if(!a){a=Date.now().toString(36)+Math.random().toString(36).slice(2,10);localStorage.setItem('lumen_aid',a);}return a;}catch(e){return 'anon';}})();
+let _evq=[],_evt=null;
+function _evflush(){if(!_evq.length)return;const batch=_evq.splice(0,25);const body=JSON.stringify({aid:_AID,events:batch});
+  try{if(navigator.sendBeacon&&navigator.sendBeacon('api/ev',new Blob([body],{type:'application/json'})))return;}catch(e){}
+  try{fetch('api/ev',{method:'POST',headers:{'Content-Type':'application/json'},body:body,keepalive:true}).catch(()=>{});}catch(e){}}
+function track(name,props,screen){try{_evq.push({name:name,props:props||null,screen:screen||(typeof TAB!=='undefined'?TAB:null)});clearTimeout(_evt);_evt=setTimeout(_evflush,1200);}catch(e){}}
+try{addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')_evflush();});}catch(e){}
+function onbLabel(s){if(typeof Q_INTENT==='undefined')return 'Slide '+(s+1);
+  const m={};m[Q_INTENT]='Q: Intent';m[Q_FREQ]='Q: Frequency';m[Q_TIME]='Q: Time';m[Q_DUR]='Q: Duration';m[Q_LEVEL]='Q: Level';m[ONB_LAST]='Signup';
+  return (s>=Q_INTENT)?(m[s]||('Step '+s)):('Slide '+(s+1));}
 async function boot(){
   try{const r=await api('me');if(r.authed){ME=r.profile;}}catch(e){}
   try{if(window.Sentry&&Sentry.setUser)Sentry.setUser(ME?{id:String(ME.id||''),email:ME.email}:null);}catch(e){}
   if(!ME){
     let done=false;try{done=localStorage.getItem('lumen_onb_done')==='1';}catch(e){}
     try{window.__screen&&window.__screen(done?'auth':'onboarding');}catch(e){}
-    if(done){renderAuth();}else{renderOnboarding();}
+    if(done){track('screen_view',null,'auth');renderAuth();}else{renderOnboarding();}
     return;
   }
   $('#nav').classList.remove('hidden');
@@ -3828,7 +3846,7 @@ function leagueEmblem(lg,size){
   </svg>`;
 }
 function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>{if(b.dataset.tab==='journal')jScreen='home';go(b.dataset.tab);};const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
-function go(tab){TAB=tab;try{window.__screen&&window.__screen(tab);}catch(e){}document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
+function go(tab){TAB=tab;try{window.__screen&&window.__screen(tab);}catch(e){}try{track('screen_view',null,tab);}catch(e){}document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
   if(window.speechSynthesis)speechSynthesis.cancel();try{stopNarration();}catch(e){}try{Sound.stop();}catch(e){}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
   ({meditate:renderMeditate,map:renderMap,leagues:renderLeagues,journal:renderJournal,collect:renderCollection,profile:renderProfile,lessons:renderLessons}[tab])();}
@@ -4008,6 +4026,7 @@ function onbSlideFit(){ // soft gate: value slides free; the only required answe
 async function renderOnboarding(){
   $('#nav').classList.add('hidden');
   const s=onb.step;
+  try{track('onboarding_step',{step:s,label:onbLabel(s)},'onboarding');}catch(e){}
   let body='';
   if(s<NSL){
     const sl=ONB_SLIDES[s];
@@ -7459,6 +7478,16 @@ class H(BaseHTTPRequestHandler):
             resp["subtasks"] = subtasks_by_parent(c)
             self._send(200, resp); return
 
+        if p == "/api/admin/analytics":
+            u, err = self._owner(c)
+            if err:
+                self._send(*err); return
+            try:
+                days = max(1, min(90, int((q.get("days") or ["30"])[0])))
+            except Exception:
+                days = 30
+            self._send(200, admin_analytics(c, days)); return
+
         self._send(404, {"error": "not found"})
 
     # -- POST api ----------------------------------------------------------
@@ -7509,6 +7538,35 @@ class H(BaseHTTPRequestHandler):
                 self._send(400, {"error": "No phone to text. Pass {\"to\":\"+1...\"} or save a phone on your account."}); return
             ok = send_sms(to, "Lumen — your SMS notification engine is wired up and working. Reply STOP to opt out.")
             self._send(200, {"ok": ok, "to": to, "mode": SMS_MODE}); return
+
+        if p == "/api/ev":
+            # First-party analytics ingest (no auth — onboarding happens pre-signup).
+            d = self._body()
+            aid = re.sub(r"[^A-Za-z0-9_-]", "", str(d.get("aid") or ""))[:40] or None
+            try:
+                u = self._me(c)
+            except Exception:
+                u = None
+            uid = u["id"] if u else None
+            evs = d.get("events") or []
+            if isinstance(evs, dict):
+                evs = [evs]
+            n = 0
+            for e in evs[:25]:
+                if not isinstance(e, dict):
+                    continue
+                name = str(e.get("name") or "")[:60]
+                if not name:
+                    continue
+                screen = str(e.get("screen") or "")[:40] or None
+                props = e.get("props")
+                props = json.dumps(props)[:500] if props is not None else None
+                c.execute("INSERT INTO events(anon_id,user_id,name,props,screen,created) VALUES(?,?,?,?,?,?)",
+                          (aid, uid, name, props, screen, now_iso()))
+                n += 1
+            if n:
+                c.commit()
+            self._send(200, {"ok": True, "n": n}); return
 
         if p == "/api/waitlist":
             email = (self._body().get("email") or "").strip().lower()
@@ -9032,6 +9090,64 @@ def _mkt_state(c):
     return {r["key"]: {"status": r["status"], "note": r["note"], "updated": r["updated"]} for r in rows}
 
 
+def admin_analytics(c, days=30):
+    """First-party product analytics: onboarding funnel + most-visited screens."""
+    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    out = {"days": days}
+    # onboarding funnel — distinct users reaching each step
+    funnel = []
+    try:
+        for r in c.execute(
+            "SELECT CAST(json_extract(props,'$.step') AS INTEGER) step, "
+            "       json_extract(props,'$.label') label, COUNT(DISTINCT anon_id) users "
+            "FROM events WHERE name='onboarding_step' AND created>=? "
+            "GROUP BY step ORDER BY step", (since,)).fetchall():
+            if r["step"] is None:
+                continue
+            funnel.append({"step": r["step"], "label": r["label"] or ("Step %d" % r["step"]),
+                           "users": r["users"]})
+    except Exception:
+        agg = {}
+        for r in c.execute("SELECT props, anon_id FROM events WHERE name='onboarding_step' AND created>=?",
+                           (since,)).fetchall():
+            try:
+                pj = json.loads(r["props"] or "{}")
+            except Exception:
+                continue
+            st = pj.get("step")
+            if st is None:
+                continue
+            agg.setdefault(st, {"label": pj.get("label") or ("Step %d" % st), "users": set()})
+            agg[st]["users"].add(r["anon_id"])
+        funnel = [{"step": s, "label": v["label"], "users": len(v["users"])}
+                  for s, v in sorted(agg.items())]
+    out["onboarding_funnel"] = funnel
+    if funnel:
+        top = funnel[0]["users"] or 1
+        out["onboarding_start"] = funnel[0]["users"]
+        out["onboarding_complete"] = funnel[-1]["users"]
+        out["onboarding_conv_pct"] = round(100.0 * funnel[-1]["users"] / top, 1)
+    # most-frequented screens
+    out["screens"] = [{"screen": r["screen"] or "(none)", "views": r["views"], "users": r["users"]}
+                      for r in c.execute(
+        "SELECT screen, COUNT(*) views, COUNT(DISTINCT anon_id) users FROM events "
+        "WHERE name='screen_view' AND created>=? GROUP BY screen ORDER BY views DESC LIMIT 25",
+        (since,)).fetchall()]
+    # headline counts
+    out["visitors"] = (c.execute("SELECT COUNT(DISTINCT anon_id) n FROM events WHERE created>=?",
+                                 (since,)).fetchone()["n"]) or 0
+    out["total_events"] = (c.execute("SELECT COUNT(*) n FROM events WHERE created>=?",
+                                     (since,)).fetchone()["n"]) or 0
+    out["signups"] = (c.execute("SELECT COUNT(*) n FROM users WHERE is_bot=0 AND created>=?",
+                                (since,)).fetchone()["n"]) or 0
+    # daily active (distinct anon) last 14 days
+    out["daily_active"] = [{"day": r["d"], "users": r["n"]} for r in c.execute(
+        "SELECT substr(created,1,10) d, COUNT(DISTINCT anon_id) n FROM events "
+        "WHERE created>=? GROUP BY d ORDER BY d DESC LIMIT 14",
+        ((datetime.now(timezone.utc) - timedelta(days=14)).isoformat(),)).fetchall()]
+    return out
+
+
 def admin_overview(c):
     """Real, live app metrics for the owner dashboard."""
     def one(sql, args=()):
@@ -9164,9 +9280,9 @@ async function boot(){const r=await j('/api/admin/overview'); if(r.error){gate(r
  DATA=r; render();}
 function render(){
  app.innerHTML=`<h1>🌕 Lumen Admin</h1><p class="sub">Live metrics + launch pipeline · <a href="/site" target="_blank">marketing site ↗</a></p>
- <div class="tabs">${['dashboard','pipeline','distribution','materials','notifications'].map(t=>`<button class="tab ${t==TAB?'on':''}" onclick="go('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>
+ <div class="tabs">${['dashboard','analytics','pipeline','distribution','materials','notifications'].map(t=>`<button class="tab ${t==TAB?'on':''}" onclick="go('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>
  <div id="body"></div>`;
- ({dashboard:dash,pipeline:pipe,distribution:dist,materials:mats,notifications:notif}[TAB])();
+ ({dashboard:dash,analytics:analytics,pipeline:pipe,distribution:dist,materials:mats,notifications:notif}[TAB])();
 }
 function go(t){TAB=t;render();}
 function dash(){const k=DATA.kpis, S=DATA.series, mx=Math.max(1,...S.map(d=>d.sessions));
@@ -9263,6 +9379,20 @@ async function notif(){const b=$('#body');b.innerHTML='<p class="sub">Loading…
    <textarea id="bb" placeholder="Message (≤160)" rows="2" style="width:100%;padding:9px;margin:4px 0;border-radius:8px;border:1px solid var(--line);background:#0f0d1c;color:var(--ink)"></textarea>
    <button class="tab on" onclick="notifBroadcast(this)">Send broadcast</button></div>
   <div class="card"><h3>Recent activity</h3><table><tr><th>Cat</th><th>Title</th><th>Status</th><th>When</th></tr>${recent}</table></div>`;
+}
+async function analytics(){const b=$('#body');b.innerHTML='<p class="sub">Loading…</p>';
+ const a=await j('/api/admin/analytics');
+ const kpi=(v,l)=>`<div class="kpi"><div class="n">${v}</div><div class="l">${l}</div></div>`;
+ const F=a.onboarding_funnel||[];const top=F.length?(F[0].users||1):1;
+ const funnelRows=F.map(f=>{const pct=Math.round(100*(f.users||0)/top);
+   return `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${esc(f.label)}</span><span>${f.users} · ${pct}%</span></div>
+   <div style="height:10px;background:#1a1730;border-radius:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f5c977,#e0a955)"></div></div></div>`;}).join('')||'<p class="sub">No onboarding events yet — open the app in a fresh browser to generate some.</p>';
+ const scr=(a.screens||[]).map(s=>`<tr><td>${esc(s.screen)}</td><td>${s.views}</td><td>${s.users}</td></tr>`).join('')||'<tr><td colspan=3>No screen views yet</td></tr>';
+ const dau=(a.daily_active||[]).map(d=>`<tr><td>${esc(d.day)}</td><td>${d.users}</td></tr>`).join('')||'<tr><td colspan=2>—</td></tr>';
+ b.innerHTML=`<div class="grid">${kpi(a.visitors,'Visitors · '+a.days+'d')}${kpi(a.signups,'Signups · '+a.days+'d')}${kpi((a.onboarding_conv_pct!=null?a.onboarding_conv_pct+'%':'—'),'Onboarding complete')}${kpi(a.total_events,'Events')}</div>
+  <div class="card"><h3>Onboarding funnel</h3><p class="sub">Distinct visitors reaching each step (${a.onboarding_start||0} started → ${a.onboarding_complete||0} reached signup).</p>${funnelRows}</div>
+  <div class="card"><h3>Most-visited screens</h3><table><tr><th>Screen</th><th>Views</th><th>Users</th></tr>${scr}</table></div>
+  <div class="card"><h3>Daily active (14d)</h3><table><tr><th>Day</th><th>Visitors</th></tr>${dau}</table></div>`;
 }
 async function notifTest(btn){btn.textContent='Sending…';const r=await j('/api/admin/notify/test',{method:'POST'});
  btn.textContent=r.ok?('Sent ✓ ('+r.tokens+' device)'):(r.error||'Failed');}
