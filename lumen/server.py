@@ -167,6 +167,12 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS idx_events_name ON events(name, created)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_events_anon ON events(anon_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_events_created ON events(created)")
+    # The 5-Year Plan: one row per user per pillar, assembled from their Future
+    # ('five years on') journal capstones and editable by hand. This is the product.
+    c.execute("""CREATE TABLE IF NOT EXISTS life_plan(
+      user_id INTEGER, pillar TEXT, vision TEXT, drift TEXT, goal TEXT,
+      why TEXT, obstacle TEXT, step TEXT, source TEXT, updated TEXT,
+      PRIMARY KEY(user_id, pillar))""")
     # premium interest / waitlist (until RevenueCat is live, 'upgrade' CTAs land here)
     c.execute("""CREATE TABLE IF NOT EXISTS premium_waitlist(
       user_id INTEGER PRIMARY KEY, email TEXT, created TEXT)""")
@@ -1405,6 +1411,89 @@ PILLAR_PLANS = {
     ]),
 }
 
+# ---- The Future lens: each pillar's "five years on" capstone -----------------
+# Modeled on the Future Authoring method: imagine the pillar at its realistic best
+# five years out, face the drift (what happens if nothing changes — the motivational
+# engine), then commit to one concrete goal, the real why, the obstacle, and a first
+# ninety-day step. Sealing this chapter writes that pillar's slice of the 5-Year Plan.
+# Each capstone's five steps map 1:1 to the plan fields:
+#   [0]=vision  [1]=drift  [2]=goal  [3]=why  [4]=step (obstacle folded in)
+PLAN_FIELDS = ["vision", "drift", "goal", "why", "step"]
+PILLAR_FUTURE = {
+    "Family": ("Family, five years on",
+     "Look down the road and choose what you want your family life to become.",
+     ["Imagine your family life five years from now, if things went about as well as they realistically could. Who are you close to? What's the feeling in the room when you're together? Write it as if it were already true.",
+      "Now the other road: if nothing changes — the distance, the old patterns, the things left unsaid drift on — where does your family life stand in five years? Be honest about the cost.",
+      "Name one concrete thing you want to be true about your family in five years. Specific enough that you'd know if you got there.",
+      "Why does this matter to you — the real reason, underneath the obvious one?",
+      "What's most likely to get in the way — and what's one small step you could take in the next ninety days toward the first road, not the second?"]),
+    "Relationships": ("Relationships, five years on",
+     "Choose the kind of closeness you want to be living inside of.",
+     ["Picture your closest relationships five years from now, at their realistic best. Who's still in your life, how do you treat each other, and how much more known do you feel? Write it as if it's already here.",
+      "And if nothing changes — the same guardedness, the same things left unsaid — what do your relationships look like in five years? Name what that would cost you.",
+      "Name one concrete thing you want to be true in your relationships in five years. Make it specific.",
+      "Why does this matter to you, really?",
+      "What's most likely to stop you — and what's one small step in the next ninety days toward the life you described first?"]),
+    "Career": ("Career, five years on",
+     "Look past the next deadline and choose where the work is taking you.",
+     ["Imagine your working life five years from now, if it went about as well as it realistically could. What are you doing with your days, and what does it feel like to do it? Write it as if it's already true.",
+      "Now the drift: if you change nothing — same role, same avoidance, same comfortable ceiling — where's your work in five years? Say the honest cost.",
+      "Name one concrete thing you want to be true about your work in five years. Specific enough to measure.",
+      "Why does it matter to you — beyond money or title?",
+      "What's most likely to get in the way — and what's the first small step you could take in the next ninety days?"]),
+    "Finances": ("Finances, five years on",
+     "Decide what you want money to make possible, five years out.",
+     ["Picture your relationship with money five years from now at its realistic best — not a fantasy number, but the ease, the choices, the absence of a certain fear. Describe it as if it's already here.",
+      "And if nothing changes — same avoidance, same patterns — where are your finances in five years? Name what that would cost you in freedom and peace.",
+      "Name one concrete financial thing you want to be true in five years. Specific and checkable.",
+      "Why does this matter — what does the money actually protect or make possible?",
+      "What's most likely to stop you — and what's one small step in the next ninety days: a number faced, a conversation, a plan?"]),
+    "Health": ("Health, five years on",
+     "Choose how you want to be living in your body in five years.",
+     ["Imagine your health and energy five years from now, if you tended them about as well as you realistically could. How do you move, sleep, and feel on an ordinary morning? Write it as if it's already true.",
+      "Now the drift: if nothing changes — same neglect, same postponed care — where's your body in five years? Be honest about where that road leads.",
+      "Name one concrete thing you want to be true about your health in five years. Specific enough to know you got there.",
+      "Why does this matter to you — who and what does your health let you show up for?",
+      "What's most likely to get in the way — and what's the first small step in the next ninety days?"]),
+    "Hobbies": ("What you love, five years on",
+     "Make sure the things you do for joy survive the next five years.",
+     ["Imagine five years from now, having kept real room for the things you love. What are you making, playing, or practising — and how much lighter does it make everything else? Write it as if it's already true.",
+      "And if it keeps getting crowded out — if 'someday' stays someday — what have you lost by five years from now? Name it.",
+      "Name one concrete thing you want to be true about your creative or playful life in five years. Specific.",
+      "Why does this matter — what does this part of you give the rest of your life?",
+      "What's most likely to crowd it out — and what's one small step in the next ninety days to protect it?"]),
+    "Inner Growth": ("Who you're becoming, five years on",
+     "Choose the person you're walking toward.",
+     ["Imagine the person you could realistically become in five years if you kept growing — how they handle a hard day, how they talk to themselves, what they've made peace with. Describe them as if you've already met.",
+      "Now the other version: if you stop doing the inner work — if the old patterns just run — who are you in five years? Be honest about that person.",
+      "Name one concrete way you want to have grown in five years. Specific enough to recognize.",
+      "Why does this matter to you?",
+      "What's most likely to keep you stuck — and what's the first small step in the next ninety days toward the first version of you?"]),
+    "Purpose": ("Purpose, five years on",
+     "Decide what you want these five years to have been for.",
+     ["Imagine five years from now, having lived more in line with what matters most to you. What are you giving, building, or standing for — and what makes the time feel well-spent? Write it as if it's already true.",
+      "And if nothing changes — if the days just accumulate without direction — what will these five years have added up to? Name the cost of drift.",
+      "Name one concrete thing you want these five years to have been for. Specific enough to aim at.",
+      "Why does this matter to you — what's the deeper pull?",
+      "What's most likely to get in the way — and what's one small step in the next ninety days toward it?"]),
+}
+
+def pillar_chapters(pillar):
+    """Full chapter list for a pillar: its past/present reflective chapters plus the
+    'five years on' Future capstone that produces the pillar's 5-Year Plan slice."""
+    base = PILLAR_PLANS.get(pillar)
+    if not base:
+        return []
+    chapters = list(base[1])
+    cap = PILLAR_FUTURE.get(pillar)
+    if cap:
+        chapters.append(cap)
+    return chapters
+
+def pillar_capstone_index(pillar):
+    """1-based chapter number of the Future capstone for a pillar (0 if none)."""
+    return len(pillar_chapters(pillar)) if PILLAR_FUTURE.get(pillar) else 0
+
 # Backward-compatible view: the first chapter of each plan, as the old
 # (title, invitation, steps) shape. Kept so any older reference still works.
 PILLAR_EXERCISES = {k: v[1][0] for k, v in PILLAR_PLANS.items()}
@@ -1729,7 +1818,8 @@ def deep_exercise(c, u, pillar, chapter=None):
     plan = PILLAR_PLANS.get(pillar)
     if not plan:
         return None
-    arc, chapters = plan
+    arc = plan[0]
+    chapters = pillar_chapters(pillar)   # past/present chapters + the Future capstone
     # How many deep sittings has this person logged on this pillar? The count
     # decides which chapter is next; we cycle back through once the plan is done.
     done = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=? AND kind='deep' "
@@ -1760,7 +1850,69 @@ def deep_exercise(c, u, pillar, chapter=None):
         opening = (r.get("opening") or "").strip()[:200]
     return {"pillar": pillar, "title": title, "invitation": invitation, "steps": steps,
             "opening": opening, "arc": arc, "chapter": idx + 1, "chapters": n,
-            "chapter_titles": titles, "looped": done >= n}
+            "chapter_titles": titles, "looped": done >= n,
+            "is_plan": bool(PILLAR_FUTURE.get(pillar)) and idx == n - 1}
+
+def synthesize_plan_slice(c, u, pillar, text):
+    """Turn a sealed 'five years on' capstone entry into that pillar's slice of the
+    5-Year Plan: vision, drift, goal, why, obstacle, step. Drafted from the person's
+    OWN words (never invented) and stored editable. Won't clobber a hand-edited slice."""
+    if pillar not in PILLARS or not (text or "").strip():
+        return None
+    existing = c.execute("SELECT source FROM life_plan WHERE user_id=? AND pillar=?",
+                         (u["id"], pillar)).fetchone()
+    if existing and existing["source"] == "edited":
+        return None   # the person has edited this slice by hand — leave it be
+    fields = {k: "" for k in ("vision", "drift", "goal", "why", "obstacle", "step")}
+    if ai_enabled():
+        p = ("From this person's journal reflection on their '" + pillar + "' pillar — their "
+             "vision of five years from now, the drift if nothing changes, and the goal they "
+             "named — extract a concise plan slice IN THEIR OWN WORDS (lightly tidied, never "
+             "invented; leave a field empty if they didn't address it). "
+             "Return ONLY JSON: {\"vision\":\"<their best-case 5yr picture, 1-2 sentences>\","
+             "\"drift\":\"<the cost if nothing changes, 1 sentence>\","
+             "\"goal\":\"<the one concrete 5-year goal, 1 sentence>\","
+             "\"why\":\"<why it matters to them, 1 sentence>\","
+             "\"obstacle\":\"<the main obstacle, short>\","
+             "\"step\":\"<the first 90-day step, short>\"}\n\nReflection:\n" + text[:1800])
+        r = ai_json(p, timeout=25) or {}
+        for k in fields:
+            fields[k] = (r.get(k) or "").strip()[:400]
+    if not any(fields.values()):
+        return None
+    c.execute(
+        "INSERT INTO life_plan(user_id,pillar,vision,drift,goal,why,obstacle,step,source,updated) "
+        "VALUES(?,?,?,?,?,?,?,?, 'draft', ?) "
+        "ON CONFLICT(user_id,pillar) DO UPDATE SET vision=excluded.vision, drift=excluded.drift, "
+        "goal=excluded.goal, why=excluded.why, obstacle=excluded.obstacle, step=excluded.step, "
+        "source='draft', updated=excluded.updated",
+        (u["id"], pillar, fields["vision"], fields["drift"], fields["goal"], fields["why"],
+         fields["obstacle"], fields["step"], now_iso()))
+    c.commit()
+    return {"pillar": pillar, **fields}
+
+def life_plan(c, u):
+    """Assemble the user's whole 5-Year Plan: a slice per pillar (in PILLARS order),
+    plus which pillars still need their Future capstone sat."""
+    rows = {r["pillar"]: r for r in c.execute(
+        "SELECT * FROM life_plan WHERE user_id=?", (u["id"],)).fetchall()}
+    slices = []
+    for pil in PILLARS:
+        r = rows.get(pil)
+        slices.append({
+            "pillar": pil,
+            "has": bool(r),
+            "vision": (r["vision"] if r else "") or "",
+            "drift": (r["drift"] if r else "") or "",
+            "goal": (r["goal"] if r else "") or "",
+            "why": (r["why"] if r else "") or "",
+            "obstacle": (r["obstacle"] if r else "") or "",
+            "step": (r["step"] if r else "") or "",
+            "source": (r["source"] if r else "") or "",
+            "updated": (r["updated"] if r else "") or "",
+        })
+    done = sum(1 for s in slices if s["has"])
+    return {"pillars": PILLARS, "slices": slices, "done": done, "total": len(PILLARS)}
 
 def season_exercise(c, u):
     """The next chapter of the Season onboarding plan — a guided arc that walks a
@@ -6012,7 +6164,7 @@ function sealHandler(payload){
     const ex=payload()||{};if(ex.error){toast(ex.error);return;}
     const words=(t.match(/\S+/g)||[]).length;const share=$('#js').checked;
     const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
-    try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||''});
+    try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||'',chapter:ex.chapter||null});
       $('#jt').value='';try{jStopTimer();}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,share);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
   };
 }
@@ -6098,7 +6250,7 @@ async function renderDeepCompose(){
   $('#jcompose').innerHTML=composerHTML({prompt,shuffle:false,topHTML:top,placeholder:'Take it one step at a time…'});
   wireComposerCommon(()=>composeSpeech(ex));
   const pb=$('#pback');if(pb)pb.onclick=()=>{journalChapter=null;jScreen='plessons';renderJournal();};
-  $('#jsave').onclick=sealHandler(()=>({kind:'deep',pillar:journalPillar,prompt}));
+  $('#jsave').onclick=sealHandler(()=>({kind:'deep',pillar:journalPillar,prompt,chapter:ex.chapter||journalChapter||null}));
 }
 
 async function renderJournalBody(){
@@ -6181,6 +6333,7 @@ async function renderJournal(){
   if(jScreen==='compose')return renderJournalCompose();
   if(jScreen==='plessons')return renderPillarLessons();
   if(jScreen==='pillars')return renderLifeOS();
+  if(jScreen==='plan')return renderFivePlan();
   return renderJournalHome();
 }
 
@@ -6190,6 +6343,7 @@ async function renderJournalHome(){
   try{jWeek=await api('journal/week');}catch(e){}
   try{jRec=await api('journal/recommend');}catch(e){jRec=null;}
   let pp=null;try{pp=await api('pillars');}catch(e){}
+  let plan=null;try{plan=await api('plan');}catch(e){}
   listening=false;rec=null;
   const recMode=jRec&&jRec.mode;
   const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
@@ -6212,6 +6366,12 @@ async function renderJournalHome(){
   $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b>`
     +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button></div>`
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
+    +(()=>{const pd=(plan&&plan.done)||0,pt=(plan&&plan.total)||8,ppct=pt?Math.round(100*pd/pt):0;
+       return `<button class="planband" id="planband"><span class="planband-glow"></span>`
+        +`<span class="planband-l"><span class="planband-eye">${ic('compass')} Your 5-Year Plan</span>`
+        +`<span class="planband-sub">${pd?`${pd} of ${pt} pillars authored`:'Built from your own words, one pillar at a time'}</span>`
+        +`<span class="planband-bar"><i style="width:${ppct}%"></i></span></span>`
+        +`<span class="planband-go">›</span></button>`;})()
     +`<div class="pcase"><div class="pcase-frame"></div>`
       +`<div class="pcase-eyebrow">${ic('seal')} Your focus pillars</div>`
       +`<div class="pcols">${chosen.length?chosen.map(caseItem).join(''):'<span class="pcase-empty">Tap Edit to set your focus pillars and fill the case.</span>'}</div></div>`
@@ -6235,6 +6395,7 @@ async function renderJournalHome(){
     return pick?pick.name:null;
   };
   $('#talkbtn').onclick=renderChat;
+  {const pb=$('#planband');if(pb)pb.onclick=()=>{jScreen='plan';renderJournal();};}
   {const le=$('#loedit');if(le)le.onclick=(e)=>{e.stopPropagation();jScreen='pillars';renderJournal();};}
   const openMode=(k)=>{journalMode=k;journalPillar=null;if(k==='season')jSeason='';
     if(k==='deep'){const pil=nextDeepPillar();if(pil){journalPillar=pil;jScreen='compose';}else{jScreen='pillars';}}
@@ -6276,6 +6437,60 @@ async function renderPillarLessons(){
     +`<p class="muted center" style="font-size:12px;margin:16px 0 4px">Each chapter is a short guided sitting. Tap to open it.</p>`;
   $('#plback2').onclick=back;
   document.querySelectorAll('.lj-row').forEach(b=>b.onclick=()=>{journalChapter=+b.dataset.n;journalMode='deep';jScreen='compose';renderJournal();});
+}
+
+// ── Your 5-Year Plan ─────────────────────────────────────────────────────────
+// The product: a slice per pillar, assembled in the person's own words from each
+// pillar's "five years on" capstone, and hand-editable. Past→present→future, the
+// Self-Authoring method turned into one concrete five-year plan across life.
+const PLAN_ROWS=[['vision','The life, five years on'],['drift','If nothing changes'],
+  ['goal','The goal'],['why','Why it matters'],['obstacle','The obstacle'],['step','First 90 days']];
+let _planData=null;
+async function renderFivePlan(){
+  const back=()=>{jScreen='home';renderJournal();};
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="fpback" title="Back to journal">‹</button><span class="mark">${lumenMark('mark')}</span><b>Your 5-Year Plan</b></div>`
+    +`<div class="card center muted" style="font-size:13px"><span class="spinner"></span> Gathering your plan…</div>`;
+  $('#fpback').onclick=back;
+  try{_planData=await api('plan');}catch(e){_planData=null;}
+  if(!_planData){$('#app').innerHTML=`<div class="brand"><button class="back-btn" id="fpb">‹</button><span class="mark">${lumenMark('mark')}</span><b>Your 5-Year Plan</b></div><div class="card center muted">Couldn’t load your plan right now.</div>`;$('#fpb').onclick=back;return;}
+  const done=_planData.done||0,total=_planData.total||8,pct=total?Math.round(100*done/total):0;
+  const card=(s)=>{
+    const has=s.has&&PLAN_ROWS.some(([k])=>s[k]);
+    const rows=has?PLAN_ROWS.filter(([k])=>s[k]).map(([k,lbl])=>
+      `<div class="fp-field fp-${k}"><div class="fp-lbl">${lbl}</div><div class="fp-val">${esc(s[k])}</div></div>`).join(''):'';
+    const body=has
+      ? `<div class="fp-body">${rows}</div>`
+        +`<div class="fp-foot"><span class="fp-src">${s.source==='edited'?'edited by you':'drafted from your words'}</span>`
+        +`<button class="fp-edit" data-p="${esc(s.pillar)}">${ic('book')} Edit</button></div>`
+      : `<div class="fp-empty">Walk the <b>${esc(s.pillar)}</b> pillar to its “five years on” chapter to write this slice.<div><button class="fp-walk" data-p="${esc(s.pillar)}">${ic('compass')} Walk this pillar</button></div></div>`;
+    return `<div class="fp-card${has?'':' blank'}" data-p="${esc(s.pillar)}" style="--pc:${pcolor(s.pillar)}">`
+      +`<div class="fp-head"><span class="fp-ic">${ic(picon(s.pillar),'g')}</span><span class="fp-nm">${esc(s.pillar)}</span>${has?`<span class="fp-chk">${ic('check')}</span>`:''}</div>`
+      +body+`</div>`;
+  };
+  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="fpback2" title="Back to journal">‹</button><span class="mark">${lumenMark('mark')}</span><b>Your 5-Year Plan</b></div>`
+    +`<div class="fp-top"><p class="fp-intro">Your plan, built one pillar at a time from your own words — the realistic best five years out, and the first steps there.</p>`
+      +`<div class="pp-bar"><i style="width:${pct}%"></i></div>`
+      +`<div class="fp-meta">${done} of ${total} pillars authored</div></div>`
+    +`<div class="fp-list">`+(_planData.slices||[]).map(card).join('')+`</div>`
+    +`<p class="muted center" style="font-size:12px;margin:14px 0 6px">Seal a pillar’s “five years on” chapter to write its slice. Edit any slice anytime.</p>`;
+  $('#fpback2').onclick=back;
+  document.querySelectorAll('.fp-walk').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;journalChapter=null;jScreen='plessons';renderJournal();});
+  document.querySelectorAll('.fp-edit').forEach(b=>b.onclick=()=>openPlanEdit(b.dataset.p));
+}
+function openPlanEdit(pillar){
+  const s=(_planData.slices||[]).find(x=>x.pillar===pillar);if(!s)return;
+  const cardEl=document.querySelector('.fp-card[data-p="'+CSS.escape(pillar)+'"]');if(!cardEl)return;
+  const field=([k,lbl])=>`<label class="fp-elbl">${lbl}</label><textarea class="fp-ta" data-k="${k}" rows="2" maxlength="400">${esc(s[k]||'')}</textarea>`;
+  cardEl.innerHTML=`<div class="fp-head"><span class="fp-ic">${ic(picon(pillar),'g')}</span><span class="fp-nm">${esc(pillar)}</span></div>`
+    +`<div class="fp-form">${PLAN_ROWS.map(field).join('')}`
+    +`<div class="fp-erow"><button class="lo-btn" id="fpcancel">Cancel</button><button class="btn gold" id="fpsave">Save</button></div></div>`;
+  cardEl.querySelector('#fpcancel').onclick=()=>renderFivePlan();
+  cardEl.querySelector('#fpsave').onclick=async()=>{
+    const btn=cardEl.querySelector('#fpsave');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving…';
+    const payload={pillar};cardEl.querySelectorAll('.fp-ta').forEach(t=>payload[t.dataset.k]=t.value.trim());
+    try{await api('plan','POST',payload);toast('Saved to your plan ✦');}catch(e){toast(e);btn.disabled=false;btn.innerHTML='Save';return;}
+    renderFivePlan();
+  };
 }
 
 // Pillars & progress — the eight life pillars, how far you've worked through them,
@@ -6383,10 +6598,12 @@ function showJournalSealed(res,words,shared){
         <div class="fstat"><div class="fsn" style="font-size:19px">${shared?'Shared':'Private'}</div><div class="fsl">kept</div></div>
       </div>
       ${ach?`<div style="margin-bottom:16px"><div class="muted" style="font-size:12px">Achievement unlocked</div><div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ach}</div></div>`:''}
-      <button class="btn gold" id="sdone">Done</button>
+      ${res&&res.plan_slice?`<div class="plan-seal"><div class="plan-seal-eye">${ic('seal','g')} Added to your 5-Year Plan</div><div class="plan-seal-pill">${esc(res.plan_slice.pillar||'')}</div>${res.plan_slice.goal?`<p class="plan-seal-goal">“${esc(res.plan_slice.goal)}”</p>`:''}<button class="btn gold" id="sviewplan" style="margin-top:12px">${ic('compass')} View your 5-Year Plan</button></div>`:''}
+      <button class="btn${res&&res.plan_slice?' ghost':' gold'}" id="sdone">Done</button>
     </div></div>`);
   const close=()=>{ov.remove();jScreen='home';renderJournal();};
   ov.querySelector('#sdone').onclick=close;
+  {const vp=ov.querySelector('#sviewplan');if(vp)vp.onclick=()=>{ov.remove();jScreen='plan';go('journal');};}
   ov.addEventListener('click',e=>{if(e.target===ov)close();});
   // Seal celebration cue: achievement arpeggio if a badge unlocked, else a soft
   // chime — with a success haptic to mark the moment the letter is kept.
@@ -7585,6 +7802,12 @@ class H(BaseHTTPRequestHandler):
                                  "FROM journal WHERE user_id=? ORDER BY id DESC LIMIT 200", (u["id"],)).fetchall()
             self._send(200, {"entries": [dict(r) for r in rows]}); return
 
+        if p == "/api/plan":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            self._send(200, life_plan(c, u)); return
+
         if p == "/api/pillars":
             u = self._me(c)
             lo = lifeos_get(u) if u else {"focus": []}
@@ -7982,7 +8205,8 @@ class H(BaseHTTPRequestHandler):
 
         if p == "/api/rc/webhook":
             # RevenueCat server webhook → keep tier in sync on renew/expire.
-            if RC_WEBHOOK_AUTH and self.headers.get("Authorization", "") != RC_WEBHOOK_AUTH:
+            if not RC_WEBHOOK_AUTH: print("[rc] webhook rejected: REVENUECAT_WEBHOOK_AUTH not set", flush=True)
+            if not RC_WEBHOOK_AUTH or not hmac.compare_digest(self.headers.get("Authorization", "").encode(), RC_WEBHOOK_AUTH.encode()):
                 self._send(401, {"error": "nope"}); return
             try:
                 ev = (self._body().get("event") or {})
@@ -8379,6 +8603,30 @@ class H(BaseHTTPRequestHandler):
             c.commit()
             self._send(200, {"ok": True}); return
 
+        if p == "/api/plan":
+            # Save a hand-edited slice of the 5-Year Plan. Marks source='edited' so the
+            # auto-synthesis from future capstone sittings won't overwrite the person's
+            # own words. Empty body fields are allowed (you can clear a field).
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            pillar = (d.get("pillar") or "").strip()
+            if pillar not in PILLARS:
+                self._send(400, {"error": "unknown pillar"}); return
+            vals = {k: (d.get(k) or "").strip()[:400]
+                    for k in ("vision", "drift", "goal", "why", "obstacle", "step")}
+            c.execute(
+                "INSERT INTO life_plan(user_id,pillar,vision,drift,goal,why,obstacle,step,source,updated) "
+                "VALUES(?,?,?,?,?,?,?,?, 'edited', ?) "
+                "ON CONFLICT(user_id,pillar) DO UPDATE SET vision=excluded.vision, drift=excluded.drift, "
+                "goal=excluded.goal, why=excluded.why, obstacle=excluded.obstacle, step=excluded.step, "
+                "source='edited', updated=excluded.updated",
+                (u["id"], pillar, vals["vision"], vals["drift"], vals["goal"], vals["why"],
+                 vals["obstacle"], vals["step"], now_iso()))
+            c.commit()
+            self._send(200, {"ok": True, "pillar": pillar, "source": "edited", **vals}); return
+
         if p == "/api/goal":
             # The meditation pledge: how many days/week the user commits to.
             # Recorded on the profile for the notification system + record-keeping.
@@ -8517,6 +8765,21 @@ class H(BaseHTTPRequestHandler):
             if kind != "deep" or pillar not in PILLARS:
                 pillar = None
             place = (d.get("place") or "").strip()[:80] if kind == "season" else None
+            # Does this deep sitting land on the pillar's 'five years on' capstone? If so,
+            # sealing it will write that pillar's 5-Year Plan slice. Honor an explicit
+            # chapter from the client; otherwise infer from how far they've walked.
+            on_capstone = False
+            if pillar:
+                chs = pillar_chapters(pillar)
+                nch = len(chs)
+                ch_cl = d.get("chapter")
+                if ch_cl and str(ch_cl).isdigit() and 1 <= int(ch_cl) <= nch:
+                    ch_idx = int(ch_cl) - 1
+                else:
+                    pre = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=? AND "
+                                    "kind='deep' AND pillar=?", (u["id"], pillar)).fetchone()["n"]
+                    ch_idx = pre % nch if nch else 0
+                on_capstone = bool(PILLAR_FUTURE.get(pillar)) and ch_idx == nch - 1
             # the Keeper reflects back + infers mood (best-effort; never blocks the save)
             refl = journal_reflect(prompt, text, kind=kind, pillar=pillar, place=place)
             mood = ((d.get("mood") or refl["mood"] or "")).strip()[:24]
@@ -8526,6 +8789,13 @@ class H(BaseHTTPRequestHandler):
                        1 if d.get("share") else 0, now_iso(), kind, pillar, place))
             new_ach = award_journal_ach(c, u)
             c.commit()
+            # Sealing a 'five years on' capstone writes/updates that pillar's plan slice.
+            plan_slice = None
+            if on_capstone:
+                try:
+                    plan_slice = synthesize_plan_slice(c, u, pillar, text)
+                except Exception:
+                    plan_slice = None
             total = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=?", (u["id"],)).fetchone()["n"]
             # which journaling categories are still untouched this ISO week?
             today = datetime.now(timezone.utc).date()
@@ -8538,6 +8808,7 @@ class H(BaseHTTPRequestHandler):
                     wkc[r["k"]] += r["n"]
             self._send(200, {"ok": True, "count": total, "reflection": refl["reflection"], "mood": mood,
                              "kind": kind, "pillar": pillar, "place": place,
+                             "plan_slice": plan_slice,
                              "week": {"counts": wkc, "missing": [k for k in JOURNAL_KINDS if wkc[k] == 0]},
                              "new_achievements": [{"code": a, "title": ACH_BY_CODE[a][1]} for a in new_ach]}); return
 
