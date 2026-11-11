@@ -4023,15 +4023,15 @@ function renderAuth(){
       <label class="sms-consent"><input type="checkbox" id="smsok"><span>Text me gentle practice reminders. Msg &amp; data rates may apply; reply STOP anytime to opt out.</span></label></div>
     <div class="err" id="er"></div>
     <button class="btn" id="go">Sign in</button>
-    <button class="btn ghost" id="sw" style="margin-top:9px">Create an account</button>
+    <button class="btn gold" id="sw" style="margin-top:9px">Create an account</button>
     <div class="center" style="margin-top:12px"><a class="onb-signin" id="forgot">Forgot password?</a></div>
   </div>`;
   let mode='login';
-  $('#sw').onclick=()=>{mode=mode==='login'?'signup':'login';
-    $('#nameWrap').classList.toggle('hidden',mode!=='signup');
-    $('#go').textContent=mode==='login'?'Sign in':'Create account & begin';
-    $('#sw').textContent=mode==='login'?'Create an account':'I already have an account';
-    $('#forgot').style.display=mode==='login'?'':'none';};
+  // "Create an account" always runs the full onboarding flow (value slides →
+  // personalization → signup), not a bare form — so every new user sees the pitch.
+  $('#sw').onclick=()=>{onb={step:0,intents:[],timeHour:null,level:null,freq:null,minutes:null};
+    try{localStorage.removeItem('lumen_onb_done');}catch(e){}
+    renderOnboarding();};
   $('#forgot').onclick=()=>renderReset(($('#em').value||'').trim());
   $('#go').onclick=async()=>{const er=$('#er');er.textContent='';
     const email=$('#em').value.trim(),password=$('#pw').value;
@@ -8814,7 +8814,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v26';
+const CACHE = 'lumen-v27';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
