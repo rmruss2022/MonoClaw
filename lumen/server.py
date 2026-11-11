@@ -1537,6 +1537,38 @@ def eleven_tts(text):
         pass
     return audio
 
+def eleven_stt(audio_bytes, filename="note.webm"):
+    """Transcribe recorded audio to text via ElevenLabs Scribe (speech-to-text).
+    Returns the transcript string, or None on any failure. Stdlib multipart."""
+    if not ELEVEN_KEY or not audio_bytes:
+        return None
+    boundary = "----lumenstt" + secrets.token_hex(10)
+    ctype = "audio/webm"
+    fl = (filename or "").lower()
+    if fl.endswith((".mp4", ".m4a")): ctype = "audio/mp4"
+    elif fl.endswith(".mp3"): ctype = "audio/mpeg"
+    elif fl.endswith(".wav"): ctype = "audio/wav"
+    elif fl.endswith(".ogg"): ctype = "audio/ogg"
+    def field(name, value):
+        return (("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n"
+                 % (boundary, name, value)).encode("utf-8"))
+    parts = [field("model_id", "scribe_v1")]
+    parts.append(("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n"
+                  "Content-Type: %s\r\n\r\n" % (boundary, filename, ctype)).encode("utf-8"))
+    parts.append(audio_bytes)
+    parts.append(("\r\n--%s--\r\n" % boundary).encode("utf-8"))
+    body = b"".join(parts)
+    req = urllib.request.Request(
+        "https://api.elevenlabs.io/v1/speech-to-text", data=body,
+        headers={"xi-api-key": ELEVEN_KEY,
+                 "Content-Type": "multipart/form-data; boundary=" + boundary})
+    try:
+        with urllib.request.urlopen(req, timeout=90) as r:
+            data = json.loads(r.read().decode("utf-8", "replace"))
+        return (data.get("text") or "").strip()
+    except Exception:
+        return None
+
 # ---------------------------------------------------------------------------
 # Sentry (zero-dep). Backend errors are posted to Sentry's envelope endpoint via
 # stdlib urllib — no sentry-sdk dependency, so the tiny reboot-safe image stays
@@ -2744,6 +2776,39 @@ a{color:var(--purple)}
 .mic-hint{position:relative;z-index:1;color:var(--purple);font-size:12px;font-style:italic;min-height:14px;margin-top:9px;text-align:center}
 .letter-seal-btn{position:relative;z-index:1;margin:16px auto 2px;width:auto;padding:13px 28px;display:flex;align-items:center;justify-content:center;gap:9px}
 .letter-seal-btn .seal-ic{width:22px;height:22px}
+/* ---- two-phase journaling flow (full-screen) ---- */
+.jflow{position:relative}
+.jphase[hidden]{display:none}
+.jp-card{margin-bottom:6px}
+.jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
+.jbegin .seal-ic{width:22px;height:22px}
+.jbegin-sub{text-align:center;font-size:13px;color:var(--muted);max-width:360px;margin:0 auto}
+.jwrite{display:flex;flex-direction:column;gap:14px}
+.jw-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px}
+.jtimer{display:flex;align-items:baseline;gap:8px;padding:10px 18px;border:1px solid var(--line);border-radius:16px;
+  background:radial-gradient(120% 140% at 50% 0,rgba(245,201,119,.12),rgba(20,16,40,.4));transition:border-color .4s,background .4s}
+.jtimer .jt-time{font-size:30px;font-weight:800;letter-spacing:.5px;color:var(--gold);font-variant-numeric:tabular-nums;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
+.jtimer .jt-lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+.jtimer.soon{border-color:rgba(245,201,119,.5)}
+.jtimer.soon .jt-time{color:#ffcf7a}
+.jtimer.done{border-color:rgba(130,220,160,.45);background:radial-gradient(120% 140% at 50% 0,rgba(130,220,160,.12),rgba(20,16,40,.4))}
+.jtimer.done .jt-time{color:#9fe3b0}
+.jw-prompt{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;line-height:1.5;color:#d8cff0;
+  padding:0 2px;border-left:2px solid rgba(245,201,119,.4);padding-left:12px}
+.jmodes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.jmode{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px 12px;border-radius:16px;
+  border:1px solid var(--line);background:rgba(20,16,40,.45);color:#cfc8e8;cursor:pointer;transition:border-color .2s,background .2s,transform .1s;text-align:center}
+.jmode:active{transform:scale(.97)}
+.jmode .jm-ic{width:24px;height:24px;color:var(--gold)}
+.jmode b{font-size:13.5px;font-weight:700;color:#efe9f8}
+.jmode small{font-size:10.5px;color:var(--muted);line-height:1.2}
+.jmode.on{border-color:rgba(245,201,119,.55);background:radial-gradient(120% 140% at 50% 0,rgba(245,201,119,.14),rgba(20,16,40,.5))}
+.jmode.rec{border-color:rgba(255,120,120,.7);background:rgba(90,20,30,.35);animation:jRecPulse 1.1s ease-in-out infinite}
+.jmode.rec .jm-ic{color:#ff8a8a}
+@keyframes jRecPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,.35)}50%{box-shadow:0 0 0 7px rgba(255,90,90,0)}}
+.jw-body{min-height:200px;border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(14,10,28,.5)}
+.jw-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.jw-foot .letter-seal-btn{margin:0 0 0 auto}
 .letter.mini{padding:16px 18px;margin-top:12px}
 .letter-tag{display:inline-flex;align-items:center;gap:5px;font-style:normal;font-size:11px;color:var(--muted)}
 .letter-tag .i{width:13px;height:13px}
@@ -5743,23 +5808,117 @@ function jRecCard(){
   +`</div>`;
 }
 
+// Two-phase composer. PHASE 1 (#jp1) = the prompt, read like a page: title,
+// invitation and questions (topHTML) + a single "Begin journaling" button.
+// PHASE 2 (#jp2) = a calm 10-minute countdown + three clear ways to write your
+// letter — Type, Record (voice → transcript), or Photograph (handwriting → text)
+// — all feeding one textarea that gets sealed. Both phases stay in the DOM so
+// every element ref (#jt, #jplace, #js, #jsave) remains valid across the switch.
 function composerHTML(o){
-  return `<div class="letter">`
-    +(o.topHTML||'')
-    +`<div class="letter-head"><span>${niceDate(Date.now())}</span>`
-    +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Read this aloud">${ic(speakOn?'sound':'mute')}</button></div>`
-    +`<div class="letter-prompt"><span class="lp-q">“${esc(o.prompt||'')}”</span>`
-    +(o.shuffle?`<button class="lp-shuffle" id="jshuf" title="Another prompt">${ic('spark')} another prompt</button>`:'')
+  const promptLine=`<div class="letter-prompt"><span class="lp-q">“${esc(o.prompt||'')}”</span>`
+    +(o.shuffle?`<button class="lp-shuffle" id="jshuf" title="Another prompt">${ic('spark')} another prompt</button>`:'')+`</div>`;
+  return `<div class="jflow">`
+  // ---------------- PHASE 1 · the prompt ----------------
+  +`<div class="jphase" id="jp1">`
+    +`<div class="letter jp-card">`
+      +(o.topHTML||'')
+      +`<div class="letter-head"><span>${niceDate(Date.now())}</span>`
+      +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Read this aloud">${ic(speakOn?'sound':'mute')}</button></div>`
+      +promptLine
     +`</div>`
-    +`<textarea id="jt" class="letter-body" rows="7" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
+    +`<button class="btn gold jbegin" id="jbegin">${ic('clock','seal-ic')} Begin journaling</button>`
+    +`<div class="jbegin-sub">Ten quiet minutes. Write it, speak it, or photograph it — however it comes.</div>`
+  +`</div>`
+  // ---------------- PHASE 2 · writing ----------------
+  +`<div class="jphase jwrite" id="jp2" hidden>`
+    +`<div class="jw-top">`
+      +`<div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">10:00</span><span class="jt-lbl" id="jtlbl">left</span></div>`
+      +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak2" title="Read the prompt aloud">${ic(speakOn?'sound':'mute')}</button>`
+    +`</div>`
+    +`<div class="jw-prompt">“${esc(o.prompt||'')}”</div>`
+    +`<div class="jmodes">`
+      +`<button class="jmode on" data-mode="type">${ic('note','jm-ic')}<b>Type</b><small>Write it out</small></button>`
+      +`<button class="jmode" data-mode="voice">${ic('mic','jm-ic')}<b>Record</b><small>Speak, we transcribe</small></button>`
+      +`<button class="jmode" data-mode="photo">${ic('camera','jm-ic')}<b>Photograph</b><small>Snap your handwriting</small></button>`
+    +`</div>`
+    +`<textarea id="jt" class="letter-body jw-body" rows="8" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
     +`<div id="jprev" class="letter-interim"></div>`
-    +`<div class="letter-foot">`
-    +`<button class="mic" id="jmic" title="Speak your letter"><span class="mic-ring"></span>${ic('mic')}</button>`
-    +`<button class="mic" id="jcam" title="Photograph your handwriting">${ic('camera')}</button>`
-    +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
-    +`<label class="letter-share"><input type="checkbox" id="js"> <span>Share</span></label></div>`
     +`<div class="mic-hint" id="michint"></div>`
-    +`<button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button></div>`;
+    +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
+    +`<div class="jw-foot">`
+      +`<label class="letter-share"><input type="checkbox" id="js"> <span>Share to community</span></label>`
+      +`<button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button>`
+    +`</div>`
+  +`</div>`
+  +`</div>`;
+}
+// ---- 10-minute journaling countdown ----
+let jTimerInt=null;
+function jStopTimer(){ if(jTimerInt){clearInterval(jTimerInt);jTimerInt=null;} }
+function jStartTimer(secs){
+  jStopTimer();
+  let left=(typeof secs==='number')?secs:600;   // 10:00
+  const disp=$('#jtdisp'),lbl=$('#jtlbl');
+  const paint=()=>{if(disp)disp.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;};
+  paint();
+  jTimerInt=setInterval(()=>{
+    left--;
+    if(left<=0){
+      left=0;paint();jStopTimer();
+      const tm=$('#jtimer');if(tm)tm.classList.add('done');
+      if(disp)disp.textContent='0:00';if(lbl)lbl.textContent='take your time';
+      try{Sound.bell();}catch(e){} try{Haptics.light();}catch(e){}
+      try{toast(ic('check','g')+' Ten minutes — seal whenever you’re ready.');}catch(e){}
+      return;
+    }
+    paint();
+    if(left===60){const tm=$('#jtimer');if(tm)tm.classList.add('soon');}
+  },1000);
+}
+// ---- voice note → transcript (MediaRecorder → ElevenLabs Scribe) ----
+let jMediaRec=null, jChunks=[], jRecStream=null, jRecTimeout=null;
+function _jSetMode(m){
+  document.querySelectorAll('.jmode').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+}
+async function toggleRecord(){
+  if(jMediaRec&&jMediaRec.state==='recording'){ try{jMediaRec.stop();}catch(e){} return; }
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast('Recording isn’t supported here — try Type or Photograph.');return;}
+  const hint=$('#michint');
+  try{
+    jRecStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){ toast('Microphone permission needed to record.'); _jSetMode('type'); return; }
+  try{
+    jChunks=[];
+    let mt='';
+    if(window.MediaRecorder.isTypeSupported){
+      mt=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+    }
+    jMediaRec=new MediaRecorder(jRecStream, mt?{mimeType:mt}:undefined);
+    jMediaRec.ondataavailable=(e)=>{if(e.data&&e.data.size)jChunks.push(e.data);};
+    jMediaRec.onstop=async()=>{
+      clearTimeout(jRecTimeout);
+      try{jRecStream.getTracks().forEach(t=>t.stop());}catch(e){}
+      const vb=document.querySelector('.jmode[data-mode="voice"]');if(vb)vb.classList.remove('rec');
+      if(hint)hint.textContent='Transcribing your words…';
+      const type=(jMediaRec&&jMediaRec.mimeType)||mt||'audio/webm';
+      const blob=new Blob(jChunks,{type});
+      if(!blob.size){if(hint)hint.textContent='';return;}
+      const ext=type.indexOf('mp4')>=0||type.indexOf('aac')>=0?'mp4':'webm';
+      try{
+        const dataUrl=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(blob);});
+        const r=await api('journal/transcribe-audio','POST',{audio:dataUrl,filename:'note.'+ext});
+        const t=$('#jt'),add=(r.text||'').trim();
+        if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;t.scrollTop=t.scrollHeight;try{Haptics.success();}catch(e){}toast('Transcribed '+ic('spark','g'));}
+        else toast('Didn’t catch any words — try again.');
+      }catch(e){toast(typeof e==='string'?e:'Couldn’t transcribe that — try again.');}
+      finally{if(hint)hint.textContent='';_jSetMode('type');}
+    };
+    jMediaRec.start();
+    const vb=document.querySelector('.jmode[data-mode="voice"]');if(vb)vb.classList.add('rec');
+    if(hint)hint.textContent='Recording… tap Record again to stop.';
+    try{Haptics.medium();}catch(e){}
+    jRecTimeout=setTimeout(()=>{if(jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}},150000); // 2.5 min cap
+  }catch(e){ toast('Couldn’t start recording.'); _jSetMode('type'); }
 }
 
 // Speak a journal prompt through Lumen's ElevenLabs voice (narrate), not the
@@ -5777,14 +5936,38 @@ function composeSpeech(ex){
   (ex.steps||[]).forEach((s,i)=>parts.push('Step '+(i+1)+'. '+strip(s)));
   return parts.filter(Boolean).join(' ');
 }
+let jComposePhase='prompt';
+function enterWritePhase(){
+  jComposePhase='write';
+  const p1=$('#jp1'),p2=$('#jp2');if(p1)p1.hidden=true;if(p2)p2.hidden=false;
+  try{Haptics.medium();}catch(e){}
+  jStartTimer(600);
+  _jSetMode('type');
+  const t=$('#jt');if(t)setTimeout(()=>{try{t.focus();}catch(e){}},60);
+  try{window.scrollTo(0,0);}catch(e){}
+}
+function exitToPrompt(){
+  jComposePhase='prompt';
+  jStopTimer();
+  if(jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}
+  const p1=$('#jp1'),p2=$('#jp2');if(p2)p2.hidden=true;if(p1)p1.hidden=false;
+  try{window.scrollTo(0,0);}catch(e){}
+}
 function wireComposerCommon(getPrompt){
-  $('#jspeak').onclick=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
-    $('#jspeak').classList.toggle('on',speakOn);$('#jspeak').innerHTML=ic(speakOn?'sound':'mute');
+  const toggleSpeak=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
+    document.querySelectorAll('#jspeak,#jspeak2').forEach(b=>{b.classList.toggle('on',speakOn);b.innerHTML=ic(speakOn?'sound':'mute');});
     if(speakOn)sayPrompt(getPrompt());else{try{stopNarration();}catch(e){}}};
+  const sp1=$('#jspeak');if(sp1)sp1.onclick=toggleSpeak;
+  const sp2=$('#jspeak2');if(sp2)sp2.onclick=toggleSpeak;
   if(speakOn){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')sayPrompt(getPrompt());},1100);}
-  $('#jmic').onclick=toggleVoice;
-  $('#jcam').onclick=()=>$('#jfile').click();
-  $('#jfile').onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
+  const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
+  document.querySelectorAll('.jmode').forEach(b=>b.onclick=()=>{
+    const m=b.dataset.mode;
+    if(m==='type'){_jSetMode('type');const t=$('#jt');if(t)t.focus();}
+    else if(m==='photo'){const f=$('#jfile');if(f)f.click();}
+    else if(m==='voice'){toggleRecord();}
+  });
+  const f=$('#jfile');if(f)f.onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
 }
 
 function sealHandler(payload){
@@ -5795,7 +5978,7 @@ function sealHandler(payload){
     const words=(t.match(/\S+/g)||[]).length;const share=$('#js').checked;
     const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
     try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||''});
-      $('#jt').value='';if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,share);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
+      $('#jt').value='';try{jStopTimer();}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,share);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
   };
 }
 
@@ -5956,6 +6139,10 @@ function renderJournalWelcome(){
 }
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
+  // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
+  // it covers the whole screen; restore it on every other journal screen.
+  try{const nv=document.getElementById('nav');if(nv){if(jScreen==='compose')nv.classList.add('hidden');else nv.classList.remove('hidden');}}catch(e){}
+  try{if(jScreen!=='compose')jStopTimer();}catch(e){}
   if(jScreen==='compose')return renderJournalCompose();
   if(jScreen==='plessons')return renderPillarLessons();
   if(jScreen==='pillars')return renderLifeOS();
@@ -6095,8 +6282,9 @@ async function renderJournalCompose(){
     +`<button class="lo-btn" id="jhome" style="margin-left:auto">${ic('book')} Journal</button></div>`
     +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
     +`<div id="jcompose"></div>`;
-  $('#jback').onclick=()=>{jScreen=backTo;journalPillar=null;renderJournal();};
-  $('#jhome').onclick=()=>{jScreen='home';journalPillar=null;renderJournal();};
+  jComposePhase='prompt';
+  $('#jback').onclick=()=>{ if(jComposePhase==='write'){exitToPrompt();return;} jStopTimer();jScreen=backTo;journalPillar=null;renderJournal(); };
+  $('#jhome').onclick=()=>{jStopTimer();jScreen='home';journalPillar=null;renderJournal();};
   if(journalMode==='deep')renderDeepCompose();
   else if(journalMode==='season')renderSeasonCompose();
   else renderDailyCompose();
@@ -8341,6 +8529,25 @@ class H(BaseHTTPRequestHandler):
                 self._send(502, {"error": "Couldn’t read that image — try better light or a closer shot."}); return
             self._send(200, {"ok": True, "text": text}); return
 
+        if p == "/api/journal/transcribe-audio":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            au = (self._body().get("audio") or "")
+            fn = (self._body().get("filename") or "note.webm")
+            if au.startswith("data:"):
+                _, _, au = au.partition(",")
+            if not au:
+                self._send(400, {"error": "no audio"}); return
+            try:
+                raw = base64.b64decode(au)
+            except Exception:
+                self._send(400, {"error": "bad audio"}); return
+            text = eleven_stt(raw, fn)
+            if text is None:
+                self._send(502, {"error": "Couldn’t hear that clearly — try again in a quiet spot."}); return
+            self._send(200, {"ok": True, "text": text}); return
+
         if p == "/api/chat":
             u = self._me(c)
             if not u:
@@ -8607,7 +8814,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v25';
+const CACHE = 'lumen-v26';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
