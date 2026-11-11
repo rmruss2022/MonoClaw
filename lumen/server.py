@@ -129,9 +129,14 @@ def init_db():
                      ("phone", "phone TEXT"),                       # E.164 mobile, if given at signup
                      ("sms_consent", "sms_consent INTEGER DEFAULT 0"),  # 1 = opted in to SMS notifications
                      ("sms_optout", "sms_optout INTEGER DEFAULT 0"),    # 1 = texted STOP / unsubscribed
-                     ("last_journey", "last_journey TEXT")):        # track key of the most recently practiced journey
+                     ("last_journey", "last_journey TEXT"),         # track key of the most recently practiced journey
+                     ("onboarded_at", "onboarded_at TEXT")):        # when the user completed onboarding (NULL = not yet)
         if col not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
+            if col == "onboarded_at":
+                # existing accounts predate onboarding tracking — treat them as
+                # already onboarded so they're never forced back through the flow.
+                c.execute("UPDATE users SET onboarded_at=created WHERE onboarded_at IS NULL")
     # Daily "Morning Pilgrimage" challenge: sit in the morning, at a new place, with a photo.
     c.execute("""CREATE TABLE IF NOT EXISTS challenges(
       user_id INTEGER, day TEXT,
@@ -2236,6 +2241,8 @@ def profile_dict(c, u):
         "companion": u["companion"],
         "motes": u["motes"] or 0,
         "goal_days": u["goal_days"] or 0,   # meditation days/week the user pledged (0 = not set yet)
+        "onboarded": bool(u["onboarded_at"]) if "onboarded_at" in u.keys() else True,  # completed the onboarding flow
+
         "items_owned": c.execute("SELECT COUNT(*) n FROM items WHERE user_id=?", (u["id"],)).fetchone()["n"],
         # Atlas facets — your whole practice, not just travel
         "journal": {"daily": jr.get("daily", 0), "season": jr.get("season", 0),
@@ -3935,6 +3942,14 @@ async function boot(){
     if(done){track('screen_view',null,'auth');renderAuth();}else{renderOnboarding();}
     return;
   }
+  // Signed in but the account hasn't completed onboarding → run it (authed variant,
+  // no signup step). The account's onboarded flag is the source of truth, so this
+  // follows the user across devices even if local storage was cleared.
+  if(ME.onboarded===false){
+    try{window.__screen&&window.__screen('onboarding');}catch(e){}
+    onb={step:0,intents:[],timeHour:null,level:null,freq:null,minutes:null};
+    renderOnboarding();return;
+  }
   $('#nav').classList.remove('hidden');
   bindNav();
   try{ if(window.__lumenIdentify && ME.email) window.__lumenIdentify(ME.email); }catch(e){}  // tie RevenueCat purchases to this user
@@ -4226,6 +4241,12 @@ async function renderOnboarding(){
   }else if(s===Q_LEVEL){
     body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_LEVEL],'g')}</div><h1 class="onb-h sm onb-enter">How familiar is this for you?</h1><p class="onb-p sm onb-enter d1">No wrong answer — it just helps us meet you where you are.</p>
       <div class="onb-grid onb-enter d1">${ONB_LEVELS.map(([label,k,icn])=>`<button class="onb-chip wide ${onb.level===k?'sel':''}" data-l="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
+  }else if(ME){
+    // Already signed in (account not yet marked onboarded) — finish, no signup.
+    body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-anim onb-enter" style="max-width:210px">${onbScene('collect')}</div>
+      <h1 class="onb-h onb-enter d1">You're all set${ME.name?', '+esc(ME.name):''}</h1>
+      <p class="onb-p">Your preferences are saved. Your light is waiting — let's begin.</p></div>
+      <div class="card" style="margin-top:4px"><button class="btn gold" id="onbFinish">Enter Lumen</button></div>`;
   }else{
     let live=0;try{live=(await api('presence')).now;}catch(e){}
     body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-anim onb-enter" style="max-width:210px">${onbScene('collect')}</div>
@@ -4245,7 +4266,7 @@ async function renderOnboarding(){
   }
   $('#app').innerHTML=`
     <div class="onb-top"><span class="onb-brand">${lumenMark('mark')} Lumen</span>
-      ${s<NSL?'<a class="onb-signin" id="toSignin">Sign in</a>':''}</div>
+      ${(s<NSL&&!ME)?'<a class="onb-signin" id="toSignin">Sign in</a>':''}</div>
     <div class="onb-body">${body}</div>
     <div class="onb-foot">
       ${onbDots()}
@@ -4266,6 +4287,20 @@ async function renderOnboarding(){
   document.querySelectorAll('.onb-chip[data-h]').forEach(b=>b.onclick=()=>{onb.timeHour=+b.dataset.h;renderOnboarding();});
   document.querySelectorAll('.onb-chip[data-l]').forEach(b=>b.onclick=()=>{onb.level=b.dataset.l;renderOnboarding();});
   const cr=$('#create');if(cr)cr.onclick=onbCreate;
+  const fin=$('#onbFinish');if(fin)fin.onclick=onbFinishAuthed;
+}
+// Finish onboarding for an already-signed-in account: persist prefs, mark the
+// account onboarded server-side, then enter the app.
+async function onbFinishAuthed(){
+  const btn=$('#onbFinish');if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{localStorage.setItem('lumen_intent',JSON.stringify(onb.intents));
+      if(onb.freq)localStorage.setItem('lumen_freq',onb.freq);
+      if(onb.minutes){localStorage.setItem('lumen_pref_min',String(onb.minutes));pick.minutes=onb.minutes;}
+      localStorage.setItem('lumen_onb_done','1');}catch(e){}
+  try{const tz=-new Date().getTimezoneOffset();await api('notif/prefs','POST',{tz_offset_min:tz,pref_hour:onb.timeHour,sto:true});}catch(e){}
+  try{await api('onboarded','POST',{});}catch(e){}
+  try{if(ME)ME.onboarded=true;}catch(e){}
+  $('#nav').classList.remove('hidden');bindNav();go('meditate');
 }
 async function onbCreate(){
   const er=$('#er');er.textContent='';
@@ -8174,9 +8209,9 @@ class H(BaseHTTPRequestHandler):
             phone = normalize_phone(d.get("phone"))
             sms_consent = 1 if (phone and d.get("sms_consent")) else 0
             salt = secrets.token_hex(16)
-            c.execute("INSERT INTO users(email,name,salt,hash,birth_date,birth_time,birth_place,birth_tz,sun_sign,phone,sms_consent,created) "
-                      "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                      (email, name, salt, _hash_pw(pw, salt), bd, bt, bp, btz, sign, phone, sms_consent, now_iso()))
+            c.execute("INSERT INTO users(email,name,salt,hash,birth_date,birth_time,birth_place,birth_tz,sun_sign,phone,sms_consent,created,onboarded_at) "
+                      "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                      (email, name, salt, _hash_pw(pw, salt), bd, bt, bp, btz, sign, phone, sms_consent, now_iso(), now_iso()))
             c.commit()
             try:
                 nu = user_by_email(c, email)
@@ -8186,6 +8221,15 @@ class H(BaseHTTPRequestHandler):
                 pass
             tok = new_session(email)
             self._send(200, {"ok": True}, extra=[("Set-Cookie", _cookie_hdr(tok))]); return
+
+        if p == "/api/onboarded":
+            # Mark the signed-in user as having completed onboarding (idempotent).
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            if "onboarded_at" in u.keys() and not u["onboarded_at"]:
+                c.execute("UPDATE users SET onboarded_at=? WHERE id=?", (now_iso(), u["id"])); c.commit()
+            self._send(200, {"ok": True}); return
 
         if p == "/api/login":
             d = self._body()
@@ -8814,7 +8858,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v27';
+const CACHE = 'lumen-v28';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
