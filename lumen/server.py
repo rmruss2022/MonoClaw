@@ -4018,18 +4018,33 @@ const Sound=(function(){
   let _bed=false;
   function bed(){ if(master)return; _bed=true; start('space',0.34); }
   function bedStop(){ if(_bed){_bed=false; stop();} }
-  // --- short UI sound effects (synthesized, no assets) ---
+  // --- cute "water-droplet" UI sounds (synthesized, no assets) ---
+  // Each cue is one or more little drops: a sine whose pitch dips then springs
+  // back up (the classic "bloop"), with a fast soft decay + a touch of bandpass
+  // sparkle. Gamified and friendly, not beepy.
   let _sfxOn=true; try{_sfxOn=(localStorage.getItem('lumen_sfx')!=='0');}catch(e){}
   function sfxOn(v){ if(v===undefined)return _sfxOn; _sfxOn=!!v; try{localStorage.setItem('lumen_sfx',_sfxOn?'1':'0');}catch(e){} }
-  function blip(freq,dur,vol,type){ if(!_sfxOn)return; try{const a=ctx();if(a.state==='suspended')a.resume();
-    const o=a.createOscillator();o.type=type||'sine';o.frequency.value=freq;
-    const g=a.createGain();g.gain.value=0;g.gain.linearRampToValueAtTime(vol||0.06,a.currentTime+0.008);
-    g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+(dur||0.12));
-    o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+(dur||0.12)+0.02);}catch(e){} }
-  function tap(){ blip(660,0.07,0.035,'sine'); }            // soft tap for buttons
-  function tick(){ blip(880,0.06,0.045,'triangle'); }        // tab / selection
-  function chime(){ if(!_sfxOn)return; [523.25,659.25,783.99].forEach((f,i)=>setTimeout(()=>blip(f,0.5,0.06,'sine'),i*90)); } // reward
-  function unlock(){ if(!_sfxOn)return; [659.25,880,1046.5,1318.5].forEach((f,i)=>setTimeout(()=>blip(f,0.45,0.055,'triangle'),i*70)); } // achievement
+  function drop(o){ if(!_sfxOn)return; try{
+    const a=ctx(); if(a.state==='suspended')a.resume();
+    o=o||{}; const T=a.currentTime+(o.delay||0);
+    const f0=o.f0||1000, dip=Math.max(80,o.dip||f0*0.72), peak=o.peak||f0*1.5, dur=o.dur||0.16, vol=o.vol||0.09;
+    const osc=a.createOscillator(); osc.type='sine';
+    osc.frequency.setValueAtTime(f0,T);
+    osc.frequency.exponentialRampToValueAtTime(dip,T+dur*0.3);
+    osc.frequency.exponentialRampToValueAtTime(peak,T+dur*0.92);
+    const g=a.createGain(); g.gain.setValueAtTime(0,T);
+    g.gain.linearRampToValueAtTime(vol,T+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001,T+dur);
+    const bp=a.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=peak; bp.Q.value=0.9;
+    osc.connect(bp); bp.connect(g); g.connect(a.destination);
+    osc.start(T); osc.stop(T+dur+0.04);
+  }catch(e){} }
+  function tap(){ drop({f0:1040,dip:740,peak:1480,dur:0.15,vol:0.075}); }     // soft droplet for buttons
+  function tick(){ drop({f0:1520,dip:1150,peak:2050,dur:0.1,vol:0.06}); }      // crisp plip for tabs/selection
+  function pop(){ drop({f0:700,dip:500,peak:1240,dur:0.18,vol:0.1}); }         // bubbly pop (toggles/checks)
+  function chime(){ if(!_sfxOn)return; [880,1174.66,1567.98].forEach((f,i)=>drop({f0:f,dip:f*0.8,peak:f*1.4,dur:0.3,vol:0.075,delay:i*0.09})); } // reward: 3 rising droplets
+  function unlock(){ if(!_sfxOn)return; [659.25,880,1046.5,1318.5,1760].forEach((f,i)=>drop({f0:f,dip:f*0.82,peak:f*1.45,dur:0.34,vol:0.07,delay:i*0.075})); } // achievement cascade
+  function blip(freq,dur,vol){ drop({f0:freq||1000,dur:dur||0.14,vol:vol||0.07}); } // back-compat alias
   // Play a narration clip THROUGH the same context as the soundscape so iOS keeps one
   // audio session (fixes the music cutting out) and duck the music under the voice.
   let curVoice=null;
@@ -4046,7 +4061,7 @@ const Sound=(function(){
     }catch(e){fin(true);}
     return {stop:()=>{try{curVoice&&curVoice.stop();}catch(e){}curVoice=null;duck(0.5,0.4);}};
   }
-  return {start,stop,bell,say,active,bed,bedStop,sfxOn,tap,tick,chime,unlock};
+  return {start,stop,bell,say,active,bed,bedStop,sfxOn,tap,tick,pop,chime,unlock};
 })();
 // Haptics bridge: native expo-haptics via the WebView postMessage bridge
 // (window.__lumenHaptic set by the native shell); falls back to the Vibration
@@ -4069,7 +4084,7 @@ const Haptics=(function(){
     const el=t.closest('button,.btn,.tab,.chip,.ach,[data-tab],[role="button"]');
     if(!el||el.disabled)return;
     if(el.closest('nav')){ try{Sound.tick();}catch(_){ } try{Haptics.select();}catch(_){ } }
-    else { try{Sound.tap();}catch(_){ } try{Haptics.light();}catch(_){ } }
+    else { try{Sound.tap();}catch(_){ } try{Haptics.medium();}catch(_){ } }   // medium = clearly felt on device
   },{passive:true,capture:true});
 }catch(e){} })();
 
@@ -9221,7 +9236,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v28';
+const CACHE = 'lumen-v29';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
