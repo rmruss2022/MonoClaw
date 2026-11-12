@@ -5525,7 +5525,7 @@ const LESSONS=[{
     {title:'Carry one tool', cue:'Choose one breath to keep for this week.', secs:140,
      teach:"So you carry four things out of here. The sigh, for stress that lands all at once. The long exhale, to unwind. The even, resonant breath, for balance. The square breath, for focus. You do not need them all — a practice is only one good tool, returned to and returned to. Choose the one that served you most today, and promise it a place this week: at a red light, before the hard conversation, in the dark before sleep. Let that small vow settle, and carry it with you."},
   ]
-}],{
+},{
   code:'stoic', title:'Stoic · I', subtitle:'The Dichotomy of Control',
   track:'philosophy', level:'Core', focus:'Control · acceptance', part:1, series:'Stoic',
   technique:'Sorting · settling',
@@ -5600,7 +5600,7 @@ const LESSONS=[{
     {title:'Review & gratitude', cue:'Gently deepen the breath; let gratitude arise.', secs:190,
      teach:"Let us gather the whole journey. We sat down on the porch and sorted the world into what is ours and what is not. We met a slave, an exile and an emperor, and the willingness they shared — to meet what came without arguing with it. We practised three things: widening the view, rehearsing the loss, and reviewing the day without cruelty. And we took a few short phrases to keep ready to hand. Now, before you rise, offer some gratitude. Seneca wrote to a friend that no one values the present enough, and that the greatest obstacle to living is expectancy, which depends on tomorrow and wastes today. So name one thing from this day that was good and is already finished. Say it quietly. Carry the sorting with you: your effort, your judgement, your next small action. The rest, let be. Rest here a moment, in that gratitude."},
   ]
-};
+}];
 // --- curriculum: tracks group the lessons; roadmap shows the program is growing ---
 const TRACKS=[
   {key:'foundations', name:'Foundations', sub:'The practice itself — start here. Universal, secular, science-grounded.', accent:'#5fd0c8'},
