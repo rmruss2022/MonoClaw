@@ -5525,13 +5525,90 @@ const LESSONS=[{
     {title:'Carry one tool', cue:'Choose one breath to keep for this week.', secs:140,
      teach:"So you carry four things out of here. The sigh, for stress that lands all at once. The long exhale, to unwind. The even, resonant breath, for balance. The square breath, for focus. You do not need them all — a practice is only one good tool, returned to and returned to. Choose the one that served you most today, and promise it a place this week: at a red light, before the hard conversation, in the dark before sleep. Let that small vow settle, and carry it with you."},
   ]
-}];
+}],{
+  code:'stoic', title:'Stoic · I', subtitle:'The Dichotomy of Control',
+  track:'philosophy', level:'Core', focus:'Control · acceptance', part:1, series:'Stoic',
+  technique:'Sorting · settling',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  prompt:'What have you been carrying that was never actually yours to decide?',
+  blurb:'Part 1 of the Stoic course. Meet the one idea the whole philosophy turns on — that some things are up to you and some are not — and begin the work of telling them apart.',
+  segments:[
+    {title:'The two piles', cue:'Breathe naturally. Let the body settle.', secs:140,
+     teach:"Come and sit where the Stoics sat. Not in a temple — in a colonnade, a public porch in Athens, open to the street. That porch is the stoa, and it is where the name comes from. This was never a philosophy for retreating from life; it was worked out in the noise of it. It begins with a sorting. Epictetus opens his handbook with it: some things are up to us, and some are not. Your judgements, your intentions, what you choose to do next — these answer to you. Your body, your reputation, other people, the past — these do not. So let the body settle, and let the breath come as it comes. You are not making it happen. Notice that. Something in you is already content to let a thing run without your permission."},
+    {title:'What is actually yours', cue:'Let the breath stay slow and even.', secs:190,
+     teach:"Almost all our suffering, the Stoics thought, comes from one honest mistake — treating what is not ours as though it were. We grip the outcome and neglect the effort. We rehearse the verdict and forget the work. And so we are forever at the mercy of things that were never listening to us. Epictetus knew the stakes better than most. He was born a slave, in a body that was not legally his own, and he taught that even then the inner life remained his. That is not a comfortable idea; it is a clarifying one. So bring something to mind that has been sitting heavily on you. Do not argue with it. Just ask, plainly: which part of this is mine? The effort is yours. The attitude is yours. The next small action is yours. The rest belongs to the world. Let the breath carry that sorting, without forcing an answer."},
+    {title:'Rest in what is yours', cue:'Let the breath breathe itself.', secs:130,
+     teach:"For these last breaths, set the whole question down. You do not have to finish the sorting today. Notice that right here, in this minute, almost nothing is being asked of you. The breath arrives. The heart keeps its own time. The world goes on deciding what it will decide, and none of it needs your supervision for the length of one quiet sit. Rest in the small, steady territory that is genuinely yours. It is narrower than we would like, and it is enough. When you return, we will look at what the Stoics asked us to do with everything outside it."},
+  ]
+},{
+  code:'stoic_fate', title:'Stoic · II', subtitle:'Amor Fati',
+  track:'philosophy', level:'Core', focus:'Acceptance · willingness', part:2, series:'Stoic',
+  technique:'Contemplation',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  prompt:'What would change if you stopped wishing this year had gone differently?',
+  blurb:'Part 2 of the Stoic course. Three people — a slave, an exile and an emperor — and the hard, freeing idea they shared: not merely to bear what happens, but to love it.',
+  segments:[
+    {title:'A slave, an exile, an emperor', cue:'Rest easy. Simply listen.', secs:210,
+     teach:"Three lives, as far apart as lives can be. Epictetus was born into slavery and lamed by it, and taught in a bare room with a lamp and a straw bed. Seneca was one of the richest men in Rome, exiled to Corsica for eight years, recalled to tutor a boy who became the emperor Nero, and finally ordered by that same boy to die. And Marcus Aurelius ruled the whole Roman world through plague and war, and wrote his private notes to himself in Greek, in camp, by lamplight — never meaning anyone to read them. They had nothing in common but the practice. And all three arrived at the same place: the only ground you can stand on is the one directly beneath you. Not the life you planned. This one."},
+    {title:'Love what happens', cue:'Let the breath carry the thought, then release it.', secs:180,
+     teach:"There is a phrase for it, from much later: amor fati — love of fate. Not grim endurance. Not pretending the hard thing is good. Something stranger and more useful: meeting what has actually happened without spending your strength wishing it had not. Marcus put it as instruction to himself, and the plainness is the point: accept the things to which fate binds you, and love the people with whom fate brings you together, but do so with all your heart. Notice how much energy goes into the argument with reality — the silent insistence that this should not be happening. That argument has never once been won. Let the breath go long, and set the argument down for the length of one exhale."},
+    {title:'Your own fate', cue:'Let one honest picture arise.', secs:170,
+     teach:"Now bring it close. Something in your life is not as you would have written it. You know what it is without searching. You are not being asked to be glad about it. You are being asked something smaller and harder — to stop fighting the fact of it, and to ask what it is asking of you. The obstacle, Marcus wrote, becomes the way: what stands in the path turns out to be the path. So picture the thing, steadily. And instead of the old question — why did this happen to me — let a different one surface: given that it did, what is mine to do? Hold the question lightly. The answer tends to arrive later, while you are doing something else."},
+  ]
+},{
+  code:'stoic_view', title:'Stoic · III', subtitle:'The View From Above',
+  track:'philosophy', level:'Core', focus:'Perspective · preparation · review', part:3, series:'Stoic',
+  technique:'View from above · Premeditatio · Evening review',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  prompt:'Which of the three practices do you most need this week, and when will you use it?',
+  blurb:'Part 3 of the Stoic course — the techniques. Three practices the Stoics actually did: widening the view, rehearsing what could go wrong, and reviewing the day without cruelty.',
+  segments:[
+    {title:'The view from above', cue:'Let the view widen with each exhale.', secs:200,
+     teach:"The first practice. Marcus returns to it again and again in his notes, and it works on the body as much as the mind. Stay with the breath, and let the vantage lift. See yourself sitting in this room. Then the building, and the street, and the whole city with its thousands of lit windows, each one holding a life as detailed and urgent as your own. Then the coastline. Then the turning dark edge of the world. Marcus called it looking down from above on the countless herds and countless ceremonies, on all the voyaging in storm and calm. This is not to make you small. It is to put the thing you are worried about back to its real size. Then come gently back — to the room, to the chair, to this breath."},
+    {title:'Rehearsing the loss', cue:'Breathe evenly. Hold the thought without flinching.', secs:190,
+     teach:"The second practice is the uncomfortable one: premeditatio malorum, the premeditation of adversity. Seneca advised setting aside time to live as though the worst had already come — plain food, rough clothes — and then asking honestly, is this what I was afraid of? Rehearsed in advance, in the safety of a quiet mind, misfortune loses much of its shock. What ruins us, he thought, is being surprised. So bring to mind something you would rather not lose. Hold it gently, and let yourself know what is already true: that it is on loan, as everything is. Notice what happens. For most people it is not fear that rises but something closer to tenderness — the thing becomes more precious, not less. Then let it be, and come back to the breath."},
+    {title:'The evening review', cue:'Look back over the day, kindly.', secs:180,
+     teach:"The third practice closes the day. Seneca describes his own: when the light is out and the house quiet, he goes back over the whole day, and examines what he did and said — hiding nothing, passing nothing over. Try it now with today, or with yesterday. Walk through it without defending yourself and without prosecuting yourself. Where did you act as the person you mean to be? Where did you not? And what will you do differently, once, tomorrow? The tone is everything. Seneca was clear that the point is not to flog yourself — it is to be your own fair witness. Harshness here only teaches you to stop looking. Review gently, decide one small thing, and let the day go."},
+  ]
+},{
+  code:'stoic_handbook', title:'Stoic · IV', subtitle:'The Handbook & the Maxims',
+  track:'philosophy', level:'Core', focus:'Maxims · readiness', part:4, series:'Stoic',
+  technique:'Phrase repetition',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  prompt:'Which phrase do you want ready to hand — and what moment will you need it in?',
+  blurb:'Part 4 of the Stoic course — the undertones. A handful of short phrases, carried the way a mantra is carried, so that they are already there when the moment comes.',
+  segments:[
+    {title:'Ready to hand', cue:'Let each phrase settle on one breath.', secs:200,
+     teach:"Epictetus never wrote a book. A student, Arrian, took down his talks, and then compressed them into something small enough to carry — the Encheiridion, which means the handbook, or more literally, the thing held in the hand. That is what these phrases are for. Not slogans. Handles. Something already in your grip when the moment arrives and there is no time to reason from first principles. Take the first one now, and let it ride a few breaths: it is not things that disturb us, but our judgements about things. Breathe, and let that sit. Not the traffic, not the message, not the delay — the verdict you passed on it, in the half-second before you noticed."},
+    {title:'Memento mori', cue:'Silently, on the out-breath: this is borrowed.', secs:200,
+     teach:"The second phrase is the oldest, and it sounds darker than it lives. Memento mori — remember that you will die. A Roman general riding in triumph through the city, the stories say, had a servant beside him in the chariot whose whole task was to keep saying, quietly, that he was mortal. Marcus wrote the same thing to himself a hundred ways: you could leave life right now, and let that determine what you do and say and think. This is not morbid. It is a knife that cuts the trivial away. Held lightly, it makes the ordinary afternoon you are in the middle of suddenly, almost unbearably, worth attending to. Let the phrase move with the breath — not as a threat, as a reminder of value."},
+    {title:'Rest in the citadel', cue:'Let the words dissolve into quiet.', secs:130,
+     teach:"Now let the phrases go. They are handles, and you are not carrying anything just now. Marcus had an image for this place: he wrote that people look for retreats in the country, by the sea, in the hills — and that you can retire at any moment into yourself, and that nowhere is quieter or freer from interruption than your own soul. That is the inner citadel. Not a fortress you build under siege; a room that was always there. Sit in it for a few breaths. Nothing to defend, nothing to decide. Just the quiet that was underneath the noise the whole time."},
+  ]
+},{
+  code:'stoic_reflect', title:'Stoic · V', subtitle:'Reflect & Give Thanks',
+  track:'philosophy', level:'Core', focus:'Reflection · gratitude', part:5, series:'Stoic',
+  technique:'Reflection · gratitude',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  prompt:'What is yours to do tomorrow — and what are you already grateful for today?',
+  blurb:'Part 5, the close of the Stoic course. Turn it all inward — what is yours to do — rest in the inner citadel, and finish with a review and a gratitude reflection.',
+  segments:[
+    {title:'What is yours to do?', cue:'Let one honest answer rise on its own.', secs:200,
+     teach:"Gather what we have carried. Without straining, let one question settle: what, in my life right now, is actually mine to do? Not what you wish were different. Not what someone else should have done. The small, unglamorous, entirely available next action — the conversation, the apology, the piece of work, the walk. The Stoics were suspicious of philosophy that stayed talk. Epictetus told his students not to explain their principles but to embody them, the way sheep do not bring the shepherd grass to prove they have eaten, but produce wool. So let one thing surface. One. Let it rest in you like something already decided."},
+    {title:'The inner citadel', cue:'Rest. Let the breath breathe itself.', secs:160,
+     teach:"Now let the question go entirely. Everything outside — the verdicts, the weather, the people, the result — goes on without needing anything from you for these last breaths. You are in the room Marcus described, the one that needs no journey to reach. Notice it is not empty. There is breath here, and attention, and whatever quiet thing in you has been doing the listening this whole time. That is the part the Stoics said no one could take. Rest there. Nothing to sort, nothing to bear, nothing to prepare for."},
+    {title:'Review & gratitude', cue:'Gently deepen the breath; let gratitude arise.', secs:190,
+     teach:"Let us gather the whole journey. We sat down on the porch and sorted the world into what is ours and what is not. We met a slave, an exile and an emperor, and the willingness they shared — to meet what came without arguing with it. We practised three things: widening the view, rehearsing the loss, and reviewing the day without cruelty. And we took a few short phrases to keep ready to hand. Now, before you rise, offer some gratitude. Seneca wrote to a friend that no one values the present enough, and that the greatest obstacle to living is expectancy, which depends on tomorrow and wastes today. So name one thing from this day that was good and is already finished. Say it quietly. Carry the sorting with you: your effort, your judgement, your next small action. The rest, let be. Rest here a moment, in that gratitude."},
+  ]
+};
 // --- curriculum: tracks group the lessons; roadmap shows the program is growing ---
 const TRACKS=[
   {key:'foundations', name:'Foundations', sub:'The practice itself — start here. Universal, secular, science-grounded.', accent:'#5fd0c8'},
   {key:'devotion', name:'Deities & Devotion', sub:'Contemplative journeys through the great figures of the Hindu tradition — myth as a mirror for the mind.', accent:'#f5c977'},
+  {key:'philosophy', name:'Philosophy & the Stoics', sub:'Practical philosophy as meditation — the Greeks and Romans on what is ours to control, and what is not.', accent:'#7f9ec4'},
 ];
 const ROADMAP={
+  philosophy:[{title:'Seneca on Time', sub:'Why the days feel stolen'},{title:'Marcus · The Obstacle', sub:'What blocks the way becomes the way'},{title:'The Four Virtues', sub:'Wisdom, justice, courage, temperance'}],
   foundations:[{title:'The Body Scan', sub:'Somatic awareness, head to toe'},{title:'Loving-Kindness (Metta)', sub:'Warmth for self and others'},{title:'Noting the Mind', sub:'Labeling thought and feeling'}],
   devotion:[{title:'Ganesha', sub:'Removing inner obstacles'},{title:'Saraswati', sub:'Clarity, learning, and flow'},{title:'Durga', sub:'Courage and protective strength'}],
 };
