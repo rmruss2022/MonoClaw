@@ -17,7 +17,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#0b0b12"
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "assetBundlePatterns": [
       "**/*"
@@ -25,6 +26,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "casa.bedrock.dash",
+      "appleTeamId": "CKYAQ94KAH",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

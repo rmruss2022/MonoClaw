@@ -7,6 +7,7 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "expo": "~58.0.22",
     "expo-splash-screen": "~58.0.13",
     "expo-status-bar": "~58.0.4",
