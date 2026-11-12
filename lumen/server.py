@@ -2939,6 +2939,10 @@ a{color:var(--purple)}
 .jflow{position:relative}
 .jphase[hidden]{display:none}
 .jp-card{margin-bottom:6px}
+.jp-lead{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;margin:16px 0 8px}
+.jp-title{font-family:var(--serif);font-size:25px;line-height:1.25;color:#e9e3f7;text-align:center;letter-spacing:.2px}
+/* The pre-start timer is the same component as the running one, just at rest. */
+.jtimer.jt-pre{background:rgba(20,16,40,.4)}
 .jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
 .jbegin .seal-ic{width:22px;height:22px}
 .jbegin-sub{text-align:center;font-size:13px;color:var(--muted);max-width:360px;margin:0 auto}
@@ -6111,6 +6115,11 @@ function jRecCard(){
 function composerHTML(o){
   const promptLine=`<div class="letter-prompt"><span class="lp-q">“${esc(o.prompt||'')}”</span>`
     +(o.shuffle?`<button class="lp-shuffle" id="jshuf" title="Another prompt">${ic('spark')} another prompt</button>`:'')+`</div>`;
+  // With the question held back, the card carries the title and the length of
+  // the sitting — you choose to write before you know what you are asked.
+  jPromptDeferred=!!o.title;
+  const leadHTML=`<div class="jp-lead"><div class="jp-title">${esc(o.title||'')}</div>`
+    +`<div class="jtimer jt-pre"><span class="jt-time">10:00</span><span class="jt-lbl">to write</span></div></div>`;
   return `<div class="jflow">`
   // ---------------- PHASE 1 · the prompt ----------------
   +`<div class="jphase" id="jp1">`
@@ -6118,10 +6127,10 @@ function composerHTML(o){
       +(o.topHTML||'')
       +`<div class="letter-head"><span>${niceDate(Date.now())}</span>`
       +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Read this aloud">${ic(speakOn?'sound':'mute')}</button></div>`
-      +promptLine
+      +(o.title?leadHTML:promptLine)
     +`</div>`
     +`<button class="btn gold jbegin" id="jbegin">${ic('clock','seal-ic')} Begin journaling</button>`
-    +`<div class="jbegin-sub">Ten quiet minutes. Write it, speak it, or photograph it — however it comes.</div>`
+    +`<div class="jbegin-sub">${o.title?'':'Ten quiet minutes. '}Write it, speak it, or photograph it — however it comes.</div>`
   +`</div>`
   // ---------------- PHASE 2 · writing ----------------
   +`<div class="jphase jwrite" id="jp2" hidden>`
@@ -6231,11 +6240,17 @@ function composeSpeech(ex){
   return parts.filter(Boolean).join(' ');
 }
 let jComposePhase='prompt';
+// Set from composerHTML's `title` option, so every mode gets the right
+// value without having to remember to reset it. jGetPrompt is kept so the
+// write phase can narrate the prompt it was holding back.
+let jPromptDeferred=false;let jGetPrompt=null;
 function enterWritePhase(){
   jComposePhase='write';
   const p1=$('#jp1'),p2=$('#jp2');if(p1)p1.hidden=true;if(p2)p2.hidden=false;
   try{Haptics.medium();}catch(e){}
   jStartTimer(600);
+  // The first card withheld the prompt, so this is its first airing.
+  if(jPromptDeferred&&speakOn&&jGetPrompt){try{sayPrompt(jGetPrompt());}catch(e){}}
   _jSetMode('type');
   const t=$('#jt');if(t)setTimeout(()=>{try{t.focus();}catch(e){}},60);
   try{window.scrollTo(0,0);}catch(e){}
@@ -6253,7 +6268,10 @@ function wireComposerCommon(getPrompt){
     if(speakOn)sayPrompt(getPrompt());else{try{stopNarration();}catch(e){}}};
   const sp1=$('#jspeak');if(sp1)sp1.onclick=toggleSpeak;
   const sp2=$('#jspeak2');if(sp2)sp2.onclick=toggleSpeak;
-  if(speakOn){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')sayPrompt(getPrompt());},1100);}
+  jGetPrompt=getPrompt;
+  // Not while the prompt is deferred: speaking it on the first card would
+  // hand over the one thing that card is deliberately withholding.
+  if(speakOn&&!jPromptDeferred){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')sayPrompt(getPrompt());},1100);}
   const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
   document.querySelectorAll('.jmode').forEach(b=>b.onclick=()=>{
     const m=b.dataset.mode;
@@ -6277,9 +6295,11 @@ function sealHandler(payload){
 }
 
 function renderDailyCompose(){
-  $('#jcompose').innerHTML=composerHTML({prompt:jPrompt,shuffle:true});
+  $('#jcompose').innerHTML=composerHTML({prompt:jPrompt,shuffle:false,title:'Daily Journal'});
   wireComposerCommon(()=>jPrompt);
-  $('#jshuf').onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt&&JPROMPTS.length>1);jPrompt=n;$('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)sayPrompt(jPrompt);};
+  // Guarded: shuffle is no longer rendered on this card, and an unguarded
+  // binding here would throw on render and blank the screen.
+  const jshufEl=$('#jshuf');if(jshufEl)jshufEl.onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt&&JPROMPTS.length>1);jPrompt=n;$('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)sayPrompt(jPrompt);};
   $('#jsave').onclick=sealHandler(()=>({kind:'daily',prompt:jPrompt}));
 }
 
