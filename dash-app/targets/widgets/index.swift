@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: - Brand
 
@@ -36,8 +37,32 @@ func widgetBackground<Content: View>(_ content: Content) -> some View {
 
 // MARK: - To-do widget
 
-struct TodoItem: Decodable { let text: String; let done: Bool }
+struct TodoItem: Decodable { let id: String?; let text: String; let done: Bool }
 struct TodoResp: Decodable { let todos: [TodoItem] }
+
+// Interactive: check a task off straight from the widget (iOS 17+). Toggles via
+// the shared API, then reloads the widget so the row updates in place.
+@available(iOS 16.0, *)
+struct ToggleTodoIntent: AppIntent {
+    static var title: LocalizedStringResource = "Toggle a to-do"
+    @Parameter(title: "Task ID") var id: String
+
+    init() {}
+    init(id: String) { self.id = id }
+
+    func perform() async throws -> some IntentResult {
+        if let url = URL(string: "https://dash.bedrock.casa/api/todo/toggle") {
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
+            req.timeoutInterval = 12
+            _ = try? await URLSession.shared.data(for: req)
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+        return .result()
+    }
+}
 
 struct TodoEntry: TimelineEntry { let date: Date; let todos: [TodoItem] }
 
@@ -60,6 +85,18 @@ struct TodoProvider: TimelineProvider {
 struct TodoWidgetView: View {
     var entry: TodoEntry
     var open: [TodoItem] { entry.todos.filter { !$0.done } }
+
+    @ViewBuilder
+    func checkbox(for t: TodoItem) -> some View {
+        let ring = Circle().strokeBorder(brandPurple.opacity(0.65), lineWidth: 2).frame(width: 15, height: 15)
+        if #available(iOS 17.0, *), let id = t.id {
+            Button(intent: ToggleTodoIntent(id: id)) { ring }
+                .buttonStyle(.plain)
+        } else {
+            ring
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
@@ -76,7 +113,7 @@ struct TodoWidgetView: View {
             } else {
                 ForEach(Array(open.prefix(4).enumerated()), id: \.offset) { _, t in
                     HStack(spacing: 8) {
-                        Circle().strokeBorder(brandPurple.opacity(0.65), lineWidth: 2).frame(width: 13, height: 13)
+                        checkbox(for: t)
                         Text(t.text).font(.system(size: 13)).lineLimit(1).foregroundColor(.primary)
                     }
                 }
