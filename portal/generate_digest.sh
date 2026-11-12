@@ -28,6 +28,14 @@ log(){ echo "[$(date '+%F %T %Z')] $*" | tee -a "$LOG"; }
 
 log "=== digest run start ($DATE) ==="
 
+# Prompt is built from the user-editable template (portal/data/report_config.json,
+# edited in Dash's Report Studio). Falls back to the built-in prompt if that
+# produces nothing, so a bad/missing config can never break the morning digest.
+PROMPT=$(python3 -I "$BASE/portal/build_prompt.py" nyc-digest 2>>"$LOG")
+if [ -n "$PROMPT" ]; then
+  log "prompt built from report template (report_config.json)"
+else
+  log "WARN: template prompt empty — using built-in fallback prompt"
 PROMPT=$(cat <<'EOF'
 You are composing Matthew's NYC Daily Digest for THIS MORNING. Use web search
 for live, current data (today's real date, NYC). Keep it tight, skimmable, and
@@ -55,6 +63,7 @@ one NYC thing. Plain prose a person would say out loud.
 Return ONLY the JSON object. No preamble.
 EOF
 )
+fi
 
 log "calling claude CLI for briefing..."
 RAW=$(timeout 280 claude -p "$PROMPT" --allowedTools "WebSearch WebFetch" 2>>"$LOG")

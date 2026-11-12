@@ -568,6 +568,65 @@ PAGE = r'''<!DOCTYPE html>
   .todo-foot{margin-top:14px;display:flex;justify-content:flex-end}
   .todo-clear{border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer}
   .todo-clear:hover{color:#ec4899}
+  /* Daily report widget */
+  .rpw{position:relative;border-radius:20px;padding:20px 22px;max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--line);
+       box-shadow:0 1px 2px rgba(20,23,30,.04),0 18px 44px -16px rgba(99,102,241,.22)}
+  .rpw-head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .rpw-mk{width:30px;height:30px;border-radius:9px;flex:0 0 auto;background:linear-gradient(135deg,#a855f7,#6366f1);
+          box-shadow:0 6px 16px -6px rgba(124,58,237,.6)}
+  .rpw-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8b5cf6}
+  .rpw-title{margin:1px 0 0;font-size:19px}
+  .rpw-edit{margin-left:auto;border:1px solid var(--line);background:#faf9fc;color:#6d28d9;font-size:12.5px;font-weight:700;
+            border-radius:11px;padding:8px 12px;cursor:pointer;white-space:nowrap;transition:background .12s,border-color .12s}
+  .rpw-edit:hover{background:#f3eefe;border-color:#c9b8f5}
+  .rpw-date{font-size:12.5px;color:var(--muted);margin:2px 0 10px}
+  .rpw-body{font-size:14px;line-height:1.5;color:var(--ink);white-space:pre-wrap;max-height:200px;overflow:hidden;
+            position:relative;-webkit-mask-image:linear-gradient(#000 76%,transparent);mask-image:linear-gradient(#000 76%,transparent)}
+  .rpw-foot{display:flex;align-items:center;gap:12px;margin-top:12px}
+  .rpw-audio{height:34px;flex:1;min-width:0}
+  .rpw-all{margin-left:auto;font-size:13px;font-weight:700;color:#6d28d9;text-decoration:none;white-space:nowrap}
+  .rpw-all:hover{text-decoration:underline}
+  /* Report Studio modal */
+  .rs-backdrop{position:fixed;inset:0;background:rgba(24,20,38,.5);backdrop-filter:blur(3px);z-index:60;display:flex;
+               align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto}
+  .rs-modal{background:#fff;border-radius:22px;max-width:620px;width:100%;padding:24px;box-shadow:0 30px 80px -20px rgba(24,20,38,.5)}
+  .rs-top{display:flex;align-items:flex-start;gap:12px}
+  .rs-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8b5cf6}
+  .rs-h{margin:1px 0 0;font-size:22px}
+  .rs-x{margin-left:auto;border:none;background:#f1eff6;color:#555;width:34px;height:34px;border-radius:10px;font-size:16px;cursor:pointer}
+  .rs-x:hover{background:#e8e4f2}
+  .rs-sub{font-size:13px;color:var(--muted);line-height:1.5;margin:8px 0 16px}
+  .rs-fields{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+  .rs-f{display:flex;flex-direction:column;gap:5px;flex:1;min-width:200px}
+  .rs-f.rs-f-sm{flex:0 0 130px;min-width:120px}
+  .rs-f span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9c}
+  .rs-f input{border:1px solid var(--line);border-radius:11px;padding:11px 12px;font-size:14px;background:#faf9fc;color:var(--ink);outline:none}
+  .rs-f input:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.14)}
+  .rs-seclbl{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9c;margin:4px 0 8px}
+  .rs-secs{display:flex;flex-direction:column;gap:10px}
+  .rs-sec{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fbfafe;transition:opacity .15s}
+  .rs-sec.off{opacity:.5}
+  .rs-sec-top{display:flex;align-items:center;gap:9px}
+  .rs-sec-top input.rs-icon{width:40px;text-align:center;font-size:16px}
+  .rs-sec-top input.rs-label{flex:1;font-weight:700}
+  .rs-sec-top input{border:1px solid var(--line);border-radius:9px;padding:8px 9px;font-size:14px;background:#fff;color:var(--ink);outline:none}
+  .rs-toggle{flex:0 0 auto;width:22px;height:22px;border:2px solid #cfd2dc;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px}
+  .rs-sec:not(.off) .rs-toggle{border-color:transparent;background:linear-gradient(135deg,#6366f1,#ec4899)}
+  .rs-mv{display:flex;flex-direction:column;gap:0}
+  .rs-mv button{border:none;background:none;color:#c2c6d2;font-size:11px;line-height:.9;cursor:pointer;padding:1px 3px}
+  .rs-mv button:hover:not(:disabled){color:#7c3aed} .rs-mv button:disabled{opacity:.25;cursor:default}
+  .rs-del{border:none;background:none;color:#c6cad4;font-size:16px;cursor:pointer} .rs-del:hover{color:#ec4899}
+  .rs-want{width:100%;margin-top:9px;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:13px;line-height:1.45;
+           background:#fff;color:var(--ink);outline:none;resize:vertical;min-height:52px;font-family:inherit}
+  .rs-want:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.12)}
+  .rs-add{margin-top:12px;border:1.5px dashed #c9b8f5;background:#faf7ff;color:#6d28d9;font-weight:700;font-size:13.5px;
+          border-radius:12px;padding:11px;width:100%;cursor:pointer}
+  .rs-add:hover{background:#f3eefe}
+  .rs-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  .rs-cancel{border:1px solid var(--line);background:#fff;color:#555;font-weight:700;font-size:14px;border-radius:12px;padding:11px 18px;cursor:pointer}
+  .rs-save{border:none;background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);color:#fff;font-weight:800;font-size:14px;
+           border-radius:12px;padding:11px 22px;cursor:pointer;box-shadow:0 10px 22px -10px rgba(124,58,237,.6)}
+  .rs-save:hover{filter:brightness(1.06)} .rs-save:disabled{opacity:.6;cursor:default}
   /* Foreman — live subagent mission control. Calm surface, premium gradient glow-up. */
   .foreman{position:relative;overflow:hidden;
     background:radial-gradient(130% 90% at 100% 0%,rgba(124,58,237,.05),transparent 55%),
@@ -769,6 +828,44 @@ PAGE = r'''<!DOCTYPE html>
   </a>
 </section>
 
+<section class="wrap" style="margin-bottom:8px">
+  <div class="rpw" id="rpWidget" hidden>
+    <div class="rpw-head">
+      <span class="rpw-mk"></span>
+      <div><div class="rpw-eyebrow">Daily report</div><h2 class="rpw-title" id="rpTitle">Report</h2></div>
+      <button type="button" class="rpw-edit" id="rpEdit" title="Customize what your report contains">✎ Customize</button>
+    </div>
+    <div class="rpw-date" id="rpDate"></div>
+    <div class="rpw-body" id="rpBody"></div>
+    <div class="rpw-foot">
+      <audio class="rpw-audio" id="rpAudio" controls preload="none" hidden></audio>
+      <a class="rpw-all" href="https://reports.bedrock.casa/" target="_blank" rel="noopener">Open reports →</a>
+    </div>
+  </div>
+</section>
+
+<div id="rsModal" class="rs-backdrop" hidden>
+  <div class="rs-modal">
+    <div class="rs-top">
+      <div><div class="rs-eyebrow">Report Studio</div><h2 class="rs-h" id="rsName">Daily report</h2></div>
+      <button type="button" class="rs-x" id="rsClose" aria-label="Close">✕</button>
+    </div>
+    <p class="rs-sub">Tell the morning generator exactly what you want. Toggle sections, edit what each should cover, reorder, or add your own. Saved changes shape tomorrow&rsquo;s 8am report.</p>
+    <div class="rs-fields">
+      <label class="rs-f"><span>Greeting</span><input id="rsGreet" maxlength="80"></label>
+      <label class="rs-f"><span>Tone</span><input id="rsTone" maxlength="140"></label>
+      <label class="rs-f rs-f-sm"><span>Deliver (ET hour)</span><input id="rsHour" type="number" min="0" max="23"></label>
+    </div>
+    <div class="rs-seclbl">Sections</div>
+    <div id="rsSecs" class="rs-secs"></div>
+    <button type="button" class="rs-add" id="rsAdd">+ Add a section</button>
+    <div class="rs-actions">
+      <button type="button" class="rs-cancel" id="rsCancel">Cancel</button>
+      <button type="button" class="rs-save" id="rsSave">Save report</button>
+    </div>
+  </div>
+</div>
+
 <main class="wrap">
   <h2>Apps</h2>
   <div class="cards">__APPS__</div>
@@ -807,7 +904,18 @@ PAGE = r'''<!DOCTYPE html>
       bar=document.getElementById('todoBar');
   dateEl.textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
   var todos=[];try{todos=JSON.parse(localStorage.getItem(KEY))||[];}catch(e){}
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(todos));}catch(e){}}
+  var _syncT=null;
+  function pushServer(){clearTimeout(_syncT);_syncT=setTimeout(function(){
+    try{fetch('api/todo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({todos:todos})}).catch(function(){});}catch(e){}
+  },300);}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(todos));}catch(e){}pushServer();}
+  // Shared server store is the source of truth across Dash + Marquee; migrate any
+  // local-only tasks up once if the server list is empty.
+  fetch('api/todo',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var srv=(d&&d.todos)||[];
+    if(srv.length){todos=srv;try{localStorage.setItem(KEY,JSON.stringify(todos));}catch(e){}render();}
+    else if(todos.length){pushServer();}
+  }).catch(function(){});
   function move(from,to){if(to<0||to>=todos.length)return;var m=todos.splice(from,1)[0];todos.splice(to,0,m);save();render();}
   function render(){
     list.innerHTML='';
@@ -852,6 +960,90 @@ PAGE = r'''<!DOCTYPE html>
     list.innerHTML=evs.map(row).join('');
     wrap.hidden=false;
   }).catch(function(){});
+})();
+// ---- Daily report widget + Report Studio editor ----
+(function(){
+  var wrap=document.getElementById('rpWidget');
+  if(!wrap)return;
+  function esc(s){return (s||'').replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  // latest report preview
+  fetch('api/report-latest',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var rp=d&&d.report;if(!rp)return;
+    document.getElementById('rpTitle').textContent=rp.title||'Daily report';
+    document.getElementById('rpDate').textContent=rp.date||'';
+    document.getElementById('rpBody').textContent=rp.text||'';
+    if(rp.audio){var a=document.getElementById('rpAudio');a.src='report-audio/'+rp.audio;a.hidden=false;}
+    wrap.hidden=false;
+  }).catch(function(){});
+
+  // Report Studio
+  var modal=document.getElementById('rsModal'),secBox=document.getElementById('rsSecs');
+  var cfg=null, rep=null;
+  function uid(){return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+  function secCard(s){
+    var card=document.createElement('div');card.className='rs-sec'+(s.enabled===false?' off':'');
+    var top=document.createElement('div');top.className='rs-sec-top';
+    var tog=document.createElement('span');tog.className='rs-toggle';tog.textContent=s.enabled===false?'':'✓';tog.title='Include this section';
+    tog.onclick=function(){s.enabled=(s.enabled===false);card.classList.toggle('off',s.enabled===false);tog.textContent=s.enabled===false?'':'✓';};
+    var icon=document.createElement('input');icon.className='rs-icon';icon.value=s.icon||'';icon.maxLength=4;icon.oninput=function(){s.icon=icon.value;};
+    var label=document.createElement('input');label.className='rs-label';label.value=s.label||'';label.placeholder='Section name';label.oninput=function(){s.label=label.value;};
+    var mv=document.createElement('span');mv.className='rs-mv';
+    var up=document.createElement('button');up.innerHTML='▴';up.title='Move up';
+    var dn=document.createElement('button');dn.innerHTML='▾';dn.title='Move down';
+    up.onclick=function(){var i=rep.sections.indexOf(s);if(i>0){rep.sections.splice(i,1);rep.sections.splice(i-1,0,s);drawSecs();}};
+    dn.onclick=function(){var i=rep.sections.indexOf(s);if(i<rep.sections.length-1){rep.sections.splice(i,1);rep.sections.splice(i+1,0,s);drawSecs();}};
+    mv.appendChild(up);mv.appendChild(dn);
+    var del=document.createElement('button');del.className='rs-del';del.innerHTML='✕';del.title='Remove section';
+    del.onclick=function(){rep.sections.splice(rep.sections.indexOf(s),1);drawSecs();};
+    top.appendChild(tog);top.appendChild(icon);top.appendChild(label);top.appendChild(mv);top.appendChild(del);
+    var want=document.createElement('textarea');want.className='rs-want';want.value=s.want||'';
+    want.placeholder='What should this section cover? e.g. "4-5 top headlines, one line each"';
+    want.oninput=function(){s.want=want.value;};
+    card.appendChild(top);card.appendChild(want);
+    return card;
+  }
+  function drawSecs(){
+    secBox.innerHTML='';
+    (rep.sections||[]).forEach(function(s){var i=rep.sections.indexOf(s);
+      var c=secCard(s);var ups=c.querySelectorAll('.rs-mv button');
+      ups[0].disabled=(i===0);ups[1].disabled=(i===rep.sections.length-1);
+      secBox.appendChild(c);});
+  }
+  function open(){
+    document.getElementById('rsName').textContent=rep.title||'Daily report';
+    document.getElementById('rsGreet').value=rep.greeting||'';
+    document.getElementById('rsTone').value=rep.tone||'';
+    document.getElementById('rsHour').value=(rep.deliver_hour_et!=null?rep.deliver_hour_et:8);
+    drawSecs();modal.hidden=false;
+  }
+  function close(){modal.hidden=true;}
+  document.getElementById('rpEdit').onclick=function(){
+    fetch('api/report-config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      cfg=d&&d.reports?d:{version:1,reports:[]};
+      rep=cfg.reports[0]||{id:'nyc-digest',title:'Daily report',sections:[]};
+      if(!cfg.reports.length)cfg.reports.push(rep);
+      rep.sections=rep.sections||[];
+      open();
+    }).catch(function(){alert('Could not load the report template.');});
+  };
+  document.getElementById('rsClose').onclick=close;
+  document.getElementById('rsCancel').onclick=close;
+  modal.onclick=function(e){if(e.target===modal)close();};
+  document.getElementById('rsAdd').onclick=function(){
+    rep.sections.push({key:uid(),icon:'•',label:'New section',enabled:true,want:''});drawSecs();
+    secBox.lastChild.querySelector('.rs-label').focus();
+  };
+  document.getElementById('rsSave').onclick=function(){
+    rep.greeting=document.getElementById('rsGreet').value.trim();
+    rep.tone=document.getElementById('rsTone').value.trim();
+    var h=parseInt(document.getElementById('rsHour').value,10);rep.deliver_hour_et=(isNaN(h)?8:Math.max(0,Math.min(23,h)));
+    var btn=document.getElementById('rsSave');btn.disabled=true;btn.textContent='Saving…';
+    fetch('api/report-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)})
+      .then(function(r){return r.json();}).then(function(d){
+        btn.disabled=false;btn.textContent='Save report';
+        if(d&&d.ok){close();}else{alert('Save failed: '+((d&&d.error)||'unknown'));}
+      }).catch(function(){btn.disabled=false;btn.textContent='Save report';alert('Save failed.');});
+  };
 })();
 // ---- Foreman mission control: per-project kanban + job detail modal ----
 (function(){
@@ -1024,6 +1216,86 @@ PAGE = r'''<!DOCTYPE html>
 </html>'''
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# Shared data (same box): the daily reports + the report template + the shared
+# to-do list. Dash reads/writes these directly so widgets never depend on the
+# (separately-running) reports portal service.
+REPORTS_DIR   = "/root/MonoClaw/portal/reports"
+REPORT_CONFIG = "/root/MonoClaw/portal/data/report_config.json"
+SHARED_TODO   = "/root/MonoClaw/portal/data/todo.json"
+
+
+def latest_report(kind="daily"):
+    """Most-recent report JSON. kind='daily' skips the *-nightsweep.json files."""
+    try:
+        files = [f for f in os.listdir(REPORTS_DIR) if f.endswith(".json")]
+    except OSError:
+        return None
+    if kind == "daily":
+        files = [f for f in files if "nightsweep" not in f]
+    files.sort(reverse=True)
+    for fn in files:
+        try:
+            with open(os.path.join(REPORTS_DIR, fn)) as f:
+                r = json.load(f)
+            r["id"] = fn[:-5]
+            return r
+        except Exception:
+            continue
+    return None
+
+
+def read_report_config():
+    try:
+        with open(REPORT_CONFIG) as f:
+            return json.load(f)
+    except Exception:
+        return {"version": 1, "reports": []}
+
+
+def write_report_config(cfg):
+    """Validate lightly, then atomically write the report template config."""
+    if not isinstance(cfg, dict) or not isinstance(cfg.get("reports"), list):
+        raise ValueError("config must have a 'reports' list")
+    for r in cfg["reports"]:
+        if not isinstance(r, dict) or not r.get("id"):
+            raise ValueError("each report needs an id")
+        secs = r.get("sections")
+        if secs is not None and not isinstance(secs, list):
+            raise ValueError("sections must be a list")
+    os.makedirs(os.path.dirname(REPORT_CONFIG), exist_ok=True)
+    tmp = REPORT_CONFIG + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, REPORT_CONFIG)
+
+
+def read_todos():
+    try:
+        with open(SHARED_TODO) as f:
+            d = json.load(f)
+        return d.get("todos", []) if isinstance(d, dict) else []
+    except Exception:
+        return []
+
+
+def write_todos(todos):
+    if not isinstance(todos, list):
+        raise ValueError("todos must be a list")
+    clean = []
+    for t in todos[:200]:
+        if not isinstance(t, dict):
+            continue
+        clean.append({"id": str(t.get("id") or int(time.time() * 1000)),
+                      "text": str(t.get("text") or "")[:400],
+                      "done": bool(t.get("done"))})
+    os.makedirs(os.path.dirname(SHARED_TODO), exist_ok=True)
+    tmp = SHARED_TODO + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump({"todos": clean}, f, ensure_ascii=False)
+    os.replace(tmp, SHARED_TODO)
+    return clean
+
+
 MANIFEST = ('{"name":"Dash","short_name":"Dash","start_url":"./",'
             '"display":"standalone","background_color":"#f5f4f1","theme_color":"#f5f4f1",'
             '"icons":[{"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},'
@@ -1045,6 +1317,7 @@ class H(BaseHTTPRequestHandler):
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)
     def do_GET(self):
@@ -1084,8 +1357,60 @@ class H(BaseHTTPRequestHandler):
                 self._send('{"events":[]}', 'application/json; charset=utf-8')
         elif p == '/api/foreman':
             self._send(json.dumps(foreman_data()), 'application/json; charset=utf-8')
+        elif p == '/api/report-latest':
+            self._send(json.dumps({"report": latest_report("daily")}), 'application/json; charset=utf-8')
+        elif p.startswith('/report-audio/') and p.endswith('.mp3'):
+            name = os.path.basename(p)
+            try:
+                with open(os.path.join('/root/MonoClaw/media/tts', name), 'rb') as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'audio/mpeg')
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers(); self.wfile.write(data)
+            except OSError:
+                self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+        elif p == '/api/report-config':
+            self._send(json.dumps(read_report_config()), 'application/json; charset=utf-8')
+        elif p == '/api/todo':
+            self._send(json.dumps({"todos": read_todos()}), 'application/json; charset=utf-8')
         elif p in ('/health', '/healthz'):
             self._send('ok', 'text/plain')
+        else:
+            self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+
+    def _cors(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    def do_OPTIONS(self):
+        self.send_response(204); self._cors(); self.end_headers()
+
+    def _body(self):
+        try:
+            n = int(self.headers.get('Content-Length') or 0)
+            return json.loads(self.rfile.read(n) or b'{}')
+        except Exception:
+            return {}
+
+    def do_POST(self):
+        p = self._route()
+        if p == '/api/report-config':
+            try:
+                write_report_config(self._body())
+                self._send(json.dumps({"ok": True}), 'application/json; charset=utf-8')
+            except Exception as e:
+                self.send_response(400); self.send_header('Content-Type', 'application/json'); self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
+        elif p == '/api/todo':
+            try:
+                saved = write_todos((self._body() or {}).get("todos", []))
+                self._send(json.dumps({"ok": True, "todos": saved}), 'application/json; charset=utf-8')
+            except Exception as e:
+                self.send_response(400); self.send_header('Content-Type', 'application/json'); self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode())
         else:
             self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
 

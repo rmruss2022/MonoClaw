@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "reports": [
+    {
+      "id": "nyc-digest",
+      "title": "NYC Daily Digest",
+      "enabled": true,
+      "greeting": "Good morning, Matthew",
+      "deliver_hour_et": 8,
+      "tone": "tight, skimmable, and friendly — a real morning briefing, not a wall of text",
+      "intro": "Use web search for live, current data (today's real date, NYC).",
+      "spoken": true,
+      "sections": [
+        {
+          "key": "weather",
+          "icon": "🌤️",
+          "label": "Weather",
+          "enabled": true,
+          "want": "NYC today: current temp, high/low, rain/snow chance, and a one-line 'what to wear/bring'."
+        },
+        {
+          "key": "headlines",
+          "icon": "🗞️",
+          "label": "Headlines",
+          "enabled": true,
+          "want": "4-5 top stories (US/world + anything major NYC-specific), one line each, as '• ' bullets."
+        },
+        {
+          "key": "transit",
+          "icon": "🚇",
+          "label": "Getting around",
+          "enabled": true,
+          "want": "any notable MTA subway service changes/major delays today (skip if nothing notable)."
+        },
+        {
+          "key": "nyc",
+          "icon": "🎉",
+          "label": "NYC today",
+          "enabled": true,
+          "want": "one or two notable things happening in the city today."
+        },
+        {
+          "key": "nugget",
+          "icon": "💡",
+          "label": "Nugget",
+          "enabled": true,
+          "want": "one useful/interesting thing to start the day."
+        }
+      ]
+    }
+  ]
+}
