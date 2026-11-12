@@ -589,6 +589,7 @@ PAGE = r'''<!DOCTYPE html>
   /* Report Studio modal */
   .rs-backdrop{position:fixed;inset:0;background:rgba(24,20,38,.5);backdrop-filter:blur(3px);z-index:60;display:flex;
                align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto}
+  .rs-backdrop[hidden]{display:none}
   .rs-modal{background:#fff;border-radius:22px;max-width:620px;width:100%;padding:24px;box-shadow:0 30px 80px -20px rgba(24,20,38,.5)}
   .rs-top{display:flex;align-items:flex-start;gap:12px}
   .rs-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8b5cf6}
