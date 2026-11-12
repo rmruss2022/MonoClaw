@@ -1,0 +1,11 @@
+dev_tones 1.2 free examples, by RCP Tones
+
+These 8 sounds are free to use royalty-free, in commercial and
+non-commercial projects, as long as you credit us. For example:
+
+    Sounds: dev_tones by RCP Tones (rcptones.com)
+
+in your credits, about screen, video description or wherever credits go.
+Everything else in the dev_tones license applies: please don't resell or
+redistribute the sounds themselves. The full library of
+630 sounds, with no attribution needed, is at https://rcptones.com/dev-tones

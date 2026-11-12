@@ -4063,11 +4063,24 @@ const Sound=(function(){
     osc.connect(bp); bp.connect(g); g.connect(a.destination);
     osc.start(T); osc.stop(T+dur+0.04);
   }catch(e){} }
-  function tap(){ drop({f0:1040,dip:740,peak:1480,dur:0.15,vol:0.075}); }     // soft droplet for buttons
-  function tick(){ drop({f0:1520,dip:1150,peak:2050,dur:0.1,vol:0.06}); }      // crisp plip for tabs/selection
-  function pop(){ drop({f0:700,dip:500,peak:1240,dur:0.18,vol:0.1}); }         // bubbly pop (toggles/checks)
-  function chime(){ if(!_sfxOn)return; [880,1174.66,1567.98].forEach((f,i)=>drop({f0:f,dip:f*0.8,peak:f*1.4,dur:0.3,vol:0.075,delay:i*0.09})); } // reward: 3 rising droplets
-  function unlock(){ if(!_sfxOn)return; [659.25,880,1046.5,1318.5,1760].forEach((f,i)=>drop({f0:f,dip:f*0.82,peak:f*1.45,dur:0.34,vol:0.07,delay:i*0.075})); } // achievement cascade
+  // Real recorded UI sounds — RCP Tones "dev_tones" free examples (royalty-free,
+  // credited in Settings). Decoded once into the shared context; the synth
+  // droplet above is the instant fallback until a sample is loaded / if one fails.
+  const SFX_SRC={tap:'digi_plink',tick:'click_04',pop:'pop_drip',chime:'music_marimba_chord',unlock:'chime_bell_ding'};
+  const _sfxBuf={}; let _sfxKicked=false;
+  function loadSfx(){ if(_sfxKicked)return; _sfxKicked=true; try{const a=ctx();
+    Object.keys(SFX_SRC).forEach(k=>{ fetch('/assets/sfx/'+SFX_SRC[k]+'.mp3').then(r=>r.arrayBuffer())
+      .then(b=>a.decodeAudioData(b)).then(buf=>{_sfxBuf[k]=buf;}).catch(()=>{}); }); }catch(e){} }
+  function playSfx(k,vol){ if(!_sfxOn)return false; const buf=_sfxBuf[k];
+    if(!buf){ loadSfx(); return false; }
+    try{const a=ctx(); if(a.state==='suspended')a.resume();
+      const s=a.createBufferSource(); s.buffer=buf; const g=a.createGain(); g.gain.value=(vol==null?0.6:vol);
+      s.connect(g); g.connect(a.destination); s.start(); return true; }catch(e){ return false; } }
+  function tap(){ if(playSfx('tap',0.5))return; drop({f0:1040,dip:740,peak:1480,dur:0.15,vol:0.075}); }     // soft droplet
+  function tick(){ if(playSfx('tick',0.55))return; drop({f0:1520,dip:1150,peak:2050,dur:0.1,vol:0.06}); }   // tab/selection
+  function pop(){ if(playSfx('pop',0.7))return; drop({f0:700,dip:500,peak:1240,dur:0.18,vol:0.1}); }         // toggle/check
+  function chime(){ if(playSfx('chime',0.55))return; if(!_sfxOn)return; [880,1174.66,1567.98].forEach((f,i)=>drop({f0:f,dip:f*0.8,peak:f*1.4,dur:0.3,vol:0.075,delay:i*0.09})); } // reward
+  function unlock(){ if(playSfx('unlock',0.5))return; if(!_sfxOn)return; [659.25,880,1046.5,1318.5,1760].forEach((f,i)=>drop({f0:f,dip:f*0.82,peak:f*1.45,dur:0.34,vol:0.07,delay:i*0.075})); } // achievement
   function blip(freq,dur,vol){ drop({f0:freq||1000,dur:dur||0.14,vol:vol||0.07}); } // back-compat alias
   // Play a narration clip THROUGH the same context as the soundscape so iOS keeps one
   // audio session (fixes the music cutting out) and duck the music under the voice.
@@ -7092,7 +7105,8 @@ async function renderProfile(){
   <a class="btn ghost" href="survey" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:4px;border-color:rgba(245,201,119,.4);color:var(--gold)">${ic('spark','g')} Share feedback — help shape Lumen</a>
   <button class="btn ghost" id="out" style="margin-top:10px">Sign out</button>
   <button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button>
-  <p class="muted" style="font-size:11px;text-align:center;margin:8px 20px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can't be undone.</p>`;
+  <p class="muted" style="font-size:11px;text-align:center;margin:8px 20px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can't be undone.</p>
+  <p class="muted" style="font-size:11px;text-align:center;margin:14px 20px 0;opacity:.7">Interface sounds: dev_tones by <a href="https://rcptones.com" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none">RCP Tones</a>.</p>`;
   $('#loc').onclick=async()=>{
     const btn=$('#loc'),help=$('#lochelp');help.style.display='none';
     if(!navigator.geolocation){toast('Geolocation isn’t available on this device');return;}
@@ -7634,6 +7648,15 @@ class H(BaseHTTPRequestHandler):
                 cc = "no-cache, must-revalidate" if rel.endswith(".html") else "public, max-age=604800"
                 with open(fp, "rb") as f:
                     self._send(200, f.read(), ct, extra=[("Cache-Control", cc)])
+                return
+            self._send(404, {"error": "not found"}); return
+        m_sfx = re.fullmatch(r"assets/sfx/([a-z0-9_]+\.mp3)", rel)
+        if m_sfx:
+            fp = os.path.join(HERE, "assets", "sfx", m_sfx.group(1))
+            if os.path.isfile(fp):
+                with open(fp, "rb") as f:
+                    self._send(200, f.read(), "audio/mpeg",
+                               extra=[("Cache-Control", "public, max-age=31536000, immutable")])
                 return
             self._send(404, {"error": "not found"}); return
         if rel in ("icon.png", "icon-192.png", "icon-512.png", "icon.svg") or \
@@ -9291,7 +9314,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v29';
+const CACHE = 'lumen-v30';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
