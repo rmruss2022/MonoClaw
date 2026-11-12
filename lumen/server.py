@@ -5182,7 +5182,7 @@ function jnyProg(code){try{const v=localStorage.getItem(jnyKey(code));return v==
 function jnySave(code,si){try{localStorage.setItem(jnyKey(code),String(si));}catch(e){}}
 function jnyClear(code){try{localStorage.removeItem(jnyKey(code));}catch(e){}}
 function lessonResumeSi(l){const rs=jnyProg(l.code);return (rs!=null&&rs>0&&rs<l.segments.length)?rs:0;}
-const SERIES_ART={Vishnu:'art/lesson_vishnu.png?v=2',Shiva:'art/lesson_shiva.png?v=2',Lakshmi:'art/lesson_lakshmi.png?v=2',Breath:'art/lesson_breath.png?v=2',Stoic:'art/lesson_stoic.png?v=1'};
+const SERIES_ART={Vishnu:'art/lesson_vishnu.png?v=2',Shiva:'art/lesson_shiva.png?v=2',Lakshmi:'art/lesson_lakshmi.png?v=2',Breath:'art/lesson_breath.png?v=2',Stoic:'art/lesson_stoic.png?v=2'};
 function deityEmblem(l,cls){const art=SERIES_ART[l.series]||l.img;
   return `<div class="deity-emblem ${cls||''}"><span class="deity-glyph">${ic('lotus','grad-gold')}</span>${art?`<img src="${art}" alt="" onerror="this.remove()">`:''}</div>`;}
 // A distinct emblem per lesson — each lesson gets its own themed glyph so every
