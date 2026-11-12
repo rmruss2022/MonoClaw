@@ -844,7 +844,7 @@ PAGE = r'''<!DOCTYPE html>
     <p class="rs-sub">A record of what you finished, by day. Read-only.</p>
     <div id="histBody" class="hist-body"></div>
   </div>
-</section>
+</div>
 
 <section class="wrap" style="margin-bottom:8px">
   <a class="mqw" id="mqWidget" href="https://marquee.bedrock.casa/" target="_blank" rel="noopener" hidden>
