@@ -567,7 +567,24 @@ PAGE = r'''<!DOCTYPE html>
   .todo-empty{color:var(--muted);font-size:14px;padding:10px 2px}
   .todo-foot{margin-top:14px;display:flex;justify-content:flex-end}
   .todo-clear{border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer}
-  .todo-clear:hover{color:#ec4899}
+  .todo-clear:hover{color:#7c3aed}
+  /* To-do: weekly frequency + history */
+  .todo-week-wrap{margin-top:16px;padding-top:14px;border-top:1px solid #f0eef6}
+  .todo-week-h{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9c;margin-bottom:9px}
+  .todo-week-h b{color:#6d28d9}
+  .todo-week{display:flex;gap:7px;align-items:flex-end;height:54px}
+  .todo-wk{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+  .todo-wk-bar{width:100%;max-width:28px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,#a855f7,#6366f1);min-height:3px;transition:height .35s ease}
+  .todo-wk-bar.zero{background:#eceaf2}
+  .todo-wk-n{font-size:10px;font-weight:800;color:#6d28d9}
+  .todo-wk-d{font-size:9px;color:#9a97a8;text-transform:uppercase;letter-spacing:.04em}
+  .todo-wk.today .todo-wk-d{color:#6d28d9;font-weight:800}
+  .hist-body{display:flex;flex-direction:column;gap:18px;max-height:62vh;overflow:auto}
+  .hist-day-h{font-size:13px;font-weight:800;color:#241f33;margin-bottom:8px;display:flex;align-items:baseline;gap:8px}
+  .hist-day-n{font-size:11px;font-weight:600;color:#9a97a8}
+  .hist-item{display:flex;align-items:center;gap:9px;padding:6px 2px;font-size:14px;color:#4b4760}
+  .hist-item .hk{color:#22c55e;font-weight:800;font-size:15px}
+  .hist-empty{color:#9a97a8;font-size:14px;padding:8px 2px}
   /* Daily report widget */
   .rpw{position:relative;border-radius:20px;padding:20px 22px;max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--line);
        box-shadow:0 1px 2px rgba(20,23,30,.04),0 18px 44px -16px rgba(99,102,241,.22)}
@@ -816,7 +833,16 @@ PAGE = r'''<!DOCTYPE html>
       <button type="submit" aria-label="Add task">+</button>
     </form>
     <ul id="todoList" class="todo-list"></ul>
-    <div class="todo-foot"><button id="todoClear" class="todo-clear">Clear completed</button></div>
+    <div class="todo-week-wrap"><div class="todo-week-h">This week · <b id="weekTotal">0</b> done</div><div class="todo-week" id="todoWeek"></div></div>
+    <div class="todo-foot"><button id="todoHistBtn" class="todo-clear">📅 Past days</button></div>
+  </div>
+</section>
+
+<div id="histModal" class="rs-backdrop" hidden>
+  <div class="rs-modal">
+    <div class="rs-top"><div><div class="rs-eyebrow">Completed</div><h2 class="rs-h">Past days</h2></div><button class="rs-x" id="histClose" aria-label="Close">✕</button></div>
+    <p class="rs-sub">A record of what you finished, by day. Read-only.</p>
+    <div id="histBody" class="hist-body"></div>
   </div>
 </section>
 
@@ -900,49 +926,68 @@ PAGE = r'''<!DOCTYPE html>
 <footer><div class="wrap">Designed &amp; built by Matthew Russell</div></footer>
 <script>
 (function(){
-  var KEY='dash_todos_v1';
   var list=document.getElementById('todoList'),input=document.getElementById('todoInput'),
       form=document.getElementById('todoForm'),count=document.getElementById('todoCount'),
-      dateEl=document.getElementById('todoDate'),clearBtn=document.getElementById('todoClear'),
-      bar=document.getElementById('todoBar');
+      dateEl=document.getElementById('todoDate'),bar=document.getElementById('todoBar');
+  if(!list)return;
   dateEl.textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
-  var todos=[];try{todos=JSON.parse(localStorage.getItem(KEY))||[];}catch(e){}
-  var _syncT=null;
-  function pushServer(){clearTimeout(_syncT);_syncT=setTimeout(function(){
-    try{fetch('api/todo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({todos:todos})}).catch(function(){});}catch(e){}
-  },300);}
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(todos));}catch(e){}pushServer();}
-  // Shared server store is the source of truth across Dash + Marquee; migrate any
-  // local-only tasks up once if the server list is empty.
-  fetch('api/todo',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-    var srv=(d&&d.todos)||[];
-    if(srv.length){todos=srv;try{localStorage.setItem(KEY,JSON.stringify(todos));}catch(e){}render();}
-    else if(todos.length){pushServer();}
-  }).catch(function(){});
-  function move(from,to){if(to<0||to>=todos.length)return;var m=todos.splice(from,1)[0];todos.splice(to,0,m);save();render();}
+  var todos=[];
+  function esc(s){return (s||'').replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  // Action API — server is the source of truth (shared with Marquee + the iOS widget).
+  function act(path,body){
+    return fetch('api/todo'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})
+      .then(function(r){return r.json();}).then(function(d){if(d&&d.todos){todos=d.todos;render();loadWeek();}return d;})
+      .catch(function(){});
+  }
   function render(){
     list.innerHTML='';
     if(!todos.length){var e=document.createElement('li');e.className='todo-empty';e.textContent='Nothing yet — add your first task.';list.appendChild(e);}
-    todos.forEach(function(t,i){
+    todos.forEach(function(t){
       var li=document.createElement('li');li.className='todo-item'+(t.done?' done':'');
-      li.onclick=function(){t.done=!t.done;save();render();};   // whole row = one tap to check
-      var mv=document.createElement('span');mv.className='moves';
-      var up=document.createElement('button');up.className='mv';up.innerHTML='▴';up.title='Move up';up.disabled=(i===0);up.onclick=function(ev){ev.stopPropagation();move(i,i-1);};
-      var dn=document.createElement('button');dn.className='mv';dn.innerHTML='▾';dn.title='Move down';dn.disabled=(i===todos.length-1);dn.onclick=function(ev){ev.stopPropagation();move(i,i+1);};
-      mv.appendChild(up);mv.appendChild(dn);
+      li.onclick=function(){act('/toggle',{id:t.id});};   // tap row = check / uncheck
       var box=document.createElement('span');box.className='box';box.textContent=t.done?'✓':'';
       var txt=document.createElement('span');txt.className='txt';txt.textContent=t.text;
-      var del=document.createElement('button');del.className='del';del.innerHTML='✕';del.title='Delete';del.onclick=function(ev){ev.stopPropagation();todos.splice(i,1);save();render();};
-      li.appendChild(mv);li.appendChild(box);li.appendChild(txt);li.appendChild(del);
+      var del=document.createElement('button');del.className='del';del.innerHTML='✕';del.title='Delete';
+      del.onclick=function(ev){ev.stopPropagation();act('/delete',{id:t.id});};
+      li.appendChild(box);li.appendChild(txt);li.appendChild(del);
       list.appendChild(li);
     });
     var done=todos.filter(function(t){return t.done;}).length;
     count.textContent=todos.length?(done+' of '+todos.length+' done'):'';
     bar.style.width=(todos.length?Math.round(100*done/todos.length):0)+'%';
   }
-  form.onsubmit=function(ev){ev.preventDefault();var v=input.value.trim();if(!v)return;todos.push({text:v,done:false});input.value='';save();render();};
-  clearBtn.onclick=function(){todos=todos.filter(function(t){return !t.done;});save();render();};
-  render();
+  form.onsubmit=function(ev){ev.preventDefault();var v=input.value.trim();if(!v)return;input.value='';act('/add',{text:v});};
+  // Weekly frequency chart — completions per day, last 7 days.
+  var weekEl=document.getElementById('todoWeek'),weekTot=document.getElementById('weekTotal');
+  function loadWeek(){fetch('api/todo/stats',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var w=(d&&d.week)||[];if(!weekEl)return;
+    var max=Math.max.apply(null,w.map(function(x){return x.count;}).concat([1]));
+    if(weekTot)weekTot.textContent=w.reduce(function(a,x){return a+x.count;},0);
+    weekEl.innerHTML=w.map(function(x,i){
+      var h=x.count?Math.max(10,Math.round(100*x.count/max)):4;var today=(i===w.length-1);
+      return '<div class="todo-wk'+(today?' today':'')+'"><div class="todo-wk-n">'+(x.count||'')+'</div>'
+        +'<div class="todo-wk-bar'+(x.count?'':' zero')+'" style="height:'+h+'%"></div>'
+        +'<div class="todo-wk-d">'+x.dow+'</div></div>';
+    }).join('');
+  }).catch(function(){});}
+  // History modal — completed tasks by day, read-only.
+  var histModal=document.getElementById('histModal'),histBody=document.getElementById('histBody');
+  document.getElementById('todoHistBtn').onclick=function(){
+    histBody.innerHTML='<div class="hist-empty">Loading…</div>';histModal.hidden=false;
+    fetch('api/todo/history',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      var days=(d&&d.days)||[];
+      if(!days.length){histBody.innerHTML='<div class="hist-empty">Nothing completed yet — check off a task and it’ll be recorded here.</div>';return;}
+      histBody.innerHTML=days.map(function(day){
+        return '<div class="hist-day"><div class="hist-day-h">'+esc(day.label)+'<span class="hist-day-n">'+day.items.length+' done</span></div>'
+          +day.items.map(function(it){return '<div class="hist-item"><span class="hk">✓</span>'+esc(it.text)+'</div>';}).join('')+'</div>';
+      }).join('');
+    }).catch(function(){histBody.innerHTML='<div class="hist-empty">Could not load history.</div>';});
+  };
+  document.getElementById('histClose').onclick=function(){histModal.hidden=true;};
+  histModal.onclick=function(e){if(e.target===histModal)histModal.hidden=true;};
+  // initial load
+  fetch('api/todo',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){todos=(d&&d.todos)||[];render();}).catch(render);
+  loadWeek();
 })();
 // ---- Marquee widget: next few NYC events (same-origin proxy to :18852) ----
 (function(){
@@ -1299,31 +1344,180 @@ def write_report_config(cfg):
     os.replace(tmp, REPORT_CONFIG)
 
 
-def read_todos():
+import datetime
+try:
+    from zoneinfo import ZoneInfo
+    _ET = ZoneInfo("America/New_York")
+except Exception:
+    _ET = None
+
+
+def _now_et():
+    return datetime.datetime.now(_ET) if _ET else datetime.datetime.now()
+
+
+def today_et():
+    return _now_et().strftime("%Y-%m-%d")
+
+
+def _day_of(iso):
+    """ET calendar day (YYYY-MM-DD) for an ISO timestamp, or '' if unparseable."""
+    if not iso:
+        return ""
     try:
-        with open(SHARED_TODO) as f:
-            d = json.load(f)
-        return d.get("todos", []) if isinstance(d, dict) else []
+        dt = datetime.datetime.fromisoformat(iso)
+        if _ET and dt.tzinfo:
+            dt = dt.astimezone(_ET)
+        return dt.strftime("%Y-%m-%d")
     except Exception:
-        return []
+        return ""
 
 
-def write_todos(todos):
-    if not isinstance(todos, list):
-        raise ValueError("todos must be a list")
-    clean = []
-    for t in todos[:200]:
-        if not isinstance(t, dict):
-            continue
-        clean.append({"id": str(t.get("id") or int(time.time() * 1000)),
-                      "text": str(t.get("text") or "")[:400],
-                      "done": bool(t.get("done"))})
+def _save_todos_raw(items):
     os.makedirs(os.path.dirname(SHARED_TODO), exist_ok=True)
     tmp = SHARED_TODO + ".tmp"
     with open(tmp, "w") as f:
-        json.dump({"todos": clean}, f, ensure_ascii=False)
+        json.dump({"todos": items}, f, ensure_ascii=False)
     os.replace(tmp, SHARED_TODO)
-    return clean
+
+
+def load_todos():
+    """Full history of every task, migrating old {id,text,done} rows to carry a
+    creation timestamp and a completion timestamp (done_at)."""
+    try:
+        with open(SHARED_TODO) as f:
+            d = json.load(f)
+        items = d.get("todos", []) if isinstance(d, dict) else []
+    except Exception:
+        items = []
+    changed = False
+    for t in items:
+        if not t.get("created"):
+            try:
+                ms = int(t.get("id"))
+                t["created"] = (datetime.datetime.fromtimestamp(ms / 1000, _ET) if _ET
+                                else datetime.datetime.fromtimestamp(ms / 1000)).isoformat()
+            except Exception:
+                t["created"] = _now_et().isoformat()
+            changed = True
+        if t.get("done"):
+            if not t.get("done_at"):
+                t["done_at"] = t.get("created"); changed = True
+        elif t.get("done_at"):
+            t["done_at"] = None; changed = True
+    if changed:
+        try:
+            _save_todos_raw(items)
+        except Exception:
+            pass
+    return items
+
+
+def _is_active(t):
+    """Show incomplete tasks always, and tasks completed *today* (so checking one
+    off stays visible for the day); completed tasks from past days archive out."""
+    if not t.get("done"):
+        return True
+    return _day_of(t.get("done_at")) == today_et()
+
+
+def active_todos():
+    return [{"id": t.get("id"), "text": t.get("text", ""), "done": bool(t.get("done")),
+             "created": t.get("created"), "done_at": t.get("done_at")}
+            for t in load_todos() if _is_active(t)]
+
+
+def todo_add(text):
+    text = str(text or "").strip()[:400]
+    if not text:
+        return active_todos()
+    items = load_todos()
+    items.append({"id": str(int(time.time() * 1000)), "text": text,
+                  "done": False, "created": _now_et().isoformat(), "done_at": None})
+    _save_todos_raw(items[-1000:])
+    return active_todos()
+
+
+def todo_toggle(tid):
+    items = load_todos()
+    for t in items:
+        if str(t.get("id")) == str(tid):
+            t["done"] = not t.get("done")
+            t["done_at"] = _now_et().isoformat() if t["done"] else None
+            break
+    _save_todos_raw(items)
+    return active_todos()
+
+
+def todo_delete(tid):
+    items = [t for t in load_todos() if str(t.get("id")) != str(tid)]
+    _save_todos_raw(items)
+    return active_todos()
+
+
+def todo_history():
+    """Completed tasks grouped by completion day, most recent first. Read-only."""
+    by_day = {}
+    for t in load_todos():
+        if not t.get("done"):
+            continue
+        day = _day_of(t.get("done_at")) or _day_of(t.get("created"))
+        if not day:
+            continue
+        by_day.setdefault(day, []).append({"text": t.get("text", ""), "done_at": t.get("done_at")})
+    days = []
+    for day in sorted(by_day.keys(), reverse=True):
+        try:
+            label = datetime.datetime.strptime(day, "%Y-%m-%d").strftime("%A, %B %-d")
+        except Exception:
+            label = day
+        days.append({"day": day, "label": label,
+                     "items": sorted(by_day[day], key=lambda x: x.get("done_at") or "")})
+    return days
+
+
+def todo_week_stats():
+    """Completions per day for the last 7 ET days (oldest→newest)."""
+    counts = {}
+    for t in load_todos():
+        if t.get("done"):
+            d = _day_of(t.get("done_at"))
+            if d:
+                counts[d] = counts.get(d, 0) + 1
+    out = []
+    today = _now_et().date()
+    for i in range(6, -1, -1):
+        d = (today - datetime.timedelta(days=i))
+        ds = d.strftime("%Y-%m-%d")
+        out.append({"day": ds, "dow": d.strftime("%a"), "count": counts.get(ds, 0)})
+    return out
+
+
+# Back-compat: whole-list POST merges (add new, update done state) without losing
+# archived rows — used only by any stale client still doing the old thing.
+def write_todos(todos):
+    if not isinstance(todos, list):
+        raise ValueError("todos must be a list")
+    items = load_todos()
+    by_id = {str(t.get("id")): t for t in items}
+    for t in todos[:200]:
+        if not isinstance(t, dict):
+            continue
+        tid = str(t.get("id") or "")
+        done = bool(t.get("done"))
+        if tid and tid in by_id:
+            ex = by_id[tid]
+            if done != bool(ex.get("done")):
+                ex["done"] = done
+                ex["done_at"] = _now_et().isoformat() if done else None
+        else:
+            text = str(t.get("text") or "")[:400]
+            if text:
+                items.append({"id": tid or str(int(time.time() * 1000)), "text": text,
+                              "done": done, "created": _now_et().isoformat(),
+                              "done_at": _now_et().isoformat() if done else None})
+    _save_todos_raw(items[-1000:])
+    return active_todos()
 
 
 MANIFEST = ('{"name":"Dash","short_name":"Dash","start_url":"./",'
@@ -1404,7 +1598,11 @@ class H(BaseHTTPRequestHandler):
         elif p == '/api/report-config':
             self._send(json.dumps(read_report_config()), 'application/json; charset=utf-8')
         elif p == '/api/todo':
-            self._send(json.dumps({"todos": read_todos()}), 'application/json; charset=utf-8')
+            self._send(json.dumps({"todos": active_todos()}), 'application/json; charset=utf-8')
+        elif p == '/api/todo/history':
+            self._send(json.dumps({"days": todo_history()}), 'application/json; charset=utf-8')
+        elif p == '/api/todo/stats':
+            self._send(json.dumps({"week": todo_week_stats()}), 'application/json; charset=utf-8')
         elif p in ('/health', '/healthz'):
             self._send('ok', 'text/plain')
         else:
@@ -1434,10 +1632,18 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400); self.send_header('Content-Type', 'application/json'); self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode())
-        elif p == '/api/todo':
+        elif p in ('/api/todo', '/api/todo/add', '/api/todo/toggle', '/api/todo/delete'):
             try:
-                saved = write_todos((self._body() or {}).get("todos", []))
-                self._send(json.dumps({"ok": True, "todos": saved}), 'application/json; charset=utf-8')
+                b = self._body() or {}
+                if p == '/api/todo/add':
+                    todos = todo_add(b.get("text"))
+                elif p == '/api/todo/toggle':
+                    todos = todo_toggle(b.get("id"))
+                elif p == '/api/todo/delete':
+                    todos = todo_delete(b.get("id"))
+                else:
+                    todos = write_todos(b.get("todos", []))
+                self._send(json.dumps({"ok": True, "todos": todos}), 'application/json; charset=utf-8')
             except Exception as e:
                 self.send_response(400); self.send_header('Content-Type', 'application/json'); self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode())

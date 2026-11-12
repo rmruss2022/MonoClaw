@@ -1895,25 +1895,27 @@ function scanRegulars(btn){
   var box=document.getElementById('mqTodo');if(!box)return;
   var list=document.getElementById('mqTdList'),input=document.getElementById('mqTdInput'),
       form=document.getElementById('mqTdForm'),cnt=document.getElementById('mqTdCount');
-  var todos=[],_t=null;
-  function push(){clearTimeout(_t);_t=setTimeout(function(){
-    fetch(DASH+'/api/todo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({todos:todos})}).catch(function(){});
-  },300);}
+  var todos=[];
+  // Action API against Dash — server is the shared source of truth.
+  function act(path,body){
+    return fetch(DASH+'/api/todo'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})
+      .then(function(r){return r.json();}).then(function(d){if(d&&d.todos){todos=d.todos;render();}return d;}).catch(function(){});
+  }
   function render(){
     list.innerHTML='';
     if(!todos.length){var e=document.createElement('li');e.className='mqtd-empty';e.textContent='Nothing yet — add a task.';list.appendChild(e);}
-    todos.forEach(function(t,i){
+    todos.forEach(function(t){
       var li=document.createElement('li');li.className='mqtd-item'+(t.done?' done':'');
-      li.onclick=function(){t.done=!t.done;push();render();};
+      li.onclick=function(){act('/toggle',{id:t.id});};
       var bx=document.createElement('span');bx.className='bx';bx.textContent=t.done?'✓':'';
       var tx=document.createElement('span');tx.className='tx';tx.textContent=t.text;
-      var rm=document.createElement('button');rm.className='rm';rm.innerHTML='✕';rm.onclick=function(ev){ev.stopPropagation();todos.splice(i,1);push();render();};
+      var rm=document.createElement('button');rm.className='rm';rm.innerHTML='✕';rm.onclick=function(ev){ev.stopPropagation();act('/delete',{id:t.id});};
       li.appendChild(bx);li.appendChild(tx);li.appendChild(rm);list.appendChild(li);
     });
     var done=todos.filter(function(t){return t.done;}).length;
     cnt.textContent=todos.length?(done+'/'+todos.length):'';
   }
-  form.onsubmit=function(ev){ev.preventDefault();var v=input.value.trim();if(!v)return;todos.push({text:v,done:false});input.value='';push();render();};
+  form.onsubmit=function(ev){ev.preventDefault();var v=input.value.trim();if(!v)return;input.value='';act('/add',{text:v});};
   fetch(DASH+'/api/todo',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
     todos=(d&&d.todos)||[];box.hidden=false;render();
   }).catch(function(){box.hidden=false;render();});
