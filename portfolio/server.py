@@ -600,8 +600,10 @@ PAGE = r'''<!DOCTYPE html>
   .rs-f{display:flex;flex-direction:column;gap:5px;flex:1;min-width:200px}
   .rs-f.rs-f-sm{flex:0 0 130px;min-width:120px}
   .rs-f span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9c}
-  .rs-f input{border:1px solid var(--line);border-radius:11px;padding:11px 12px;font-size:14px;background:#faf9fc;color:var(--ink);outline:none}
-  .rs-f input:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.14)}
+  .rs-f input,.rs-f select{border:1px solid var(--line);border-radius:11px;padding:11px 12px;font-size:14px;background:#faf9fc;color:var(--ink);outline:none;width:100%;-webkit-appearance:none;appearance:none}
+  .rs-f select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%238b5cf6' stroke-width='2' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+  .rs-f input:focus,.rs-f select:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.14)}
+  .rs-hint{font-size:11px;color:#9a97a8;margin-top:5px}
   .rs-seclbl{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8b8f9c;margin:4px 0 8px}
   .rs-secs{display:flex;flex-direction:column;gap:10px}
   .rs-sec{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fbfafe;transition:opacity .15s}
@@ -852,9 +854,9 @@ PAGE = r'''<!DOCTYPE html>
     </div>
     <p class="rs-sub">Tell the morning generator exactly what you want. Toggle sections, edit what each should cover, reorder, or add your own. Saved changes shape tomorrow&rsquo;s 8am report.</p>
     <div class="rs-fields">
-      <label class="rs-f"><span>Greeting</span><input id="rsGreet" maxlength="80"></label>
-      <label class="rs-f"><span>Tone</span><input id="rsTone" maxlength="140"></label>
-      <label class="rs-f rs-f-sm"><span>Deliver (ET hour)</span><input id="rsHour" type="number" min="0" max="23"></label>
+      <label class="rs-f"><span>Opening line</span><select id="rsGreet"></select><small class="rs-hint">How the report greets you at the top.</small></label>
+      <label class="rs-f"><span>Tone</span><select id="rsTone"></select><small class="rs-hint">The voice of the writing.</small></label>
+      <label class="rs-f rs-f-sm"><span>Delivery time</span><select id="rsHour"></select><small class="rs-hint">When it arrives (ET).</small></label>
     </div>
     <div class="rs-seclbl">Sections</div>
     <div id="rsSecs" class="rs-secs"></div>
@@ -1009,33 +1011,60 @@ PAGE = r'''<!DOCTYPE html>
       ups[0].disabled=(i===0);ups[1].disabled=(i===rep.sections.length-1);
       secBox.appendChild(c);});
   }
+  // Preset choices for the dropdowns. Any saved value not in a list is added so
+  // nothing is ever lost.
+  var GREETS=['Good morning, Matthew','Rise and shine, Matthew','Morning, Matthew','Hello, Matthew','Good morning'];
+  var TONES=[
+    ['Tight, skimmable & friendly','tight, skimmable, and friendly — a real morning briefing, not a wall of text'],
+    ['Warm & conversational','warm and conversational, like a friend catching you up'],
+    ['Punchy & brief','punchy and brief — the fewest words that still inform'],
+    ['Calm & reflective','calm and reflective, unhurried'],
+    ['Just the facts','neutral and factual, no fluff']
+  ];
+  var HOURS=[[5,'5:00 AM'],[6,'6:00 AM'],[7,'7:00 AM'],[8,'8:00 AM'],[9,'9:00 AM'],[10,'10:00 AM']];
+  function defaultSections(){return [
+    {key:'weather',icon:'🌤️',label:'Weather',enabled:true,want:"NYC today: current temp, high/low, rain/snow chance, and a one-line 'what to wear/bring'."},
+    {key:'headlines',icon:'🗞️',label:'Headlines',enabled:true,want:"4-5 top stories (US/world + anything major NYC-specific), one line each, as '• ' bullets."},
+    {key:'transit',icon:'🚇',label:'Getting around',enabled:true,want:'any notable MTA subway service changes/major delays today (skip if nothing notable).'},
+    {key:'nyc',icon:'🎉',label:'NYC today',enabled:true,want:'one or two notable things happening in the city today.'},
+    {key:'nugget',icon:'💡',label:'Nugget',enabled:true,want:'one useful/interesting thing to start the day.'}
+  ];}
+  function fillSel(id,items,cur){var s=document.getElementById(id);s.innerHTML='';
+    var arr=items.slice(),found=false;
+    arr.forEach(function(it){if(String(it[1])===String(cur))found=true;});
+    if(cur!=null&&cur!==''&&!found)arr.unshift([cur,String(cur)]);
+    arr.forEach(function(it){var o=document.createElement('option');o.value=it[1];o.textContent=it[0];
+      if(String(it[1])===String(cur))o.selected=true;s.appendChild(o);});}
   function open(){
     document.getElementById('rsName').textContent=rep.title||'Daily report';
-    document.getElementById('rsGreet').value=rep.greeting||'';
-    document.getElementById('rsTone').value=rep.tone||'';
-    document.getElementById('rsHour').value=(rep.deliver_hour_et!=null?rep.deliver_hour_et:8);
+    fillSel('rsGreet',GREETS.map(function(g){return [g,g];}),rep.greeting||GREETS[0]);
+    fillSel('rsTone',TONES,rep.tone||TONES[0][1]);
+    fillSel('rsHour',HOURS.map(function(h){return [h[1],h[0]];}),(rep.deliver_hour_et!=null?rep.deliver_hour_et:8));
     drawSecs();modal.hidden=false;
   }
   function close(){modal.hidden=true;}
+  function startEdit(d){
+    cfg=(d&&d.reports)?d:{version:1,reports:[]};
+    rep=cfg.reports[0];
+    if(!rep){rep={id:'nyc-digest',title:'NYC Daily Digest',greeting:GREETS[0],tone:TONES[0][1],deliver_hour_et:8,sections:defaultSections()};cfg.reports.push(rep);}
+    if(!rep.sections||!rep.sections.length)rep.sections=defaultSections();  // never show a blank editor
+    open();
+  }
   document.getElementById('rpEdit').onclick=function(){
-    fetch('api/report-config',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-      cfg=d&&d.reports?d:{version:1,reports:[]};
-      rep=cfg.reports[0]||{id:'nyc-digest',title:'Daily report',sections:[]};
-      if(!cfg.reports.length)cfg.reports.push(rep);
-      rep.sections=rep.sections||[];
-      open();
-    }).catch(function(){alert('Could not load the report template.');});
+    fetch('api/report-config',{cache:'no-store'}).then(function(r){return r.json();}).then(startEdit)
+      .catch(function(){startEdit(null);});  // offline/empty → seed defaults so it still works
   };
   document.getElementById('rsClose').onclick=close;
   document.getElementById('rsCancel').onclick=close;
   modal.onclick=function(e){if(e.target===modal)close();};
   document.getElementById('rsAdd').onclick=function(){
+    if(!rep)return;rep.sections=rep.sections||[];
     rep.sections.push({key:uid(),icon:'•',label:'New section',enabled:true,want:''});drawSecs();
-    secBox.lastChild.querySelector('.rs-label').focus();
+    var last=secBox.lastChild;if(last){var lbl=last.querySelector('.rs-label');if(lbl)lbl.focus();}
   };
   document.getElementById('rsSave').onclick=function(){
-    rep.greeting=document.getElementById('rsGreet').value.trim();
-    rep.tone=document.getElementById('rsTone').value.trim();
+    rep.greeting=document.getElementById('rsGreet').value;
+    rep.tone=document.getElementById('rsTone').value;
     var h=parseInt(document.getElementById('rsHour').value,10);rep.deliver_hour_et=(isNaN(h)?8:Math.max(0,Math.min(23,h)));
     var btn=document.getElementById('rsSave');btn.disabled=true;btn.textContent='Saving…';
     fetch('api/report-config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)})
@@ -1316,7 +1345,7 @@ class H(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
-        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Cache-Control', 'no-store, must-revalidate')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)

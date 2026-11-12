@@ -28,6 +28,17 @@ log(){ echo "[$(date '+%F %T %Z')] $*" | tee -a "$LOG"; }
 
 log "=== digest run start ($DATE) ==="
 
+# Delivery-hour gate: the cron fires hourly across the morning; only the hour
+# chosen in the report template (Dash → Report Studio) actually sends. FORCE=1
+# bypasses the gate for manual runs.
+WANT_HOUR=$(python3 -I -c "import json;print(int(json.load(open('$BASE/portal/data/report_config.json'))['reports'][0].get('deliver_hour_et',8)))" 2>/dev/null || echo 8)
+NOW_HOUR=$(TZ=America/New_York date +%H)
+if [ "${FORCE:-}" != "1" ] && [ "$((10#$NOW_HOUR))" -ne "$((10#$WANT_HOUR))" ]; then
+  log "skip: ET hour $((10#$NOW_HOUR)) != configured delivery hour $WANT_HOUR"
+  exit 0
+fi
+log "delivery hour matched (ET $((10#$NOW_HOUR)) == $WANT_HOUR); proceeding"
+
 # Prompt is built from the user-editable template (portal/data/report_config.json,
 # edited in Dash's Report Studio). Falls back to the built-in prompt if that
 # produces nothing, so a bad/missing config can never break the morning digest.
