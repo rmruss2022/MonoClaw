@@ -68,10 +68,10 @@ struct TodoEntry: TimelineEntry { let date: Date; let todos: [TodoItem] }
 
 struct TodoProvider: TimelineProvider {
     func placeholder(in context: Context) -> TodoEntry {
-        TodoEntry(date: Date(), todos: [TodoItem(text: "Loading…", done: false)])
+        TodoEntry(date: Date(), todos: [TodoItem(id: nil, text: "Loading…", done: false)])
     }
     func getSnapshot(in context: Context, completion: @escaping (TodoEntry) -> Void) {
-        completion(TodoEntry(date: Date(), todos: [TodoItem(text: "Tap to open Dash", done: false)]))
+        completion(TodoEntry(date: Date(), todos: [TodoItem(id: nil, text: "Tap to open Dash", done: false)]))
     }
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodoEntry>) -> Void) {
         Task {
