@@ -2939,10 +2939,30 @@ a{color:var(--purple)}
 .jflow{position:relative}
 .jphase[hidden]{display:none}
 .jp-card{margin-bottom:6px}
-.jp-lead{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:14px;margin:16px 0 8px}
-.jp-title{font-family:var(--serif);font-size:25px;line-height:1.25;color:#e9e3f7;text-align:center;letter-spacing:.2px}
-/* The pre-start timer is the same component as the running one, just at rest. */
-.jtimer.jt-pre{background:rgba(20,16,40,.4)}
+/* Centre the sitting on the screen instead of stacking it at the top over a
+   third of a page of nothing. */
+#jp1.jp1-hero{display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - 230px)}
+/* Giving #jp1 a display value beats the hidden attribute, which would leave
+   the prompt card on screen above the editor for the whole writing phase. */
+#jp1[hidden]{display:none}
+.jp-hero{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:24px;padding:10px 0 2px}
+.jp-title{font-family:var(--serif);font-size:27px;line-height:1.2;color:#f3eefc;text-align:center;letter-spacing:.2px}
+.jp-ring{position:relative;width:206px;height:206px;display:grid;place-items:center}
+/* The glow lives here, on a circle, not as a drop-shadow on the arc. A filter on
+   an SVG child is clipped to that element's filter region, so the soft light fell
+   square — a visibly lighter box sat behind the ring. */
+.jp-ring:before{content:"";position:absolute;inset:16px;border-radius:50%;
+  box-shadow:0 0 36px rgba(245,201,119,.20);pointer-events:none}
+.jpr{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.jpr circle{fill:none;stroke-width:5;stroke-linecap:round}
+.jpr-track{stroke:rgba(245,201,119,.13)}
+.jpr-arc{stroke:var(--gold);stroke-dasharray:333;stroke-dashoffset:0}
+.jpr-in{display:flex;flex-direction:column;align-items:center;gap:4px}
+.jpr-t{font-size:45px;font-weight:800;letter-spacing:.5px;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
+.jpr-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2.2px}
+.jp-ways{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.jp-way{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);letter-spacing:.2px}
+.jp-way .i{width:15px;height:15px;color:var(--gold);opacity:.85}
 .jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
 .jbegin .seal-ic{width:22px;height:22px}
 .jbegin-sub{text-align:center;font-size:13px;color:var(--muted);max-width:360px;margin:0 auto}
@@ -6118,11 +6138,26 @@ function composerHTML(o){
   // With the question held back, the card carries the title and the length of
   // the sitting — you choose to write before you know what you are asked.
   jPromptDeferred=!!o.title;
-  const leadHTML=`<div class="jp-lead"><div class="jp-title">${esc(o.title||'')}</div>`
-    +`<div class="jtimer jt-pre"><span class="jt-time">10:00</span><span class="jt-lbl">to write</span></div></div>`;
+  // r=53 gives a circumference of 333, so a full dash is a full ring: before
+  // you begin, all ten minutes are still yours. The arc unwinds from here.
+  const leadHTML=`<div class="jp-hero">`
+    +`<div class="jp-title">${esc(o.title||'')}</div>`
+    +`<div class="jp-ring">`
+      +`<svg class="jpr" viewBox="0 0 120 120" aria-hidden="true">`
+        +`<circle class="jpr-track" cx="60" cy="60" r="53"/>`
+        +`<circle class="jpr-arc" cx="60" cy="60" r="53"/>`
+      +`</svg>`
+      +`<div class="jpr-in"><span class="jpr-t">10:00</span><span class="jpr-l">minutes</span></div>`
+    +`</div>`
+    +`<div class="jp-ways">`
+      +`<span class="jp-way">${ic('book')}Type</span>`
+      +`<span class="jp-way">${ic('mic')}Record</span>`
+      +`<span class="jp-way">${ic('camera')}Photograph</span>`
+    +`</div>`
+  +`</div>`;
   return `<div class="jflow">`
   // ---------------- PHASE 1 · the prompt ----------------
-  +`<div class="jphase" id="jp1">`
+  +`<div class="jphase${o.title?' jp1-hero':''}" id="jp1">`
     +`<div class="letter jp-card">`
       +(o.topHTML||'')
       +`<div class="letter-head"><span>${niceDate(Date.now())}</span>`
@@ -6130,7 +6165,7 @@ function composerHTML(o){
       +(o.title?leadHTML:promptLine)
     +`</div>`
     +`<button class="btn gold jbegin" id="jbegin">${ic('clock','seal-ic')} Begin journaling</button>`
-    +`<div class="jbegin-sub">${o.title?'':'Ten quiet minutes. '}Write it, speak it, or photograph it — however it comes.</div>`
+    +(o.title?'':`<div class="jbegin-sub">Ten quiet minutes. Write it, speak it, or photograph it — however it comes.</div>`)
   +`</div>`
   // ---------------- PHASE 2 · writing ----------------
   +`<div class="jphase jwrite" id="jp2" hidden>`
@@ -6140,7 +6175,7 @@ function composerHTML(o){
     +`</div>`
     +`<div class="jw-prompt">“${esc(o.prompt||'')}”</div>`
     +`<div class="jmodes">`
-      +`<button class="jmode on" data-mode="type">${ic('note','jm-ic')}<b>Type</b><small>Write it out</small></button>`
+      +`<button class="jmode on" data-mode="type">${ic('book','jm-ic')}<b>Type</b><small>Write it out</small></button>`
       +`<button class="jmode" data-mode="voice">${ic('mic','jm-ic')}<b>Record</b><small>Speak, we transcribe</small></button>`
       +`<button class="jmode" data-mode="photo">${ic('camera','jm-ic')}<b>Photograph</b><small>Snap your handwriting</small></button>`
     +`</div>`
