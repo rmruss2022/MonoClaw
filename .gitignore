@@ -47,3 +47,12 @@ rolodex-deploy/data/
 /recilia/
 /rolodex-ios/
 /travelog-ios/
+
+# Night Sweep / agent runtime artifacts (regenerated nightly)
+media/tts/*.mp3
+**/media/inbound/openclaw-staged-*/
+nightsweep/work/sha-*
+nightsweep/work/context-*.md
+nightsweep/logs/sweep-*.log
+*.py.bak
+*.py.pre-ui
