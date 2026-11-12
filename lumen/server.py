@@ -3581,11 +3581,24 @@ a{color:var(--purple)}
   background:rgba(5,4,10,.62);backdrop-filter:blur(4px);opacity:0;transition:opacity .24s}
 .lmodal-ov.show{opacity:1}
 .lmodal{position:relative;width:100%;max-width:520px;max-height:76vh;max-height:76dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  /* The radius lives here, on the element that stays put, so the rounded top is
+     the edge of the sheet rather than the top of the content. On .card it
+     scrolled away and left square corners against the backdrop. */
+  border-radius:22px 22px 0 0;
   transform:translateY(100%);transition:transform .3s cubic-bezier(.2,.85,.25,1)}
 .lmodal-ov.show .lmodal{transform:translateY(0)}
 .lmodal .card{margin:0;border-radius:22px 22px 0 0;border-bottom:0;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
 .lmodal-x{position:absolute;top:12px;right:12px;z-index:5;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#00000055;color:#d8d0ef;display:grid;place-items:center;cursor:pointer}
 .lmodal-x .i{width:16px;height:16px}
+/* The start button, pinned to the foot of the sheet so a lesson is always one
+   tap away. Deliberately a child of .lmodal and not of .jdetail: that card is
+   overflow:hidden, and an overflow ancestor silently kills position:sticky. */
+.jd-cta{position:sticky;bottom:0;z-index:6;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top,#110d1b 58%,rgba(17,13,27,.92) 82%,rgba(17,13,27,0));
+  border-bottom-left-radius:0;border-bottom-right-radius:0}
+.jd-cta .btn{width:100%;margin:0}
+/* The card no longer carries the bottom padding the inline button needed. */
+.lmodal .card.jdetail{padding-bottom:6px}
 .lj-row:active{transform:scale(.995)}
 .lj-row.next{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 16px -6px var(--gold)}
 .lj-row.done{opacity:.82}
@@ -5223,13 +5236,14 @@ function lessonDetail(code){
       <ol class="jd-steps">${l.segments.map(s=>`<li>${esc(s.title)}</li>`).join('')}</ol>
       ${l.prompt?`<div class="jd-prompt">${ic('book','g')}<span>Afterward, you'll reflect: &ldquo;${esc(l.prompt)}&rdquo;</span></div>`:''}
       ${done?`<div class="lesson-done" style="justify-content:center;margin-top:12px">${ic('check')} Completed ${pr.count}×${pr.last?' · last '+ago(pr.last):''}</div>`:''}
-      <button class="btn gold" id="dbegin" style="margin-top:14px">${ic('seal')} ${rs>0?('Continue · step '+(rs+1)+' of '+nSeg):(done?'Practice again':'Begin journey')}</button>
       <div class="jd-sound">
         <div class="jd-sound-lbl">Background sound</div>
         <div class="grid3" id="lsnds">${SOUNDS.map(s=>`<div class="chip snd-chip ${s[0]===l.soundscape?'sel':''}" data-s="${s[0]}"><div class="big">${ic(s[1])}</div>${s[2]}</div>`).join('')}</div>
       </div>
       <p class="muted center" style="font-size:12px;margin-top:12px">Earns Light · builds your streak</p>
-    </div></div></div>`);
+    </div>
+    <div class="jd-cta"><button class="btn gold" id="dbegin">${ic('seal')} ${rs>0?('Continue · step '+(rs+1)+' of '+nSeg):(done?'Practice again':'Begin journey')}</button></div>
+  </div></div>`);
   const close=()=>{ov.classList.remove('show');setTimeout(()=>ov.remove(),240);};
   ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('.lmodal-x'))close();});
   ov.querySelector('#dbegin').onclick=()=>{ov.remove();lessonPlay(l, rs);};
@@ -5529,7 +5543,7 @@ const LESSONS=[{
   code:'stoic', title:'Stoic · I', subtitle:'The Dichotomy of Control',
   track:'philosophy', level:'Core', focus:'Control · acceptance', part:1, series:'Stoic',
   technique:'Sorting · settling',
-  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'rain', accent:'#7f9ec4',
   prompt:'What have you been carrying that was never actually yours to decide?',
   blurb:'Part 1 of the Stoic course. Meet the one idea the whole philosophy turns on — that some things are up to you and some are not — and begin the work of telling them apart.',
   segments:[
@@ -5544,7 +5558,7 @@ const LESSONS=[{
   code:'stoic_fate', title:'Stoic · II', subtitle:'Amor Fati',
   track:'philosophy', level:'Core', focus:'Acceptance · willingness', part:2, series:'Stoic',
   technique:'Contemplation',
-  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'rain', accent:'#7f9ec4',
   prompt:'What would change if you stopped wishing this year had gone differently?',
   blurb:'Part 2 of the Stoic course. Three people — a slave, an exile and an emperor — and the hard, freeing idea they shared: not merely to bear what happens, but to love it.',
   segments:[
@@ -5559,7 +5573,7 @@ const LESSONS=[{
   code:'stoic_view', title:'Stoic · III', subtitle:'The View From Above',
   track:'philosophy', level:'Core', focus:'Perspective · preparation · review', part:3, series:'Stoic',
   technique:'View from above · Premeditatio · Evening review',
-  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'rain', accent:'#7f9ec4',
   prompt:'Which of the three practices do you most need this week, and when will you use it?',
   blurb:'Part 3 of the Stoic course — the techniques. Three practices the Stoics actually did: widening the view, rehearsing what could go wrong, and reviewing the day without cruelty.',
   segments:[
@@ -5574,7 +5588,7 @@ const LESSONS=[{
   code:'stoic_handbook', title:'Stoic · IV', subtitle:'The Handbook & the Maxims',
   track:'philosophy', level:'Core', focus:'Maxims · readiness', part:4, series:'Stoic',
   technique:'Phrase repetition',
-  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'rain', accent:'#7f9ec4',
   prompt:'Which phrase do you want ready to hand — and what moment will you need it in?',
   blurb:'Part 4 of the Stoic course — the undertones. A handful of short phrases, carried the way a mantra is carried, so that they are already there when the moment comes.',
   segments:[
@@ -5589,7 +5603,7 @@ const LESSONS=[{
   code:'stoic_reflect', title:'Stoic · V', subtitle:'Reflect & Give Thanks',
   track:'philosophy', level:'Core', focus:'Reflection · gratitude', part:5, series:'Stoic',
   technique:'Reflection · gratitude',
-  tradition:'Stoic · the Examined Life', img:'', soundscape:'silence', accent:'#7f9ec4',
+  tradition:'Stoic · the Examined Life', img:'', soundscape:'rain', accent:'#7f9ec4',
   prompt:'What is yours to do tomorrow — and what are you already grateful for today?',
   blurb:'Part 5, the close of the Stoic course. Turn it all inward — what is yours to do — rest in the inner citadel, and finish with a review and a gratitude reflection.',
   segments:[
