@@ -1356,6 +1356,32 @@ PAGE = r"""<!doctype html><html lang="en"><head>
   .cell .d{font-size:11px}
   .cell .more{font-size:9px;padding:1px 3px 0}
  }
+.mq-widgets{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 4px}
+@media(max-width:620px){.mq-widgets{grid-template-columns:1fr}}
+.mqtd,.mqrp{background:#fff;border:1px solid #eceaf2;border-radius:16px;padding:14px 15px;
+  box-shadow:0 1px 2px rgba(20,23,30,.04),0 14px 34px -18px rgba(124,58,237,.22);text-decoration:none;color:inherit;display:block}
+.mqrp{transition:transform .1s,box-shadow .15s} .mqrp:hover{transform:translateY(-1px);box-shadow:0 18px 40px -16px rgba(124,58,237,.3)}
+.mqw2-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.mqw2-head h3{margin:0;font-size:15px;font-weight:800}
+.mqw2-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.mqw2-dot.td{background:linear-gradient(135deg,#6366f1,#ec4899)} .mqw2-dot.rp{background:linear-gradient(135deg,#a855f7,#6366f1)}
+.mqtd-count{margin-left:auto;font-size:12px;color:#8f8da3;font-weight:600}
+.mqtd-add{display:flex;gap:7px;margin-bottom:9px}
+.mqtd-add input{flex:1;border:1px solid #e7e5ee;border-radius:10px;padding:9px 11px;font-size:13.5px;background:#faf9fc;outline:none;color:#241f33}
+.mqtd-add input:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.13)}
+.mqtd-add button{width:38px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);color:#fff;font-size:19px;cursor:pointer}
+.mqtd-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;max-height:168px;overflow:auto}
+.mqtd-item{display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:10px;background:#fbfafe;cursor:pointer}
+.mqtd-item .bx{width:19px;height:19px;border:2px solid #cfd2dc;border-radius:6px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.mqtd-item.done .bx{border-color:transparent;background:linear-gradient(135deg,#6366f1,#ec4899)}
+.mqtd-item .tx{flex:1;font-size:13.5px;color:#241f33} .mqtd-item.done .tx{color:#9a97a8;text-decoration:line-through}
+.mqtd-item .rm{border:none;background:none;color:#c6cad4;font-size:15px;cursor:pointer;opacity:0}
+.mqtd-item:hover .rm{opacity:1} .mqtd-item .rm:hover{color:#ec4899}
+.mqtd-empty{font-size:13px;color:#9a97a8;padding:4px 2px}
+.mqrp-date{margin-left:auto;font-size:12px;color:#8f8da3}
+.mqrp-body{font-size:13px;line-height:1.5;color:#4b4760;white-space:pre-wrap;max-height:120px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(#000 68%,transparent);mask-image:linear-gradient(#000 68%,transparent)}
+.mqrp-all{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:700;color:#6d28d9}
 </style></head><body>
 <div class="wrap">
  <div class="top">
@@ -1375,6 +1401,18 @@ PAGE = r"""<!doctype html><html lang="en"><head>
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.3M21 3v6h-6"/></svg>Refresh</button>
    <button class="refresh" id="appsBtn" title="Where our events come from"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18.5" r="1.6"/><path d="M8 15a5.5 5.5 0 0 1 8 0M5 11.5a10 10 0 0 1 14 0M2 8a14.5 14.5 0 0 1 20 0"/></svg>Sources</button>
   </div>
+ </div>
+ <div class="mq-widgets">
+  <div class="mqtd" id="mqTodo" hidden>
+   <div class="mqw2-head"><span class="mqw2-dot td"></span><h3>To-do</h3><span class="mqtd-count" id="mqTdCount"></span></div>
+   <form class="mqtd-add" id="mqTdForm"><input id="mqTdInput" placeholder="Add a task…" autocomplete="off"><button type="submit" aria-label="Add">＋</button></form>
+   <ul class="mqtd-list" id="mqTdList"></ul>
+  </div>
+  <a class="mqrp" id="mqReport" href="https://reports.bedrock.casa/" target="_blank" rel="noopener" hidden>
+   <div class="mqw2-head"><span class="mqw2-dot rp"></span><h3 id="mqRpTitle">Daily report</h3><span class="mqrp-date" id="mqRpDate"></span></div>
+   <div class="mqrp-body" id="mqRpBody"></div>
+   <span class="mqrp-all">Read today&rsquo;s report →</span>
+  </a>
  </div>
  <div class="chips" id="chips"></div>
  <div class="controls">
@@ -1843,6 +1881,43 @@ function scanRegulars(btn){
   });
  }).catch(function(){btn.textContent='Scan failed';btn.disabled=false;});
 }
+// ---- Shared widgets: To-do + Daily report (read/write Dash, same account) ----
+(function(){
+  var DASH='https://dash.bedrock.casa';
+  var rp=document.getElementById('mqReport');
+  if(rp){fetch(DASH+'/api/report-latest',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    var r=d&&d.report;if(!r)return;
+    document.getElementById('mqRpTitle').textContent=r.title||'Daily report';
+    document.getElementById('mqRpDate').textContent=r.date||'';
+    document.getElementById('mqRpBody').textContent=r.text||'';
+    rp.hidden=false;
+  }).catch(function(){});}
+  var box=document.getElementById('mqTodo');if(!box)return;
+  var list=document.getElementById('mqTdList'),input=document.getElementById('mqTdInput'),
+      form=document.getElementById('mqTdForm'),cnt=document.getElementById('mqTdCount');
+  var todos=[],_t=null;
+  function push(){clearTimeout(_t);_t=setTimeout(function(){
+    fetch(DASH+'/api/todo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({todos:todos})}).catch(function(){});
+  },300);}
+  function render(){
+    list.innerHTML='';
+    if(!todos.length){var e=document.createElement('li');e.className='mqtd-empty';e.textContent='Nothing yet — add a task.';list.appendChild(e);}
+    todos.forEach(function(t,i){
+      var li=document.createElement('li');li.className='mqtd-item'+(t.done?' done':'');
+      li.onclick=function(){t.done=!t.done;push();render();};
+      var bx=document.createElement('span');bx.className='bx';bx.textContent=t.done?'✓':'';
+      var tx=document.createElement('span');tx.className='tx';tx.textContent=t.text;
+      var rm=document.createElement('button');rm.className='rm';rm.innerHTML='✕';rm.onclick=function(ev){ev.stopPropagation();todos.splice(i,1);push();render();};
+      li.appendChild(bx);li.appendChild(tx);li.appendChild(rm);list.appendChild(li);
+    });
+    var done=todos.filter(function(t){return t.done;}).length;
+    cnt.textContent=todos.length?(done+'/'+todos.length):'';
+  }
+  form.onsubmit=function(ev){ev.preventDefault();var v=input.value.trim();if(!v)return;todos.push({text:v,done:false});input.value='';push();render();};
+  fetch(DASH+'/api/todo',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    todos=(d&&d.todos)||[];box.hidden=false;render();
+  }).catch(function(){box.hidden=false;render();});
+})();
 load(false);setInterval(function(){load(false);},120000);
 </script></body></html>"""
 
