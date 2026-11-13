@@ -3448,7 +3448,9 @@ a{color:var(--purple)}
 .onb-brand{display:flex;align-items:center;gap:7px;font-weight:800;color:var(--gold)}
 .onb-brand .i{width:22px;height:22px}
 .onb-signin{color:var(--muted,#9a93b8);font-size:14px;text-decoration:none;cursor:pointer}
-.onb-body{min-height:52vh;display:flex;flex-direction:column;justify-content:center}
+/* sticky only pins when the page outgrows the viewport; at 52vh the footer just
+   sat wherever the content ended, 330px short of the bottom. */
+.onb-body{min-height:calc(100dvh - 150px);display:flex;flex-direction:column;justify-content:center}
 .onb-hero{text-align:center;padding:12px 6px}
 .onb-photo{width:100%;max-width:330px;margin:0 auto 4px;border-radius:22px;overflow:hidden;aspect-ratio:4/3;background:rgba(255,255,255,.04);box-shadow:0 16px 44px rgba(0,0,0,.5),inset 0 0 0 1px rgba(245,201,119,.12)}
 .onb-photo img{width:100%;height:100%;object-fit:cover;display:block}
@@ -3472,9 +3474,13 @@ a{color:var(--purple)}
 .onb-chip.sel .i{color:var(--gold)}
 .onb-foot{position:sticky;bottom:0;padding:14px 0 calc(10px + env(safe-area-inset-bottom));
   background:linear-gradient(0deg,var(--bg) 72%,transparent)}
-.onb-dots{display:flex;gap:7px;justify-content:center;margin-bottom:14px}
-.onb-dots span{width:7px;height:7px;border-radius:50%;background:var(--line)}
-.onb-dots span.on{background:var(--gold);width:20px;border-radius:4px}
+.onb-prog{height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:14px}
+.onb-prog i{display:block;height:100%;border-radius:3px;background:var(--gold);transition:width .35s ease}
+.onb-prog-lbl{text-align:center;font-size:12px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
+/* The cited institutions, set as names rather than crests — see the note at the
+   top of this patch about borrowing trademarks for authority. */
+.onb-cite{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 2px}
+.onb-cite span{font-family:var(--serif);font-size:14px;letter-spacing:.4px;color:#cfc6ea;border:1px solid var(--line);border-radius:999px;padding:6px 13px;background:rgba(255,255,255,.03)}
 .onb-nav{display:flex;gap:10px;align-items:center}
 .onb-nav .btn{flex:1}
 .onb-nav .btn[disabled]{opacity:.4;pointer-events:none}
@@ -4329,16 +4335,16 @@ function renderReset(prefill){
 /* ---- onboarding (value slides → personalization → account) ---- */
 let onb={step:0,intents:[],timeHour:null,level:null,freq:null,minutes:null};
 const ONB_SLIDES=[
-  {scene:'world',h:"Show up with a vibrant community",p:"Thousands are meditating right now, glowing across a living world map. You sit alongside a real, worldwide community — and their momentum keeps you coming back."},
+  {scene:'world',h:"Show up with a vibrant community",cta:"I’d like that",p:"Thousands are meditating right now, glowing across a living world map. You sit alongside a real, worldwide community — and their momentum keeps you coming back."},
   {scene:'explore',h:"Explore the world, one meditation at a time",p:"Discover the beautiful places people meditate across the globe, claim your own spots on the map, and earn bonus Light every time you sit somewhere new."},
   {scene:'inspire',h:"Inspire, and be inspired",p:"Wake up to a community that shows up with you — cheer others on, share your own places, and draw daily inspiration from people chasing the same stillness."},
   {scene:'learn',h:"Learn from real, deep traditions",p:"Narrated journeys teach genuine technique — breathwork, meditation and sacred knowledge drawn from living spiritual traditions, not watered-down soundbites."},
   {scene:'collect',h:"Collect Light as you grow",p:"Earn Light for every sit, with bonuses for meditating in new places, finishing new lessons, and contributing to your community. Your practice, made visible."},
-  {scene:'vedic',h:"Your Vedic reading, every day",p:"Each morning brings a horoscope written for you — drawn from ancient Jyotish teachings and your own rāśi and nakshatra — a calm, personal invitation to begin."},
-  {scene:'mandala',h:"Watch your mandala bloom",p:"A single sacred mandala grows with you — each milestone revealing one more facet, until it becomes a beautiful record of the journey only you have walked."},
-  {scene:'badges',h:"Earn badges for the inner path",p:"Every new level awards a unique emblem — merit badges for the soul — a growing collection of honors that mark how far your practice has carried you."},
-  {scene:'research',h:"Grounded in real science",p:"The self-authoring and reflection exercises draw on published research from leading institutions — Harvard, Stanford and MIT — translated into a daily practice you can actually keep."},
-  {scene:'price',h:"The price of a coffee",p:"Lumen Premium is just $7 a month — about what you’d pay for a single coffee. Unlock the full library of journeys, deeper readings and everything that helps your practice grow."},
+  {scene:'vedic',h:"Your Vedic reading, every day",cta:"Show me",p:"Each morning brings a horoscope written for you — drawn from ancient Jyotish teachings and your own rāśi and nakshatra — a calm, personal invitation to begin."},
+  {scene:'mandala',h:"Watch your mandala bloom",cta:"Beautiful",p:"A single sacred mandala grows with you — each milestone revealing one more facet, until it becomes a beautiful record of the journey only you have walked."},
+  {scene:'badges',h:"Earn badges for the inner path",cta:"I’m ready",p:"Every new level awards a unique emblem — merit badges for the soul — a growing collection of honors that mark how far your practice has carried you."},
+  {scene:'research',h:"Grounded in real science",cta:"Makes sense",p:"The self-authoring and reflection exercises draw on published research from leading institutions — translated into a daily practice you can actually keep.",cite:['Harvard','Stanford','MIT']},
+  {scene:'price',h:"Built by one person, for people who sit",cta:"I’m in",p:"Lumen has no investors and no advertising. Members fund the narration, the new journeys and the lights on the map — and keep the practice itself free for everyone who needs it."},
 ];
 const ONB_INTENTS=[['calm','Calm my mind','lotus'],['sleep','Sleep better','glow'],['focus','Focus & clarity','compass'],['stress','Ease stress & anxiety','ocean'],['habit','Build a habit','flame'],['spirit','Spiritual growth','nova'],['self','Understand myself','crystal'],['grief','Sit with something hard','moon']];
 const ONB_FREQS=[['daily','Every day','flame'],['most','Most days','sunrise'],['few','A few times a week','glow'],['open','Just exploring','compass']];
@@ -4430,12 +4436,23 @@ function onbScene(key){
     <path d="M194 112 h12 a15 15 0 0 1 0 30 h-9" fill="none" stroke="#f5c977" stroke-width="2.6"/>
     <ellipse cx="150" cy="106" rx="44" ry="11" fill="#2a1f0c" stroke="#f5c977" stroke-width="2.6"/>
     <ellipse cx="150" cy="106" rx="35" ry="7" fill="#6b4418"/></g>
-    <g class="os-glow" style="transform-origin:224px 70px"><circle cx="224" cy="70" r="22" fill="#f5c977" stroke="#fff3d0" stroke-width="1.5"/><text x="224" y="79" text-anchor="middle" font-family="Georgia,serif" font-size="22" font-weight="700" fill="#241a0a">$7</text></g>
+    <!-- The coin carried "$7". This slide no longer names a price — that moved to the
+         offer screen where the ask is — so a bare glow replaces the number; the art
+         should not state what the copy deliberately withholds. -->
+    <g class="os-glow" style="transform-origin:224px 70px"><circle cx="224" cy="70" r="16" fill="none" stroke="#f5c977" stroke-width="1.5" opacity=".55"/><circle cx="224" cy="70" r="5" fill="#f5c977" opacity=".8"/></g>
     ${_oStars([[66,78,2.2,.4],[80,158,2,1.5],[246,138,2.2,1]])}
     </svg>`;
   return '';
 }
-function onbDots(){let h='<div class="onb-dots">';for(let i=0;i<=ONB_LAST;i++)h+=`<span class="${i===onb.step?'on':''}"></span>`;return h+'</div>';}
+// Sixteen identical dots told the user the flow was long without telling them
+// how far in they were. A bar does the second job, and during the question run
+// it is labelled — bounded progress is what makes length tolerable.
+function onbDots(){
+  const pct=Math.round((onb.step/ONB_LAST)*100);
+  const qn=(onb.step>=Q_INTENT&&onb.step<ONB_LAST)?(onb.step-Q_INTENT+1):0;
+  const lbl=qn?`<div class="onb-prog-lbl">Question ${qn} of 5</div>`:'';
+  return `${lbl}<div class="onb-prog"><i style="width:${pct}%"></i></div>`;
+}
 function onbSlideFit(){ // soft gate: value slides free; the only required answer is >=1 intent
   if(onb.step===Q_INTENT)return onb.intents.length>0;
   return true;
@@ -4449,7 +4466,8 @@ async function renderOnboarding(){
     const sl=ONB_SLIDES[s];
     body=`<div class="onb-hero">
       <div class="onb-anim onb-enter">${onbScene(sl.scene)}</div>
-      <h1 class="onb-h onb-enter d1">${sl.h}</h1><p class="onb-p onb-enter d2">${sl.p}</p></div>`;
+      <h1 class="onb-h onb-enter d1">${sl.h}</h1><p class="onb-p onb-enter d2">${sl.p}</p>
+      ${sl.cite?`<div class="onb-cite onb-enter d2">${sl.cite.map(c=>`<span>${c}</span>`).join('')}</div>`:''}</div>`;
   }else if(s===Q_INTENT){
     body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_INTENT],'g')}</div><h1 class="onb-h sm onb-enter">What brings you to Lumen?</h1><p class="onb-p sm onb-enter d1">Pick any that feel true — we'll shape your practice around them.</p>
       <div class="onb-grid onb-enter d1">${ONB_INTENTS.map(([k,label,icn])=>`<button class="onb-chip ${onb.intents.includes(k)?'sel':''}" data-k="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
@@ -4496,7 +4514,7 @@ async function renderOnboarding(){
       ${onbDots()}
       <div class="onb-nav">
         ${s>0&&s<=ONB_LAST?'<button class="btn ghost" id="onbBack" style="flex:0 0 auto;width:auto;padding:12px 18px">Back</button>':''}
-        ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s>=Q_INTENT?'Continue':'Next'}</button>`:''}
+        ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s>=Q_INTENT?'Continue':((ONB_SLIDES[s]&&ONB_SLIDES[s].cta)||'Next')}</button>`:''}
         ${(s>Q_INTENT&&s<ONB_LAST)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
       </div>
     </div>`;
@@ -4533,7 +4551,7 @@ function renderOnboardOffer(){
   <div class="onb-hero" style="padding-bottom:4px">
     <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${lumenMark('lg')}</div>
     <h1 class="onb-h onb-enter d1">Go deeper with Premium</h1>
-    <p class="onb-p">Everything in Lumen stays free. Premium opens the rest of the library.</p>
+    <p class="onb-p">About the price of one coffee a month. Everything you have already seen stays free — Premium opens the rest of the library.</p>
   </div>
   <div class="card">
     <div class="po-row">${ic('lotus','g')}<span>Every journey — the Stoics, Deities &amp; Devotion, and each one we add</span></div>
