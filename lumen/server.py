@@ -2939,6 +2939,8 @@ a{color:var(--purple)}
 .jflow{position:relative}
 .jphase[hidden]{display:none}
 .jp-card{margin-bottom:6px}
+.po-row{display:flex;align-items:flex-start;gap:10px;margin:0 0 11px;font-size:14px;line-height:1.5;color:#e9e3f7}
+.po-row .i{width:18px;height:18px;flex:0 0 auto;margin-top:2px}
 /* Centre the sitting on the screen instead of stacking it at the top over a
    third of a page of nothing. */
 #jp1.jp1-hero{display:flex;flex-direction:column;justify-content:center;min-height:calc(100dvh - 230px)}
@@ -4179,11 +4181,16 @@ window.__lumenPremiumResult=async function(ok){
     try{await api('premium/activate','POST',{});}catch(e){}
     if(ME)ME.tier='premium';
     try{toast(ic('spark','g')+' Premium unlocked ✦');}catch(e){}
+    if(window.__onbOffer){window.__onbOffer=false;go('meditate');return;}
     if(typeof TAB!=='undefined'&&TAB==='profile')renderProfile();
   }else if(pb){pb.disabled=false;pb.innerHTML=_canBuy()?(ic('spark')+' Subscribe · '+_premPrice()+'/month'):(ic('spark')+' Get founding-member access');}
 };
 window.__lumenPremiumError=function(m){
-  const pb=window.__premBtn;if(pb){pb.disabled=false;pb.innerHTML=ic('spark')+' Get founding-member access';}
+  // The bridge only exists on native, so a failure here is always a real
+  // subscribe button — restoring the waitlist wording would be a lie.
+  const pb=window.__premBtn;if(pb){pb.disabled=false;pb.innerHTML=_canBuy()
+    ?(ic('spark')+' Subscribe · '+_premPrice()+'/month')
+    :(ic('spark')+' Get founding-member access');}
   try{toast(m||'Purchase didn’t complete');}catch(e){}
 };
 const NAV_ICON={meditate:'meditate',lessons:'lotus',map:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
@@ -4506,6 +4513,44 @@ async function renderOnboarding(){
   const cr=$('#create');if(cr)cr.onclick=onbCreate;
   const fin=$('#onbFinish');if(fin)fin.onclick=onbFinishAuthed;
 }
+// Where onboarding hands over to the app. Ahead and Headspace both put their
+// trial offer exactly here, and Lumen's own price slide two screens back has
+// already done the selling — this is the ask it was setting up.
+//
+// It must never be able to strand anyone outside the app: every branch below,
+// including a thrown bridge call, ends at go('meditate').
+async function onbEnter(){
+  $('#nav').classList.remove('hidden');bindNav();
+  if(_canBuy() && !(ME && ME.tier==='premium')){ try{ renderOnboardOffer(); return; }catch(e){} }
+  go('meditate');
+}
+function onbSkipOffer(){ window.__onbOffer=false; go('meditate'); }
+function renderOnboardOffer(){
+  window.__onbOffer=true;
+  try{track('paywall_view',null,'onboarding');}catch(e){}
+  const price=_premPrice();
+  $('#app').innerHTML=`
+  <div class="onb-hero" style="padding-bottom:4px">
+    <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${lumenMark('lg')}</div>
+    <h1 class="onb-h onb-enter d1">Go deeper with Premium</h1>
+    <p class="onb-p">Everything in Lumen stays free. Premium opens the rest of the library.</p>
+  </div>
+  <div class="card">
+    <div class="po-row">${ic('lotus','g')}<span>Every journey — the Stoics, Deities &amp; Devotion, and each one we add</span></div>
+    <div class="po-row">${ic('book','g')}<span>Deep &amp; Season journaling, your pillars and the five-year plan</span></div>
+    <div class="po-row">${ic('sunrise','g')}<span>Deeper daily Vedic readings</span></div>
+    <button class="btn gold" id="poBuy" style="margin-top:14px">${ic('spark')} Subscribe · ${price}/month</button>
+    <button class="btn ghost" id="poSkip" style="margin-top:9px">Not now</button>
+    <p class="muted" style="font-size:12px;text-align:center;margin:10px 0 0">${price} per month, billed through your Apple ID. Renews until cancelled; cancel any time in Settings.</p>
+    <div class="center" style="margin-top:8px"><a class="onb-signin" id="poRestore">Restore purchase</a></div>
+  </div>`;
+  $('#poSkip').onclick=onbSkipOffer;
+  $('#poRestore').onclick=()=>{try{window.__lumenRestore();}catch(e){}};
+  $('#poBuy').onclick=()=>{const b=$('#poBuy');b.disabled=true;b.innerHTML=ic('live','g')+' Opening…';
+    window.__premBtn=b;
+    try{window.__lumenBuyPremium();}
+    catch(e){b.disabled=false;b.innerHTML=ic('spark')+' Subscribe · '+_premPrice()+'/month';}};
+}
 // Finish onboarding for an already-signed-in account: persist prefs, mark the
 // account onboarded server-side, then enter the app.
 async function onbFinishAuthed(){
@@ -4517,7 +4562,7 @@ async function onbFinishAuthed(){
   try{const tz=-new Date().getTimezoneOffset();await api('notif/prefs','POST',{tz_offset_min:tz,pref_hour:onb.timeHour,sto:true});}catch(e){}
   try{await api('onboarded','POST',{});}catch(e){}
   try{if(ME)ME.onboarded=true;}catch(e){}
-  $('#nav').classList.remove('hidden');bindNav();go('meditate');
+  await onbEnter();
 }
 async function onbCreate(){
   const er=$('#er');er.textContent='';
@@ -4538,7 +4583,7 @@ async function onbCreate(){
     try{const tz=-new Date().getTimezoneOffset();
         await api('notif/prefs','POST',{tz_offset_min:tz,pref_hour:onb.timeHour,sto:true});}catch(e){}
     const r=await api('me');ME=r.profile;
-    $('#nav').classList.remove('hidden');bindNav();go('meditate');
+    await onbEnter();
   }catch(e){btn.disabled=false;btn.textContent='Create account & begin';er.textContent=e;}
 }
 
