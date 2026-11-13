@@ -2978,6 +2978,27 @@ a{color:var(--purple)}
 .jtimer.soon .jt-time{color:#ffcf7a}
 .jtimer.done{border-color:rgba(130,220,160,.45);background:radial-gradient(120% 140% at 50% 0,rgba(130,220,160,.12),rgba(20,16,40,.4))}
 .jtimer.done .jt-time{color:#9fe3b0}
+/* Warm "journal paper" theme — only for the compose flow (body.jbg-warm) */
+body.jbg-warm{background:linear-gradient(168deg,#f7e6ab 0%,#f0d583 52%,#e9c868 100%) !important}
+body.jbg-warm .brand b,body.jbg-warm .back-btn,body.jbg-warm .jp-title{color:#4a3813 !important}
+body.jbg-warm .jmode-blurb{color:#7a5e24 !important}
+body.jbg-warm .letter.jp-card,body.jbg-warm .jp-card{background:#fffbef !important;border-color:#e6cf8d !important;color:#352808 !important;box-shadow:0 18px 50px -18px rgba(120,86,20,.5) !important}
+body.jbg-warm .letter-head,body.jbg-warm .letter-head span{color:#9a7a38 !important}
+body.jbg-warm .lp-q,body.jbg-warm .jw-prompt{color:#352808 !important;border-left-color:#d7b55a !important}
+body.jbg-warm .jp-ways .jp-way{color:#7a5e24 !important}
+body.jbg-warm .jw-body,body.jbg-warm .letter-body{background:#fffbef !important;border-color:#e6cf8d !important;color:#2e2409 !important}
+body.jbg-warm .jw-body::placeholder{color:#c0a768 !important}
+body.jbg-warm .jmode{background:#fff7e0 !important;border-color:#e6cf8d !important;color:#5a4316 !important}
+body.jbg-warm .jmode.on{background:#ffeab0 !important;border-color:#caa94e !important}
+body.jbg-warm .jmode small{color:#9a7a38 !important}
+body.jbg-warm .jtimer{background:#fffbef !important;border-color:#e6cf8d !important}
+body.jbg-warm .jtimer .jt-time{color:#b5831e !important}
+body.jbg-warm .jtimer .jt-lbl,body.jbg-warm .jbegin-sub{color:#8a6c2e !important}
+body.jbg-warm .letter-share,body.jbg-warm .letter-share span{color:#6a5220 !important}
+body.jbg-warm .jpr-track{stroke:#e6cf8d !important}
+body.jbg-warm .jpr-arc{stroke:#caa94e !important}
+body.jbg-warm .jpr-t{color:#b5831e !important}
+body.jbg-warm .jpr-l{color:#9a7a38 !important}
 .jw-prompt{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;line-height:1.5;color:#d8cff0;
   padding:0 2px;border-left:2px solid rgba(245,201,119,.4);padding-left:12px}
 .jmodes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -6223,7 +6244,7 @@ function composerHTML(o){
         +`<circle class="jpr-track" cx="60" cy="60" r="53"/>`
         +`<circle class="jpr-arc" cx="60" cy="60" r="53"/>`
       +`</svg>`
-      +`<div class="jpr-in"><span class="jpr-t">10:00</span><span class="jpr-l">minutes</span></div>`
+      +`<div class="jpr-in"><span class="jpr-t">3:00</span><span class="jpr-l">minutes</span></div>`
     +`</div>`
     +`<div class="jp-ways">`
       +`<span class="jp-way">${ic('book')}Type</span>`
@@ -6241,12 +6262,12 @@ function composerHTML(o){
       +(o.title?leadHTML:promptLine)
     +`</div>`
     +`<button class="btn gold jbegin" id="jbegin">${ic('clock','seal-ic')} Begin journaling</button>`
-    +(o.title?'':`<div class="jbegin-sub">Ten quiet minutes. Write it, speak it, or photograph it — however it comes.</div>`)
+    +(o.title?'':`<div class="jbegin-sub">A few quiet minutes. Write it, speak it, or photograph it — however it comes.</div>`)
   +`</div>`
   // ---------------- PHASE 2 · writing ----------------
   +`<div class="jphase jwrite" id="jp2" hidden>`
     +`<div class="jw-top">`
-      +`<div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">10:00</span><span class="jt-lbl" id="jtlbl">left</span></div>`
+      +`<div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">3:00</span><span class="jt-lbl" id="jtlbl">left</span></div>`
       +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak2" title="Read the prompt aloud">${ic(speakOn?'sound':'mute')}</button>`
     +`</div>`
     +`<div class="jw-prompt">“${esc(o.prompt||'')}”</div>`
@@ -6271,7 +6292,7 @@ let jTimerInt=null;
 function jStopTimer(){ if(jTimerInt){clearInterval(jTimerInt);jTimerInt=null;} }
 function jStartTimer(secs){
   jStopTimer();
-  let left=(typeof secs==='number')?secs:600;   // 10:00
+  let left=(typeof secs==='number')?secs:180;   // 3:00 — bite-sized
   const disp=$('#jtdisp'),lbl=$('#jtlbl');
   const paint=()=>{if(disp)disp.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;};
   paint();
@@ -6282,7 +6303,7 @@ function jStartTimer(secs){
       const tm=$('#jtimer');if(tm)tm.classList.add('done');
       if(disp)disp.textContent='0:00';if(lbl)lbl.textContent='take your time';
       try{Sound.bell();}catch(e){} try{Haptics.light();}catch(e){}
-      try{toast(ic('check','g')+' Ten minutes — seal whenever you’re ready.');}catch(e){}
+      try{toast(ic('check','g')+' That’s your few minutes — seal whenever you’re ready.');}catch(e){}
       return;
     }
     paint();
@@ -6359,7 +6380,7 @@ function enterWritePhase(){
   jComposePhase='write';
   const p1=$('#jp1'),p2=$('#jp2');if(p1)p1.hidden=true;if(p2)p2.hidden=false;
   try{Haptics.medium();}catch(e){}
-  jStartTimer(600);
+  jStartTimer(180);
   // The first card withheld the prompt, so this is its first airing.
   if(jPromptDeferred&&speakOn&&jGetPrompt){try{sayPrompt(jGetPrompt());}catch(e){}}
   _jSetMode('type');
@@ -6567,6 +6588,8 @@ async function renderJournal(){
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
   // it covers the whole screen; restore it on every other journal screen.
   try{const nv=document.getElementById('nav');if(nv){if(jScreen==='compose')nv.classList.add('hidden');else nv.classList.remove('hidden');}}catch(e){}
+  // Warm "journal paper" background for the compose flow only.
+  try{document.body.classList.toggle('jbg-warm',jScreen==='compose');}catch(e){}
   try{if(jScreen!=='compose')jStopTimer();}catch(e){}
   if(jScreen==='compose')return renderJournalCompose();
   if(jScreen==='plessons')return renderPillarLessons();
@@ -9396,7 +9419,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v30';
+const CACHE = 'lumen-v31';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
