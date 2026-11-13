@@ -2999,6 +2999,24 @@ body.jbg-warm .jpr-track{stroke:#e6cf8d !important}
 body.jbg-warm .jpr-arc{stroke:#caa94e !important}
 body.jbg-warm .jpr-t{color:#b5831e !important}
 body.jbg-warm .jpr-l{color:#9a7a38 !important}
+/* Daily Global Sit card */
+.gsit{display:flex;align-items:center;gap:12px;width:100%;margin:14px 0 2px;padding:14px 16px;border-radius:16px;
+  background:linear-gradient(135deg,#201a33,#17132a);border:1px solid var(--line);text-align:left;cursor:default}
+.gsit-ic{width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.gsit-body{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.gsit-k{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.gsit-t{font-size:14.5px;color:var(--text);font-weight:600}
+.gsit-t b{color:var(--gold)}
+.gsit-live{cursor:pointer;border-color:rgba(245,201,119,.55);
+  background:radial-gradient(130% 160% at 0 0,rgba(245,201,119,.16),rgba(23,19,42,.6));
+  box-shadow:0 14px 40px -16px rgba(245,201,119,.45);transition:transform .1s ease}
+.gsit-live:active{transform:scale(.99)}
+.gsit-live .gsit-k{color:#ffd98a}
+.gsit-dot{width:11px;height:11px;flex:0 0 auto;border-radius:50%;background:#ff5a5a;box-shadow:0 0 0 0 rgba(255,90,90,.6);animation:gsitpulse 1.6s infinite}
+@keyframes gsitpulse{0%{box-shadow:0 0 0 0 rgba(255,90,90,.55)}70%{box-shadow:0 0 0 10px rgba(255,90,90,0)}100%{box-shadow:0 0 0 0 rgba(255,90,90,0)}}
+.gsit-go{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:5px;font-size:13px;font-weight:800;color:#2a1a05;
+  background:linear-gradient(135deg,#f5c977,#e0953a);border-radius:999px;padding:8px 14px}
+.gsit-go svg{width:14px;height:14px}
 .jw-prompt{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;line-height:1.5;color:#d8cff0;
   padding:0 2px;border-left:2px solid rgba(245,201,119,.4);padding-left:12px}
 .jmodes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -4951,12 +4969,41 @@ function openSessionSheet(){
   ov.querySelectorAll('#mSnds .chip').forEach(c=>c.onclick=()=>{pick.sound=c.dataset.s; ov.querySelectorAll('#mSnds .chip').forEach(x=>x.classList.toggle('sel',x===c)); syncQuick();});
   ov.querySelector('#mStart').onclick=()=>{closeSessionSheet(); startSession();};
 }
+// Daily Global Sit card — a synchronized community meditation at 9:00 AM ET.
+function groupSitCardHTML(gs){
+  if(!gs)return '';
+  if(gs.live){
+    return `<button class="gsit gsit-live" id="gsitJoin" type="button">`
+      +`<span class="gsit-dot"></span>`
+      +`<span class="gsit-body"><span class="gsit-k">Live now · Daily Global Sit</span>`
+      +`<span class="gsit-t">Sit with <b>${gs.now}</b> people, together right now</span></span>`
+      +`<span class="gsit-go">Join ${ic('play')}</span></button>`;
+  }
+  return `<div class="gsit" id="gsitCard">`
+    +`<span class="gsit-ic">${ic('globe','g')}</span>`
+    +`<span class="gsit-body"><span class="gsit-k">Daily Global Sit · 9:00 AM ET</span>`
+    +`<span class="gsit-t" id="gsitCount">Everyone sits together — soon</span></span></div>`;
+}
+function wireGroupSit(gs){
+  if(!gs)return;
+  const join=$('#gsitJoin');
+  if(join)join.onclick=()=>{ pick.minutes=10; try{Haptics.medium();}catch(e){} try{toast(ic('globe','g')+' Joining the global sit ✨');}catch(e){} startSession(); };
+  const cnt=$('#gsitCount');
+  if(cnt && !gs.live){
+    const paint=()=>{ const s=Math.max(0, gs.start - Math.floor(Date.now()/1000));
+      if(s<=0){ clearInterval(window._gsInt); if(TAB==='meditate')renderMeditate(); return; }
+      const h=Math.floor(s/3600), m=Math.floor((s%3600)/60);
+      cnt.textContent = h>0?('Everyone sits together in '+h+'h '+m+'m') : ('Everyone sits together in '+Math.max(1,m)+'m'); };
+    paint(); clearInterval(window._gsInt); window._gsInt=setInterval(paint,30000);
+  }
+}
 async function renderMeditate(){
   if(!_mediPledged()){renderMeditatePledge();return;}
   let pres={now:0,today_sessions:0};try{pres=await api('presence');}catch(e){}
   let dp=null;try{dp=(await api('lifeos/prompts')).prompts;}catch(e){}
   let chal=null;try{chal=await api('challenge?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
   let horo=null;try{horo=await api('horoscope?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
+  let gsit=null;try{gsit=await api('groupsit');}catch(e){}
   const durs=[5,10,20,30];
   const PICK=todaysPick();
   const REST=recommendedLessons().filter(l=>!PICK||l.code!==PICK.code);
@@ -5012,6 +5059,7 @@ async function renderMeditate(){
       :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
     <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
   </div>
+  ${groupSitCardHTML(gsit)}
   <button class="journal-cta" id="journalCta" type="button"><svg class="jbook" viewBox="0 0 44 48" aria-hidden="true"><defs><linearGradient id="jbCov" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0bd69"/><stop offset="1" stop-color="#b9792e"/></linearGradient><linearGradient id="jbSpn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6f4616"/><stop offset=".5" stop-color="#b9823a"/><stop offset="1" stop-color="#7a4e1a"/></linearGradient></defs><rect x="12" y="7.5" width="26" height="35" rx="2" fill="#f1e3c2"/><g stroke="#cdb888" stroke-width=".5" opacity=".7"><path d="M35.5 10 V40"/><path d="M36.6 10.5 V39.5"/></g><rect x="9" y="5" width="26" height="36" rx="2.6" fill="url(#jbCov)" stroke="#5e3b12" stroke-width="1"/><rect x="9" y="5" width="6.5" height="36" rx="2.6" fill="url(#jbSpn)"/><rect x="14.4" y="5" width="1.3" height="36" fill="#5e3b12" opacity=".55"/><g stroke="#4f3110" stroke-width="1.5" opacity=".6"><path d="M9 12.5 H15.5"/><path d="M9 19.5 H15.5"/><path d="M9 26.5 H15.5"/><path d="M9 33.5 H15.5"/></g><g stroke="#fbe3a4" stroke-width=".5" opacity=".45"><path d="M9 11.7 H15.5"/><path d="M9 18.7 H15.5"/><path d="M9 25.7 H15.5"/><path d="M9 32.7 H15.5"/></g><rect x="18" y="9" width="14" height="28" rx="1.5" fill="none" stroke="#5e3b12" stroke-width=".9" opacity=".75"/><rect x="19.4" y="10.4" width="11.2" height="25.2" rx="1" fill="none" stroke="#fbe3a4" stroke-width=".5" opacity=".5"/><g transform="translate(25,23)"><circle r="2.7" fill="#fbe3a4" stroke="#5e3b12" stroke-width=".7"/><g stroke="#5e3b12" stroke-width="1" stroke-linecap="round"><path d="M0 -4.4 V-6 M0 4.4 V6 M-4.4 0 H-6 M4.4 0 H6 M-3.1 -3.1 L-4.3 -4.3 M3.1 -3.1 L4.3 -4.3 M-3.1 3.1 L-4.3 4.3 M3.1 3.1 L4.3 4.3"/></g></g><g fill="#fbe3a4" stroke="#5e3b12" stroke-width=".5"><circle cx="19.6" cy="9.6" r="1"/><circle cx="31.4" cy="9.6" r="1"/><circle cx="19.6" cy="36.4" r="1"/><circle cx="31.4" cy="36.4" r="1"/></g><path d="M34.5 19.5 H38.8 V26.5 H34.5" fill="#d8af63" stroke="#5e3b12" stroke-width=".6" stroke-linejoin="round"/><circle cx="37" cy="23" r=".95" fill="#5e3b12"/></svg><span class="jc-txt">Unlock today’s journal entry</span>${ic('seal')}</button>
   ${PICK?`<div class="rec-feature">${lessonCardHTML(PICK)}</div>
   <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
@@ -5023,6 +5071,7 @@ async function renderMeditate(){
   ${horoscopeCardHTML(horo)}
   ${challengeCardHTML(chal)}`;
   {const qm=$('#quickMed');if(qm)qm.onclick=openSessionSheet;}
+  wireGroupSit(gsit);
   document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
   {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
    const hl=document.querySelector('.horo-listen:not(.pick-listen)');if(hl&&horo&&horo.text)hl.onclick=()=>playHoroscope(hl,horo.text);
@@ -8070,6 +8119,12 @@ class H(BaseHTTPRequestHandler):
             live = LIVE.count()
             self._send(200, {"now": live, "today_sessions": row["n"], "today_light": row["l"], "today_minutes": row["m"]}); return
 
+        if p == "/api/groupsit":
+            w = group_sit_window()
+            w["now"] = LIVE.count()
+            w["label"] = "9:00 AM ET"
+            self._send(200, w); return
+
         if p == "/api/map":
             scope = q.get("scope", "today")
             me0 = self._me(c)
@@ -9484,7 +9539,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v31';
+const CACHE = 'lumen-v32';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -10980,12 +11035,77 @@ def _notif_time_pass(c):
     c.commit()
 
 
+# ---- Daily Global Sit: a synchronized community meditation at 9:00 AM ET ----
+GROUP_SIT_HOUR_ET = 9
+GROUP_SIT_WINDOW_MIN = 20  # how long the sit counts as "live" / joinable
+
+def _et_offset_hours(dt_utc):
+    """US Eastern UTC offset (EDT -4 / EST -5) for a UTC datetime — no tzdata needed."""
+    y = dt_utc.year
+    def nth_sun(month, n):
+        fs = 1 + (6 - date(y, month, 1).weekday()) % 7  # first Sunday
+        return fs + (n - 1) * 7
+    dst_start = datetime(y, 3, nth_sun(3, 2), 7, tzinfo=timezone.utc)   # 2am EST -> EDT
+    dst_end = datetime(y, 11, nth_sun(11, 1), 6, tzinfo=timezone.utc)   # 2am EDT -> EST
+    return -4 if dst_start <= dt_utc < dst_end else -5
+
+def group_sit_window(now_utc=None):
+    """Nearest Daily Global Sit: {start, end, live, seconds_until} (epoch seconds)."""
+    now_utc = now_utc or datetime.now(timezone.utc)
+    def start_for(ref):
+        off = _et_offset_hours(ref)
+        et = ref + timedelta(hours=off)
+        start_et = et.replace(hour=GROUP_SIT_HOUR_ET, minute=0, second=0, microsecond=0)
+        return start_et - timedelta(hours=off)
+    start_utc = start_for(now_utc)
+    end_utc = start_utc + timedelta(minutes=GROUP_SIT_WINDOW_MIN)
+    if now_utc >= end_utc:  # today's window passed → roll to tomorrow
+        start_utc = start_for(now_utc + timedelta(days=1))
+        end_utc = start_utc + timedelta(minutes=GROUP_SIT_WINDOW_MIN)
+    s, e = int(start_utc.timestamp()), int(end_utc.timestamp())
+    return {"start": s, "end": e, "live": s <= int(now_utc.timestamp()) < e,
+            "seconds_until": max(0, s - int(now_utc.timestamp()))}
+
+def group_sit_push(c):
+    """Once per day, when the 9am ET window opens, push every opted-in user to join."""
+    w = group_sit_window()
+    if not w["live"]:
+        return
+    dk = "groupsit:" + datetime.utcfromtimestamp(w["start"]).strftime("%Y-%m-%d")
+    live_n = LIVE.count()
+    title = "🧘 The Daily Global Sit"
+    body = ("It's 9 AM — sit with the Lumen community now." if live_n <= 3
+            else "It's 9 AM — %d people are gathering to sit together. Join them." % live_n)
+    for r in c.execute("SELECT DISTINCT user_id FROM push_tokens").fetchall():
+        uid = r["user_id"]
+        if _dedup_exists(c, uid, dk):
+            continue
+        pr = c.execute("SELECT enabled,cats FROM notif_prefs WHERE user_id=?", (uid,)).fetchone()
+        if pr and not pr["enabled"]:
+            continue
+        try:
+            cats = json.loads(pr["cats"]) if (pr and pr["cats"]) else dict(DEFAULT_CATS)
+        except Exception:
+            cats = dict(DEFAULT_CATS)
+        if not cats.get("community", 1):
+            continue
+        toks = _tokens_for(c, uid)
+        if not toks:
+            continue
+        ok = expo_push_send(c, toks, title, body, {"category": "community", "action": "groupsit"})
+        c.execute("INSERT INTO notif_log(user_id,category,title,body,dedupe_key,status,created,sent) "
+                  "VALUES(?,?,?,?,?,?,?,?)",
+                  (uid, "community", title, body, dk, "sent" if ok else "failed", now_iso(), now_iso()))
+    c.commit()
+
+
 def notif_tick():
     with _dblock:
         c = db()
         try:
             _notif_flush_queued(c)
             _notif_time_pass(c)
+            group_sit_push(c)
         except Exception as e:
             print("notif_tick error:", e)
         finally:
