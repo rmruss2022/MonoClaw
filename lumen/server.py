@@ -2962,10 +2962,20 @@ a{color:var(--purple)}
 .jpr-in{display:flex;flex-direction:column;align-items:center;gap:4px}
 .jpr-t{font-size:45px;font-weight:800;letter-spacing:.5px;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
 .jpr-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2.2px}
-.jp-ways{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
-.jp-way{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);letter-spacing:.2px}
-.jp-way .i{width:15px;height:15px;color:var(--gold);opacity:.85}
-.jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
+.jp-ways{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.jp-way{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);letter-spacing:.2px;font-family:inherit;cursor:pointer;
+  background:#13101f;border:1px solid var(--line);border-radius:999px;padding:9px 15px;transition:border-color .15s,color .15s,background .15s}
+.jp-way svg,.jp-way .i{width:15px;height:15px;color:var(--gold);opacity:.8}
+.jp-way.sel{border-color:var(--gold);color:var(--text);background:rgba(245,201,119,.13)}
+.jp-way.sel svg,.jp-way.sel .i{opacity:1}
+/* Compose: full-screen with just an X; no header; hero timer floats (no card bg) */
+.jx-close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:40;width:40px;height:40px;border-radius:50%;
+  background:#1b1630;border:1px solid var(--line);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.jx-close svg{width:17px;height:17px}
+.jflow{padding-top:52px}
+.jp1-hero .jp-card{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.jp1-hero .letter-head{justify-content:center;opacity:.85}
+.jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
 .jbegin .seal-ic{width:22px;height:22px}
 .jbegin-sub{text-align:center;font-size:13px;color:var(--muted);max-width:360px;margin:0 auto}
 .jwrite{display:flex;flex-direction:column;gap:14px}
@@ -6414,6 +6424,12 @@ function composerHTML(o){
   jPromptDeferred=!!o.title;
   // r=53 gives a circumference of 333, so a full dash is a full ring: before
   // you begin, all ten minutes are still yours. The arc unwinds from here.
+  // Type / Record / Photograph as a single radio choice — it drives the write screen.
+  const waysHTML=`<div class="jp-ways" id="jpWays" role="radiogroup" aria-label="How to journal">`
+    +`<button type="button" class="jp-way sel" data-mode="type" role="radio" aria-checked="true">${ic('book')}Type</button>`
+    +`<button type="button" class="jp-way" data-mode="voice" role="radio" aria-checked="false">${ic('mic')}Record</button>`
+    +`<button type="button" class="jp-way" data-mode="photo" role="radio" aria-checked="false">${ic('camera')}Photograph</button>`
+  +`</div>`;
   const leadHTML=`<div class="jp-hero">`
     +`<div class="jp-title">${esc(o.title||'')}</div>`
     +`<div class="jp-ring">`
@@ -6423,36 +6439,24 @@ function composerHTML(o){
       +`</svg>`
       +`<div class="jpr-in"><span class="jpr-t">3:00</span><span class="jpr-l">minutes</span></div>`
     +`</div>`
-    +`<div class="jp-ways">`
-      +`<span class="jp-way">${ic('book')}Type</span>`
-      +`<span class="jp-way">${ic('mic')}Record</span>`
-      +`<span class="jp-way">${ic('camera')}Photograph</span>`
-    +`</div>`
+    +waysHTML
   +`</div>`;
   return `<div class="jflow">`
   // ---------------- PHASE 1 · the prompt ----------------
   +`<div class="jphase${o.title?' jp1-hero':''}" id="jp1">`
     +`<div class="letter jp-card">`
       +(o.topHTML||'')
-      +`<div class="letter-head"><span>${niceDate(Date.now())}</span>`
-      +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak" title="Read this aloud">${ic(speakOn?'sound':'mute')}</button></div>`
-      +(o.title?leadHTML:promptLine)
+      +`<div class="letter-head"><span>${niceDate(Date.now())}</span></div>`
+      +(o.title?leadHTML:(promptLine+waysHTML))
     +`</div>`
     +`<button class="btn gold jbegin" id="jbegin">${ic('clock','seal-ic')} Begin journaling</button>`
-    +(o.title?'':`<div class="jbegin-sub">A few quiet minutes. Write it, speak it, or photograph it — however it comes.</div>`)
   +`</div>`
-  // ---------------- PHASE 2 · writing ----------------
+  // ---------------- PHASE 2 · writing (just the chosen input) ----------------
   +`<div class="jphase jwrite" id="jp2" hidden>`
     +`<div class="jw-top">`
       +`<div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">3:00</span><span class="jt-lbl" id="jtlbl">left</span></div>`
-      +`<button class="lp-speak ${speakOn?'on':''}" id="jspeak2" title="Read the prompt aloud">${ic(speakOn?'sound':'mute')}</button>`
     +`</div>`
     +`<div class="jw-prompt">“${esc(o.prompt||'')}”</div>`
-    +`<div class="jmodes">`
-      +`<button class="jmode on" data-mode="type">${ic('book','jm-ic')}<b>Type</b><small>Write it out</small></button>`
-      +`<button class="jmode" data-mode="voice">${ic('mic','jm-ic')}<b>Record</b><small>Speak, we transcribe</small></button>`
-      +`<button class="jmode" data-mode="photo">${ic('camera','jm-ic')}<b>Photograph</b><small>Snap your handwriting</small></button>`
-    +`</div>`
     +`<textarea id="jt" class="letter-body jw-body" rows="8" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
     +`<div id="jprev" class="letter-interim"></div>`
     +`<div class="mic-hint" id="michint"></div>`
@@ -6553,15 +6557,18 @@ let jComposePhase='prompt';
 // value without having to remember to reset it. jGetPrompt is kept so the
 // write phase can narrate the prompt it was holding back.
 let jPromptDeferred=false;let jGetPrompt=null;
+let jChosenMode='type';  // Type / Record / Photograph radio from phase 1
 function enterWritePhase(){
   jComposePhase='write';
   const p1=$('#jp1'),p2=$('#jp2');if(p1)p1.hidden=true;if(p2)p2.hidden=false;
   try{Haptics.medium();}catch(e){}
   jStartTimer(180);
-  // The first card withheld the prompt, so this is its first airing.
-  if(jPromptDeferred&&speakOn&&jGetPrompt){try{sayPrompt(jGetPrompt());}catch(e){}}
-  _jSetMode('type');
-  const t=$('#jt');if(t)setTimeout(()=>{try{t.focus();}catch(e){}},60);
+  // Show just the chosen input: type → textarea, record → start recording,
+  // photograph → open the camera. Voice/photo results land in the same textarea.
+  const mode=jChosenMode||'type';
+  if(mode==='voice'){ try{toggleRecord();}catch(e){} }
+  else if(mode==='photo'){ const f=$('#jfile');if(f)f.click(); }
+  else { const t=$('#jt');if(t)setTimeout(()=>{try{t.focus();}catch(e){}},80); }
   try{window.scrollTo(0,0);}catch(e){}
 }
 function exitToPrompt(){
@@ -6572,23 +6579,19 @@ function exitToPrompt(){
   try{window.scrollTo(0,0);}catch(e){}
 }
 function wireComposerCommon(getPrompt){
-  const toggleSpeak=()=>{speakOn=!speakOn;try{localStorage.setItem('lumen_speak',speakOn?'1':'0');}catch(e){}
-    document.querySelectorAll('#jspeak,#jspeak2').forEach(b=>{b.classList.toggle('on',speakOn);b.innerHTML=ic(speakOn?'sound':'mute');});
-    if(speakOn)sayPrompt(getPrompt());else{try{stopNarration();}catch(e){}}};
-  const sp1=$('#jspeak');if(sp1)sp1.onclick=toggleSpeak;
-  const sp2=$('#jspeak2');if(sp2)sp2.onclick=toggleSpeak;
   jGetPrompt=getPrompt;
-  // Not while the prompt is deferred: speaking it on the first card would
-  // hand over the one thing that card is deliberately withholding.
-  if(speakOn&&!jPromptDeferred){clearTimeout(window._spk);window._spk=setTimeout(()=>{if(TAB==='journal')sayPrompt(getPrompt());},1100);}
-  const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
-  document.querySelectorAll('.jmode').forEach(b=>b.onclick=()=>{
-    const m=b.dataset.mode;
-    if(m==='type'){_jSetMode('type');const t=$('#jt');if(t)t.focus();}
-    else if(m==='photo'){const f=$('#jfile');if(f)f.click();}
-    else if(m==='voice'){toggleRecord();}
+  // Type / Record / Photograph radio — selecting one sets the write-screen input.
+  jChosenMode='type';
+  document.querySelectorAll('#jpWays .jp-way').forEach(b=>b.onclick=()=>{
+    jChosenMode=b.dataset.mode;
+    document.querySelectorAll('#jpWays .jp-way').forEach(x=>{const on=x===b;x.classList.toggle('sel',on);x.setAttribute('aria-checked',on?'true':'false');});
+    try{Sound.pop();}catch(e){} try{Haptics.select();}catch(e){}
   });
+  const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
   const f=$('#jfile');if(f)f.onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
+  // On open: start the ambient background music + an ElevenLabs welcome line.
+  try{Sound.bed();}catch(e){}
+  clearTimeout(window._jvo);window._jvo=setTimeout(()=>{if(TAB==='journal'){try{narrate('Take just three minutes for your journal.');}catch(e){}}},350);
 }
 
 function sealHandler(payload){
@@ -6815,7 +6818,7 @@ async function renderJournal(){
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
   // it covers the whole screen; restore it on every other journal screen.
   try{const nv=document.getElementById('nav');if(nv){if(jScreen==='compose')nv.classList.add('hidden');else nv.classList.remove('hidden');}}catch(e){}
-  try{if(jScreen!=='compose')jStopTimer();}catch(e){}
+  try{if(jScreen!=='compose'){jStopTimer();Sound.bedStop();}}catch(e){}
   // The free tier, enforced in the one place every door funnels through.
   if(!_isPrem() && (jScreen==='compose'||jScreen==='plessons')){
     if(journalMode==='season')
@@ -7023,13 +7026,10 @@ async function renderJournalCompose(){
   listening=false;rec=null;
   const lbl={deep:'Deep',daily:'Daily',season:'Season'}[journalMode]||'Journal';
   const backTo=(journalMode==='deep')?'pillars':'home';
-  $('#app').innerHTML=`<div class="brand"><button class="back-btn" id="jback" title="Back">‹</button><span class="mark">${lumenMark('mark')}</span><b>${lbl}</b>`
-    +`<button class="lo-btn" id="jhome" style="margin-left:auto">${ic('book')} Journal</button></div>`
-    +`<div class="jmode-blurb muted">${J_MODE_BLURB[journalMode]||''}</div>`
+  $('#app').innerHTML=`<button class="jx-close" id="jxclose" aria-label="Close">${ic('close')}</button>`
     +`<div id="jcompose"></div>`;
   jComposePhase='prompt';
-  $('#jback').onclick=()=>{ if(jComposePhase==='write'){exitToPrompt();return;} jStopTimer();jScreen=backTo;journalPillar=null;renderJournal(); };
-  $('#jhome').onclick=()=>{jStopTimer();jScreen='home';journalPillar=null;renderJournal();};
+  $('#jxclose').onclick=()=>{ if(jComposePhase==='write'){exitToPrompt();return;} try{Sound.bedStop();}catch(e){} try{stopNarration();}catch(e){} jStopTimer();jScreen=backTo;journalPillar=null;renderJournal(); };
   if(journalMode==='deep')renderDeepCompose();
   else if(journalMode==='season')renderSeasonCompose();
   else renderDailyCompose();
@@ -7077,6 +7077,7 @@ async function transcribePhoto(file){
 /* ---- journal sealed celebration ---- */
 function showJournalSealed(res,words,shared){
   if(window.speechSynthesis)speechSynthesis.cancel();
+  try{stopNarration();}catch(e){} try{Sound.bedStop();}catch(e){}
   const n=(res&&res.count)||1;
   const ach=((res&&res.new_achievements)||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'book')} ${a.title}</div>`).join(' ');
   const spk=[...Array(10)].map(()=>`<span class="fspark" style="left:${Math.round(Math.random()*100)}%;animation-delay:${(Math.random()*3).toFixed(2)}s;animation-duration:${(3+Math.random()*2.5).toFixed(2)}s"></span>`).join('');
@@ -9659,7 +9660,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v34';
+const CACHE = 'lumen-v35';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
