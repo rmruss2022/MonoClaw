@@ -3658,6 +3658,26 @@ body.jbg-warm .jpr-l{color:#9a7a38 !important}
 .jrh-count{font-size:12px;color:var(--muted);margin-top:9px;letter-spacing:.02em}
 .lj-list{display:flex;flex-direction:column;gap:11px}
 .lj-row{display:flex;align-items:center;gap:13px;text-align:left;width:100%;background:#140f24;border:1px solid var(--line);border-radius:14px;padding:15px 14px;cursor:pointer}
+/* Two-column lesson cards (journey view) */
+.lj-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.lj-card{display:flex;flex-direction:column;gap:5px;align-items:flex-start;text-align:left;width:100%;min-height:158px;
+  background:#140f24;border:1px solid var(--line);border-radius:16px;padding:13px 13px;cursor:pointer;font-family:inherit;color:var(--text);
+  transition:transform .1s ease,border-color .18s ease,box-shadow .18s ease}
+.lj-card:active{transform:scale(.99)}
+.lj-card.next{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 18px -6px var(--gold)}
+.lj-card.done{opacity:.92}
+.lj-card.locked{opacity:.5;cursor:default;filter:saturate(.55)}
+.lc-top{display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:2px}
+.lc-emb{width:42px;height:42px;display:flex;align-items:center;justify-content:center}
+.lc-n{font-family:var(--serif);font-size:19px;color:#8f82b8;line-height:1}
+.lc-title{font-size:14.5px;font-weight:700;line-height:1.18}
+.lc-sub{font-size:12px;color:var(--muted);line-height:1.3}
+.lc-meta{font-size:11px;color:var(--muted);margin-top:auto;padding-top:4px}
+.lc-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 9px;border-radius:999px;margin-top:6px}
+.lc-badge svg{width:12px;height:12px}
+.lc-badge.done{color:#7ee0b0;background:rgba(126,224,176,.12)}
+.lc-badge.next{color:#2a1a05;background:linear-gradient(135deg,#f5c977,#e0953a)}
+.lc-badge.lock{color:var(--muted);background:#1c1730}
 /* lesson-detail modal (opened from the journey list) */
 /* lesson preview — a bottom sheet pinned to the bottom edge (can't float off the top) */
 .lmodal-ov{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;
@@ -5142,20 +5162,24 @@ function renderJourney(key){
   const done=ls.filter(l=>{const p=lessonProg(l.code);return p&&p.count>0;}).length;
   const pct=total?Math.round(100*done/total):0;
   const next=_journeyNext(ls);
-  const row=(l,i)=>{
+  // Each lesson is a card in a two-column grid. Only completed lessons and the
+  // single next-up lesson are open; everything else is locked (walk them in order).
+  const card=(l,i)=>{
     const p=lessonProg(l.code);const isDone=p&&p.count>0;const rs=lessonResumeSi(l);
     const isNext=next&&l.code===next.code;
-    const meta=lessonMins(l)+' min · '+l.segments.length+' steps'
-      +(isDone?(' · done '+p.count+'×'):(rs>0?' · resume · step '+(rs+1):''));
-    return `<button class="lj-row${isDone?' done':''}${isNext?' next':''}" data-l="${l.code}" style="--a:${l.accent}">
-      <span class="lj-ico">${lessonEmblem(l,'ljm')}${isDone?`<span class="lj-seal">${ic('check')}</span>`:''}</span>
-      <span class="lj-main"><span class="lj-title">${esc(l.title)} · ${esc(l.subtitle)}</span>
-      <span class="lj-sub">${esc(meta)}</span></span>
-      ${isNext?`<span class="lj-badge">Next up</span>`:`<span class="lj-go">${ic('play')}</span>`}
-    </button>`;
+    const locked=!isDone&&!isNext;
+    const meta=lessonMins(l)+' min · '+l.segments.length+' steps';
+    const badge=isDone?`<span class="lc-badge done">${ic('check')} Done${p.count>1?' · '+p.count+'×':''}</span>`
+      :isNext?`<span class="lc-badge next">${ic('play')} ${rs>0?'Resume':'Next up'}</span>`
+      :`<span class="lc-badge lock">${ic('lock')} Locked</span>`;
+    return `<button class="lj-card${isDone?' done':''}${isNext?' next':''}${locked?' locked':''}"${locked?'':` data-l="${l.code}"`} style="--a:${l.accent}">
+      <span class="lc-top"><span class="lc-emb">${locked?ic('lock','ljm'):lessonEmblem(l,'ljm')}</span><span class="lc-n">${i+1}</span></span>
+      <span class="lc-title">${esc(l.title)}</span>
+      <span class="lc-sub">${esc(l.subtitle)}</span>
+      <span class="lc-meta">${esc(meta)}</span>${badge}</button>`;
   };
-  const soonRows=(ROADMAP[key]||[]).map(r=>`<div class="lj-row soon"><span class="lj-ico lock">${ic('lock')}</span>`
-    +`<span class="lj-main"><span class="lj-title">${esc(r.title)}</span><span class="lj-sub">${esc(r.sub)}</span></span></div>`).join('');
+  const soonCards=(ROADMAP[key]||[]).map((r,i)=>`<div class="lj-card locked"><span class="lc-top"><span class="lc-emb">${ic('lock','ljm')}</span></span>`
+    +`<span class="lc-title">${esc(r.title)}</span><span class="lc-sub">${esc(r.sub)}</span><span class="lc-badge lock">${ic('lock')} Soon</span></div>`).join('');
   $('#app').innerHTML=`
   <div class="brand"><button class="back-btn" id="jrback" title="All journeys">‹</button><span class="mark">${lumenMark('mark')}</span><b>${esc(t.name)}</b></div>
   <div class="jrh" style="--a:${t.accent}">
@@ -5167,11 +5191,11 @@ function renderJourney(key){
     <div class="jrh-count">${done} of ${total} lessons complete</div>
   </div>
   ${next?`<button class="btn jrnext-btn" id="jrnext" style="margin:2px 0 16px">${ic('seal')} ${done>0?'Continue':'Start'} · ${esc(next.title)} · ${esc(next.subtitle)}</button>`:`<div class="muted center" style="margin:6px 0 14px">${ic('check','g')} You've completed this journey — revisit any lesson below.</div>`}
-  <div class="lj-list">${ls.map(row).join('')}</div>
-  ${soonRows?`<div class="trk-head" style="--a:${t.accent};margin-top:18px"><div class="trk-name">Coming soon</div></div>${soonRows}`:''}`;
+  <div class="lj-grid">${ls.map(card).join('')}</div>
+  ${soonCards?`<div class="trk-head" style="--a:${t.accent};margin-top:18px"><div class="trk-name">Coming soon</div></div><div class="lj-grid">${soonCards}</div>`:''}`;
   $('#jrback').onclick=()=>go('lessons');
   const nb=$('#jrnext');if(nb&&next)nb.onclick=()=>{lessonFrom='journey';lessonDetail(next.code);};
-  document.querySelectorAll('.lj-row:not(.soon)').forEach(c=>c.onclick=()=>{lessonFrom='journey';lessonDetail(c.dataset.l);});
+  document.querySelectorAll('.lj-card:not(.locked)').forEach(c=>c.onclick=()=>{lessonFrom='journey';lessonDetail(c.dataset.l);});
 }
 
 let timerInt=null;
@@ -9539,7 +9563,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v32';
+const CACHE = 'lumen-v33';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
