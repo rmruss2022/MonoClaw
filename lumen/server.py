@@ -3513,6 +3513,16 @@ body.jbg-warm .jpr-l{color:#9a7a38 !important}
 .onb-chip.sel .i{color:var(--gold)}
 .onb-foot{position:sticky;bottom:0;padding:14px 0 calc(10px + env(safe-area-inset-bottom));
   background:linear-gradient(0deg,var(--bg) 72%,transparent)}
+.sit-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;margin:6px 0 2px}
+.sit-orb{width:190px;height:190px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  background:radial-gradient(circle at 50% 45%,rgba(245,201,119,.30),rgba(245,201,119,.06) 62%,transparent 72%);
+  border:1px solid rgba(245,201,119,.34);box-shadow:0 0 44px rgba(245,201,119,.16);
+  transition:transform .4s ease}
+.sit-orb.breathing{animation:sitBreathe 10s ease-in-out infinite;cursor:default}
+@keyframes sitBreathe{0%,100%{transform:scale(.82)}40%{transform:scale(1.06)}60%{transform:scale(1.06)}}
+@media (prefers-reduced-motion:reduce){.sit-orb.breathing{animation:none}}
+.sit-cue{font-size:15px;color:var(--gold);letter-spacing:1.4px;text-transform:uppercase;font-weight:700}
+.sit-time{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.6px}
 .vow-ask{text-align:center;font-size:13px;color:var(--muted);margin:2px 0 8px}
 .vow-wrap{position:relative;max-width:330px;margin:0 auto}
 .vow-canvas{display:block;width:100%;height:132px;border-radius:16px;background:rgba(255,255,255,.04);
@@ -4226,7 +4236,7 @@ function _evflush(){if(!_evq.length)return;const batch=_evq.splice(0,25);const b
 function track(name,props,screen){try{_evq.push({name:name,props:props||null,screen:screen||(typeof TAB!=='undefined'?TAB:null)});clearTimeout(_evt);_evt=setTimeout(_evflush,1200);}catch(e){}}
 try{addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')_evflush();});}catch(e){}
 function onbLabel(s){if(typeof Q_INTENT==='undefined')return 'Slide '+(s+1);
-  const m={};m[S_VOW]='Vow';m[Q_INTENT]='Q: Intent';m[Q_FREQ]='Q: Frequency';m[Q_TIME]='Q: Time';m[Q_DUR]='Q: Duration';m[Q_LEVEL]='Q: Level';m[S_PLAN]='Your practice';m[ONB_LAST]='Signup';
+  const m={};m[S_VOW]='Vow';m[S_SIT]='First sit';m[Q_INTENT]='Q: Intent';m[Q_FREQ]='Q: Frequency';m[Q_TIME]='Q: Time';m[Q_DUR]='Q: Duration';m[Q_LEVEL]='Q: Level';m[S_PLAN]='Your practice';m[ONB_LAST]='Signup';
   const title=(typeof ONB_SLIDES!=='undefined'&&ONB_SLIDES[s])?ONB_SLIDES[s].h:'';
   return (s>=Q_INTENT)?(m[s]||('Step '+s)):('Slide '+(s+1)+(title?' · '+title:''));}
 async function boot(){
@@ -4425,8 +4435,8 @@ const ONB_LEVELS=[['New to it','new','spark'],['I dabble','some','glow'],['Seaso
 const NSL=ONB_SLIDES.length;                        // value slides are steps 0..NSL-1
 // S_VOW sits before the questions (commitment first, as Ahead does) and S_PLAN
 // after them, so the answers are handed back before the account is asked for.
-const S_VOW=NSL, Q_INTENT=NSL+1, Q_FREQ=NSL+2, Q_TIME=NSL+3, Q_DUR=NSL+4,
-      Q_LEVEL=NSL+5, S_PLAN=NSL+6, ONB_LAST=NSL+7;  // ONB_LAST = signup step
+const S_VOW=NSL, S_SIT=NSL+1, Q_INTENT=NSL+2, Q_FREQ=NSL+3, Q_TIME=NSL+4,
+      Q_DUR=NSL+5, Q_LEVEL=NSL+6, S_PLAN=NSL+7, ONB_LAST=NSL+8;  // ONB_LAST = signup
 const ONB_QIC={[Q_INTENT]:'compass',[Q_FREQ]:'flame',[Q_TIME]:'clock',[Q_DUR]:'meditate',[Q_LEVEL]:'lotus'};  // header icon per question step
 
 function _oStars(list){return list.map(([x,y,r,d])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#fff6dc" class="os-tw" style="filter:drop-shadow(0 0 4px #f5c977);animation-delay:${d}s"/>`).join('');}
@@ -4525,6 +4535,47 @@ function onbScene(key){
 // The bitmap must be sized to the client rect times devicePixelRatio: a canvas
 // sized only by CSS draws blurry and, worse, offset — and the offset is exactly
 // what makes a line fail to follow the finger.
+// The first sit: sixty seconds of real practice before the account.
+//
+// Everything that can fail is a layer, never the mechanism. The breathing guide
+// is CSS, the clock is a local interval; the rain and the voice sit on top, and
+// if TTS 503s or the network drops the minute still runs exactly as long. Audio
+// has to be started inside the tap handler — browsers refuse otherwise, and this
+// is the only gesture the screen gets.
+let _sitT=null,_sitLeft=60,_sitOn=false;
+function sitStop(){
+  _sitOn=false;
+  if(_sitT){clearInterval(_sitT);_sitT=null;}
+  try{Sound.stop();}catch(e){}
+  try{stopNarration();}catch(e){}
+}
+function sitStart(){
+  if(_sitOn)return;
+  _sitOn=true;_sitLeft=60;
+  const orb=$('#sitorb'),cue=$('#sitcue'),tm=$('#sittime');
+  if(orb)orb.classList.add('breathing');
+  try{track('onb_first_sit',null,'onboarding');}catch(e){}
+  // Inside the gesture, or neither of these is allowed to make a sound.
+  try{Sound.start('rain',0.30);}catch(e){}
+  try{narrate("Let's take one minute together. Sit however you are, and let your eyes close if that feels right.");}catch(e){}
+  const say=(t)=>{try{narrate(t);}catch(e){}};
+  const marks={42:"Breathe in as the light grows. And out, slowly, as it fades.",
+               16:"Nothing to fix. Just this breath, and the next one."};
+  _sitT=setInterval(()=>{
+    _sitLeft--;
+    if(tm)tm.textContent='0:'+String(Math.max(0,_sitLeft)).padStart(2,'0');
+    if(cue)cue.textContent=(Math.floor(_sitLeft/5)%2===0)?'Breathe in':'And out';
+    if(marks[_sitLeft])say(marks[_sitLeft]);
+    if(_sitLeft<=0){
+      sitStop();
+      if(orb)orb.classList.remove('breathing');
+      if(cue)cue.textContent='Done';
+      if(tm)tm.textContent='That was a minute of practice.';
+      say("That was a minute of practice. However it went, you showed up — and that is the whole of it.");
+      const n=$('#onbNext');if(n){n.innerHTML='Keep going';}
+    }
+  },1000);
+}
 function vowInit(c){
   const fit=()=>{const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;
     c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);
@@ -4570,6 +4621,14 @@ async function renderOnboarding(){
       <p class="vow-ask onb-enter d1">Draw a checkmark to promise:</p>
       <div class="vow-wrap onb-enter d1"><canvas id="vowc" class="vow-canvas"></canvas>
         <button class="vow-clear" id="vowx" aria-label="Clear">${ic('close')}</button></div>`;
+  }else if(s===S_SIT){
+    body=`<div class="onb-hero" style="padding-bottom:2px">
+      <h1 class="onb-h onb-enter">Then let's begin now</h1>
+      <p class="onb-p onb-enter d1">One minute, before anything else. Follow the light — in as it grows, out as it fades.</p></div>
+      <div class="sit-wrap onb-enter d1">
+        <div class="sit-orb" id="sitorb"><span class="sit-cue" id="sitcue">Begin</span></div>
+        <div class="sit-time" id="sittime">1:00</div>
+      </div>`;
   }else if(s===S_PLAN){
     const intent=ONB_INTENTS.filter(i=>onb.intents.includes(i[0]));
     const freq=(ONB_FREQS.find(f=>f[0]===onb.freq)||[])[1];
@@ -4636,14 +4695,14 @@ async function renderOnboarding(){
       ${onbDots()}
       <div class="onb-nav">
         ${s>0&&s<=ONB_LAST?'<button class="btn ghost" id="onbBack" style="flex:0 0 auto;width:auto;padding:12px 18px">Back</button>':''}
-        ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s===S_VOW?'I promise myself':(s===S_PLAN?'Save my practice':(s>=Q_INTENT?'Continue':((ONB_SLIDES[s]&&ONB_SLIDES[s].cta)||'Next')))}</button>`:''}
-        ${(s>Q_INTENT&&s<=Q_LEVEL)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
+        ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s===S_VOW?'I promise myself':(s===S_SIT?'Keep going':(s===S_PLAN?'Save my practice':(s>=Q_INTENT?'Continue':((ONB_SLIDES[s]&&ONB_SLIDES[s].cta)||'Next'))))}</button>`:''}
+        ${((s>Q_INTENT&&s<=Q_LEVEL)||s===S_SIT)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
       </div>
     </div>`;
   const si=$('#toSignin');if(si)si.onclick=()=>{try{localStorage.setItem('lumen_onb_done','1');}catch(e){}renderAuth();};
-  const bk=$('#onbBack');if(bk)bk.onclick=()=>{onb.step=Math.max(0,onb.step-1);renderOnboarding();};
-  const nx=$('#onbNext');if(nx)nx.onclick=()=>{if(!onbSlideFit())return;onb.step++;renderOnboarding();};
-  const sk=$('#onbSkip');if(sk)sk.onclick=()=>{onb.step++;renderOnboarding();};
+  const bk=$('#onbBack');if(bk)bk.onclick=()=>{sitStop();onb.step=Math.max(0,onb.step-1);renderOnboarding();};
+  const nx=$('#onbNext');if(nx)nx.onclick=()=>{if(!onbSlideFit())return;sitStop();onb.step++;renderOnboarding();};
+  const sk=$('#onbSkip');if(sk)sk.onclick=()=>{sitStop();onb.step++;renderOnboarding();};
   document.querySelectorAll('.onb-chip[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;
     onb.intents.includes(k)?onb.intents=onb.intents.filter(x=>x!==k):onb.intents.push(k);renderOnboarding();});
   document.querySelectorAll('.onb-chip[data-f]').forEach(b=>b.onclick=()=>{onb.freq=b.dataset.f;renderOnboarding();});
@@ -4651,6 +4710,7 @@ async function renderOnboarding(){
   document.querySelectorAll('.onb-chip[data-h]').forEach(b=>b.onclick=()=>{onb.timeHour=+b.dataset.h;renderOnboarding();});
   document.querySelectorAll('.onb-chip[data-l]').forEach(b=>b.onclick=()=>{onb.level=b.dataset.l;renderOnboarding();});
   const vc=$('#vowc');if(vc)vowInit(vc);
+  const so=$('#sitorb');if(so)so.onclick=sitStart;
   const vx=$('#vowx');if(vx)vx.onclick=()=>{const c=$('#vowc');if(c){const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);}};
   const cr=$('#create');if(cr)cr.onclick=onbCreate;
   const fin=$('#onbFinish');if(fin)fin.onclick=onbFinishAuthed;
