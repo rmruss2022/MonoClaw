@@ -3495,6 +3495,18 @@ body.jbg-warm .jpr-l{color:#9a7a38 !important}
 .onb-chip.sel .i{color:var(--gold)}
 .onb-foot{position:sticky;bottom:0;padding:14px 0 calc(10px + env(safe-area-inset-bottom));
   background:linear-gradient(0deg,var(--bg) 72%,transparent)}
+.vow-ask{text-align:center;font-size:13px;color:var(--muted);margin:2px 0 8px}
+.vow-wrap{position:relative;max-width:330px;margin:0 auto}
+.vow-canvas{display:block;width:100%;height:132px;border-radius:16px;background:rgba(255,255,255,.04);
+  border:1px solid var(--line);touch-action:none;cursor:crosshair}
+.vow-clear{position:absolute;left:8px;top:8px;width:28px;height:28px;border-radius:50%;border:0;
+  background:rgba(255,255,255,.07);color:var(--muted);display:grid;place-items:center;cursor:pointer}
+.vow-clear .i{width:14px;height:14px}
+.plan-row{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.plan-row:last-child{border-bottom:0}
+.plan-row>.i,.plan-first .i{width:19px;height:19px;flex:0 0 auto;margin-top:2px}
+.plan-k{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted)}
+.plan-v{font-size:15px;color:#f3eefc;line-height:1.4;margin-top:2px}
 .onb-prog{height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin-bottom:14px}
 .onb-prog i{display:block;height:100%;border-radius:3px;background:var(--gold);transition:width .35s ease}
 .onb-prog-lbl{text-align:center;font-size:12px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
@@ -4176,7 +4188,7 @@ function _evflush(){if(!_evq.length)return;const batch=_evq.splice(0,25);const b
 function track(name,props,screen){try{_evq.push({name:name,props:props||null,screen:screen||(typeof TAB!=='undefined'?TAB:null)});clearTimeout(_evt);_evt=setTimeout(_evflush,1200);}catch(e){}}
 try{addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')_evflush();});}catch(e){}
 function onbLabel(s){if(typeof Q_INTENT==='undefined')return 'Slide '+(s+1);
-  const m={};m[Q_INTENT]='Q: Intent';m[Q_FREQ]='Q: Frequency';m[Q_TIME]='Q: Time';m[Q_DUR]='Q: Duration';m[Q_LEVEL]='Q: Level';m[ONB_LAST]='Signup';
+  const m={};m[S_VOW]='Vow';m[Q_INTENT]='Q: Intent';m[Q_FREQ]='Q: Frequency';m[Q_TIME]='Q: Time';m[Q_DUR]='Q: Duration';m[Q_LEVEL]='Q: Level';m[S_PLAN]='Your practice';m[ONB_LAST]='Signup';
   const title=(typeof ONB_SLIDES!=='undefined'&&ONB_SLIDES[s])?ONB_SLIDES[s].h:'';
   return (s>=Q_INTENT)?(m[s]||('Step '+s)):('Slide '+(s+1)+(title?' · '+title:''));}
 async function boot(){
@@ -4373,7 +4385,10 @@ const ONB_TIMES=[['Morning',8,'sunrise'],['Afternoon',13,'compass'],['Evening',1
 const ONB_DURS=[[5,'Just a taste','5 min','spark'],[10,'A daily sit','10 min','lotus'],[20,'Go deep','20 min','nova'],[30,'A long stillness','30 min','glow']];
 const ONB_LEVELS=[['New to it','new','spark'],['I dabble','some','glow'],['Seasoned','pro','nova']];
 const NSL=ONB_SLIDES.length;                        // value slides are steps 0..NSL-1
-const Q_INTENT=NSL, Q_FREQ=NSL+1, Q_TIME=NSL+2, Q_DUR=NSL+3, Q_LEVEL=NSL+4, ONB_LAST=NSL+5;  // ONB_LAST = signup step
+// S_VOW sits before the questions (commitment first, as Ahead does) and S_PLAN
+// after them, so the answers are handed back before the account is asked for.
+const S_VOW=NSL, Q_INTENT=NSL+1, Q_FREQ=NSL+2, Q_TIME=NSL+3, Q_DUR=NSL+4,
+      Q_LEVEL=NSL+5, S_PLAN=NSL+6, ONB_LAST=NSL+7;  // ONB_LAST = signup step
 const ONB_QIC={[Q_INTENT]:'compass',[Q_FREQ]:'flame',[Q_TIME]:'clock',[Q_DUR]:'meditate',[Q_LEVEL]:'lotus'};  // header icon per question step
 
 function _oStars(list){return list.map(([x,y,r,d])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#fff6dc" class="os-tw" style="filter:drop-shadow(0 0 4px #f5c977);animation-delay:${d}s"/>`).join('');}
@@ -4468,9 +4483,30 @@ function onbScene(key){
 // Sixteen identical dots told the user the flow was long without telling them
 // how far in they were. A bar does the second job, and during the question run
 // it is labelled — bounded progress is what makes length tolerable.
+// The vow canvas. Pointer events cover finger, trackpad and Pencil in one path.
+// The bitmap must be sized to the client rect times devicePixelRatio: a canvas
+// sized only by CSS draws blurry and, worse, offset — and the offset is exactly
+// what makes a line fail to follow the finger.
+function vowInit(c){
+  const fit=()=>{const r=c.getBoundingClientRect(),d=window.devicePixelRatio||1;
+    c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);
+    const x=c.getContext('2d');x.scale(d,d);
+    x.lineWidth=5;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#f5c977';};
+  fit();
+  let drawing=false;
+  const at=(e)=>{const r=c.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+  const x=()=>c.getContext('2d');
+  c.addEventListener('pointerdown',(e)=>{drawing=true;try{c.setPointerCapture(e.pointerId);}catch(_){}
+    const [a,b]=at(e);x().beginPath();x().moveTo(a,b);e.preventDefault();});
+  c.addEventListener('pointermove',(e)=>{if(!drawing)return;const [a,b]=at(e);
+    x().lineTo(a,b);x().stroke();e.preventDefault();});
+  const end=()=>{drawing=false;};
+  c.addEventListener('pointerup',end);c.addEventListener('pointercancel',end);
+  c.addEventListener('pointerleave',end);
+}
 function onbDots(){
   const pct=Math.round((onb.step/ONB_LAST)*100);
-  const qn=(onb.step>=Q_INTENT&&onb.step<ONB_LAST)?(onb.step-Q_INTENT+1):0;
+  const qn=(onb.step>=Q_INTENT&&onb.step<=Q_LEVEL)?(onb.step-Q_INTENT+1):0;
   const lbl=qn?`<div class="onb-prog-lbl">Question ${qn} of 5</div>`:'';
   return `${lbl}<div class="onb-prog"><i style="width:${pct}%"></i></div>`;
 }
@@ -4489,6 +4525,33 @@ async function renderOnboarding(){
       <div class="onb-anim onb-enter">${onbScene(sl.scene)}</div>
       <h1 class="onb-h onb-enter d1">${sl.h}</h1><p class="onb-p onb-enter d2">${sl.p}</p>
       ${sl.cite?`<div class="onb-cite onb-enter d2">${sl.cite.map(c=>`<span>${c}</span>`).join('')}</div>`:''}</div>`;
+  }else if(s===S_VOW){
+    body=`<div class="onb-hero" style="padding-bottom:2px">
+      <h1 class="onb-h onb-enter">Are you ready to sit with yourself?</h1>
+      <p class="onb-p onb-enter d1">Not perfectly. Not every day. Just honestly, when you can.</p></div>
+      <p class="vow-ask onb-enter d1">Draw a checkmark to promise:</p>
+      <div class="vow-wrap onb-enter d1"><canvas id="vowc" class="vow-canvas"></canvas>
+        <button class="vow-clear" id="vowx" aria-label="Clear">${ic('close')}</button></div>`;
+  }else if(s===S_PLAN){
+    const intent=ONB_INTENTS.filter(i=>onb.intents.includes(i[0]));
+    const freq=(ONB_FREQS.find(f=>f[0]===onb.freq)||[])[1];
+    const when=(ONB_TIMES.find(t=>t[1]===onb.timeHour)||[])[0];
+    const dur=(ONB_DURS.find(d=>d[0]===onb.minutes)||[])[2];
+    const lvl=(ONB_LEVELS.find(l=>l[1]===onb.level)||[])[0];
+    const rows=[
+      intent.length?[intent[0][2],'You came for',intent.map(i=>i[1]).join(' · ')]:null,
+      dur?['clock','Each sit',dur+(freq?' · '+freq.toLowerCase():'')]:null,
+      when?['sunrise','We will nudge you','in the '+when.toLowerCase()]:null,
+      lvl?['lotus','Starting from',lvl.toLowerCase()]:null,
+    ].filter(Boolean);
+    body=`<div class="onb-hero" style="padding-bottom:2px">
+      <div class="onb-anim onb-enter" style="max-width:150px">${onbScene('collect')}</div>
+      <h1 class="onb-h onb-enter d1">Here is your practice</h1>
+      <p class="onb-p onb-enter d1">Built from what you just told us. Everything stays changeable.</p></div>
+      <div class="card onb-enter d2" style="margin-top:2px">
+        ${rows.map(([icn,k,v])=>`<div class="plan-row">${ic(icn,'g')}<div><div class="plan-k">${k}</div><div class="plan-v">${esc(v)}</div></div></div>`).join('')}
+        <div class="plan-row"><span class="plan-first">${ic('play','g')}</span><div><div class="plan-k">First lesson</div><div class="plan-v">Breath · I · Arrive &amp; Notice</div></div></div>
+      </div>`;
   }else if(s===Q_INTENT){
     body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_INTENT],'g')}</div><h1 class="onb-h sm onb-enter">What brings you to Lumen?</h1><p class="onb-p sm onb-enter d1">Pick any that feel true — we'll shape your practice around them.</p>
       <div class="onb-grid onb-enter d1">${ONB_INTENTS.map(([k,label,icn])=>`<button class="onb-chip ${onb.intents.includes(k)?'sel':''}" data-k="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
@@ -4535,8 +4598,8 @@ async function renderOnboarding(){
       ${onbDots()}
       <div class="onb-nav">
         ${s>0&&s<=ONB_LAST?'<button class="btn ghost" id="onbBack" style="flex:0 0 auto;width:auto;padding:12px 18px">Back</button>':''}
-        ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s>=Q_INTENT?'Continue':((ONB_SLIDES[s]&&ONB_SLIDES[s].cta)||'Next')}</button>`:''}
-        ${(s>Q_INTENT&&s<ONB_LAST)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
+        ${s<ONB_LAST?`<button class="btn gold" id="onbNext" ${onbSlideFit()?'':'disabled'}>${s===S_VOW?'I promise myself':(s===S_PLAN?'Save my practice':(s>=Q_INTENT?'Continue':((ONB_SLIDES[s]&&ONB_SLIDES[s].cta)||'Next')))}</button>`:''}
+        ${(s>Q_INTENT&&s<=Q_LEVEL)?'<button class="btn ghost" id="onbSkip" style="flex:0 0 auto;width:auto;padding:12px 16px">Skip</button>':''}
       </div>
     </div>`;
   const si=$('#toSignin');if(si)si.onclick=()=>{try{localStorage.setItem('lumen_onb_done','1');}catch(e){}renderAuth();};
@@ -4549,6 +4612,8 @@ async function renderOnboarding(){
   document.querySelectorAll('.onb-chip[data-d]').forEach(b=>b.onclick=()=>{onb.minutes=+b.dataset.d;renderOnboarding();});
   document.querySelectorAll('.onb-chip[data-h]').forEach(b=>b.onclick=()=>{onb.timeHour=+b.dataset.h;renderOnboarding();});
   document.querySelectorAll('.onb-chip[data-l]').forEach(b=>b.onclick=()=>{onb.level=b.dataset.l;renderOnboarding();});
+  const vc=$('#vowc');if(vc)vowInit(vc);
+  const vx=$('#vowx');if(vx)vx.onclick=()=>{const c=$('#vowc');if(c){const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);}};
   const cr=$('#create');if(cr)cr.onclick=onbCreate;
   const fin=$('#onbFinish');if(fin)fin.onclick=onbFinishAuthed;
 }
