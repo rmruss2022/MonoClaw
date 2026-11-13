@@ -4180,7 +4180,7 @@ window.__lumenPremiumResult=async function(ok){
     if(ME)ME.tier='premium';
     try{toast(ic('spark','g')+' Premium unlocked ✦');}catch(e){}
     if(typeof TAB!=='undefined'&&TAB==='profile')renderProfile();
-  }else if(pb){pb.disabled=false;pb.innerHTML=ic('spark')+' Get founding-member access';}
+  }else if(pb){pb.disabled=false;pb.innerHTML=_canBuy()?(ic('spark')+' Subscribe · '+_premPrice()+'/month'):(ic('spark')+' Get founding-member access');}
 };
 window.__lumenPremiumError=function(m){
   const pb=window.__premBtn;if(pb){pb.disabled=false;pb.innerHTML=ic('spark')+' Get founding-member access';}
@@ -7023,6 +7023,15 @@ function chatVoice(){
 /* ---- profile ---- */
 const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['journal','Journal rhythm (deep · daily · season)'],['community','Community activity'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
 function hoursOpts(sel){let h='';for(let i=0;i<24;i++){const lbl=(i===0?'12 AM':i<12?i+' AM':i===12?'12 PM':(i-12)+' PM');h+=`<option value="${i}" ${i===sel?'selected':''}>${lbl}</option>`;}return h;}
+/* The purchase bridge is only present inside the iOS wrapper, which sets
+   __lumenNativeIAP in injectedJavaScriptBeforeContentLoaded — so it is reliably
+   there by the time anything renders. On the web there is nothing to sell yet,
+   and the card must keep saying so. */
+function _canBuy(){try{return !!window.__lumenNativeIAP;}catch(e){return false;}}
+/* The wrapper can hand us the localised price straight from the RevenueCat
+   offering; until it does, this is the App Store Connect price. Reading it at
+   call time means a wrapper update needs no web deploy. */
+function _premPrice(){try{return window.__lumenPrice||'$7';}catch(e){return '$7';}}
 async function renderProfile(){
   const r=await api('me');ME=r.profile;const p=ME;
   const prog=Math.min(100,100*p.level_into/(p.level_into+p.level_need));
@@ -7053,11 +7062,16 @@ async function renderProfile(){
       <div style="flex:1">
         <div class="pill" style="border-color:#f5c977;color:#f5c977;font-size:11px">LUMEN PREMIUM</div>
         <h3 style="margin:8px 0 2px;color:#f6f1ea">Go deeper with Premium</h3>
-        <p class="muted" style="font-size:13px;margin:0;line-height:1.55">The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">coming soon</b>.</p>
+        <p class="muted" style="font-size:13px;margin:0;line-height:1.55">${_canBuy()
+          ?`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">${_premPrice()} a month</b>.`
+          :`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">coming soon</b>.`}</p>
       </div>
     </div>
-    <button class="btn" id="pro" style="margin-top:12px;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;font-weight:700;border:0">${ic('spark')} Get founding-member access</button>
-    <p class="muted" id="prostate" style="font-size:12px;text-align:center;margin:8px 0 0">First access + a founding price when it opens. No charge yet.</p>
+    <button class="btn" id="pro" style="margin-top:12px;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;font-weight:700;border:0">${_canBuy()?(ic('spark')+' Subscribe · '+_premPrice()+'/month'):(ic('spark')+' Get founding-member access')}</button>
+    <p class="muted" id="prostate" style="font-size:12px;text-align:center;margin:8px 0 0">${_canBuy()
+      ?`${_premPrice()} per month, billed through your Apple ID. Renews until cancelled; cancel any time in Settings.`
+      :'First access + a founding price when it opens. No charge yet.'}</p>
+    ${_canBuy()?`<button class="btn ghost" id="prorestore" style="margin-top:8px;font-size:13px">Restore purchase</button>`:''}
   </div>`:''}
   <div class="card">
     <h3 style="margin:0 0 2px">Achievements</h3>
@@ -7149,10 +7163,15 @@ async function renderProfile(){
       toast('Text settings saved '+ic('spark','g'));renderProfile();}
     catch(e){sb.disabled=false;sb.textContent='Save text settings';toast(e);}
   };}
+  {const rb=$('#prorestore');if(rb)rb.onclick=()=>{
+    rb.disabled=true;rb.textContent='Restoring…';
+    try{window.__lumenRestore();}catch(e){rb.disabled=false;rb.textContent='Restore purchase';}
+    setTimeout(()=>{if(rb&&rb.disabled){rb.disabled=false;rb.textContent='Restore purchase';}},6000);
+  };}
   {const pb=$('#pro');if(pb)pb.onclick=async()=>{
     if(window.__lumenNativeIAP){           // in the iOS app → native StoreKit purchase ($7/mo)
       pb.disabled=true;pb.innerHTML=ic('live','g')+' Opening…';
-      window.__premBtn=pb;try{window.__lumenBuyPremium();}catch(e){pb.disabled=false;pb.innerHTML=ic('spark')+' Get founding-member access';}
+      window.__premBtn=pb;try{window.__lumenBuyPremium();}catch(e){pb.disabled=false;pb.innerHTML=ic('spark')+' Subscribe · '+_premPrice()+'/month';}
       return;
     }
     pb.disabled=true;const old=pb.innerHTML;pb.innerHTML=ic('live','g')+' Saving…';   // web → interest capture
