@@ -2978,27 +2978,6 @@ a{color:var(--purple)}
 .jtimer.soon .jt-time{color:#ffcf7a}
 .jtimer.done{border-color:rgba(130,220,160,.45);background:radial-gradient(120% 140% at 50% 0,rgba(130,220,160,.12),rgba(20,16,40,.4))}
 .jtimer.done .jt-time{color:#9fe3b0}
-/* Warm "journal paper" theme — only for the compose flow (body.jbg-warm) */
-body.jbg-warm{background:linear-gradient(168deg,#f7e6ab 0%,#f0d583 52%,#e9c868 100%) !important}
-body.jbg-warm .brand b,body.jbg-warm .back-btn,body.jbg-warm .jp-title{color:#4a3813 !important}
-body.jbg-warm .jmode-blurb{color:#7a5e24 !important}
-body.jbg-warm .letter.jp-card,body.jbg-warm .jp-card{background:#fffbef !important;border-color:#e6cf8d !important;color:#352808 !important;box-shadow:0 18px 50px -18px rgba(120,86,20,.5) !important}
-body.jbg-warm .letter-head,body.jbg-warm .letter-head span{color:#9a7a38 !important}
-body.jbg-warm .lp-q,body.jbg-warm .jw-prompt{color:#352808 !important;border-left-color:#d7b55a !important}
-body.jbg-warm .jp-ways .jp-way{color:#7a5e24 !important}
-body.jbg-warm .jw-body,body.jbg-warm .letter-body{background:#fffbef !important;border-color:#e6cf8d !important;color:#2e2409 !important}
-body.jbg-warm .jw-body::placeholder{color:#c0a768 !important}
-body.jbg-warm .jmode{background:#fff7e0 !important;border-color:#e6cf8d !important;color:#5a4316 !important}
-body.jbg-warm .jmode.on{background:#ffeab0 !important;border-color:#caa94e !important}
-body.jbg-warm .jmode small{color:#9a7a38 !important}
-body.jbg-warm .jtimer{background:#fffbef !important;border-color:#e6cf8d !important}
-body.jbg-warm .jtimer .jt-time{color:#b5831e !important}
-body.jbg-warm .jtimer .jt-lbl,body.jbg-warm .jbegin-sub{color:#8a6c2e !important}
-body.jbg-warm .letter-share,body.jbg-warm .letter-share span{color:#6a5220 !important}
-body.jbg-warm .jpr-track{stroke:#e6cf8d !important}
-body.jbg-warm .jpr-arc{stroke:#caa94e !important}
-body.jbg-warm .jpr-t{color:#b5831e !important}
-body.jbg-warm .jpr-l{color:#9a7a38 !important}
 /* Daily Global Sit card */
 .gsit{display:flex;align-items:center;gap:12px;width:100%;margin:14px 0 2px;padding:14px 16px;border-radius:16px;
   background:linear-gradient(135deg,#201a33,#17132a);border:1px solid var(--line);text-align:left;cursor:default}
@@ -6836,8 +6815,6 @@ async function renderJournal(){
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
   // it covers the whole screen; restore it on every other journal screen.
   try{const nv=document.getElementById('nav');if(nv){if(jScreen==='compose')nv.classList.add('hidden');else nv.classList.remove('hidden');}}catch(e){}
-  // Warm "journal paper" background for the compose flow only.
-  try{document.body.classList.toggle('jbg-warm',jScreen==='compose');}catch(e){}
   try{if(jScreen!=='compose')jStopTimer();}catch(e){}
   // The free tier, enforced in the one place every door funnels through.
   if(!_isPrem() && (jScreen==='compose'||jScreen==='plessons')){
@@ -9682,7 +9659,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v33';
+const CACHE = 'lumen-v34';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
