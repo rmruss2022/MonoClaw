@@ -6721,6 +6721,56 @@ function renderJournalWelcome(){
   $('#jpl-skip').onclick=()=>{try{localStorage.setItem('lumen_journal_pledged','1');}catch(e){}renderJournal();};
   const nf=$('#jpl-name');if(nf){nf.oninput=()=>nf.classList.remove('miss');nf.onkeydown=(e)=>{if(e.key==='Enter')sign();};}
 }
+// What the free tier includes. Daily journaling is the habit and stays free; Deep
+// and Season are the self-authoring work. FREE_PILLAR mirrors the server's
+// PILLARS[0] *by name* — positional lookup would let the free pillar change under
+// a user between sessions. If that list is reordered, move this with it.
+const FREE_PILLAR='Family';
+function _isPrem(){try{return !!(ME&&ME.tier==='premium');}catch(e){return false;}}
+// Offered rather than blocked: on web there is no purchase bridge, so a subscribe
+// button there would be a locked door with no handle. Same screen, honest copy in
+// both places.
+function renderPremiumGate(title,why){
+  // renderJournal turns on body.jbg-warm — the journal-paper light theme — before
+  // routing here, because jScreen is still 'compose'. The gate is a Premium screen,
+  // not a page of the journal, and the warm theme only restyles elements it knows
+  // about, so the heading rendered white on cream. Drop it.
+  try{document.body.classList.remove('jbg-warm');}catch(e){}
+  try{track('paywall_view',{gate:title},'journal');}catch(e){}
+  const price=_premPrice();
+  $('#app').innerHTML=`
+  <div class="brand"><button class="back-btn" id="gback" title="Back">‹</button><span class="mark">${lumenMark('mark')}</span><b>Premium</b></div>
+  <div class="onb-hero" style="padding:10px 6px 2px">
+    <div style="color:var(--gold);filter:drop-shadow(0 0 22px var(--gold))">${lumenMark('lg')}</div>
+    <h1 class="onb-h onb-enter d1" style="font-size:25px">${esc(title)}</h1>
+    <p class="onb-p">${esc(why)}</p></div>
+  <div class="card">
+    <div class="po-row">${ic('book','g')}<span>Deep journaling across all eight pillars, and Season</span></div>
+    <div class="po-row">${ic('lotus','g')}<span>Every journey — the Stoics, Deities &amp; Devotion, and each one we add</span></div>
+    <div class="po-row">${ic('sunrise','g')}<span>Deeper daily Vedic readings</span></div>
+    ${_canBuy()
+      ? `<button class="btn gold" id="gbuy" style="margin-top:14px">${ic('spark')} Subscribe · ${price}/month</button>
+         <p class="muted" style="font-size:12px;text-align:center;margin:10px 0 0">${price} per month, billed through your Apple ID. Renews until cancelled; cancel any time in Settings.</p>
+         <div class="center" style="margin-top:8px"><a class="onb-signin" id="grestore">Restore purchase</a></div>`
+      : `<button class="btn gold" id="gbuy" style="margin-top:14px">${ic('spark')} Get founding-member access</button>
+         <p class="muted" id="gstate" style="font-size:12px;text-align:center;margin:10px 0 0">First access + a founding price when it opens. No charge yet.</p>`}
+    <button class="btn ghost" id="gback2" style="margin-top:9px">Keep to the daily letter</button>
+  </div>`;
+  const back=()=>{jScreen='home';journalPillar=null;journalMode='daily';renderJournal();};
+  $('#gback').onclick=back; $('#gback2').onclick=back;
+  const gr=$('#grestore');if(gr)gr.onclick=()=>{try{window.__lumenRestore();}catch(e){}};
+  $('#gbuy').onclick=async()=>{
+    const b=$('#gbuy');
+    if(_canBuy()){b.disabled=true;b.innerHTML=ic('live','g')+' Opening…';window.__premBtn=b;
+      try{window.__lumenBuyPremium();}catch(e){b.disabled=false;b.innerHTML=ic('spark')+' Subscribe · '+_premPrice()+'/month';}
+      return;}
+    b.disabled=true;b.innerHTML=ic('live','g')+' Saving…';
+    try{await api('premium/interest','POST',{});
+      b.style.display='none';
+      const st=$('#gstate');if(st){st.innerHTML=ic('check','g')+' You’re on the founding-member list.';st.style.color='#f5c977';}
+    }catch(e){toast(e);b.disabled=false;b.innerHTML=ic('spark')+' Get founding-member access';}
+  };
+}
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
@@ -6729,6 +6779,15 @@ async function renderJournal(){
   // Warm "journal paper" background for the compose flow only.
   try{document.body.classList.toggle('jbg-warm',jScreen==='compose');}catch(e){}
   try{if(jScreen!=='compose')jStopTimer();}catch(e){}
+  // The free tier, enforced in the one place every door funnels through.
+  if(!_isPrem() && (jScreen==='compose'||jScreen==='plessons')){
+    if(journalMode==='season')
+      return renderPremiumGate('Season journaling',
+        'Season takes a whole chapter of your life — names it, walks it, and writes it back to you over several sittings.');
+    if(journalMode==='deep' && journalPillar && journalPillar!==FREE_PILLAR)
+      return renderPremiumGate('Deep · '+journalPillar,
+        'Deep journaling walks each of your eight pillars in turn. '+FREE_PILLAR+' is open to everyone; the rest come with Premium.');
+  }
   if(jScreen==='compose')return renderJournalCompose();
   if(jScreen==='plessons')return renderPillarLessons();
   if(jScreen==='pillars')return renderLifeOS();
