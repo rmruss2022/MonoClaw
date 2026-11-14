@@ -3221,7 +3221,7 @@ a{color:var(--purple)}
 /* --- journal write: gold-bar stage holding 3 depth-gold components --- */
 body.jw-gold{background:linear-gradient(175deg,#fde7ad 0%,#f6cf83 24%,#eaba60 50%,#dba747 76%,#cd9531 100%) fixed !important}
 body.jw-gold .jx-close{display:none}
-.jwrite{min-height:100dvh;gap:12px;padding-bottom:calc(env(safe-area-inset-bottom) + 6px);background:transparent}
+.jwrite{height:100dvh;max-height:100dvh;overflow:hidden;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 8px);background:transparent}
 .jw-stage{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:0;background:none;border:0;box-shadow:none}
 .jw-x{position:absolute;top:10px;right:10px;z-index:7;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
   background:rgba(60,40,10,.42);color:#ffe6ab;display:flex;align-items:center;justify-content:center}
@@ -3230,17 +3230,19 @@ body.jw-gold .jx-close{display:none}
   border-radius:16px;padding:12px 14px;transition:flex-grow .34s cubic-bezier(.3,.9,.3,1);
   background:linear-gradient(160deg,#5a431f 0%,#3f2f16 48%,#2b2010 100%);border:1px solid rgba(245,201,119,.38);
   box-shadow:inset 0 1px 0 rgba(255,228,160,.22),inset 0 -14px 26px rgba(0,0,0,.42),0 6px 16px -8px rgba(0,0,0,.5)}
-.jw-comp.expanded{flex-grow:3.2;cursor:default}
+.jw-comp.expanded{flex-grow:2.6;cursor:default}
 .jw-chead{display:flex;align-items:center;justify-content:space-between;flex:none}
-.jw-ctag{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:#f3c877;text-shadow:0 0 10px rgba(245,201,119,.4)}
+.jw-ctag{display:flex;align-items:center;color:#f3c877}
+.jw-ctag .i{width:17px;height:17px;filter:drop-shadow(0 0 6px rgba(245,201,119,.45))}
 .jw-exp{color:#f3c877;opacity:.55;font-size:15px;line-height:1}
 .jw-comp.expanded .jw-exp{opacity:.22}
 .jw-cbody{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:auto;margin-top:8px}
 .jw-c-resp .jw-cbody{align-items:stretch;justify-content:flex-start}
 .jw-comp .jtimer{border:0;background:transparent;padding:0}
-.jw-comp .jtimer .jt-time{color:#ffd98a;text-shadow:0 0 16px rgba(245,201,119,.5);font-size:32px;transition:font-size .3s}
-.jw-comp.expanded .jtimer .jt-time{font-size:60px}
-.jw-comp .jtimer .jt-lbl{color:#e8c074}
+.jw-comp .jtimer{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.jw-comp .jtimer .jt-time{color:#ffd98a;text-shadow:0 0 20px rgba(245,201,119,.5);font-size:clamp(52px,16vw,96px);line-height:1;transition:font-size .3s}
+.jw-comp.jw-c-timer.expanded .jtimer .jt-time{font-size:clamp(72px,22vw,128px)}
+.jw-comp .jtimer .jt-lbl{display:none}
 .jw-comp.jw-c-timer.expanded .jw-cbody{gap:4px}
 .jw-comp .jw-prompt{border-left:0;padding:0;color:#ffe3ad;font-size:15.5px;text-align:center;text-shadow:0 0 14px rgba(245,201,119,.22);transition:font-size .3s}
 .jw-comp.jw-c-prompt.expanded .jw-prompt{font-size:22px;line-height:1.5}
@@ -6756,17 +6758,17 @@ function composerHTML(o){
       +`<button type="button" class="jw-x" id="jwx" aria-label="Close">${ic('x')}</button>`
       // component 1 · the timer
       +`<section class="jw-comp jw-c-timer" data-comp="timer">`
-        +`<div class="jw-chead"><span class="jw-ctag">Timer</span><span class="jw-exp">⤢</span></div>`
-        +`<div class="jw-cbody"><div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">3:00</span><span class="jt-lbl" id="jtlbl">left</span></div></div>`
+        +`<div class="jw-chead"><span class="jw-ctag">${ic('clock')}</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-cbody"><div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">3:00</span><span class="jt-lbl" id="jtlbl" hidden></span></div></div>`
       +`</section>`
       // component 2 · the prompt
       +`<section class="jw-comp jw-c-prompt" data-comp="prompt">`
-        +`<div class="jw-chead"><span class="jw-ctag">Prompt</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-chead"><span class="jw-ctag">${ic('spark')}</span><span class="jw-exp">⤢</span></div>`
         +`<div class="jw-cbody"><div class="jw-prompt" id="jwPrompt">“${esc(o.prompt||'')}”</div></div>`
       +`</section>`
       // component 3 · your response (text / voice / photo)
       +`<section class="jw-comp jw-c-resp expanded" data-comp="resp">`
-        +`<div class="jw-chead"><span class="jw-ctag" id="jwRespTag">Your page</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-chead"><span class="jw-ctag" id="jwRespTag">${ic('camera')}</span><span class="jw-exp">⤢</span></div>`
         +`<div class="jw-cbody jw-resp-body">`
           +`<textarea id="jt" class="letter-body jw-body" rows="6" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
           +`<div id="jvoice" class="jcap" hidden>`
@@ -6930,8 +6932,8 @@ function jSetWriteMode(m,noFocus){
   if(jv)jv.hidden=(m!=='voice');
   if(jph)jph.hidden=(m!=='photo');
   document.querySelectorAll('#jwModes .jw-mode').forEach(b=>{const on=b.dataset.mode===m;b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');});
-  const tag=$('#jwRespTag');if(tag)tag.textContent=(m==='photo'?'Your page':m==='voice'?'Your voice':'Your words');
-  jExpand('resp');
+  const tag=$('#jwRespTag');if(tag)tag.innerHTML=ic(m==='photo'?'camera':m==='voice'?'mic':'book');
+  jExpand(m==='type'?'resp':null);
   if(m!=='voice'&&jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}
   _jRecUI(false);
   if(m==='type'&&ta&&!noFocus)setTimeout(()=>{try{ta.focus();}catch(e){}},80);
@@ -10122,7 +10124,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v76';
+const CACHE = 'lumen-v77';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
