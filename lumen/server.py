@@ -6915,6 +6915,7 @@ function enterWritePhase(){
   const walking=jMaybeWalk();          // show the 3-part walkthrough on first ever open
   jSetWriteMode(jChosenMode||'photo',walking); // suppress auto-focus while the walkthrough is up
   jUpdateSeal();
+  jFitTimer();setTimeout(jFitTimer,80);
   try{window.scrollTo(0,0);}catch(e){}
 }
 // Reveal "Seal & keep" only once there's a photo uploaded or enough written.
@@ -6941,7 +6942,30 @@ function jSetWriteMode(m,noFocus){
 // Accordion: the tapped component grows to ~half the stage; the others shrink.
 function jExpand(which){
   document.querySelectorAll('#jwStage .jw-comp').forEach(c=>c.classList.toggle('expanded',c.dataset.comp===which));
+  jFitTimer();setTimeout(jFitTimer,370); // refit after the grow/shrink transition
 }
+// Grow the countdown so the digits fill the entire height of their panel
+// (capped so they never spill past the panel width), recomputed on layout change.
+let _jFitRAF=null;
+function jFitTimer(){
+  if(_jFitRAF)cancelAnimationFrame(_jFitRAF);
+  _jFitRAF=requestAnimationFrame(()=>{
+    const box=document.querySelector('#jp2 .jw-c-timer .jw-cbody'),t=$('#jtdisp');
+    if(!box||!t)return;
+    const H=box.clientHeight,W=box.clientWidth;if(!H||!W)return;
+    t.style.lineHeight='1';
+    // measure the glyph advance accurately (canvas) at 100px, then pick the
+    // largest size that fills the panel height without spilling past its width.
+    const cs=getComputedStyle(t);
+    const cv=jFitTimer._cv||(jFitTimer._cv=document.createElement('canvas'));
+    const cx=cv.getContext('2d');
+    cx.font=`${cs.fontWeight||800} 100px ${cs.fontFamily||'sans-serif'}`;
+    const w100=(cx.measureText(t.textContent||'0:00').width)||100;
+    const byWidth=Math.floor(W*100/w100*0.96);   // 4% side breathing room
+    t.style.fontSize=Math.max(40,Math.min(Math.floor(H*0.98),byWidth))+'px';
+  });
+}
+try{addEventListener('resize',()=>{if(jComposePhase==='write')jFitTimer();});}catch(e){}
 function jMaybeWalk(){
   let seen=false;try{seen=localStorage.getItem('lumen_jwrite_walk')==='1';}catch(e){}
   const w=$('#jwWalk');if(w)w.hidden=seen;
@@ -10124,7 +10148,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v77';
+const CACHE = 'lumen-v78';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
