@@ -2566,6 +2566,37 @@ PAGE = r"""<!doctype html>
 .comm-read-p{font-size:15px;line-height:1.62;color:#d8cff0;margin:0 0 13px}
 .comm-read-done{width:100%;margin-top:6px}
 .jmode-chev{font-size:22px;font-weight:300;line-height:1}
+.you-hero{min-height:200px;background-position:center 46%}
+.you-levelcard{background:#15112466;border:1px solid var(--line);border-radius:18px;padding:16px;margin:2px 0 4px}
+.you-lvtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.you-lvn{font-weight:800;font-size:17px;color:#fff}
+.you-lvsub{font-size:12.5px;color:var(--muted);margin-top:7px}
+.you-mandala{display:flex;justify-content:center;padding:4px 0}
+.you-mandala .altar-svg{width:min(320px,86vw);height:auto}
+.you-cardhint{font-size:11px;color:var(--muted)}
+.you-cards{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.you-cards::-webkit-scrollbar{display:none}
+.you-card{position:relative;overflow:hidden;flex:none;width:124px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;border-radius:16px;cursor:pointer;color:var(--text);background:linear-gradient(165deg,#1b1530,#130f20 82%) padding-box,linear-gradient(180deg,color-mix(in srgb,var(--c) 55%,transparent),rgba(90,80,150,.08) 70%) border-box;border:1.5px solid transparent;opacity:.62}
+.you-card.on{opacity:1;box-shadow:0 8px 22px -14px var(--c)}
+.you-card.sel{outline:2px solid var(--c);outline-offset:1px}
+.you-card-ic{width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--c)}.you-card-ic .i{width:30px;height:30px}
+.you-card.on .you-card-ic{filter:drop-shadow(0 0 7px color-mix(in srgb,var(--c) 70%,transparent))}
+.you-card-t{font-size:12px;font-weight:700;text-align:center;line-height:1.2}
+.you-card-r{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--c)}
+.you-card.on:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.22) 50%,transparent 62%);transform:translateX(-130%);animation:youGlim 5s ease-in-out infinite}
+@keyframes youGlim{0%,72%{transform:translateX(-130%)}88%,100%{transform:translateX(130%)}}
+.you-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.you-stat{background:#15112466;border:1px solid var(--line);border-radius:16px;padding:14px 6px;text-align:center}
+.you-stat .n{font-size:22px;font-weight:800;color:#fff}.you-stat .l{font-size:11px;color:var(--muted);margin-top:3px}
+.acc{background:#15112466;border:1px solid var(--line);border-radius:16px;margin-bottom:10px;overflow:hidden}
+.acc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:15px 16px;font-weight:700;font-size:15px;color:#efeafe}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary:after{content:"⌄";margin-left:auto;color:var(--muted);font-size:20px;line-height:1;transition:transform .2s}
+.acc[open]>summary:after{transform:rotate(180deg)}
+.acc>summary svg{width:18px;height:18px;color:var(--purple)}
+.acc-body{padding:2px 16px 16px}
+.acc-body .card{margin:0 0 10px;border:0;background:transparent;padding:0}
+
 .pil-med{flex:none;width:46px;height:46px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 13px -4px rgba(245,201,119,.5),inset 0 0 0 1px rgba(245,201,119,.28)}
 .comm-letter.jmodecard-rec{background:linear-gradient(120deg,#241a3e,#161028 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.9),rgba(192,132,252,.42) 70%) border-box}
 
@@ -4066,9 +4097,7 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
   <button data-tab="meditate" class="on"><span class="ic"></span>Meditate</button>
   <button data-tab="lessons"><span class="ic"></span>Journeys</button>
   <button data-tab="community"><span class="ic"></span>Community</button>
-  <button data-tab="leagues"><span class="ic"></span>Leagues</button>
   <button data-tab="journal"><span class="ic"></span>Journal</button>
-  <button data-tab="collect"><span class="ic"></span>Collect</button>
   <button data-tab="profile"><span class="ic"></span>You</button>
 </div></nav>
 
@@ -7625,95 +7654,53 @@ function _canBuy(){try{return !!window.__lumenNativeIAP;}catch(e){return false;}
    offering; until it does, this is the App Store Connect price. Reading it at
    call time means a wrapper update needs no web deploy. */
 function _premPrice(){try{return window.__lumenPrice||'$7';}catch(e){return '$7';}}
+function cardChip(a){const r=RARITY[rarityOf(a.code)];return `<button class="you-card${a.unlocked?' on':''}" data-card="${a.code}" style="--c:${r[1]}"><span class="you-card-ic">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</span><span class="you-card-t">${a.unlocked?esc(a.title):'Locked'}</span><span class="you-card-r">${r[0]}</span></button>`;}
+function leagueSectionHTML(d){if(!d||!d.league)return '<div class="card muted">League loading…</div>';const lg=d.league;const toNext=lg.next_at?Math.max(0,lg.next_at-d.weekly_light):0;const prog=lg.next_at?Math.min(100,100*(d.weekly_light-lg.at)/(lg.next_at-lg.at)):100;
+ return `<div class="card center league-hero" style="border-color:${lg.color};--lc:${lg.color};--lc2:${lg.color2||lg.color}"><div class="league-emblem-wrap">${leagueEmblem(lg,110)}</div><div class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase">Current league</div><h1 style="margin:6px 0;color:${lg.color}">${esc(lg.name)}</h1><div class="muted">${fmt(d.weekly_light)} light this week</div>${lg.next?`<div class="bar lg-bar" style="margin:14px 0 6px"><i style="width:${prog}%"></i></div><div class="muted" style="font-size:13px">${toNext} light to <b style="color:var(--text)">${leagueIcon(lg.next,'g')} ${esc(lg.next)}</b></div>`:`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Top league — keep it lit</div>`}</div>`
+ +`<div class="card"><h3 style="margin:0 0 6px;display:flex;align-items:center;gap:7px">${leagueIcon(lg.name,'g')} ${esc(lg.name)} · this week</h3><p class="muted" style="font-size:12px;margin:0 0 8px">Top 5 promote ${ic('up','g')} · resets weekly</p>${(d.members||[]).map(m=>`<div class="lb-row ${m.you?'you':''}"><div class="rk ${m.rank<=5?'g':''}">${m.rank<=5?ic('up','g'):''}${m.rank}</div><div class="nm">${esc(m.name)}${m.you?' (you)':''}</div><div class="vl">${fmt(m.weekly_light)}</div></div>`).join('')||'<div class="muted">No one here yet.</div>'}</div>`;}
 async function renderProfile(){
   const r=await api('me');ME=r.profile;const p=ME;
   const prog=Math.min(100,100*p.level_into/(p.level_into+p.level_need));
   let ach={achievements:[]};try{ach=await api('achievements');}catch(e){}
   let horo=null;try{horo=await api('horoscope?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
   let np=null;try{np=await api('notif/prefs');}catch(e){}
+  let lgd=null;try{lgd=await api('league');}catch(e){}
   const starLine = (horo&&!horo.need_sign)
     ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6"><span class="zsym">${horo.glyph}︎</span> <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
     : `<p class="muted" style="font-size:13px;margin:0 0 12px">Add your birthday to receive your daily Vedic reading.</p>`;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>${esc(p.name)}</b></div>
-  <div class="card">
-    <div class="row" style="align-items:center"><div><div class="muted" style="font-size:12px">LEVEL</div><div style="font-size:40px;font-weight:800">${p.level}</div></div>
-    <div style="text-align:right"><div class="pill" style="border-color:${p.league.color};color:${p.league.color}">${p.league.name} league</div></div></div>
-    <div class="bar" style="margin:10px 0 6px"><i style="width:${prog}%"></i></div>
-    <div class="muted" style="font-size:12px">${p.level_into} / ${p.level_into+p.level_need} light to level ${p.level+1}</div>
-  </div>
-  <div class="card"><div class="grid3">
-    <div class="stat"><div class="n">${fmt(p.light)}</div><div class="l">Light</div></div>
-    <div class="stat"><div class="n">${p.streak}</div><div class="l">Streak</div></div>
-    <div class="stat"><div class="n">${p.total_sessions}</div><div class="l">Sessions</div></div>
-    <div class="stat"><div class="n">${p.total_minutes}</div><div class="l">Minutes</div></div>
-    <div class="stat"><div class="n">${p.best_streak}</div><div class="l">Best streak</div></div>
-    <div class="stat"><div class="n">${fmt(p.weekly_light)}</div><div class="l">This week</div></div>
-  </div></div>
-  ${(p.tier!=='premium')?`<div class="card" id="procard" style="border:1px solid #4a3a1e;background:linear-gradient(160deg,#1c1507,#14111f)">
-    <div class="row" style="align-items:center;gap:12px">
-      <span style="flex:0 0 auto">${lumenMark('pro')}</span>
-      <div style="flex:1">
-        <div class="pill" style="border-color:#f5c977;color:#f5c977;font-size:11px">LUMEN PREMIUM</div>
-        <h3 style="margin:8px 0 2px;color:#f6f1ea">Go deeper with Premium</h3>
-        <p class="muted" style="font-size:13px;margin:0;line-height:1.55">${_canBuy()
-          ?`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">${_premPrice()} a month</b>.`
-          :`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">coming soon</b>.`}</p>
-      </div>
-    </div>
+  $('#app').innerHTML=`<section class="nh-hero you-hero" id="youHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">${esc(p.name)}</h1><p class="nh-sub">${esc(p.league.name)} league · Level ${p.level}</p></div></div></section>`
+  +`<div class="you-levelcard"><div class="you-lvtop"><span class="you-lvn">Level ${p.level}</span><span class="pill" style="border-color:${p.league.color};color:${p.league.color}">${esc(p.league.name)} league</span></div><div class="nh-lbar"><i style="width:${prog}%"></i></div><div class="you-lvsub">${fmt(p.level_into)} / ${fmt(p.level_into+p.level_need)} light to Level ${p.level+1}</div></div>`
+  +`<div class="nh-sec-h" style="margin-top:14px"><h2>Your Mandala</h2></div>`
+  +`<div class="you-mandala">${buildAltar(ach.achievements)}</div>`
+  +`<div class="nh-sec-h"><h2>Your Cards</h2><span class="you-cardhint">tap a petal above</span></div>`
+  +`<div class="you-cards" id="youCards">${ach.achievements.map(cardChip).join('')}</div>`
+  +`<div class="nh-sec-h" style="margin-top:16px"><h2>Your Stats</h2></div>`
+  +`<div class="you-stats">${[['Light',fmt(p.light)],['Streak',p.streak],['Sessions',p.total_sessions],['Minutes',p.total_minutes],['Best streak',p.best_streak],['This week',fmt(p.weekly_light)]].map(st=>`<div class="you-stat"><div class="n">${st[1]}</div><div class="l">${st[0]}</div></div>`).join('')}</div>`
+  +`<div class="nh-sec-h" style="margin-top:18px"><h2>Your League</h2></div>`
+  +leagueSectionHTML(lgd)
+  +((p.tier!=='premium')?`<div class="card" id="procard" style="border:1px solid #4a3a1e;background:linear-gradient(160deg,#1c1507,#14111f);margin-top:14px">
+    <div class="row" style="align-items:center;gap:12px"><span style="flex:0 0 auto">${lumenMark('pro')}</span><div style="flex:1"><div class="pill" style="border-color:#f5c977;color:#f5c977;font-size:11px">LUMEN PREMIUM</div><h3 style="margin:8px 0 2px;color:#f6f1ea">Go deeper with Premium</h3><p class="muted" style="font-size:13px;margin:0;line-height:1.55">${_canBuy()?`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">${_premPrice()} a month</b>.`:`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#f5c977">coming soon</b>.`}</p></div></div>
     <button class="btn" id="pro" style="margin-top:12px;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;font-weight:700;border:0">${_canBuy()?(ic('spark')+' Subscribe · '+_premPrice()+'/month'):(ic('spark')+' Get founding-member access')}</button>
-    <p class="muted" id="prostate" style="font-size:12px;text-align:center;margin:8px 0 0">${_canBuy()
-      ?`${_premPrice()} per month, billed through your Apple ID. Renews until cancelled; cancel any time in Settings.`
-      :'First access + a founding price when it opens. No charge yet.'}</p>
-    ${_canBuy()?`<button class="btn ghost" id="prorestore" style="margin-top:8px;font-size:13px">Restore purchase</button>`:''}
-  </div>`:''}
-  <div class="card">
-    <h3 style="margin:0 0 2px">Achievements</h3>
-    <p class="muted" style="font-size:12px;margin:0 0 10px">Tap a badge to open its card</p>
-    ${ach.achievements.map(a=>{const r=RARITY[rarityOf(a.code)];return `<div class="ach ${a.unlocked?'on':''}" data-ac="${a.code}"><div class="e">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</div><div style="flex:1"><b>${a.title}</b><div class="muted" style="font-size:13px">${a.unlocked?a.desc:'Locked'}</div></div><span class="rtag" style="--c:${r[1]}">${r[0]}</span></div>`;}).join('')}
-  </div>
-  <div class="card">
-    <h3 style="margin:0 0 6px">Home location</h3>
-    <p class="muted" style="font-size:13px;margin:0 0 10px" id="locstate">${p.city?(ic('pin')+' '+esc(p.city)):'Not set — your sessions aren’t shown on the map until you set this.'}</p>
-    <button class="btn ghost" id="loc">${ic('pin')} Use my current location</button>
-    <p class="muted" id="lochelp" style="font-size:12px;margin:10px 0 0;display:none"></p>
-  </div>
-  <div class="card">
-    <h3 style="margin:0 0 6px">Your stars ${ic('nova','g')}</h3>
-    ${starLine}
-    <label>Birthday</label><input id="pbd" type="date" value="${esc(p.birth_date||'')}">
-    <label>Birth time <span class="muted" style="font-weight:400">(optional — for your birth star &amp; daśā)</span></label>
-    <div style="display:flex;gap:8px"><input id="pbt" type="time" value="${esc(p.birth_time||'')}" style="flex:0 0 42%"><input id="pbp" placeholder="City of birth" value="${esc(p.birth_place||'')}" style="flex:1"></div>
-    <button class="btn ghost" id="psave" style="margin-top:10px">Save birth details</button>
-  </div>
-  ${np?`<div class="card">
-    <div class="nrow" style="border-top:0;padding-top:0">
-      <div><b>Push notifications</b><div class="muted" style="font-size:12px">Gentle nudges to sit, streak saves &amp; celebrations.</div></div>
-      <label class="switch"><input type="checkbox" id="nen" ${np.enabled?'checked':''}><span class="sl"></span></label>
-    </div>
-    <p class="muted" id="nstat" style="font-size:12px;margin:4px 0 0">${np.registered?(ic('spark','g')+' This device is set up for push.'):'To get them on your phone: open Lumen on iOS and tap <b>Allow</b> when asked (needs the latest build).'}</p>
-    <div id="ncatwrap" style="margin-top:12px;${np.enabled?'':'opacity:.45;pointer-events:none'}">
-      <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">What to send</div>
-      ${NCATS.map(cc=>`<div class="nrow"><span class="nl">${esc(cc[1])}</span><label class="switch"><input type="checkbox" id="nc_${cc[0]}" ${(np.cats&&np.cats[cc[0]]===0)?'':'checked'}><span class="sl"></span></label></div>`).join('')}
-      <div class="nrow"><span class="nl">Quiet hours <span class="muted" style="font-size:11px">(your local time)</span></span>
-        <span style="display:flex;align-items:center;gap:6px"><select id="nqs" class="nsel">${hoursOpts(np.quiet_start)}</select><span class="muted">to</span><select id="nqe" class="nsel">${hoursOpts(np.quiet_end)}</select></span></div>
-    </div>
-  </div>`:''}
-  <div class="card">
-    <div class="nrow" style="border-top:0;padding-top:0">
-      <div><b>Text reminders</b><div class="muted" style="font-size:12px">Opt-in SMS for streak saves &amp; gentle nudges. Standard rates apply.</div></div>
-      <label class="switch"><input type="checkbox" id="smsen" ${(p.sms_consent&&!p.sms_optout)?'checked':''}><span class="sl"></span></label>
-    </div>
-    <label style="margin-top:10px">Mobile number</label>
-    <input id="smsph" type="tel" autocomplete="tel" placeholder="+1 555 123 4567" value="${esc(p.phone||'')}">
-    ${p.sms_optout?`<p class="muted" style="font-size:12px;margin:6px 0 0;color:#ff9aa6">You texted STOP, so we won't send texts. Toggle on above to opt back in.</p>`:''}
-    <button class="btn ghost" id="smssave" style="margin-top:10px">Save text settings</button>
-    <p class="muted" style="font-size:11px;margin:8px 0 0">Reply STOP to any text to opt out anytime.</p>
-  </div>
-  <a class="btn ghost" href="survey" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:4px;border-color:rgba(245,201,119,.4);color:var(--gold)">${ic('spark','g')} Share feedback — help shape Lumen</a>
-  <button class="btn ghost" id="out" style="margin-top:10px">Sign out</button>
-  <button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button>
-  <p class="muted" style="font-size:11px;text-align:center;margin:8px 20px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can't be undone.</p>
-  <p class="muted" style="font-size:11px;text-align:center;margin:14px 20px 0;opacity:.7">Interface sounds: dev_tones by <a href="https://rcptones.com" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none">RCP Tones</a>.</p>`;
+    <p class="muted" id="prostate" style="font-size:12px;text-align:center;margin:8px 0 0">${_canBuy()?`${_premPrice()} per month, billed through your Apple ID. Renews until cancelled; cancel any time in Settings.`:'First access + a founding price when it opens. No charge yet.'}</p>
+    ${_canBuy()?`<button class="btn ghost" id="prorestore" style="margin-top:8px;font-size:13px">Restore purchase</button>`:''}</div>`:'')
+  +`<div class="nh-sec-h" style="margin-top:18px"><h2>Settings</h2></div>`
+  +`<details class="acc"><summary>${ic('book')} Notifications</summary><div class="acc-body">`
+    +(np?`<div class="nrow" style="border-top:0;padding-top:0"><div><b>Push notifications</b><div class="muted" style="font-size:12px">Gentle nudges to sit, streak saves &amp; celebrations.</div></div><label class="switch"><input type="checkbox" id="nen" ${np.enabled?'checked':''}><span class="sl"></span></label></div>
+      <p class="muted" id="nstat" style="font-size:12px;margin:4px 0 0">${np.registered?(ic('spark','g')+' This device is set up for push.'):'To get them on your phone: open Lumen on iOS and tap <b>Allow</b> when asked (needs the latest build).'}</p>
+      <div id="ncatwrap" style="margin-top:12px;${np.enabled?'':'opacity:.45;pointer-events:none'}"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">What to send</div>${NCATS.map(cc=>`<div class="nrow"><span class="nl">${esc(cc[1])}</span><label class="switch"><input type="checkbox" id="nc_${cc[0]}" ${(np.cats&&np.cats[cc[0]]===0)?'':'checked'}><span class="sl"></span></label></div>`).join('')}<div class="nrow"><span class="nl">Quiet hours <span class="muted" style="font-size:11px">(your local time)</span></span><span style="display:flex;align-items:center;gap:6px"><select id="nqs" class="nsel">${hoursOpts(np.quiet_start)}</select><span class="muted">to</span><select id="nqe" class="nsel">${hoursOpts(np.quiet_end)}</select></span></div></div>`:'')
+    +`<div class="nrow"><div><b>Text reminders</b><div class="muted" style="font-size:12px">Opt-in SMS for streak saves &amp; gentle nudges. Standard rates apply.</div></div><label class="switch"><input type="checkbox" id="smsen" ${(p.sms_consent&&!p.sms_optout)?'checked':''}><span class="sl"></span></label></div>
+      <label style="margin-top:10px">Mobile number</label><input id="smsph" type="tel" autocomplete="tel" placeholder="+1 555 123 4567" value="${esc(p.phone||'')}">${p.sms_optout?`<p class="muted" style="font-size:12px;margin:6px 0 0;color:#ff9aa6">You texted STOP, so we won't send texts. Toggle on above to opt back in.</p>`:''}<button class="btn ghost" id="smssave" style="margin-top:10px">Save text settings</button>`
+  +`</div></details>`
+  +`<details class="acc"><summary>${ic('nova')} Your stars</summary><div class="acc-body">`
+    +starLine
+    +`<label>Birthday</label><input id="pbd" type="date" value="${esc(p.birth_date||'')}"><label>Birth time <span class="muted" style="font-weight:400">(optional)</span></label><div style="display:flex;gap:8px"><input id="pbt" type="time" value="${esc(p.birth_time||'')}" style="flex:0 0 42%"><input id="pbp" placeholder="City of birth" value="${esc(p.birth_place||'')}" style="flex:1"></div><button class="btn ghost" id="psave" style="margin-top:10px">Save birth details</button>`
+  +`</div></details>`
+  +`<details class="acc"><summary>${ic('pin')} Home location</summary><div class="acc-body">`
+    +`<p class="muted" style="font-size:13px;margin:0 0 10px" id="locstate">${p.city?(ic('pin')+' '+esc(p.city)):'Not set — your sessions aren’t shown on the map until you set this.'}</p><button class="btn ghost" id="loc">${ic('pin')} Use my current location</button><p class="muted" id="lochelp" style="font-size:12px;margin:10px 0 0;display:none"></p>`
+  +`</div></details>`
+  +`<details class="acc"><summary>${ic('spark')} Account</summary><div class="acc-body">`
+    +`<a class="btn ghost" href="survey" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;border-color:rgba(245,201,119,.4);color:var(--gold)">${ic('spark','g')} Share feedback — help shape Lumen</a><button class="btn ghost" id="out" style="margin-top:10px">Sign out</button><button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button><p class="muted" style="font-size:11px;text-align:center;margin:8px 10px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can’t be undone.</p><p class="muted" style="font-size:11px;text-align:center;margin:12px 10px 0;opacity:.7">Interface sounds: dev_tones by <a href="https://rcptones.com" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none">RCP Tones</a>.</p>`
+  +`</div></details>`;
   $('#loc').onclick=async()=>{
     const btn=$('#loc'),help=$('#lochelp');help.style.display='none';
     if(!navigator.geolocation){toast('Geolocation isn’t available on this device');return;}
@@ -7784,6 +7771,9 @@ async function renderProfile(){
     ME=null;toast('Your account has been deleted');renderAuth();};
   window._ACH=ach.achievements;
   document.querySelectorAll('.ach').forEach(x=>x.onclick=()=>openAchCard(x.dataset.ac));
+  {const h=$('#youHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/you-hero.jpg?v=65')";};im.src="/art/you-hero.jpg?v=65";}}
+  document.querySelectorAll('.you-card').forEach(x=>x.onclick=()=>openAchCard(x.dataset.card));
+  document.querySelectorAll('.apiece').forEach(f=>f.onclick=()=>{const code=f.dataset.ach;const c=document.querySelector('.you-card[data-card="'+code+'"]');if(c){document.querySelectorAll('.you-card.sel').forEach(e=>e.classList.remove('sel'));c.classList.add('sel');c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});try{Haptics.select();}catch(e){}}});
 }
 
 /* ---- achievement collectible card ---- */
@@ -9963,7 +9953,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v64';
+const CACHE = 'lumen-v65';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
