@@ -2786,7 +2786,7 @@ nav .inner{display:flex;gap:4px;background:#14111f;border:1px solid var(--line);
 nav button{flex:1;min-width:0;background:transparent;border:0;color:var(--muted);font-size:10px;font-weight:600;padding:7px 1px;border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
 nav .inner{gap:2px}
 nav button .ic{font-size:19px}
-nav button.on{color:var(--text);background:#211a37}
+nav button.on{color:#f5c977;background:#231a33}
 /* meditate / breathing */
 .orb-wrap{position:relative;height:300px;display:grid;place-items:center;margin:8px 0}
 .orb{width:180px;height:180px;border-radius:50%;
@@ -4052,8 +4052,8 @@ a{color:var(--purple)}
 .lb-row .rk .i{width:18px;height:18px}
 .lb-row .rk .medal{width:20px;height:20px;filter:drop-shadow(0 0 5px currentColor)}
 .pill .i{width:15px;height:15px;filter:drop-shadow(0 0 4px currentColor)}
-nav button .ic .i{width:22px;height:22px}
-nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple));transform:translateY(-1px) scale(1.1)}
+nav button .ic .i{width:23px;height:23px;color:#a68c5a;filter:drop-shadow(0 0 4px rgba(245,201,119,.28))}
+nav button.on .ic .i{color:#f5c977;filter:drop-shadow(0 0 9px rgba(245,201,119,.75));transform:translateY(-1px) scale(1.14)}
 .ach .e .i{filter:none}
 .ach.on .e .i{filter:drop-shadow(0 0 6px var(--gold))}
 /* journal intelligence: Keeper reflections + insights */
@@ -4494,7 +4494,7 @@ window.__lumenPremiumError=function(m){
     :(ic('spark')+' Get founding-member access');}
   try{toast(m||'Purchase didn’t complete');}catch(e){}
 };
-const NAV_ICON={meditate:'meditate',lessons:'lotus',community:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
+const NAV_ICON={meditate:'meditate',lessons:'compass',community:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'lotus'};
 const LEAGUE_ICON={Ember:'flame',Spark:'spark',Glow:'glow',Flare:'flare',Beacon:'beacon',Nova:'star',Supernova:'nova'};
 const leagueIcon=(name,cls)=>ic(LEAGUE_ICON[name]||'trophy',cls||'');
 // Premium league emblem: a glowing tiered medallion themed to the league colour —
@@ -9981,7 +9981,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v69';
+const CACHE = 'lumen-v70';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
