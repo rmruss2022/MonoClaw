@@ -13,6 +13,7 @@ import { execFile } from "node:child_process";
 import * as home from "./home.ts";
 import * as lights from "./lights.ts";
 import * as spotify from "./spotify.ts";
+import * as sceneConfig from "./sceneConfig.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -249,12 +250,49 @@ async function doMusic(a: any): Promise<string> {
   }
 }
 
+// Run a scene's REAL configured actions (lights + a pinned Spotify playlist) on actual
+// devices, so "good morning" turns on the real bulb and plays real music — not the mock.
+async function runSceneReal(id: string): Promise<string | null> {
+  const cfg = sceneConfig.getScene(id);
+  if (!cfg) return null;
+  const parts: string[] = [];
+  for (const la of cfg.lights || []) {
+    try {
+      const all = lights.listLights().filter((x: any) => x.real);
+      const targets = la.room
+        ? all.filter((x: any) => String(x.room || "").toLowerCase().includes(la.room!.toLowerCase()))
+        : all;
+      let hit = 0;
+      for (const l of targets) {
+        const patch: any = { on: la.on };
+        if (la.brightness != null) patch.brightness = la.brightness;
+        if (la.rgb) patch.rgb = la.rgb;
+        try { const r = await lights.control(l.id, patch); if (r.ok) hit++; } catch { /* light offline */ }
+      }
+      if (hit) parts.push(`${la.room || "lights"} on`);
+    } catch { /* ignore light group errors */ }
+  }
+  if (cfg.music && cfg.music.playlistUri) {
+    try {
+      const dev = await spotify.deviceForRoom("Living Room");
+      await spotify.play({ contextUri: cfg.music.playlistUri, deviceId: dev?.id });
+      parts.push(`playing ${cfg.music.name || "music"}`);
+    } catch (e) { console.log("[scene] music failed:", (e as Error)?.message); }
+  }
+  return parts.length ? parts.join(", ") : null;
+}
+
 async function execActions(actions: any[]): Promise<string[]> {
   const done: string[] = [];
   for (const a of actions || []) {
     try {
       switch (a.type) {
-        case "scene": home.activateScene(String(a.id)); done.push(`scene ${a.id}`); break;
+        case "scene": {
+          const real = await runSceneReal(String(a.id));   // real devices (lights + playlist)
+          home.activateScene(String(a.id));                // keep mock/UI model in sync
+          done.push(real || `scene ${a.id}`);
+          break;
+        }
         case "lights": {
           const on = !!a.on;
           const room = String(a.room || "all").toLowerCase();
