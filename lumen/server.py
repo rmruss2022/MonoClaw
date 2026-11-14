@@ -3215,6 +3215,65 @@ a{color:var(--purple)}
 .jw-body{flex:1;min-height:200px;border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(14,10,28,.5)}
 .jw-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:auto;padding-top:6px}
 .jw-foot .letter-seal-btn{margin:0;width:100%;max-width:420px;border-radius:999px;padding:16px 28px;font-size:17px}
+/* --- journal write: gold-bar stage holding 3 depth-gold components --- */
+.jwrite{min-height:calc(100dvh - 70px);gap:12px;padding-bottom:6px}
+.jw-stage{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:calc(100dvh - 214px);
+  border-radius:22px;padding:14px;overflow:hidden;
+  background:linear-gradient(175deg,#fbe3a6 0%,#f4cd81 26%,#e9b85f 52%,#d7a042 78%,#c8902f 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 0 44px rgba(120,70,10,.28),0 14px 40px -16px rgba(120,70,10,.6)}
+.jw-stage:before{content:"";position:absolute;left:0;right:0;top:0;height:42%;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.32),transparent)}
+.jw-x{position:absolute;top:10px;right:10px;z-index:7;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
+  background:rgba(60,40,10,.42);color:#ffe6ab;display:flex;align-items:center;justify-content:center}
+.jw-x .i{width:18px;height:18px}
+.jw-comp{position:relative;display:flex;flex-direction:column;min-height:0;flex:1 1 0;overflow:hidden;cursor:pointer;
+  border-radius:16px;padding:12px 14px;transition:flex-grow .34s cubic-bezier(.3,.9,.3,1);
+  background:linear-gradient(160deg,#5a431f 0%,#3f2f16 48%,#2b2010 100%);border:1px solid rgba(245,201,119,.38);
+  box-shadow:inset 0 1px 0 rgba(255,228,160,.22),inset 0 -14px 26px rgba(0,0,0,.42),0 6px 16px -8px rgba(0,0,0,.5)}
+.jw-comp.expanded{flex-grow:3.2;cursor:default}
+.jw-chead{display:flex;align-items:center;justify-content:space-between;flex:none}
+.jw-ctag{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:#f3c877;text-shadow:0 0 10px rgba(245,201,119,.4)}
+.jw-exp{color:#f3c877;opacity:.55;font-size:15px;line-height:1}
+.jw-comp.expanded .jw-exp{opacity:.22}
+.jw-cbody{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:auto;margin-top:8px}
+.jw-c-resp .jw-cbody{align-items:stretch;justify-content:flex-start}
+.jw-comp .jtimer{border:0;background:transparent;padding:0}
+.jw-comp .jtimer .jt-time{color:#ffd98a;text-shadow:0 0 16px rgba(245,201,119,.5);font-size:32px;transition:font-size .3s}
+.jw-comp.expanded .jtimer .jt-time{font-size:60px}
+.jw-comp .jtimer .jt-lbl{color:#e8c074}
+.jw-comp.jw-c-timer.expanded .jw-cbody{gap:4px}
+.jw-comp .jw-prompt{border-left:0;padding:0;color:#ffe3ad;font-size:15.5px;text-align:center;text-shadow:0 0 14px rgba(245,201,119,.22);transition:font-size .3s}
+.jw-comp.jw-c-prompt.expanded .jw-prompt{font-size:22px;line-height:1.5}
+.jw-c-resp .jw-body{flex:1;width:100%;min-height:92px;border:1px solid rgba(245,201,119,.3);border-radius:12px;
+  padding:12px;background:rgba(20,13,4,.4);color:#ffe8bf;font-size:15px}
+.jw-c-resp .jw-body::placeholder{color:rgba(245,201,119,.5)}
+.jw-c-resp .jcap{padding:6px 0}
+.jw-c-resp .jcap-label{color:#ffe3ad;font-weight:600}
+.jw-c-resp .jcap-status{color:#e8c074}
+.jw-c-resp .jcap-btn{background:rgba(20,13,4,.4);border-color:rgba(245,201,119,.55);color:#ffd98a}
+.jw-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:none}
+.jw-mode{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:14px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(20,16,40,.5);color:#b7afce;font:600 11px/1 inherit;transition:border-color .18s,background .18s,color .18s,transform .1s}
+.jw-mode .i{width:19px;height:19px;color:#a68c5a}
+.jw-mode.on{border-color:rgba(245,201,119,.6);color:#f5c977;background:radial-gradient(120% 140% at 50% 0,rgba(245,201,119,.18),rgba(20,16,40,.5))}
+.jw-mode.on .i{color:#f5c977;filter:drop-shadow(0 0 6px rgba(245,201,119,.6))}
+.jw-mode:active{transform:scale(.96)}
+.jw-walk{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(8,5,16,.72);backdrop-filter:blur(6px)}
+.jw-walk[hidden]{display:none}
+.jw-walk-card{max-width:360px;width:100%;border-radius:22px;padding:24px 22px;text-align:center;
+  background:linear-gradient(170deg,#241a3a,#161028 86%);border:1px solid rgba(245,201,119,.4);
+  box-shadow:0 24px 60px -20px rgba(0,0,0,.7),inset 0 1px 0 rgba(245,201,119,.18)}
+.jw-walk-emblem{width:54px;height:54px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 40% 35%,#f7d487,#c98a2e);color:#2a1a05;box-shadow:0 0 22px rgba(245,201,119,.5)}
+.jw-walk-emblem .i{width:26px;height:26px}
+.jw-walk-card h3{font-size:19px;color:#f5c977;margin-bottom:12px}
+.jw-walk-card ul{list-style:none;text-align:left;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:7px}
+.jw-walk-card li{font-size:13.5px;color:#d8cff0;padding-left:16px;position:relative}
+.jw-walk-card li:before{content:"";position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:50%;background:#f5c977}
+.jw-walk-card li b{color:#ffe3ad}
+.jw-walk-card p{font-size:13px;color:#b7afce;line-height:1.5;margin-bottom:16px}
+.jw-walk-card p b{color:#f5c977}
+.jw-walk-card .btn.gold{width:100%}
 .letter.mini{padding:16px 18px;margin-top:12px}
 .letter-tag{display:inline-flex;align-items:center;gap:5px;font-style:normal;font-size:11px;color:var(--muted)}
 .letter-tag .i{width:13px;height:13px}
@@ -6655,9 +6714,9 @@ function composerHTML(o){
   // you begin, all ten minutes are still yours. The arc unwinds from here.
   // Type / Record / Photograph as a single radio choice — it drives the write screen.
   const waysHTML=`<div class="jp-ways" id="jpWays" role="radiogroup" aria-label="How to journal">`
-    +`<button type="button" class="jp-way sel" data-mode="type" role="radio" aria-checked="true">${ic('book')}Type</button>`
+    +`<button type="button" class="jp-way sel" data-mode="photo" role="radio" aria-checked="true">${ic('camera')}Photograph</button>`
+    +`<button type="button" class="jp-way" data-mode="type" role="radio" aria-checked="false">${ic('book')}Type</button>`
     +`<button type="button" class="jp-way" data-mode="voice" role="radio" aria-checked="false">${ic('mic')}Record</button>`
-    +`<button type="button" class="jp-way" data-mode="photo" role="radio" aria-checked="false">${ic('camera')}Photograph</button>`
   +`</div>`;
   const leadHTML=`<div class="jp-hero">`
     +`<div class="jp-title">${esc(o.title||'')}</div>`
@@ -6680,31 +6739,62 @@ function composerHTML(o){
     +`</div>`
     +`<button class="btn gold jbegin" id="jbegin">${ic('clock','seal-ic')} Begin journaling</button>`
   +`</div>`
-  // ---------------- PHASE 2 · writing (just the chosen input) ----------------
+  // ---------------- PHASE 2 · writing — gold-bar stage, 3 depth-gold components ----------------
   +`<div class="jphase jwrite" id="jp2" hidden>`
-    +`<div class="jw-top">`
-      +`<div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">3:00</span><span class="jt-lbl" id="jtlbl">left</span></div>`
+    +`<div class="jw-stage" id="jwStage">`
+      +`<button type="button" class="jw-x" id="jwx" aria-label="Close">${ic('x')}</button>`
+      // component 1 · the timer
+      +`<section class="jw-comp jw-c-timer" data-comp="timer">`
+        +`<div class="jw-chead"><span class="jw-ctag">Timer</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-cbody"><div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">3:00</span><span class="jt-lbl" id="jtlbl">left</span></div></div>`
+      +`</section>`
+      // component 2 · the prompt
+      +`<section class="jw-comp jw-c-prompt" data-comp="prompt">`
+        +`<div class="jw-chead"><span class="jw-ctag">Prompt</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-cbody"><div class="jw-prompt" id="jwPrompt">“${esc(o.prompt||'')}”</div></div>`
+      +`</section>`
+      // component 3 · your response (text / voice / photo)
+      +`<section class="jw-comp jw-c-resp expanded" data-comp="resp">`
+        +`<div class="jw-chead"><span class="jw-ctag" id="jwRespTag">Your page</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-cbody jw-resp-body">`
+          +`<textarea id="jt" class="letter-body jw-body" rows="6" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
+          +`<div id="jvoice" class="jcap" hidden>`
+            +`<button type="button" class="jrec-btn" id="jrecbtn"><span class="jrec-ring"><span class="jrec-core"></span></span></button>`
+            +`<div class="jcap-label" id="jreclbl">Tap to record</div>`
+            +`<div class="jcap-status" id="jrecstatus"></div>`
+          +`</div>`
+          +`<div id="jphoto" class="jcap" hidden>`
+            +`<button type="button" class="jcap-btn" id="jphotobtn">${ic('camera','jcap-ic')}</button>`
+            +`<div class="jcap-label">Tap to photograph your handwritten page</div>`
+            +`<div class="jcap-status" id="jphotostatus"></div>`
+          +`</div>`
+          +`<div id="jprev" class="letter-interim"></div>`
+          +`<div class="mic-hint" id="michint"></div>`
+          +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
+        +`</div>`
+      +`</section>`
     +`</div>`
-    +`<div class="jw-prompt">“${esc(o.prompt||'')}”</div>`
-    +`<textarea id="jt" class="letter-body jw-body" rows="8" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
-    // Record mode: a single tap-to-record / tap-to-stop button, no text box.
-    +`<div id="jvoice" class="jcap" hidden>`
-      +`<button type="button" class="jrec-btn" id="jrecbtn"><span class="jrec-ring"><span class="jrec-core"></span></span></button>`
-      +`<div class="jcap-label" id="jreclbl">Tap to record</div>`
-      +`<div class="jcap-status" id="jrecstatus"></div>`
+    // bottom input switcher — start on Photo to anchor the practice physically
+    +`<div class="jw-modes" id="jwModes" role="radiogroup" aria-label="How to journal">`
+      +`<button type="button" class="jw-mode on" data-mode="photo" role="radio" aria-checked="true">${ic('camera')}<span>Photo</span></button>`
+      +`<button type="button" class="jw-mode" data-mode="type" role="radio" aria-checked="false">${ic('book')}<span>Text</span></button>`
+      +`<button type="button" class="jw-mode" data-mode="voice" role="radio" aria-checked="false">${ic('mic')}<span>Record</span></button>`
     +`</div>`
-    // Photograph mode: a tap target to snap a picture of your journal.
-    +`<div id="jphoto" class="jcap" hidden>`
-      +`<button type="button" class="jcap-btn" id="jphotobtn">${ic('camera','jcap-ic')}</button>`
-      +`<div class="jcap-label">Tap to take a picture of your journal</div>`
-      +`<div class="jcap-status" id="jphotostatus"></div>`
-    +`</div>`
-    +`<div id="jprev" class="letter-interim"></div>`
-    +`<div class="mic-hint" id="michint"></div>`
-    +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
     +`<div class="jw-foot">`
       +`<button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button>`
     +`</div>`
+    // first-run walkthrough
+    +`<div class="jw-walk" id="jwWalk" hidden><div class="jw-walk-card">`
+      +`<div class="jw-walk-emblem">${ic('book')}</div>`
+      +`<h3>Your journal, in three parts</h3>`
+      +`<ul>`
+        +`<li><b>Timer</b> — a few unhurried minutes.</li>`
+        +`<li><b>Prompt</b> — what to sit with.</li>`
+        +`<li><b>Your page</b> — a photo, a few typed lines, or a voice note.</li>`
+      +`</ul>`
+      +`<p>Tap any section to <b>enlarge</b> it. Switch between <b>Photo · Text · Record</b> at the bottom — start by <b>photographing your handwritten page</b> to anchor the practice.</p>`
+      +`<button class="btn gold" id="jwWalkGo">Begin</button>`
+    +`</div></div>`
   +`</div>`
   +`</div>`;
 }
@@ -6800,22 +6890,39 @@ let jComposePhase='prompt';
 // value without having to remember to reset it. jGetPrompt is kept so the
 // write phase can narrate the prompt it was holding back.
 let jPromptDeferred=false;let jGetPrompt=null;
-let jChosenMode='type';  // Type / Record / Photograph radio from phase 1
+let jChosenMode='photo';  // Photograph / Type / Record — starts on photo (physical anchor)
 function enterWritePhase(){
   jComposePhase='write';
   const p1=$('#jp1'),p2=$('#jp2');if(p1)p1.hidden=true;if(p2)p2.hidden=false;
   try{Haptics.medium();}catch(e){}
   jStartTimer(180);
-  // Show just the chosen input. Type = text box; Record = a tap-to-record button;
-  // Photograph = a tap-to-snap target. Voice/photo results fill the hidden textarea.
-  const mode=jChosenMode||'type';
-  const ta=$('#jt'),jv=$('#jvoice'),jph=$('#jphoto');
-  if(ta)ta.hidden=(mode!=='type');
-  if(jv)jv.hidden=(mode!=='voice');
-  if(jph)jph.hidden=(mode!=='photo');
-  if(mode==='type'&&ta)setTimeout(()=>{try{ta.focus();}catch(e){}},80);
-  _jRecUI(false);
+  const walking=jMaybeWalk();          // show the 3-part walkthrough on first ever open
+  jSetWriteMode(jChosenMode||'photo',walking); // suppress auto-focus while the walkthrough is up
   try{window.scrollTo(0,0);}catch(e){}
+}
+// Show just the chosen input inside the response component, light up the bottom
+// switcher, and expand the response so the chosen input is roomy.
+function jSetWriteMode(m,noFocus){
+  jChosenMode=m;
+  const ta=$('#jt'),jv=$('#jvoice'),jph=$('#jphoto');
+  if(ta)ta.hidden=(m!=='type');
+  if(jv)jv.hidden=(m!=='voice');
+  if(jph)jph.hidden=(m!=='photo');
+  document.querySelectorAll('#jwModes .jw-mode').forEach(b=>{const on=b.dataset.mode===m;b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');});
+  const tag=$('#jwRespTag');if(tag)tag.textContent=(m==='photo'?'Your page':m==='voice'?'Your voice':'Your words');
+  jExpand('resp');
+  if(m!=='voice'&&jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}
+  _jRecUI(false);
+  if(m==='type'&&ta&&!noFocus)setTimeout(()=>{try{ta.focus();}catch(e){}},80);
+}
+// Accordion: the tapped component grows to ~half the stage; the others shrink.
+function jExpand(which){
+  document.querySelectorAll('#jwStage .jw-comp').forEach(c=>c.classList.toggle('expanded',c.dataset.comp===which));
+}
+function jMaybeWalk(){
+  let seen=false;try{seen=localStorage.getItem('lumen_jwrite_walk')==='1';}catch(e){}
+  const w=$('#jwWalk');if(w)w.hidden=seen;
+  return !seen;
 }
 // Update the record button's look + label for the current recording state.
 function _jRecUI(recording){
@@ -6833,13 +6940,19 @@ function exitToPrompt(){
 function wireComposerCommon(getPrompt){
   jGetPrompt=getPrompt;
   // Type / Record / Photograph radio — selecting one sets the write-screen input.
-  jChosenMode='type';
+  jChosenMode='photo';
   document.querySelectorAll('#jpWays .jp-way').forEach(b=>b.onclick=()=>{
     jChosenMode=b.dataset.mode;
     document.querySelectorAll('#jpWays .jp-way').forEach(x=>{const on=x===b;x.classList.toggle('sel',on);x.setAttribute('aria-checked',on?'true':'false');});
     try{Sound.pop();}catch(e){} try{Haptics.select();}catch(e){}
   });
   const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
+  // write-stage wiring (jp2 is in the DOM already, just hidden)
+  jChosenMode='photo';
+  document.querySelectorAll('#jwStage .jw-comp').forEach(c=>{const h=c.querySelector('.jw-chead');if(h)h.onclick=()=>{try{Haptics.select();}catch(e){}jExpand(c.dataset.comp);};});
+  document.querySelectorAll('#jwModes .jw-mode').forEach(b=>b.onclick=()=>{try{Sound.pop();}catch(e){}try{Haptics.select();}catch(e){}jSetWriteMode(b.dataset.mode);});
+  const jwxb=$('#jwx');if(jwxb)jwxb.onclick=()=>{try{Haptics.light();}catch(e){}exitToPrompt();};
+  const jwgo=$('#jwWalkGo');if(jwgo)jwgo.onclick=()=>{const w=$('#jwWalk');if(w)w.hidden=true;try{localStorage.setItem('lumen_jwrite_walk','1');}catch(e){}jSetWriteMode(jChosenMode||'photo');};
   const f=$('#jfile');if(f)f.onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
   const recb=$('#jrecbtn');if(recb)recb.onclick=()=>{try{Haptics.medium();}catch(e){}toggleRecord();};
   const phb=$('#jphotobtn');if(phb)phb.onclick=()=>{try{Haptics.medium();}catch(e){}const ff=$('#jfile');if(ff)ff.click();};
@@ -9983,7 +10096,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v72';
+const CACHE = 'lumen-v73';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
