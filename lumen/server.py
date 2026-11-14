@@ -3171,7 +3171,15 @@ a{color:var(--purple)}
   background:#1b1630;border:1px solid var(--line);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .jx-close svg{width:17px;height:17px}
 .jflow{padding-top:52px}
-.jp1-hero .jp-card{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.jp1-hero .jp-card{position:relative;margin:0 auto;max-width:460px;border-radius:28px;padding:26px 20px 24px;
+  background:linear-gradient(160deg,#8a6a33 0%,#6f5427 50%,#574121 100%);border:1px solid rgba(245,201,119,.42);
+  box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -14px 26px rgba(0,0,0,.24),0 10px 26px -12px rgba(40,24,4,.5)}
+.jp1-hero .jp-card .letter-head span{color:#f0dcae}
+.jp1-hero .jp-title{color:#fff3d8}
+.jp1-hero .jp-way{border-color:rgba(245,201,119,.4);color:#efe0bb;background:rgba(20,13,4,.22)}
+.jp1-hero .jp-way.sel{border-color:rgba(255,230,160,.85);color:#fff6e4;background:rgba(255,220,150,.18)}
+.jp1-hero .jpr-t{color:#ffe3ad;text-shadow:0 0 18px rgba(245,201,119,.45)}
+.jp1-hero .jpr-l{color:#e8c98f}
 .jp1-hero .letter-head{justify-content:center;opacity:.85}
 .jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
 .jbegin .seal-ic{width:22px;height:22px}
@@ -3223,7 +3231,7 @@ a{color:var(--purple)}
 /* --- journal write: gold-bar stage holding 3 depth-gold components --- */
 body.jw-gold{background:linear-gradient(175deg,#fde7ad 0%,#f6cf83 24%,#eaba60 50%,#dba747 76%,#cd9531 100%) fixed !important;overflow:hidden !important}
 html.jw-gold-h{overflow:hidden !important}
-body.jw-gold .jx-close{display:none}
+body.jw-writing .jx-close{display:none}
 /* journal write: locked to the viewport, never scrolls */
 .jwrite{position:fixed !important;inset:0;height:100dvh;max-height:100dvh;overflow:hidden}
 /* timer digits stretch to fill the whole panel (both axes) */
@@ -3265,6 +3273,11 @@ body.jw-gold .jx-close{display:none}
   background:linear-gradient(160deg,#8a6a33 0%,#6f5427 50%,#574121 100%);border:1px solid rgba(245,201,119,.42);
   box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -14px 26px rgba(0,0,0,.26),0 6px 16px -8px rgba(0,0,0,.42)}
 .jw-comp.expanded{flex-grow:2.6;cursor:default}
+/* the prompt panel sits a little taller than the others by default */
+.jw-c-prompt{flex-grow:1.45}
+/* ornamental inset frame — echoes the gold-emblem iconography (a fine gold
+   hairline inside the panel edge, like the linework on the generated icons) */
+.jw-c-timer::before,.jw-c-prompt::before,.jp1-hero .jp-card::before{content:"";position:absolute;inset:7px;border-radius:21px;border:1px solid rgba(255,232,180,.34);box-shadow:inset 0 0 0 3px rgba(90,62,24,.12);pointer-events:none;z-index:3}
 .jw-chead{display:flex;align-items:center;justify-content:space-between;flex:none}
 .jw-ctag{display:flex;align-items:center;color:#f3c877}
 .jw-ctag .i{width:17px;height:17px;filter:drop-shadow(0 0 6px rgba(245,201,119,.45))}
@@ -6917,7 +6930,7 @@ function enterWritePhase(){
   try{Haptics.medium();}catch(e){}
   jStartTimer(180);
   jPhotoTaken=false;
-  try{document.body.classList.add('jw-gold');}catch(e){}   // whole-screen gold ground
+  try{document.body.classList.add('jw-gold','jw-writing');}catch(e){}   // whole-screen gold ground; jw-writing hides the back-X (jp2 has its own)
   const walking=jMaybeWalk();          // show the 3-part walkthrough on first ever open
   jSetWriteMode(jChosenMode||'photo',walking); // suppress auto-focus while the walkthrough is up
   jUpdateSeal();
@@ -7017,7 +7030,7 @@ function _jRecUI(recording){
 }
 function exitToPrompt(){
   jComposePhase='prompt';
-  try{document.body.classList.remove('jw-gold');}catch(e){}
+  try{document.body.classList.remove('jw-writing');}catch(e){}   // stay gold on the prompt screen; just restore the back-X
   jStopTimer();
   if(jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}
   const p1=$('#jp1'),p2=$('#jp2');if(p2)p2.hidden=true;if(p1)p1.hidden=false;
@@ -7025,6 +7038,7 @@ function exitToPrompt(){
 }
 function wireComposerCommon(getPrompt){
   jGetPrompt=getPrompt;
+  try{document.body.classList.add('jw-gold');document.body.classList.remove('jw-writing');}catch(e){}  // the whole journal flow sits on the gold ground now
   // Type / Record / Photograph radio — selecting one sets the write-screen input.
   jChosenMode='photo';
   document.querySelectorAll('#jpWays .jp-way').forEach(b=>b.onclick=()=>{
@@ -7060,7 +7074,7 @@ function sealHandler(payload){
     // completion screen, so the writer decides after they've read it back.
     const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
     try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share:false,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||'',chapter:ex.chapter||null});
-      $('#jt').value='';try{jStopTimer();}catch(_){}try{document.body.classList.remove('jw-gold');}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,false);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
+      $('#jt').value='';try{jStopTimer();}catch(_){}try{document.body.classList.remove('jw-gold','jw-writing');}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,false);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
   };
 }
 
@@ -7325,7 +7339,7 @@ async function renderJournal(){
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
   // it covers the whole screen; restore it on every other journal screen.
   try{const nv=document.getElementById('nav');if(nv){if(jScreen==='compose')nv.classList.add('hidden');else nv.classList.remove('hidden');}}catch(e){}
-  try{if(jScreen!=='compose'){jStopTimer();Sound.bedStop();document.body.classList.remove('jw-gold');}}catch(e){}
+  try{if(jScreen!=='compose'){jStopTimer();Sound.bedStop();document.body.classList.remove('jw-gold','jw-writing');}}catch(e){}
   // The free tier, enforced in the one place every door funnels through.
   if(!_isPrem() && (jScreen==='compose'||jScreen==='plessons')){
     if(journalMode==='season')
@@ -10188,7 +10202,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v86';
+const CACHE = 'lumen-v87';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
