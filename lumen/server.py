@@ -231,26 +231,67 @@ def week_str(d=None):
 # auth (rolodex pattern: pbkdf2 + in-memory token sessions + cookie)
 # ---------------------------------------------------------------------------
 
-SESSIONS = {}  # token -> (email, expires_epoch)
-SESSION_TTL = 60 * 60 * 24 * 30
+SESSIONS = {}  # legacy in-memory fallback: token -> (email, expires_epoch)
+SESSION_TTL = 60 * 60 * 24 * 365  # 1 year — stay signed in until explicit logout
 
 def _hash_pw(pw, salt):
     return hashlib.pbkdf2_hmac("sha256", pw.encode(), bytes.fromhex(salt), 200000).hex()
 
+def _session_secret():
+    """Stable HMAC secret that survives restarts/redeploys, so signed session
+    tokens stay valid across deploys (a redeploy must NOT log everyone out).
+    Prefers $LUMEN_SECRET; otherwise a random secret persisted on the data volume."""
+    s = os.environ.get("LUMEN_SECRET")
+    if s:
+        return s.encode()
+    p = os.path.join(DATA, ".session_secret")
+    try:
+        if os.path.exists(p):
+            data = open(p, "rb").read()
+            if data:
+                return data
+        sec = secrets.token_bytes(32)
+        with open(p, "wb") as f:
+            f.write(sec)
+        try:
+            os.chmod(p, 0o600)
+        except Exception:
+            pass
+        return sec
+    except Exception:
+        return b"lumen-static-fallback-secret-v1"
+
+_SECRET = _session_secret()
+
 def new_session(email):
-    tok = secrets.token_urlsafe(32)
-    SESSIONS[tok] = (email, time.time() + SESSION_TTL)
-    return tok
+    # Stateless signed token: carries its own (email|expiry|signature), so ANY
+    # process validates it with the shared secret — no in-memory store to lose on
+    # restart. This is why a redeploy previously logged everyone out.
+    exp = int(time.time()) + SESSION_TTL
+    msg = "%s|%d" % (email, exp)
+    sig = hmac.new(_SECRET, msg.encode(), hashlib.sha256).hexdigest()[:32]
+    return base64.urlsafe_b64encode(("%s|%s" % (msg, sig)).encode()).decode().rstrip("=")
 
 def session_email(tok):
+    if not tok:
+        return None
+    # Verify a stateless signed token (works across any process / after restart).
+    try:
+        pad = "=" * (-len(tok) % 4)
+        raw = base64.urlsafe_b64decode(tok + pad).decode()
+        email, exp, sig = raw.rsplit("|", 2)
+        if time.time() <= float(exp):
+            good = hmac.new(_SECRET, ("%s|%s" % (email, exp)).encode(),
+                            hashlib.sha256).hexdigest()[:32]
+            if hmac.compare_digest(good, sig):
+                return email
+    except Exception:
+        pass
+    # Legacy fallback for tokens minted before this change (best-effort).
     v = SESSIONS.get(tok)
-    if not v:
-        return None
-    email, exp = v
-    if time.time() > exp:
-        SESSIONS.pop(tok, None)
-        return None
-    return email
+    if v and v[1] > time.time():
+        return v[0]
+    return None
 
 # Catch obvious email typos at signup (a ".con" address can never receive mail).
 _TYPO_DOMAINS = {
