@@ -17,6 +17,7 @@ import { Agent } from "./agent.ts";
 import { docsIndexHtml, docPageHtml } from "./docs.ts";
 import * as home from "./home.ts";
 import * as ai from "./ai.ts";
+import * as voiceagent from "./voiceagent.ts";
 import * as audio from "./audio.ts";
 import * as spotify from "./spotify.ts";
 import * as curator from "./curator.ts";
@@ -26,6 +27,7 @@ import * as calibration from "./calibration.ts";
 import * as snapcast from "./snapcast.ts";
 import * as pwRouter from "./pwRouter.ts";
 import * as lights from "./lights.ts";
+import * as party from "./party.ts";
 import * as localLights from "./localLights.ts";
 import * as hub from "./hub.ts";
 import * as climate from "./climate.ts";
@@ -266,6 +268,15 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     const body = await readBody(req);
     let text = "";
     try { text = String(JSON.parse(body || "{}").text ?? ""); } catch {}
+    // Real conversational agent (Claude via ccut gateway) — home control + web search.
+    if (voiceagent.enabled() && text.trim()) {
+      try {
+        const r = await voiceagent.runAgent(text);
+        console.log(`[agent] (ccut) in=${JSON.stringify(text)} actions=${JSON.stringify(r.actions)} reply=${JSON.stringify(r.reply)}`);
+        json(res, { ok: true, heard: text, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent", summary: home.summary() });
+        return;
+      } catch (e) { console.log("[agent] ccut error:", (e as Error)?.message); }
+    }
     if (ai.aiEnabled()) {
       try {
         const r = await ai.aiText(text);
@@ -707,6 +718,9 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
     const cmd = String(p.cmd ?? "");
     let hint: string | undefined;
+    // Any real light change ends the party first (so "set the lights green" takes over),
+    // except brightness (which can ride along) and the party command itself.
+    if (party.isOn() && cmd !== "party" && cmd !== "brightness") party.stop(false);
     switch (cmd) {
       case "toggle": { const r = await lights.control(String(p.id), { on: !!p.on }); if (!r.ok) hint = r.reason; break; }
       case "brightness": { const r = await lights.control(String(p.id), { brightness: Number(p.brightness) }); if (!r.ok) hint = r.reason; break; }
@@ -714,6 +728,11 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "temp": { const r = await lights.control(String(p.id), { colorTempK: Number(p.colorTempK) }); if (!r.ok) hint = r.reason; break; }
       case "light-room": { lights.setRoom(String(p.id), String(p.room ?? "—")); break; }
       case "room-power": { const n = await lights.setRoomPower(String(p.room ?? ""), !!p.on); hint = `${p.on ? "On" : "Off"} · ${n} light${n === 1 ? "" : "s"}`; break; }
+      case "party": {
+        if (p.on === false) { party.stop(); hint = "Party over"; }
+        else { const r = await party.start(); hint = `Party on · ${r.lights} light${r.lights === 1 ? "" : "s"} @ ${Math.round(60000 / r.intervalMs)} fpm`; }
+        break;
+      }
       case "scene": { const s = home.activateScene(String(p.id)); hint = (s as any).name ? `${(s as any).name} scene` : undefined; break; }
       case "onboard-light": { const l = localLights.onboard(p.device || {}, String(p.room ?? "Living Room")); hint = `Added ${l.name} to ${l.room}`; break; }
       case "reconnect-light": { const l = await localLights.reconnect(String(p.id)); hint = l ? `${l.name}: ${l.status}` : "not found"; break; }

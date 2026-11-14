@@ -17,7 +17,7 @@ const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI || "http://127.0.0.1:4700/
 const SCOPES = [
   "user-read-private", "user-read-email",
   "playlist-read-private", "playlist-read-collaborative",
-  "user-library-read", "user-top-read",
+  "user-library-read", "user-library-modify", "user-top-read",
   "user-read-playback-state", "user-modify-playback-state", "streaming",
 ].join(" ");
 
@@ -181,6 +181,18 @@ export async function search(q: string, want = 10) {
   return out.slice(0, want);
 }
 
+// Search Spotify's PUBLIC/editorial playlists (e.g. "Today's Top Hits", "RapCaviar",
+// genre/mood mixes) — the catalog the user doesn't personally own.
+export async function searchPlaylists(q: string, want = 5) {
+  const j = await api(`/search?type=playlist&limit=${want}&q=${encodeURIComponent(q)}`);
+  const items = j.playlists?.items || [];
+  return items.filter(Boolean).map((p: any) => ({
+    id: p.id, name: p.name, uri: p.uri,
+    owner: p.owner?.display_name || "",
+    tracks: p.tracks?.total || 0,
+  }));
+}
+
 export async function devices() {
   const j = await api("/me/player/devices");
   return (j.devices || []).map((d: any) => ({
@@ -262,12 +274,33 @@ export async function currentlyPlaying() {
   if (!j || !j.item) return null;
   const t = j.item;
   return {
-    source: "spotify" as const,
+    source: "spotify" as const, id: t.id,
     title: t.name, artist: (t.artists || []).map((a: any) => a.name).join(", "),
     album: t.album?.name ?? "", art: t.album?.images?.[0]?.url ?? "",
     playing: !!j.is_playing, positionMs: j.progress_ms ?? 0, durationMs: t.duration_ms ?? 0,
     device: j.device?.name ?? "",
   };
+}
+
+/** Current track's tempo (BPM) for beat-matching party mode. null if unavailable
+ * (the audio-features endpoint 403s for some newer apps — party mode falls back). */
+export async function trackTempo(): Promise<number | null> {
+  try {
+    const np = await currentlyPlaying();
+    if (!np?.id) return null;
+    const j = await api(`/audio-features/${np.id}`);
+    return typeof j?.tempo === "number" ? j.tempo : null;
+  } catch { return null; }
+}
+
+/** Shuffle / repeat / save — fuller player control for the voice agent. */
+export async function shuffle(on: boolean) { await api(`/me/player/shuffle?state=${on}`, { method: "PUT" }); return { ok: true }; }
+export async function repeat(mode: "track" | "context" | "off") { await api(`/me/player/repeat?state=${mode}`, { method: "PUT" }); return { ok: true }; }
+export async function saveCurrent() {
+  const c = await currentlyPlaying();
+  if (!c?.id) return null;
+  await api(`/me/tracks?ids=${c.id}`, { method: "PUT" });
+  return c;
 }
 
 function trackOf(t: any) {

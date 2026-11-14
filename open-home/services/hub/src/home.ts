@@ -223,24 +223,28 @@ export function respond(textRaw: string): { understood: boolean; action?: string
   else if (has("i'm home", "im home", "i am home", "welcome")) { activateScene("home"); action = "home"; reply = "Welcome home 🏡 — unlocked and lit up."; }
   else if (has("dinner")) { activateScene("dinner"); action = "dinner"; reply = "Dinner scene 🍽️ — warm lights and some jazz."; }
   else if (has("temperature", "thermostat", "degree", "warmer", "cooler", "heat", "cool")) {
-    const m = t.match(/(\d{2})/); const dev = getDevice("thermostat_main")!;
-    if (m) dev.state.target = Number(m[1]);
-    else if (has("warmer", "heat")) dev.state.target += 2;
-    else if (has("cooler", "cool")) dev.state.target -= 2;
-    action = "thermostat"; reply = `Set the thermostat to ${dev.state.target}° 🌡️.`;
+    const m = t.match(/(\d{2})/); const dev = getDevice("thermostat_main");
+    if (dev) {
+      if (m) dev.state.target = Number(m[1]);
+      else if (has("warmer", "heat")) dev.state.target += 2;
+      else if (has("cooler", "cool")) dev.state.target -= 2;
+    }
+    action = "thermostat";
+    reply = dev ? `Set the thermostat to ${dev.state.target}° 🌡️.`
+                : (m ? `Setting the thermostat to ${Number(m[1])}° 🌡️.` : "Adjusting the thermostat 🌡️.");
   }
   else if (has("light", "lamp")) {
     const room = ROOM_LIGHTS.find((r) => t.includes(r[0]));
-    if (room) { const dev = getDevice(room[1])!; dev.state.on = !off; action = "lights"; reply = `${dev.name} ${dev.state.on ? "on 💡" : "off"}.`; }
+    if (room) { const dev = getDevice(room[1]); if (dev) dev.state.on = !off; action = "lights"; reply = dev ? `${dev.name} ${dev.state.on ? "on 💡" : "off"}.` : `${room[0].charAt(0).toUpperCase() + room[0].slice(1)} lights ${off ? "off" : "on 💡"}.`; }
     else { byType("light").filter((l) => l.id !== "light_porch").forEach((l) => (l.state.on = !off)); action = "lights"; reply = `All lights ${off ? "off" : "on 💡"}.`; }
   }
   else if (has("unlock")) { byType("lock").forEach((l) => (l.state.locked = false)); action = "lock"; reply = "Doors unlocked 🔓."; }
   else if (has("lock")) { byType("lock").forEach((l) => (l.state.locked = true)); action = "lock"; reply = "All doors locked 🔒."; }
-  else if (has("garage")) { const g = getDevice("garage_door")!; g.state.open = has("open") ? true : has("close") ? false : !g.state.open; action = "garage"; reply = `Garage ${g.state.open ? "opening" : "closing"} 🚗.`; }
-  else if (has("music", "song", "play", "spotify", "jazz")) { const s = getDevice("speaker_living")!; s.state.playing = !off; if (s.state.playing && s.state.track === "—") s.state.track = "Chill Mix"; action = "music"; reply = `Music ${s.state.playing ? "playing 🎵" : "paused"}.`; }
+  else if (has("garage")) { const g = getDevice("garage_door"); const openIt = has("open") ? true : has("close") ? false : !(g?.state.open); if (g) g.state.open = openIt; action = "garage"; reply = `Garage ${openIt ? "opening" : "closing"} 🚗.`; }
+  else if (has("music", "song", "play", "spotify", "jazz")) { const s = getDevice("speaker_living"); if (s) { s.state.playing = !off; if (s.state.playing && s.state.track === "—") s.state.track = "Chill Mix"; } action = "music"; reply = `Music ${off ? "paused" : "playing 🎵"}.`; }
   else if (has("camera")) { action = "cameras"; reply = "Here are your cameras 📷 — all recording."; }
   else if (has("doorbell", "front door", "who's at", "whos at")) { action = "doorbell"; reply = "Showing the front door 🔔."; }
-  else if (has("vacuum", "clean", "roomba")) { const v = getDevice("vacuum_robo")!; v.state.status = off ? "returning" : "cleaning"; action = "vacuum"; reply = `Vacuum ${v.state.status} 🧹.`; }
+  else if (has("vacuum", "clean", "roomba")) { const v = getDevice("vacuum_robo"); const st = off ? "returning" : "cleaning"; if (v) v.state.status = st; action = "vacuum"; reply = `Vacuum ${st} 🧹.`; }
   else { reply = "Sorry, I didn't catch that. Try \"good night\", \"turn on the kitchen lights\", \"set it to 70\", or \"lock the doors\"."; }
 
   return { understood: !!action, action, reply };
@@ -294,14 +298,14 @@ export function summary() {
   const lights = byType("light");
   const lightsOn = lights.filter((l) => l.state.on).length;
   const locks = byType("lock");
-  const thermo = getDevice("thermostat_main")!;
+  const thermo = getDevice("thermostat_main");
   return {
     devices: devices.length,
     rooms: ROOMS.length,
     lightsOn, lightsTotal: lights.length,
     allLocked: locks.every((l) => l.state.locked),
     anyPlaying: byType("speaker").some((s) => s.state.playing),
-    temp: thermo.state.temp, target: thermo.state.target,
+    temp: thermo?.state.temp ?? null, target: thermo?.state.target ?? null,
     scene: currentScene,
   };
 }

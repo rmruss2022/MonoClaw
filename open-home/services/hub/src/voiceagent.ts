@@ -140,6 +140,46 @@ async function setRoomVolume(q: string): Promise<string> {
   return `volume ${label}`;
 }
 
+// Genre/mood/collection queries should play a PLAYLIST; specific artists/songs play tracks.
+const GENRES = ["pop", "rock", "jazz", "classical", "hip hop", "hip-hop", "rap", "country",
+  "indie", "lofi", "lo-fi", "edm", "dance", "house", "techno", "trap", "r&b", "rnb", "soul",
+  "funk", "blues", "metal", "punk", "reggae", "reggaeton", "latin", "afrobeats", "k-pop",
+  "kpop", "gospel", "ambient", "acoustic", "folk", "disco", "grunge"];
+const PLAYLIST_MARKERS = ["hit", "top ", "mix", "playlist", "radio", "station", "vibe", "chill",
+  "workout", "party", "focus", "sleep", "throwback", "essentials", "this is", "discover",
+  "release radar", "daily mix", "charts", "trending", "best of", "roadtrip", "road trip",
+  "dinner", "study", "classics", "anthems", "bangers", "hype", "relax", "jams"];
+function wantsPlaylist(q: string): boolean {
+  const s = q.toLowerCase().trim();
+  if (GENRES.includes(s)) return true;
+  return PLAYLIST_MARKERS.some((m) => s.includes(m));
+}
+
+// Tidy a playlist title for speaking: drop SEO spam after | / • / - separators,
+// strip a leading "the" (so we don't say "the The ..."), and cap the length.
+// Pick the most relevant playlist from search results — Spotify personalizes search and
+// often ranks junk/short-named playlists first, so score by query-word overlap in the name
+// (and prefer Spotify's own editorial) instead of blindly taking result #0.
+function pickBestPlaylist(query: string, found: any[]): any {
+  const qwords = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+  let best = found[0];
+  let bestScore = -1;
+  for (const p of found) {
+    const n = String(p?.name || "").toLowerCase();
+    let score = qwords.filter((w) => n.includes(w)).length;
+    if (String(p?.owner || "").toLowerCase() === "spotify") score += 2;
+    if (score > bestScore) { bestScore = score; best = p; }
+  }
+  return best;
+}
+
+function speakName(n: string): string {
+  let s = String(n || "").split(/[|•·]/)[0].trim();
+  s = s.replace(/^the\s+/i, "").trim();
+  if (s.length > 44) s = s.slice(0, 44).replace(/\s+\S*$/, "").trim();
+  return s || String(n || "").trim();
+}
+
 async function doMusic(a: any): Promise<string> {
   const op = String(a.op || "play").toLowerCase();
   const src = String(a.source || "spotify").toLowerCase();
@@ -176,15 +216,33 @@ async function doMusic(a: any): Promise<string> {
     const q = query.toLowerCase();
     if (/\bliked\b|liked songs|my songs|my music|my library|saved songs/.test(q)) {
       const uris = (await spotify.liked(50)).map((t: any) => t.uri).filter(Boolean);
-      if (uris.length) { await spotify.play({ uris, deviceId }); return "playing your liked songs"; }
+      if (uris.length) { await spotify.play({ uris, deviceId }); return "NOWPLAYING::your liked songs"; }
     }
-    // named playlist
-    const pls = await spotify.playlists(50);
-    const pl = pls.find((p: any) => { const n = String(p.name || "").toLowerCase(); return n && (q.includes(n) || n.includes(q)); });
-    if (pl) { await spotify.play({ contextUri: pl.uri, deviceId }); return `playing the ${pl.name} playlist`; }
-    // search (song / artist / genre like "jazz")
-    const uris = (await spotify.search(query, 25)).map((t: any) => t.uri).filter(Boolean).slice(0, 30);
-    if (uris.length) { await spotify.play({ uris, deviceId }); return `playing ${query} on Spotify`; }
+    // the user's OWN playlist, if the name matches
+    const mine = await spotify.playlists(50);
+    const pl = mine.find((p: any) => { const n = String(p.name || "").toLowerCase(); return n && (q.includes(n) || n.includes(q)); });
+    if (pl) { await spotify.play({ contextUri: pl.uri, deviceId }); return `NOWPLAYING::the ${speakName(pl.name)} playlist`; }
+    // Genre / mood / "top hits" / "mix" / "playlist" → play the best PUBLIC playlist
+    // (Spotify's editorial catalog), not a literal track search.
+    if (wantsPlaylist(q)) {
+      try {
+        const found = await spotify.searchPlaylists(query, 10);
+        if (found.length) { const pl2 = pickBestPlaylist(query, found); await spotify.play({ contextUri: pl2.uri, deviceId }); return `NOWPLAYING::the ${speakName(pl2.name)} playlist`; }
+      } catch (e) { console.log("[agent] playlist search failed:", (e as Error)?.message); }
+    }
+    // Specific song / artist → track search
+    const tracks = await spotify.search(query, 25);
+    const uris = tracks.map((t: any) => t.uri).filter(Boolean).slice(0, 30);
+    if (uris.length) {
+      await spotify.play({ uris, deviceId });
+      const first = tracks[0];
+      return first ? `NOWPLAYING::${first.title} by ${first.artist}` : `NOWPLAYING::${query}`;
+    }
+    // Last resort: any public playlist that matches
+    try {
+      const found = await spotify.searchPlaylists(query, 10);
+      if (found.length) { const pl2 = pickBestPlaylist(query, found); await spotify.play({ contextUri: pl2.uri, deviceId }); return `NOWPLAYING::the ${speakName(pl2.name)} playlist`; }
+    } catch {}
     return `I couldn't find ${query} on Spotify`;
   } catch {
     await run("soloist", ["ctl", "play"]); return "playing Spotify";
@@ -240,7 +298,12 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   }
   console.log("[agent] llm out:", JSON.stringify({ say: out.say, actions: out.actions, web_search: out.web_search }));
   const done = await execActions(out.actions || []);
+  // Music plays tag their result as "NOWPLAYING::<name>" so we can announce the
+  // real thing that started, not the model's generic "sure, playing that".
+  const np = done.map((d) => /^NOWPLAYING::(.+)/.exec(d)?.[1]).find(Boolean);
+  const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
   let reply = String(out.say || "").trim();
-  if (!reply) reply = done.length ? "Done." : "Okay.";
-  return { reply, actions: done, understood: done.length > 0 || !!out.say };
+  if (np) reply = `Now playing ${np}.`;
+  if (!reply) reply = cleanDone.length ? "Done." : "Okay.";
+  return { reply, actions: cleanDone, understood: cleanDone.length > 0 || !!out.say };
 }
