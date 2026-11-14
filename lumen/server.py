@@ -3259,9 +3259,9 @@ body.jw-gold .jx-close{display:none}
   background:rgba(60,40,10,.42);color:#ffe6ab;display:flex;align-items:center;justify-content:center}
 .jw-x .i{width:18px;height:18px}
 .jw-comp{position:relative;display:flex;flex-direction:column;min-height:0;flex:1 1 0;overflow:hidden;cursor:pointer;
-  border-radius:16px;padding:12px 14px;transition:flex-grow .34s cubic-bezier(.3,.9,.3,1);
-  background:linear-gradient(160deg,#5a431f 0%,#3f2f16 48%,#2b2010 100%);border:1px solid rgba(245,201,119,.38);
-  box-shadow:inset 0 1px 0 rgba(255,228,160,.22),inset 0 -14px 26px rgba(0,0,0,.42),0 6px 16px -8px rgba(0,0,0,.5)}
+  border-radius:28px;padding:12px 16px;transition:flex-grow .34s cubic-bezier(.3,.9,.3,1);
+  background:linear-gradient(160deg,#8a6a33 0%,#6f5427 50%,#574121 100%);border:1px solid rgba(245,201,119,.42);
+  box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -14px 26px rgba(0,0,0,.26),0 6px 16px -8px rgba(0,0,0,.42)}
 .jw-comp.expanded{flex-grow:2.6;cursor:default}
 .jw-chead{display:flex;align-items:center;justify-content:space-between;flex:none}
 .jw-ctag{display:flex;align-items:center;color:#f3c877}
@@ -10183,7 +10183,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v80';
+const CACHE = 'lumen-v81';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
