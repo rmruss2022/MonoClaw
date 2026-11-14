@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# sc-ctl — control the SoundCloud mpv helper over its IPC socket.
+#   pause | resume | next | stop | vol <0-150> | status | now
+# status/now let the voice client detect that SoundCloud (not Spotify) is the live source
+# and route transport commands + the "Now playing …" announce accordingly.
+SOCK=/tmp/sc-mpv.sock
+
+# Read an mpv property via IPC; prints its value (empty + exit 1 if no player).
+q() {
+  python3 - "$1" <<'PY' 2>/dev/null
+import socket, json, sys, time
+prop = sys.argv[1]
+try:
+    s = socket.socket(socket.AF_UNIX); s.settimeout(1.0); s.connect("/tmp/sc-mpv.sock")
+    s.sendall((json.dumps({"command": ["get_property", prop]}) + "\n").encode())
+    time.sleep(0.15)
+    data = s.recv(65536).decode("utf8", "ignore")
+    for line in data.splitlines():
+        j = json.loads(line)
+        if "data" in j:
+            print(j["data"]); break
+    else:
+        sys.exit(1)
+except Exception:
+    sys.exit(1)
+PY
+}
+
+case "$1" in
+  pause)        C='{"command":["set_property","pause",true]}';;
+  resume|play)  C='{"command":["set_property","pause",false]}';;
+  next)         C='{"command":["playlist-next"]}';;
+  stop)         C='{"command":["quit"]}';;
+  vol)          C="{\"command\":[\"set_property\",\"volume\",$2]}";;
+  status)
+    p=$(q pause); [ -z "$p" ] && { echo "no active SoundCloud"; exit 1; }
+    [ "$p" = "True" ] && echo "paused" || echo "playing"; exit 0;;
+  now)
+    t=$(q media-title); [ -z "$t" ] && { echo "no active SoundCloud"; exit 1; }
+    echo "$t"; exit 0;;
+  *) echo "usage: sc-ctl pause|resume|next|stop|vol <0-150>|status|now"; exit 1;;
+esac
+python3 -c "import socket;s=socket.socket(socket.AF_UNIX);s.connect('$SOCK');s.send(('$C'+chr(10)).encode())" 2>/dev/null && echo ok || echo "no active SoundCloud"

@@ -355,6 +355,19 @@ def _soloist_now():
         return None
 
 
+def _sc_now():
+    """Current SoundCloud track title (via sc-ctl now → mpv IPC), or None."""
+    try:
+        p = subprocess.run(["sc-ctl", "now"], env=_AENV, timeout=2,
+                           stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        if p.returncode != 0:
+            return None
+        s = p.stdout.decode("utf8", "ignore").strip()
+        return s[:60] if s and "no active" not in s.lower() else None
+    except Exception:
+        return None
+
+
 def _open_mic_once():
     # When MIC_PW_SOURCE is set we capture from a PipeWire node (the AEC'd
     # echo-cancel source) so the music the X10 is playing is already subtracted
@@ -761,6 +774,22 @@ def fast_intent(text, snapshot=None):
              "what's today", "whats today", "what's today's date", "whats todays date"):
         return ("date", f"It's {datetime.now().strftime('%A, %B %-d')}.")
     if ("skip" in t or "next" in words) and "playlist" not in t:
+        # Route "next" to whatever source is actually playing right now (not always Spotify).
+        music_playing(fresh=True)
+        if _music_sources.get("soundcloud") and not _music_sources.get("spotify"):
+            before = _sc_now()
+            _run(["sc-ctl", "next"])                 # advance the mpv playlist (individual tracks)
+            nowp = None
+            for _ in range(10):                      # SoundCloud resolves the next track via ytdl (slower)
+                time.sleep(0.3)
+                cur = _sc_now()
+                if cur and cur != before:
+                    nowp = cur
+                    break
+            log(f"skip(soundcloud): new track = {nowp!r}")
+            if nowp:
+                _say(f"Now playing {nowp}.")
+            return ("skip", None)
         before = _soloist_now()
         _run(["soloist", "ctl", "next"])            # advances the track (and auto-plays it)…
         _run(["soloist", "ctl", "pause"])           # …so re-pause it: announcement stays clean + audible

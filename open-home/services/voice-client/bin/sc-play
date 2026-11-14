@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# sc-play "<soundcloud url | search terms>" — play SoundCloud on the X10 as INDIVIDUAL tracks.
+#
+# Expands a set / "/likes" page / free-text search into a real mpv playlist (one entry per
+# track) instead of a single continuous stream. That makes "next" advance track-by-track and
+# lets `sc-ctl now` report the real song title (media-title) for the "Now playing …" announce.
+export XDG_RUNTIME_DIR=/run/user/1000 PATH="/usr/local/bin:/home/pi/.local/bin:$PATH"
+SOCK=/tmp/sc-mpv.sock
+PLST=/tmp/sc-playlist.txt
+pkill -f "input-ipc-server=$SOCK" 2>/dev/null; sleep 0.3
+soloist ctl pause >/dev/null 2>&1   # one source at a time: stop Spotify so the X10 has a single stream
+arg="$*"
+case "$arg" in
+  http*|https*) src="$arg" ;;              # a track / set / "<user>/likes" URL
+  *)            src="scsearch25:$arg" ;;   # free text → up to 25 individual tracks (so music keeps going)
+esac
+# Flatten to individual track page URLs — sets, /likes and searches all expand here.
+yt-dlp --no-warnings --flat-playlist --print webpage_url "$src" 2>/dev/null > "$PLST"
+if [ ! -s "$PLST" ]; then echo "no SoundCloud match for: $arg"; exit 1; fi
+setsid mpv --no-video --no-terminal --volume=100 \
+  --audio-device=pipewire/bluez_output.F4_4E_FD_49_83_98.1 \
+  --input-ipc-server=$SOCK --playlist="$PLST" >/tmp/sc-mpv.log 2>&1 &
+echo "SoundCloud playing ($(wc -l < "$PLST") tracks): $(head -1 "$PLST")"
