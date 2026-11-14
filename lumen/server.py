@@ -2678,6 +2678,14 @@ nav button.on{color:var(--text);background:#211a37}
 .fstat{background:#160f26;border:1px solid var(--line);border-radius:16px;padding:14px 4px}
 .fsn{font-size:27px;font-weight:800;color:var(--gold);line-height:1}
 .fsl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:6px;line-height:1.2}
+.seal-share{display:inline-flex;align-items:center;gap:9px;margin:0 auto 16px;padding:12px 18px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--line);background:#15122280;color:var(--text);font-size:14px;font-weight:600;transition:border-color .18s,background .18s,color .18s}
+.seal-share svg,.seal-share .i{width:17px;height:17px;color:var(--muted);transition:color .18s}
+.seal-share .ss-state{font-size:12px;font-weight:600;color:var(--muted);padding:2px 8px;border-radius:999px;background:#0f0c1a}
+.seal-share.on{border-color:var(--gold);background:rgba(245,201,119,.12)}
+.seal-share.on svg,.seal-share.on .i{color:var(--gold)}
+.seal-share.on .ss-state{color:#2a1a05;background:var(--gold)}
+.seal-share:active{transform:scale(.98)} .seal-share:disabled{opacity:.6}
 .finale-lines{text-align:left;display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
 .fline{display:flex;align-items:center;gap:12px;background:#120e20;border:1px solid var(--line);border-radius:14px;padding:11px 13px}
 .fli{display:flex}.fli .i{width:20px;height:20px}
@@ -2978,9 +2986,9 @@ a{color:var(--purple)}
 .jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
 .jbegin .seal-ic{width:22px;height:22px}
 .jbegin-sub{text-align:center;font-size:13px;color:var(--muted);max-width:360px;margin:0 auto}
-.jwrite{display:flex;flex-direction:column;gap:14px}
-.jw-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px}
-.jtimer{display:flex;align-items:baseline;gap:8px;padding:10px 18px;border:1px solid var(--line);border-radius:16px;
+.jwrite{display:flex;flex-direction:column;gap:14px;min-height:calc(100dvh - 88px)}
+.jw-top{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px}
+.jtimer{display:flex;width:100%;align-items:baseline;justify-content:center;gap:8px;padding:10px 18px;border:1px solid var(--line);border-radius:16px;
   background:radial-gradient(120% 140% at 50% 0,rgba(245,201,119,.12),rgba(20,16,40,.4));transition:border-color .4s,background .4s}
 .jtimer .jt-time{font-size:30px;font-weight:800;letter-spacing:.5px;color:var(--gold);font-variant-numeric:tabular-nums;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
 .jtimer .jt-lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
@@ -3019,9 +3027,9 @@ a{color:var(--purple)}
 .jmode.rec{border-color:rgba(255,120,120,.7);background:rgba(90,20,30,.35);animation:jRecPulse 1.1s ease-in-out infinite}
 .jmode.rec .jm-ic{color:#ff8a8a}
 @keyframes jRecPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,90,90,.35)}50%{box-shadow:0 0 0 7px rgba(255,90,90,0)}}
-.jw-body{min-height:200px;border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(14,10,28,.5)}
-.jw-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.jw-foot .letter-seal-btn{margin:0 0 0 auto}
+.jw-body{flex:1;min-height:200px;border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(14,10,28,.5)}
+.jw-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:auto;padding-top:6px}
+.jw-foot .letter-seal-btn{margin:0;width:100%;max-width:420px;border-radius:999px;padding:16px 28px;font-size:17px}
 .letter.mini{padding:16px 18px;margin-top:12px}
 .letter-tag{display:inline-flex;align-items:center;gap:5px;font-style:normal;font-size:11px;color:var(--muted)}
 .letter-tag .i{width:13px;height:13px}
@@ -3075,6 +3083,22 @@ a{color:var(--purple)}
 .jmode .i{width:18px;height:18px}
 .jmode.on{background:linear-gradient(160deg,#241c3e,#1b1530);color:var(--text);box-shadow:0 0 0 1px #ffffff0c inset}
 .jmode-blurb{font-size:12.5px;font-style:italic;font-family:var(--serif);margin:0 2px 12px;color:var(--muted)}
+/* Record & Photograph capture screens (write phase) */
+.jcap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px 0;text-align:center}
+.jcap[hidden]{display:none}
+.jcap-label{font-size:15px;color:var(--text);font-weight:600;max-width:300px;line-height:1.35}
+.jcap-status{font-size:13px;color:var(--muted);min-height:18px}
+.jcap-status svg{width:14px;height:14px;vertical-align:-2px}
+.jrec-btn{width:116px;height:116px;border-radius:50%;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.jrec-ring{width:116px;height:116px;border-radius:50%;border:3px solid var(--gold);display:flex;align-items:center;justify-content:center}
+.jrec-core{width:82px;height:82px;border-radius:50%;background:#e85d5d;transition:all .22s ease}
+.jrec-btn:active .jrec-core{transform:scale(.92)}
+.jrec-btn.rec .jrec-ring{animation:jrecpulse 1.5s infinite}
+.jrec-btn.rec .jrec-core{width:40px;height:40px;border-radius:10px}
+@keyframes jrecpulse{0%{box-shadow:0 0 0 0 rgba(232,93,93,.45)}70%{box-shadow:0 0 0 16px rgba(232,93,93,0)}100%{box-shadow:0 0 0 0 rgba(232,93,93,0)}}
+.jcap-btn{width:124px;height:124px;border-radius:26px;border:2px dashed rgba(245,201,119,.5);background:#15111f;color:var(--gold);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s}
+.jcap-btn svg{width:46px;height:46px}
+.jcap-btn:active{transform:scale(.97)} .jcap-btn.live{opacity:.6}
 .jrec{display:flex;align-items:center;gap:12px;margin:2px 2px 12px;padding:13px 14px;border-radius:16px;
   background:linear-gradient(135deg,rgba(245,201,119,.10),rgba(168,85,247,.07));
   border:1px solid rgba(245,201,119,.28);box-shadow:0 8px 28px -16px var(--gold)}
@@ -3086,9 +3110,9 @@ a{color:var(--purple)}
 .jrec-kick .i{width:12px;height:12px}
 .jrec-title{font-family:var(--serif);font-size:16px;color:var(--text);margin-top:3px}
 .jrec-reason{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
-.jrec-btn{flex:none;align-self:center;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;border:0;
+.jrec-begin{flex:none;align-self:center;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;border:0;
   border-radius:999px;padding:9px 16px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
-.jrec-btn:active{transform:scale(.97)}
+.jrec-begin:active{transform:scale(.97)}
 /* journal first-run welcome + pledge */
 .jwelc-hero{text-align:center;padding:12px 6px 4px}
 .jwelc-halo{width:64px;height:64px;margin:6px auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;
@@ -6406,7 +6430,7 @@ function jRecCard(){
       +`<div class="jrec-title">${esc(jRec.title||'')}</div>`
       +`<div class="jrec-reason">${esc(jRec.reason||'')}</div>`
     +`</div>`
-    +`<button class="jrec-btn" id="jrecbtn">Begin</button>`
+    +`<button class="jrec-begin" id="jrecbeginbtn">Begin</button>`
   +`</div>`;
 }
 
@@ -6458,11 +6482,22 @@ function composerHTML(o){
     +`</div>`
     +`<div class="jw-prompt">“${esc(o.prompt||'')}”</div>`
     +`<textarea id="jt" class="letter-body jw-body" rows="8" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
+    // Record mode: a single tap-to-record / tap-to-stop button, no text box.
+    +`<div id="jvoice" class="jcap" hidden>`
+      +`<button type="button" class="jrec-btn" id="jrecbtn"><span class="jrec-ring"><span class="jrec-core"></span></span></button>`
+      +`<div class="jcap-label" id="jreclbl">Tap to record</div>`
+      +`<div class="jcap-status" id="jrecstatus"></div>`
+    +`</div>`
+    // Photograph mode: a tap target to snap a picture of your journal.
+    +`<div id="jphoto" class="jcap" hidden>`
+      +`<button type="button" class="jcap-btn" id="jphotobtn">${ic('camera','jcap-ic')}</button>`
+      +`<div class="jcap-label">Tap to take a picture of your journal</div>`
+      +`<div class="jcap-status" id="jphotostatus"></div>`
+    +`</div>`
     +`<div id="jprev" class="letter-interim"></div>`
     +`<div class="mic-hint" id="michint"></div>`
     +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
     +`<div class="jw-foot">`
-      +`<label class="letter-share"><input type="checkbox" id="js"> <span>Share to community</span></label>`
       +`<button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button>`
     +`</div>`
   +`</div>`
@@ -6502,7 +6537,7 @@ async function toggleRecord(){
   const hint=$('#michint');
   try{
     jRecStream=await navigator.mediaDevices.getUserMedia({audio:true});
-  }catch(e){ toast('Microphone permission needed to record.'); _jSetMode('type'); return; }
+  }catch(e){ toast('Microphone permission needed to record.'); _jRecUI(false); return; }
   try{
     jChunks=[];
     let mt='';
@@ -6514,7 +6549,8 @@ async function toggleRecord(){
     jMediaRec.onstop=async()=>{
       clearTimeout(jRecTimeout);
       try{jRecStream.getTracks().forEach(t=>t.stop());}catch(e){}
-      const vb=document.querySelector('.jmode[data-mode="voice"]');if(vb)vb.classList.remove('rec');
+      _jRecUI(false);
+      const rst=$('#jrecstatus');if(rst)rst.textContent='Transcribing your words…';
       if(hint)hint.textContent='Transcribing your words…';
       const type=(jMediaRec&&jMediaRec.mimeType)||mt||'audio/webm';
       const blob=new Blob(jChunks,{type});
@@ -6524,17 +6560,19 @@ async function toggleRecord(){
         const dataUrl=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.onerror=rej;fr.readAsDataURL(blob);});
         const r=await api('journal/transcribe-audio','POST',{audio:dataUrl,filename:'note.'+ext});
         const t=$('#jt'),add=(r.text||'').trim();
-        if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;t.scrollTop=t.scrollHeight;try{Haptics.success();}catch(e){}toast('Transcribed '+ic('spark','g'));}
-        else toast('Didn’t catch any words — try again.');
-      }catch(e){toast(typeof e==='string'?e:'Couldn’t transcribe that — try again.');}
-      finally{if(hint)hint.textContent='';_jSetMode('type');}
+        const rst2=$('#jrecstatus');
+        if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;try{Haptics.success();}catch(e){}
+          const wc=(t.value.match(/\S+/g)||[]).length;if(rst2)rst2.innerHTML=ic('check','g')+' Recorded — '+wc+' words. Record more or seal it.';toast('Transcribed '+ic('spark','g'));}
+        else {if(rst2)rst2.textContent='Didn’t catch any words — tap to try again.';toast('Didn’t catch any words — try again.');}
+      }catch(e){const rst3=$('#jrecstatus');if(rst3)rst3.textContent='Couldn’t transcribe that — tap to try again.';toast(typeof e==='string'?e:'Couldn’t transcribe that — try again.');}
+      finally{if(hint)hint.textContent='';}
     };
     jMediaRec.start();
-    const vb=document.querySelector('.jmode[data-mode="voice"]');if(vb)vb.classList.add('rec');
-    if(hint)hint.textContent='Recording… tap Record again to stop.';
+    _jRecUI(true);
+    if(hint)hint.textContent='Recording… tap to stop.';
     try{Haptics.medium();}catch(e){}
     jRecTimeout=setTimeout(()=>{if(jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}},150000); // 2.5 min cap
-  }catch(e){ toast('Couldn’t start recording.'); _jSetMode('type'); }
+  }catch(e){ toast('Couldn’t start recording.'); _jRecUI(false); }
 }
 
 // Speak a journal prompt through Lumen's ElevenLabs voice (narrate), not the
@@ -6563,13 +6601,22 @@ function enterWritePhase(){
   const p1=$('#jp1'),p2=$('#jp2');if(p1)p1.hidden=true;if(p2)p2.hidden=false;
   try{Haptics.medium();}catch(e){}
   jStartTimer(180);
-  // Show just the chosen input: type → textarea, record → start recording,
-  // photograph → open the camera. Voice/photo results land in the same textarea.
+  // Show just the chosen input. Type = text box; Record = a tap-to-record button;
+  // Photograph = a tap-to-snap target. Voice/photo results fill the hidden textarea.
   const mode=jChosenMode||'type';
-  if(mode==='voice'){ try{toggleRecord();}catch(e){} }
-  else if(mode==='photo'){ const f=$('#jfile');if(f)f.click(); }
-  else { const t=$('#jt');if(t)setTimeout(()=>{try{t.focus();}catch(e){}},80); }
+  const ta=$('#jt'),jv=$('#jvoice'),jph=$('#jphoto');
+  if(ta)ta.hidden=(mode!=='type');
+  if(jv)jv.hidden=(mode!=='voice');
+  if(jph)jph.hidden=(mode!=='photo');
+  if(mode==='type'&&ta)setTimeout(()=>{try{ta.focus();}catch(e){}},80);
+  _jRecUI(false);
   try{window.scrollTo(0,0);}catch(e){}
+}
+// Update the record button's look + label for the current recording state.
+function _jRecUI(recording){
+  const b=$('#jrecbtn'),l=$('#jreclbl');
+  if(b)b.classList.toggle('rec',!!recording);
+  if(l)l.textContent=recording?'Recording… tap to stop':'Tap to record';
 }
 function exitToPrompt(){
   jComposePhase='prompt';
@@ -6589,6 +6636,8 @@ function wireComposerCommon(getPrompt){
   });
   const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
   const f=$('#jfile');if(f)f.onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
+  const recb=$('#jrecbtn');if(recb)recb.onclick=()=>{try{Haptics.medium();}catch(e){}toggleRecord();};
+  const phb=$('#jphotobtn');if(phb)phb.onclick=()=>{try{Haptics.medium();}catch(e){}const ff=$('#jfile');if(ff)ff.click();};
   // On open: start the ambient background music + an ElevenLabs welcome line.
   try{Sound.bed();}catch(e){}
   clearTimeout(window._jvo);window._jvo=setTimeout(()=>{if(TAB==='journal'){try{narrate('Take just three minutes for your journal.');}catch(e){}}},350);
@@ -6599,10 +6648,12 @@ function sealHandler(payload){
     if(listening&&rec)rec.stop();
     const t=$('#jt').value.trim();if(!t){toast('Write a few words first');return;}
     const ex=payload()||{};if(ex.error){toast(ex.error);return;}
-    const words=(t.match(/\S+/g)||[]).length;const share=$('#js').checked;
+    const words=(t.match(/\S+/g)||[]).length;
+    // Seal private by default — the share-to-community choice now lives on the
+    // completion screen, so the writer decides after they've read it back.
     const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
-    try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||'',chapter:ex.chapter||null});
-      $('#jt').value='';try{jStopTimer();}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,share);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
+    try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share:false,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||'',chapter:ex.chapter||null});
+      $('#jt').value='';try{jStopTimer();}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,false);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
   };
 }
 
@@ -7063,15 +7114,16 @@ function downscaleImage(file,maxDim,q){return new Promise((res,rej)=>{
   img.src=url;});}
 async function transcribePhoto(file){
   if(!file)return;
-  const hint=$('#michint'),cam=$('#jcam');
-  if(hint)hint.textContent='Reading your handwriting…';if(cam)cam.classList.add('live');
+  const hint=$('#michint'),cam=$('#jphotobtn'),pst=$('#jphotostatus');
+  if(hint)hint.textContent='Reading your handwriting…';if(cam)cam.classList.add('live');if(pst)pst.textContent='Reading your journal…';
   try{
     const dataUrl=await downscaleImage(file,1600,0.82);
     const r=await api('journal/transcribe','POST',{image:dataUrl});
     const t=$('#jt'),add=(r.text||'').trim();
-    if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;t.scrollTop=t.scrollHeight;toast('Transcribed '+ic('spark','g'));}
-    else toast('No text found in that photo');
-  }catch(e){toast(e);}
+    if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;try{Haptics.success();}catch(e){}
+      const wc=(t.value.match(/\S+/g)||[]).length;if(pst)pst.innerHTML=ic('check','g')+' Captured — '+wc+' words. Snap another page or seal it.';toast('Transcribed '+ic('spark','g'));}
+    else {if(pst)pst.textContent='No text found — tap to try another photo.';toast('No text found in that photo');}
+  }catch(e){if(pst)pst.textContent='Couldn’t read that — tap to try again.';toast(e);}
   finally{if(hint)hint.textContent='';if(cam)cam.classList.remove('live');const f=$('#jfile');if(f)f.value='';}
 }
 /* ---- journal sealed celebration ---- */
@@ -7091,14 +7143,30 @@ function showJournalSealed(res,words,shared){
       <div class="finale-stats">
         <div class="fstat"><div class="fsn">${words}</div><div class="fsl">words</div></div>
         <div class="fstat"><div class="fsn">${n}</div><div class="fsl">${n===1?'letter':'letters'}</div></div>
-        <div class="fstat"><div class="fsn" style="font-size:19px">${shared?'Shared':'Private'}</div><div class="fsl">kept</div></div>
+        <div class="fstat"><div class="fsn" id="fsharestate" style="font-size:19px">${shared?'Shared':'Private'}</div><div class="fsl">kept</div></div>
       </div>
+      <button class="seal-share${shared?' on':''}" id="sealshare" aria-pressed="${shared?'true':'false'}">${ic('globe')}<span class="ss-txt">Share to community</span><span class="ss-state">${shared?'On':'Off'}</span></button>
       ${ach?`<div style="margin-bottom:16px"><div class="muted" style="font-size:12px">Achievement unlocked</div><div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ach}</div></div>`:''}
       ${res&&res.plan_slice?`<div class="plan-seal"><div class="plan-seal-eye">${ic('seal','g')} Added to your 5-Year Plan</div><div class="plan-seal-pill">${esc(res.plan_slice.pillar||'')}</div>${res.plan_slice.goal?`<p class="plan-seal-goal">“${esc(res.plan_slice.goal)}”</p>`:''}<button class="btn gold" id="sviewplan" style="margin-top:12px">${ic('compass')} View your 5-Year Plan</button></div>`:''}
       <button class="btn${res&&res.plan_slice?' ghost':' gold'}" id="sdone">Done</button>
     </div></div>`);
   const close=()=>{ov.remove();jScreen='home';renderJournal();};
   ov.querySelector('#sdone').onclick=close;
+  // Share-to-community toggle — the choice now lives here, after you've read it
+  // back, instead of on the write screen. Flips the sealed entry's shared flag.
+  {const ss=ov.querySelector('#sealshare');
+   if(ss)ss.onclick=async()=>{
+     const id=res&&res.id; if(!id){toast('Can’t share this one');return;}
+     const on=!ss.classList.contains('on');
+     ss.disabled=true;
+     try{await api('journal/share','POST',{id,share:on});
+       ss.classList.toggle('on',on);ss.setAttribute('aria-pressed',on?'true':'false');
+       const st=ss.querySelector('.ss-state');if(st)st.textContent=on?'On':'Off';
+       const fs=ov.querySelector('#fsharestate');if(fs)fs.textContent=on?'Shared':'Private';
+       try{Sound.pop();}catch(e){} try{Haptics.select();}catch(e){}
+       toast(on?ic('check','g')+' Shared to the community':'Kept private');
+     }catch(e){toast(typeof e==='string'?e:'Couldn’t update sharing');}finally{ss.disabled=false;}
+   };}
   {const vp=ov.querySelector('#sviewplan');if(vp)vp.onclick=()=>{ov.remove();jScreen='plan';go('journal');};}
   ov.addEventListener('click',e=>{if(e.target===ov)close();});
   // Seal celebration cue: achievement arpeggio if a badge unlocked, else a soft
@@ -9314,10 +9382,11 @@ class H(BaseHTTPRequestHandler):
             # the Keeper reflects back + infers mood (best-effort; never blocks the save)
             refl = journal_reflect(prompt, text, kind=kind, pillar=pillar, place=place)
             mood = ((d.get("mood") or refl["mood"] or "")).strip()[:24]
-            c.execute("INSERT INTO journal(user_id,prompt,text,mood,reflection,shared,created,kind,pillar,place) "
+            _ins = c.execute("INSERT INTO journal(user_id,prompt,text,mood,reflection,shared,created,kind,pillar,place) "
                       "VALUES(?,?,?,?,?,?,?,?,?,?)",
                       (u["id"], prompt, text[:2000], mood, refl["reflection"],
                        1 if d.get("share") else 0, now_iso(), kind, pillar, place))
+            entry_id = _ins.lastrowid
             new_ach = award_journal_ach(c, u)
             c.commit()
             # Sealing a 'five years on' capstone writes/updates that pillar's plan slice.
@@ -9337,11 +9406,32 @@ class H(BaseHTTPRequestHandler):
                                (u["id"], monday)).fetchall():
                 if r["k"] in wkc:
                     wkc[r["k"]] += r["n"]
-            self._send(200, {"ok": True, "count": total, "reflection": refl["reflection"], "mood": mood,
+            self._send(200, {"ok": True, "id": entry_id, "count": total, "reflection": refl["reflection"], "mood": mood,
                              "kind": kind, "pillar": pillar, "place": place,
                              "plan_slice": plan_slice,
                              "week": {"counts": wkc, "missing": [k for k in JOURNAL_KINDS if wkc[k] == 0]},
                              "new_achievements": [{"code": a, "title": ACH_BY_CODE[a][1]} for a in new_ach]}); return
+
+        # Toggle an entry's community-share state after it's sealed — the share
+        # choice now lives on the completion screen, not the write screen.
+        if p == "/api/journal/share":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            try:
+                eid = int(d.get("id") or 0)
+            except Exception:
+                eid = 0
+            if not eid:
+                self._send(400, {"error": "missing id"}); return
+            share = 1 if d.get("share") else 0
+            cur = c.execute("UPDATE journal SET shared=? WHERE id=? AND user_id=?",
+                            (share, eid, u["id"]))
+            c.commit()
+            if not cur.rowcount:
+                self._send(404, {"error": "not found"}); return
+            self._send(200, {"ok": True, "shared": bool(share)}); return
 
         if p == "/api/journal/insights":
             u = self._me(c)
@@ -9660,7 +9750,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v35';
+const CACHE = 'lumen-v39';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
