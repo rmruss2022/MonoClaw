@@ -15,7 +15,7 @@ export interface SceneActions { lights?: SceneLight[]; music?: SceneMusic | null
 // good_morning: Living Room light ON, warm white at 100%, + the Morning Café Jazz playlist.
 const DEFAULTS: Record<string, SceneActions> = {
   good_morning: {
-    lights: [{ room: "Living Room", on: true, brightness: 100, rgb: { r: 255, g: 180, b: 107 } }],
+    lights: [{ room: "Living Room", on: true, brightness: 100, rgb: { r: 255, g: 130, b: 30 } }],
     music: { playlistUri: "spotify:playlist:37talafIK8enbbryNV5ZCg", name: "Morning Café Jazz" },
   },
 };
