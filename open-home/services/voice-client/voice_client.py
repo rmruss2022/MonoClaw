@@ -411,6 +411,32 @@ def flush_mic(mic):
         log("mic flush err:", e, level="WARN")
 
 
+def drain_after_beep(mic, max_s=1.2):
+    """After a beep/reply plays on the Bluetooth speaker, consume mic audio until it
+    goes quiet, THEN flush — so the beep's BT-delayed tail (which a fixed sleep can't
+    reliably cover) can't leak into the next recording and be transcribed as '[beep]'.
+    Breaks on ~100ms of sustained quiet, which lands in the gap between the beep ending
+    and the user reacting, so we don't clip the start of their reply. Bounded by max_s."""
+    deadline = time.time() + max_s
+    quiet_run = 0
+    while time.time() < deadline:
+        try:
+            samples = read_samples(mic, VAD_FRAME)
+        except Exception:
+            break
+        try:
+            rms = float(np.sqrt(np.mean(samples.astype(np.float32) ** 2)))
+        except Exception:
+            rms = 0.0
+        if rms < VOICE_RMS_FLOOR:
+            quiet_run += 1
+            if quiet_run >= 5:          # ~100ms sustained quiet → beep/tail has passed
+                break
+        else:
+            quiet_run = 0
+    flush_mic(mic)                      # drop anything still buffered
+
+
 def _close_process(p):
     if p is None:
         return
@@ -963,14 +989,12 @@ def main():
                         # lane, one buffer, one message at a time — no overlap.
                         grace = WAKE_GRACE_MUSIC_S if music else WAKE_GRACE_S
                         if turn == 0:
-                            time.sleep(BEEP_SETTLE_S)      # let the wake beep land
-                            flush_mic(mic)                 # clean start
+                            drain_after_beep(mic)          # wait out the BT-delayed wake beep, then clean start
                         else:
                             time.sleep(FOLLOWUP_SETTLE_S)  # let the reply's BT-delayed tail land
                             flush_mic(mic)                 # drop it (don't transcribe our own reply)
                             beep()                         # cue: talk now
-                            time.sleep(BEEP_SETTLE_S)      # let the beep land
-                            flush_mic(mic)                 # drop the beep too
+                            drain_after_beep(mic)          # wait out the BT-delayed beep, then record fresh
                         try:
                             pcm = record_utterance(mic, wait_s=grace)
                         except RuntimeError as e:
