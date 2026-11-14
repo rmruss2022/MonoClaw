@@ -2596,6 +2596,9 @@ PAGE = r"""<!doctype html>
 .acc>summary svg{width:18px;height:18px;color:var(--purple)}
 .acc-body{padding:2px 16px 16px}
 .acc-body .card{margin:0 0 10px;border:0;background:transparent;padding:0}
+.jny-hero{min-height:208px;background-position:center 50%}
+.you-card-ic.img{width:54px;height:54px;border-radius:12px;background-size:cover;background-position:center;box-shadow:0 0 12px -4px color-mix(in srgb,var(--c) 70%,transparent)}
+.ach-emblem{display:block;width:96px;height:96px;background-size:cover;background-position:center;border-radius:18px;box-shadow:0 0 20px -4px var(--rc)}
 
 .pil-med{flex:none;width:46px;height:46px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 13px -4px rgba(245,201,119,.5),inset 0 0 0 1px rgba(245,201,119,.28)}
 .comm-letter.jmodecard-rec{background:linear-gradient(120deg,#241a3e,#161028 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.9),rgba(192,132,252,.42) 70%) border-box}
@@ -4255,6 +4258,7 @@ const COMP_NAME={moth:'Lumen Moth',fox:'Ember Fox',koi:'Tide Koi',owl:'Dawn Owl'
 const RARITY=[['Common','#9aa3b8','#232233','rgba(154,163,184,.20)'],['Rare','#5fb0fa','#13233e','rgba(95,176,250,.26)'],['Epic','#c084fc','#271640','rgba(192,132,252,.28)'],['Legendary','#f5c977','#33260f','rgba(245,201,119,.32)']];
 const ACH_RARITY={first_light:0,centurion:0,marathoner:1,moon_child:1,dawn_patrol:1,week_warrior:2,globetrotter:2,deep_diver:2,constellation:3,luminary:3,scribe:1,chronicler:2,pilgrim:2};
 function rarityOf(code){return ACH_RARITY[code]!=null?ACH_RARITY[code]:0;}
+const CARD_CODES={first_light:1,marathoner:1,week_warrior:1,constellation:1,moon_child:1,dawn_patrol:1,globetrotter:1,centurion:1,deep_diver:1,luminary:1,scribe:1,chronicler:1,pilgrim:1};
 function ic(name,cls){return `<svg class="i ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SVGP[name]||''}</svg>`;}
 // The Lumen brand mark: a dimensional ringed light-orb (mini of the home hero orb).
 // This is the app logo everywhere — the old line-art sun (SVGP.lumen) is kept as the
@@ -5399,11 +5403,12 @@ async function renderLessons(){
     </button>`;
   };
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journeys</b></div>
-  <p class="muted" style="font-size:13px;margin:4px 2px 16px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
+  <section class="nh-hero jny-hero" id="jnyHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Journeys</h1><p class="nh-sub">Guided courses that build, one lesson at a time.</p></div></div></section>
+  <p class="muted" style="font-size:13px;margin:10px 2px 16px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
   <div class="jrny-grid">${tracks.map(card).join('')}</div>
   <p class="muted center" style="font-size:12px;margin:20px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
   document.querySelectorAll('.jrny-card').forEach(c=>c.onclick=()=>renderJourney(c.dataset.k));
+  {const h=$('#jnyHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journeys-hero.jpg?v=66')";};im.src="/art/journeys-hero.jpg?v=66";}}
 }
 
 // A single journey — its lessons in order, your next lesson highlighted, tap to open.
@@ -7654,7 +7659,7 @@ function _canBuy(){try{return !!window.__lumenNativeIAP;}catch(e){return false;}
    offering; until it does, this is the App Store Connect price. Reading it at
    call time means a wrapper update needs no web deploy. */
 function _premPrice(){try{return window.__lumenPrice||'$7';}catch(e){return '$7';}}
-function cardChip(a){const r=RARITY[rarityOf(a.code)];return `<button class="you-card${a.unlocked?' on':''}" data-card="${a.code}" style="--c:${r[1]}"><span class="you-card-ic">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</span><span class="you-card-t">${a.unlocked?esc(a.title):'Locked'}</span><span class="you-card-r">${r[0]}</span></button>`;}
+function cardChip(a){const r=RARITY[rarityOf(a.code)];const ih=(a.unlocked&&CARD_CODES[a.code])?`<span class="you-card-ic img" style="background-image:url('/art/card-${a.code}.jpg?v=66')"></span>`:`<span class="you-card-ic">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</span>`;return `<button class="you-card${a.unlocked?' on':''}" data-card="${a.code}" style="--c:${r[1]}">${ih}<span class="you-card-t">${a.unlocked?esc(a.title):'Locked'}</span><span class="you-card-r">${r[0]}</span></button>`;}
 function leagueSectionHTML(d){if(!d||!d.league)return '<div class="card muted">League loading…</div>';const lg=d.league;const toNext=lg.next_at?Math.max(0,lg.next_at-d.weekly_light):0;const prog=lg.next_at?Math.min(100,100*(d.weekly_light-lg.at)/(lg.next_at-lg.at)):100;
  return `<div class="card center league-hero" style="border-color:${lg.color};--lc:${lg.color};--lc2:${lg.color2||lg.color}"><div class="league-emblem-wrap">${leagueEmblem(lg,110)}</div><div class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase">Current league</div><h1 style="margin:6px 0;color:${lg.color}">${esc(lg.name)}</h1><div class="muted">${fmt(d.weekly_light)} light this week</div>${lg.next?`<div class="bar lg-bar" style="margin:14px 0 6px"><i style="width:${prog}%"></i></div><div class="muted" style="font-size:13px">${toNext} light to <b style="color:var(--text)">${leagueIcon(lg.next,'g')} ${esc(lg.next)}</b></div>`:`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Top league — keep it lit</div>`}</div>`
  +`<div class="card"><h3 style="margin:0 0 6px;display:flex;align-items:center;gap:7px">${leagueIcon(lg.name,'g')} ${esc(lg.name)} · this week</h3><p class="muted" style="font-size:12px;margin:0 0 8px">Top 5 promote ${ic('up','g')} · resets weekly</p>${(d.members||[]).map(m=>`<div class="lb-row ${m.you?'you':''}"><div class="rk ${m.rank<=5?'g':''}">${m.rank<=5?ic('up','g'):''}${m.rank}</div><div class="nm">${esc(m.name)}${m.you?' (you)':''}</div><div class="vl">${fmt(m.weekly_light)}</div></div>`).join('')||'<div class="muted">No one here yet.</div>'}</div>`;}
@@ -7790,7 +7795,7 @@ function openAchCard(code){
       <div class="ach-rare" style="color:${rcol};border-color:${rcol}">${rname}</div>
       <div class="ach-badge">
         <div class="ach-ring"></div>
-        <div class="ach-ic" style="${locked?'':'color:'+rcol}">${ic(locked?'lock':(ACH_ICON[code]||'star'),'achbig '+grad)}</div>
+        <div class="ach-ic" style="${locked?'':'color:'+rcol}">${(!locked&&CARD_CODES[code])?`<span class="ach-emblem" style="background-image:url('/art/card-${code}.jpg?v=66')"></span>`:ic(locked?'lock':(ACH_ICON[code]||'star'),'achbig '+grad)}</div>
       </div>
       <div class="ach-title">${locked?'???':a.title}</div>
       <div class="ach-desc">${a.desc}</div>
@@ -9953,7 +9958,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v65';
+const CACHE = 'lumen-v66';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
