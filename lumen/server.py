@@ -7033,7 +7033,8 @@ function wireComposerCommon(getPrompt){
   const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
   // write-stage wiring (jp2 is in the DOM already, just hidden)
   jChosenMode='photo';
-  document.querySelectorAll('#jwStage .jw-comp[data-comp="timer"] .jw-chead,#jwStage .jw-comp[data-comp="prompt"] .jw-chead').forEach(h=>{const c=h.closest('.jw-comp');if(c)h.onclick=()=>{try{Haptics.select();}catch(e){}jExpand(c.dataset.comp);};});
+  // tap anywhere on the timer/prompt section to enlarge it (tap again to reset)
+  document.querySelectorAll('#jwStage .jw-comp[data-comp="timer"],#jwStage .jw-comp[data-comp="prompt"]').forEach(c=>{c.onclick=()=>{try{Haptics.select();}catch(e){}jExpand(c.classList.contains('expanded')?null:c.dataset.comp);};});
   const jwp=$('#jwPrev');if(jwp)jwp.onclick=()=>jCycleMode(-1);
   const jwn=$('#jwNext');if(jwn)jwn.onclick=()=>jCycleMode(1);
   const jwxb=$('#jwx');if(jwxb)jwxb.onclick=()=>{try{Haptics.light();}catch(e){}exitToPrompt();};
@@ -10185,7 +10186,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v82';
+const CACHE = 'lumen-v83';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
