@@ -218,6 +218,20 @@ function speakName(n: string): string {
   return s || String(n || "").trim();
 }
 
+// Normalize for name comparison: lowercase, strip punctuation, collapse spaces.
+function normName(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+}
+// Plural-insensitive token-set equality, so "palm monkeys" matches the artist "Palm Monkey".
+function artistNameMatches(query: string, name: string): boolean {
+  const a = normName(query), b = normName(name);
+  if (!a || !b) return false;
+  const stem = (t: string) => t.replace(/s$/, "");
+  const at = [...new Set(a.split(" ").map(stem))].sort().join(" ");
+  const bt = [...new Set(b.split(" ").map(stem))].sort().join(" ");
+  return at.length > 0 && at === bt;
+}
+
 async function doMusic(a: any): Promise<string> {
   const op = String(a.op || "play").toLowerCase();
   const src = String(a.source || "spotify").toLowerCase();
@@ -274,6 +288,17 @@ async function doMusic(a: any): Promise<string> {
         if (found.length) { const pl2 = pickBestPlaylist(query, found); await spotify.play({ contextUri: pl2.uri, deviceId }); return `NOWPLAYING::the ${speakName(pl2.name)} playlist`; }
       } catch (e) { console.log("[agent] playlist search failed:", (e as Error)?.message); }
     }
+    // Artist by name → play that artist's top tracks. Spotify ranks the best artist
+    // first; if its name matches what the user said (plural-insensitive), we treat it
+    // as an artist request instead of a fuzzy track-title search that grabs junk
+    // (e.g. "Palm Monkeys" → artist "Palm Monkey", not "Five Little Monkeys").
+    try {
+      const artists = await spotify.searchArtist(query, 3);
+      const best = artists.find((ar: any) => artistNameMatches(query, ar.name));
+      // Play the artist as a CONTEXT (spotify:artist:… → their top tracks/radio). The
+      // dedicated /top-tracks endpoint 403s for this dev-mode app, but the context URI plays.
+      if (best?.uri) { await spotify.play({ contextUri: best.uri, deviceId }); return `NOWPLAYING::${best.name}`; }
+    } catch (e) { console.log("[agent] artist search failed:", (e as Error)?.message); }
     // Specific song / artist → track search
     const tracks = await spotify.search(query, 25);
     const uris = tracks.map((t: any) => t.uri).filter(Boolean).slice(0, 30);

@@ -192,6 +192,24 @@ export async function search(q: string, want = 10) {
   return out.slice(0, want);
 }
 
+// Search artists by name, best match first (so "play <artist>" resolves to the
+// artist, not a fuzzy track-title match like "Five Little Monkeys by Hap Palmer").
+export async function searchArtist(q: string, want = 5) {
+  const j = await api(`/search?type=artist&limit=${want}&q=${encodeURIComponent(q)}`);
+  const items = j.artists?.items || [];
+  return items.filter(Boolean).map((a: any) => ({
+    id: a.id, name: a.name, uri: a.uri,
+    popularity: a.popularity || 0, followers: a.followers?.total || 0,
+  }));
+}
+
+// An artist's current top tracks (for "play <artist>"). market=from_token uses the
+// token's country so we get a playable, region-correct set.
+export async function artistTopTracks(artistId: string) {
+  const j = await api(`/artists/${artistId}/top-tracks?market=from_token`);
+  return (j.tracks || []).map(trackOf).filter((t: any) => t.uri);
+}
+
 // Search Spotify's PUBLIC/editorial playlists (e.g. "Today's Top Hits", "RapCaviar",
 // genre/mood mixes) — the catalog the user doesn't personally own.
 export async function searchPlaylists(q: string, want = 5) {
