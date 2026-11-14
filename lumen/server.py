@@ -3824,15 +3824,15 @@ a{color:var(--purple)}
 .jrny-art:after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--a) 34%,transparent),transparent 62%)}
 .jrny-art .i,.jrny-art svg{position:relative;z-index:1;width:42px;height:42px}
 /* most recently practiced journey — pulsing glow so you can pick up where you left off */
-.jrny-card.recent{border-color:color-mix(in srgb,var(--a) 62%,transparent);animation:jrnyPulse 2.4s ease-in-out infinite}
-.jrny-card.recent .jrny-art:after{opacity:.9;animation:jrnyArt 2.4s ease-in-out infinite}
+.jrny-card.infocus{border-color:color-mix(in srgb,var(--a) 62%,transparent);animation:jrnyPulse 2.4s ease-in-out infinite}
+.jrny-card.infocus .jrny-art:after{opacity:.9;animation:jrnyArt 2.4s ease-in-out infinite}
 .jrny-tag{position:absolute;top:9px;right:10px;z-index:2;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--a);background:color-mix(in srgb,var(--a) 15%,#0c0a14);border:1px solid color-mix(in srgb,var(--a) 45%,transparent);
   border-radius:999px;padding:3px 8px}
 @keyframes jrnyPulse{0%,100%{box-shadow:0 12px 32px -20px color-mix(in srgb,var(--a) 85%,#000),0 0 0 0 color-mix(in srgb,var(--a) 40%,transparent)}
   50%{box-shadow:0 12px 30px -18px color-mix(in srgb,var(--a) 95%,#000),0 0 22px 2px color-mix(in srgb,var(--a) 42%,transparent)}}
 @keyframes jrnyArt{0%,100%{opacity:.55}50%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.jrny-card.recent,.jrny-card.recent .jrny-art:after{animation:none}}
+@media (prefers-reduced-motion:reduce){.jrny-card.infocus,.jrny-card.infocus .jrny-art:after{animation:none}}
 .jrny-body{flex:1;min-width:0;padding:13px 14px 13px 15px}
 .jrny-name{font-weight:800;font-size:16.5px;color:#f1ecff;letter-spacing:-.01em}
 .jrny-sub{font-family:var(--serif);font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:2px}
@@ -4532,7 +4532,7 @@ function leagueEmblem(lg,size){
   </svg>`;
 }
 function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick=()=>{if(b.dataset.tab==='journal')jScreen='home';go(b.dataset.tab);};const s=b.querySelector('.ic');if(s)s.innerHTML=ic(NAV_ICON[b.dataset.tab],'nav');});}
-function go(tab){TAB=tab;try{window.__screen&&window.__screen(tab);}catch(e){}try{track('screen_view',null,tab);}catch(e){}document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
+function go(tab){try{_jnyClearFocus();}catch(e){}TAB=tab;try{window.__screen&&window.__screen(tab);}catch(e){}try{track('screen_view',null,tab);}catch(e){}document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
   if(window.speechSynthesis)speechSynthesis.cancel();try{stopNarration();}catch(e){}try{Sound.stop();}catch(e){}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
   ({meditate:renderMeditate,community:renderCommunity,map:renderMap,leagues:renderLeagues,journal:renderJournal,collect:renderCollection,profile:renderProfile,lessons:renderLessons}[tab])();}
@@ -5371,6 +5371,8 @@ function _journeyNext(ls){
 }
 function _trackLast(key){let m=0;LESSONS.filter(l=>l.track===key).forEach(l=>{const p=lessonProg(l.code);
   if(p&&p.last){const t=Date.parse(p.last);if(t>m)m=t;}});return m;}
+let _jnyFocusH=null;
+function _jnyClearFocus(){if(_jnyFocusH){removeEventListener('scroll',_jnyFocusH);removeEventListener('resize',_jnyFocusH);_jnyFocusH=null;}document.querySelectorAll('.jrny-card.infocus').forEach(c=>c.classList.remove('infocus'));}
 async function renderLessons(){
   try{const r=await api('me');ME=r.profile;}catch(e){}
   // order journeys by most-recently practiced (saved last_journey wins the tie / drives the pulse)
@@ -5408,6 +5410,13 @@ async function renderLessons(){
   <div class="jrny-grid">${tracks.map(card).join('')}</div>
   <p class="muted center" style="font-size:12px;margin:20px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
   document.querySelectorAll('.jrny-card').forEach(c=>c.onclick=()=>renderJourney(c.dataset.k));
+  _jnyClearFocus();
+  {const cards=[...document.querySelectorAll('.jrny-card')];
+   if(cards.length){const upd=()=>{const vc=innerHeight*0.46;let best=null,bd=1e9;
+     cards.forEach(c=>{const r=c.getBoundingClientRect();const cc=r.top+r.height/2;const d=Math.abs(cc-vc);if(d<bd){bd=d;best=c;}});
+     if(!best)best=cards[0];cards.forEach(c=>c.classList.toggle('infocus',c===best));};
+     let raf=null;_jnyFocusH=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=null;upd();});};
+     addEventListener('scroll',_jnyFocusH,{passive:true});addEventListener('resize',_jnyFocusH,{passive:true});upd();}}
   {const h=$('#jnyHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journeys-hero.jpg?v=66')";};im.src="/art/journeys-hero.jpg?v=66";}}
 }
 
@@ -9958,7 +9967,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v66';
+const CACHE = 'lumen-v67';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
