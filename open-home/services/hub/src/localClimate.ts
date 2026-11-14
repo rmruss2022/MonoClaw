@@ -13,7 +13,7 @@
  * Onboarded thermostats persist to <data>/local-climate.json; a maintenance
  * loop tracks reachability (connected / reconnecting / offline).
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { durableStore } from "./durableStore.ts";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import net from "node:net";
@@ -21,7 +21,6 @@ import http from "node:http";
 import * as localLights from "./localLights.ts";
 
 const DATA_DIR = new URL("../.data/", import.meta.url);
-const STORE = new URL("../.data/local-climate.json", import.meta.url);
 
 export type ClimateBackend = "esphome" | "matter";
 export type ConnStatus = "connected" | "reconnecting" | "offline";
@@ -37,9 +36,10 @@ export interface Thermostat {
   status: ConnStatus; lastSeen: number; attempts: number;
 }
 
-function load(): Thermostat[] { try { return JSON.parse(readFileSync(STORE, "utf8")); } catch { return []; } }
-function save(list: Thermostat[]) { try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(STORE, JSON.stringify(list)); } catch (e) { console.log("[climate] save:", (e as Error).message); } }
-let stats: Thermostat[] = load();
+// Crash/power-loss safe store (fsync + .bak recovery; see durableStore.ts).
+const store = durableStore<Thermostat[]>(DATA_DIR, "local-climate.json", "climate");
+function save(list: Thermostat[]) { store.save(list); }
+let stats: Thermostat[] = store.load([]);
 export function list(): Thermostat[] { return stats.map((s) => ({ ...s })); }
 
 const f2c = (f: number) => Math.round(((f - 32) * 5 / 9) * 10) / 10;

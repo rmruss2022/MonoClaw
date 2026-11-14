@@ -19,14 +19,13 @@
  * with your lights (a Pi/Mac); a cloud host correctly reports an empty scan.
  * Matter *control* additionally needs a controller installed on the hub.
  */
-import { readFileSync, writeFileSync, mkdirSync, renameSync } from "node:fs";
+import { durableStore } from "./durableStore.ts";
 import { execFile } from "node:child_process";
 import dgram from "node:dgram";
 import net from "node:net";
 import http from "node:http";
 
 const DATA_DIR = new URL("../.data/", import.meta.url);
-const STORE = new URL("../.data/local-lights.json", import.meta.url);
 
 export type LightBackend = "esphome" | "matter";
 export type ConnStatus = "connected" | "reconnecting" | "offline";
@@ -45,16 +44,11 @@ export interface LocalLight {
 }
 
 // ---- persistence ----
-function load(): LocalLight[] { try { return JSON.parse(readFileSync(STORE, "utf8")); } catch { return []; } }
-const STORE_TMP = new URL("../.data/local-lights.json.tmp", import.meta.url);
-function save(list: LocalLight[]) {
-  // Atomic write: a hub restart/crash mid-write used to leave a 0-byte file and wipe all
-  // onboarded lights. Write to a temp file then rename over the target (atomic on same fs),
-  // so an interrupted write never corrupts the real store.
-  try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(STORE_TMP, JSON.stringify(list)); renameSync(STORE_TMP, STORE); }
-  catch (e) { console.log("[lights] save:", (e as Error).message); }
-}
-let lights: LocalLight[] = load();
+// Crash/power-loss safe: fsync before rename + a .bak mirror that recovers the
+// store if a hard reboot ever leaves the primary NUL-filled. (See durableStore.ts.)
+const store = durableStore<LocalLight[]>(DATA_DIR, "local-lights.json", "lights");
+function save(list: LocalLight[]) { store.save(list); }
+let lights: LocalLight[] = store.load([]);
 export function list(): LocalLight[] { return lights.map((l) => ({ ...l })); }
 
 // ---- capability detection ----

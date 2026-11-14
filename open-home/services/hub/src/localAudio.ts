@@ -15,13 +15,12 @@
  * the hub on the LAN with your speakers (a Pi/Mac) for it to find them; a
  * cloud host will correctly report an empty scan.
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { durableStore } from "./durableStore.ts";
 import { execFile, spawn } from "node:child_process";
 import dgram from "node:dgram";
 import net from "node:net";
 
 const DATA_DIR = new URL("../.data/", import.meta.url);
-const STORE = new URL("../.data/local-speakers.json", import.meta.url);
 
 export type LocalKind = "wifi" | "bluetooth";
 export type ConnStatus = "connected" | "reconnecting" | "offline";
@@ -32,10 +31,10 @@ export interface LocalSpeaker {
   status: ConnStatus; lastSeen: number; attempts: number;
 }
 
-// ---- persistence ----
-function load(): LocalSpeaker[] { try { return JSON.parse(readFileSync(STORE, "utf8")); } catch { return []; } }
-function save(list: LocalSpeaker[]) { try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(STORE, JSON.stringify(list)); } catch (e) { console.log("[local] save:", (e as Error).message); } }
-let speakers: LocalSpeaker[] = load();
+// ---- persistence (crash/power-loss safe: fsync + .bak recovery; see durableStore.ts) ----
+const store = durableStore<LocalSpeaker[]>(DATA_DIR, "local-speakers.json", "local");
+function save(list: LocalSpeaker[]) { store.save(list); }
+let speakers: LocalSpeaker[] = store.load([]);
 
 export function list(): LocalSpeaker[] { return speakers.map((s) => ({ ...s })); }
 
