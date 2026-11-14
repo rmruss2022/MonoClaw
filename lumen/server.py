@@ -3216,13 +3216,10 @@ a{color:var(--purple)}
 .jw-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:auto;padding-top:6px}
 .jw-foot .letter-seal-btn{margin:0;width:100%;max-width:420px;border-radius:999px;padding:16px 28px;font-size:17px}
 /* --- journal write: gold-bar stage holding 3 depth-gold components --- */
-.jwrite{min-height:calc(100dvh - 70px);gap:12px;padding-bottom:6px}
-.jw-stage{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:calc(100dvh - 214px);
-  border-radius:22px;padding:14px;overflow:hidden;
-  background:linear-gradient(175deg,#fbe3a6 0%,#f4cd81 26%,#e9b85f 52%,#d7a042 78%,#c8902f 100%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 0 44px rgba(120,70,10,.28),0 14px 40px -16px rgba(120,70,10,.6)}
-.jw-stage:before{content:"";position:absolute;left:0;right:0;top:0;height:42%;pointer-events:none;
-  background:linear-gradient(180deg,rgba(255,255,255,.32),transparent)}
+body.jw-gold{background:linear-gradient(175deg,#fde7ad 0%,#f6cf83 24%,#eaba60 50%,#dba747 76%,#cd9531 100%) fixed !important}
+body.jw-gold .jx-close{display:none}
+.jwrite{min-height:100dvh;gap:12px;padding-bottom:calc(env(safe-area-inset-bottom) + 6px);background:transparent}
+.jw-stage{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:0;background:none;border:0;box-shadow:none}
 .jw-x{position:absolute;top:10px;right:10px;z-index:7;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
   background:rgba(60,40,10,.42);color:#ffe6ab;display:flex;align-items:center;justify-content:center}
 .jw-x .i{width:18px;height:18px}
@@ -3250,14 +3247,25 @@ a{color:var(--purple)}
 .jw-c-resp .jcap{padding:6px 0}
 .jw-c-resp .jcap-label{color:#ffe3ad;font-weight:600}
 .jw-c-resp .jcap-status{color:#e8c074}
-.jw-c-resp .jcap-btn{background:rgba(20,13,4,.4);border-color:rgba(245,201,119,.55);color:#ffd98a}
+.jw-c-resp .jcap-btn{width:66px;height:66px;border-radius:16px;background:rgba(20,13,4,.4);border-color:rgba(245,201,119,.55);color:#ffd98a}
+.jw-c-resp .jcap-btn svg{width:28px;height:28px}
+.jw-c-resp .jrec-btn,.jw-c-resp .jrec-ring{width:66px;height:66px}
+.jw-c-resp .jrec-core{width:44px;height:44px}
+.jw-c-resp .jrec-btn.rec .jrec-core{width:22px;height:22px;border-radius:6px}
+.jw-c-resp .jcap{gap:10px}
 .jw-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:none}
-.jw-mode{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px;border-radius:14px;cursor:pointer;
-  border:1px solid var(--line);background:rgba(20,16,40,.5);color:#b7afce;font:600 11px/1 inherit;transition:border-color .18s,background .18s,color .18s,transform .1s}
-.jw-mode .i{width:19px;height:19px;color:#a68c5a}
-.jw-mode.on{border-color:rgba(245,201,119,.6);color:#f5c977;background:radial-gradient(120% 140% at 50% 0,rgba(245,201,119,.18),rgba(20,16,40,.5))}
-.jw-mode.on .i{color:#f5c977;filter:drop-shadow(0 0 6px rgba(245,201,119,.6))}
+.jw-mode{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:14px;cursor:pointer;
+  border:1px solid rgba(90,62,24,.45);background:linear-gradient(160deg,#54401d,#352813);color:#f3c877;font:600 11px/1 inherit;transition:border-color .18s,background .18s,box-shadow .18s,transform .1s}
+.jw-mode .i{width:18px;height:18px;color:#e8c074}
+.jw-mode.on{border-color:rgba(255,230,160,.75);color:#ffe3ad;background:linear-gradient(160deg,#6a5024,#44341a);box-shadow:0 0 0 1px rgba(255,230,160,.35),0 5px 14px -6px rgba(60,38,8,.6)}
+.jw-mode.on .i{color:#ffd98a;filter:drop-shadow(0 0 6px rgba(255,220,150,.7))}
 .jw-mode:active{transform:scale(.96)}
+/* seal stays hidden until there's a photo or enough written */
+#jp2 .jw-foot{display:none}
+#jp2 .jw-foot.ready{display:flex}
+#jp2 .jw-foot .letter-seal-btn{background:linear-gradient(160deg,#4c3718,#2b2010);color:#ffe3ad;border:1px solid rgba(255,230,160,.6);
+  box-shadow:0 8px 20px -8px rgba(40,24,4,.7),inset 0 1px 0 rgba(255,228,160,.28)}
+#jp2 .jw-foot .letter-seal-btn .i{color:#ffd98a}
 .jw-walk{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(8,5,16,.72);backdrop-filter:blur(6px)}
 .jw-walk[hidden]{display:none}
 .jw-walk-card{max-width:360px;width:100%;border-radius:22px;padding:24px 22px;text-align:center;
@@ -6856,7 +6864,7 @@ async function toggleRecord(){
         const r=await api('journal/transcribe-audio','POST',{audio:dataUrl,filename:'note.'+ext});
         const t=$('#jt'),add=(r.text||'').trim();
         const rst2=$('#jrecstatus');
-        if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;try{Haptics.success();}catch(e){}
+        if(add){t.value=(t.value.trim()?t.value.trim()+'\n\n':'')+add;try{jUpdateSeal();}catch(e){}try{Haptics.success();}catch(e){}
           const wc=(t.value.match(/\S+/g)||[]).length;if(rst2)rst2.innerHTML=ic('check','g')+' Recorded — '+wc+' words. Record more or seal it.';toast('Transcribed '+ic('spark','g'));}
         else {if(rst2)rst2.textContent='Didn’t catch any words — tap to try again.';toast('Didn’t catch any words — try again.');}
       }catch(e){const rst3=$('#jrecstatus');if(rst3)rst3.textContent='Couldn’t transcribe that — tap to try again.';toast(typeof e==='string'?e:'Couldn’t transcribe that — try again.');}
@@ -6891,14 +6899,24 @@ let jComposePhase='prompt';
 // write phase can narrate the prompt it was holding back.
 let jPromptDeferred=false;let jGetPrompt=null;
 let jChosenMode='photo';  // Photograph / Type / Record — starts on photo (physical anchor)
+let jPhotoTaken=false;    // an uploaded photo counts as 'enough' to seal
 function enterWritePhase(){
   jComposePhase='write';
   const p1=$('#jp1'),p2=$('#jp2');if(p1)p1.hidden=true;if(p2)p2.hidden=false;
   try{Haptics.medium();}catch(e){}
   jStartTimer(180);
+  jPhotoTaken=false;
+  try{document.body.classList.add('jw-gold');}catch(e){}   // whole-screen gold ground
   const walking=jMaybeWalk();          // show the 3-part walkthrough on first ever open
   jSetWriteMode(jChosenMode||'photo',walking); // suppress auto-focus while the walkthrough is up
+  jUpdateSeal();
   try{window.scrollTo(0,0);}catch(e){}
+}
+// Reveal "Seal & keep" only once there's a photo uploaded or enough written.
+function jUpdateSeal(){
+  const foot=document.querySelector('#jp2 .jw-foot'); if(!foot)return;
+  const ta=$('#jt'); const len=ta?ta.value.trim().length:0;
+  foot.classList.toggle('ready', jPhotoTaken || len>=12);
 }
 // Show just the chosen input inside the response component, light up the bottom
 // switcher, and expand the response so the chosen input is roomy.
@@ -6932,6 +6950,7 @@ function _jRecUI(recording){
 }
 function exitToPrompt(){
   jComposePhase='prompt';
+  try{document.body.classList.remove('jw-gold');}catch(e){}
   jStopTimer();
   if(jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}
   const p1=$('#jp1'),p2=$('#jp2');if(p2)p2.hidden=true;if(p1)p1.hidden=false;
@@ -6953,7 +6972,8 @@ function wireComposerCommon(getPrompt){
   document.querySelectorAll('#jwModes .jw-mode').forEach(b=>b.onclick=()=>{try{Sound.pop();}catch(e){}try{Haptics.select();}catch(e){}jSetWriteMode(b.dataset.mode);});
   const jwxb=$('#jwx');if(jwxb)jwxb.onclick=()=>{try{Haptics.light();}catch(e){}exitToPrompt();};
   const jwgo=$('#jwWalkGo');if(jwgo)jwgo.onclick=()=>{const w=$('#jwWalk');if(w)w.hidden=true;try{localStorage.setItem('lumen_jwrite_walk','1');}catch(e){}jSetWriteMode(jChosenMode||'photo');};
-  const f=$('#jfile');if(f)f.onchange=(e)=>transcribePhoto(e.target.files&&e.target.files[0]);
+  const f=$('#jfile');if(f)f.onchange=(e)=>{jPhotoTaken=true;jUpdateSeal();transcribePhoto(e.target.files&&e.target.files[0]);};
+  const jtEl=$('#jt');if(jtEl)jtEl.addEventListener('input',jUpdateSeal);
   const recb=$('#jrecbtn');if(recb)recb.onclick=()=>{try{Haptics.medium();}catch(e){}toggleRecord();};
   const phb=$('#jphotobtn');if(phb)phb.onclick=()=>{try{Haptics.medium();}catch(e){}const ff=$('#jfile');if(ff)ff.click();};
   // On open: start the ambient background music + an ElevenLabs welcome line.
@@ -6971,7 +6991,7 @@ function sealHandler(payload){
     // completion screen, so the writer decides after they've read it back.
     const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
     try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share:false,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||'',chapter:ex.chapter||null});
-      $('#jt').value='';try{jStopTimer();}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,false);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
+      $('#jt').value='';try{jStopTimer();}catch(_){}try{document.body.classList.remove('jw-gold');}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,false);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
   };
 }
 
@@ -7236,7 +7256,7 @@ async function renderJournal(){
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
   // it covers the whole screen; restore it on every other journal screen.
   try{const nv=document.getElementById('nav');if(nv){if(jScreen==='compose')nv.classList.add('hidden');else nv.classList.remove('hidden');}}catch(e){}
-  try{if(jScreen!=='compose'){jStopTimer();Sound.bedStop();}}catch(e){}
+  try{if(jScreen!=='compose'){jStopTimer();Sound.bedStop();document.body.classList.remove('jw-gold');}}catch(e){}
   // The free tier, enforced in the one place every door funnels through.
   if(!_isPrem() && (jScreen==='compose'||jScreen==='plessons')){
     if(journalMode==='season')
@@ -10096,7 +10116,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v73';
+const CACHE = 'lumen-v74';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
