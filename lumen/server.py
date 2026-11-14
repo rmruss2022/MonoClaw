@@ -2541,6 +2541,31 @@ PAGE = r"""<!doctype html>
 .nh-pplay{width:48px;height:48px;flex:none;border-radius:50%;border:0;cursor:pointer;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -6px rgba(124,58,237,.7)}
 .nh-pplay svg{width:20px;height:20px}
 .jnl-hero{min-height:236px;background-position:center 60%}
+.comm-hero{min-height:218px;background-position:center 52%}
+.comm-intro{font-size:13px;color:var(--muted);margin:2px 2px 12px;line-height:1.4}
+.comm-letters{display:flex;flex-direction:column;gap:12px}
+.comm-letter{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;padding:14px;border-radius:18px;color:var(--text);background:linear-gradient(120deg,#1e1636,#140f24 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.5),rgba(168,85,247,.22) 60%,rgba(90,80,150,.06)) border-box;border:1.5px solid transparent;box-shadow:0 8px 22px -14px rgba(150,120,80,.35)}
+.comm-letter:active{transform:scale(.99)}
+.comm-let-ic{flex:none;width:60px;height:60px;border-radius:15px;background-size:cover;background-position:center;box-shadow:0 0 15px -4px rgba(245,201,119,.5)}
+.comm-let-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.comm-let-eye{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#caa96a}
+.comm-let-t{font-family:var(--serif);font-size:17px;color:#efe7d6}
+.comm-let-teaser{font-size:12.5px;color:var(--muted);line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.comm-let-go{flex:none;color:var(--gold);display:flex}.comm-let-go .i{width:18px;height:18px}
+.comm-locktag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted)}.comm-locktag .i{width:13px;height:13px}
+.comm-lock{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:30px 18px;border-radius:18px;background:#15112466;border:1px dashed var(--line)}
+.comm-lock-ic{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--muted);background:#1a1430;border:1px solid var(--line)}.comm-lock-ic .i{width:20px;height:20px}
+.comm-lock-t{font-family:var(--serif);font-size:16px;color:var(--text)}
+.comm-lock-sub{font-size:12.5px;color:var(--muted);max-width:30ch;line-height:1.4}
+.comm-reader{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(8,6,16,.74)}
+.comm-read-card{position:relative;max-width:440px;width:100%;max-height:86vh;overflow:auto;background:linear-gradient(170deg,#1b1533,#120d22);border:1px solid var(--line);border-radius:22px;padding:26px 22px 22px;text-align:left;box-shadow:0 30px 70px -20px #000}
+.comm-read-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#19152b;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}.comm-read-x .i{width:17px;height:17px}
+.comm-read-ic{width:74px;height:74px;border-radius:18px;background-size:cover;background-position:center;margin:4px auto 12px;box-shadow:0 0 18px -4px rgba(245,201,119,.5)}
+.comm-read-eye{text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#caa96a}
+.comm-read-t{text-align:center;font-family:var(--serif);font-size:26px;margin:4px 0 14px;color:#f3ecdf}
+.comm-read-p{font-size:15px;line-height:1.62;color:#d8cff0;margin:0 0 13px}
+.comm-read-done{width:100%;margin-top:6px}
+
 .jnl-hero .nh-greet{font-size:30px}
 
 
@@ -4037,7 +4062,7 @@ nav button.on .ic .i{color:var(--purple);filter:drop-shadow(0 0 7px var(--purple
 <nav class="hidden" id="nav"><div class="inner">
   <button data-tab="meditate" class="on"><span class="ic"></span>Meditate</button>
   <button data-tab="lessons"><span class="ic"></span>Journeys</button>
-  <button data-tab="map"><span class="ic"></span>Map</button>
+  <button data-tab="community"><span class="ic"></span>Community</button>
   <button data-tab="leagues"><span class="ic"></span>Leagues</button>
   <button data-tab="journal"><span class="ic"></span>Journal</button>
   <button data-tab="collect"><span class="ic"></span>Collect</button>
@@ -4426,7 +4451,7 @@ window.__lumenPremiumError=function(m){
     :(ic('spark')+' Get founding-member access');}
   try{toast(m||'Purchase didn’t complete');}catch(e){}
 };
-const NAV_ICON={meditate:'meditate',lessons:'lotus',map:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
+const NAV_ICON={meditate:'meditate',lessons:'lotus',community:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'spark'};
 const LEAGUE_ICON={Ember:'flame',Spark:'spark',Glow:'glow',Flare:'flare',Beacon:'beacon',Nova:'star',Supernova:'nova'};
 const leagueIcon=(name,cls)=>ic(LEAGUE_ICON[name]||'trophy',cls||'');
 // Premium league emblem: a glowing tiered medallion themed to the league colour —
@@ -4474,7 +4499,7 @@ function bindNav(){document.querySelectorAll('nav button').forEach(b=>{b.onclick
 function go(tab){TAB=tab;try{window.__screen&&window.__screen(tab);}catch(e){}try{track('screen_view',null,tab);}catch(e){}document.querySelectorAll('.jny-finale').forEach(x=>x.remove());
   if(window.speechSynthesis)speechSynthesis.cancel();try{stopNarration();}catch(e){}try{Sound.stop();}catch(e){}
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
-  ({meditate:renderMeditate,map:renderMap,leagues:renderLeagues,journal:renderJournal,collect:renderCollection,profile:renderProfile,lessons:renderLessons}[tab])();}
+  ({meditate:renderMeditate,community:renderCommunity,map:renderMap,leagues:renderLeagues,journal:renderJournal,collect:renderCollection,profile:renderProfile,lessons:renderLessons}[tab])();}
 
 /* ---- auth ---- */
 function renderAuth(){
@@ -6988,6 +7013,55 @@ function renderPremiumGate(title,why){
       const st=$('#gstate');if(st){st.innerHTML=ic('check','g')+' You’re on the founding-member list.';st.style.color='#f5c977';}
     }catch(e){toast(e);b.disabled=false;b.innerHTML=ic('spark')+' Get founding-member access';}
   };
+}
+const COMM_LOTUS='<svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg>';
+const COMM_LETTERS=[
+ {ic:'comm-quill',t:'On Beginning Again',by:'A letter from the Keeper',teaser:'You have not fallen behind. The cushion keeps no grudge.',
+  body:['If it has been a day or a year, the breath is still here, patient as ever. Practice is not a streak you broke; it is a room you can walk back into at any hour.',
+        'Do not spend your first minutes paying penance for the days you missed. Sit. Breathe. Let the mind be loud if it needs to be. You came back — that is the whole of it.',
+        'Begin again, and again, and again. That returning is the practice. There is nothing to catch up on, only this breath to arrive for.']},
+ {ic:'comm-leaf',t:'On Stillness',by:'A letter from the Keeper',teaser:'The quiet you are looking for is already underneath the noise.',
+  body:['Stillness is not the absence of thought. It is the space the thoughts move through — and that space is never disturbed, no matter how busy the weather on its surface.',
+        'You do not have to force the mind quiet. Follow a single breath the whole way in and the whole way out, and you will feel the floor of stillness that was always holding you.',
+        'Rest there as long as you can. When you are carried off, come back. The stillness is not going anywhere; it is you, underneath.']},
+ {ic:'comm-letter',t:'On Letting Go',by:'A letter from the Keeper',teaser:'Some things you carry only because no one told you to set them down.',
+  body:['Notice what you are gripping right now — a worry, a plan, a version of how today was supposed to go. Feel the small muscular effort of holding it.',
+        'On the next out-breath, loosen that grip by ten percent. Not forever. Just for this breath. You can pick it back up after, if you still want it.',
+        'This is all letting go ever is: a long series of small releases, one breath at a time. You do not have to drop everything. Only this, only now.']},
+];
+async function renderCommunity(){
+  const unlocked=(function(){try{return localStorage.getItem('lumen_comm_read')==='1';}catch(e){return false;}})();
+  let fd=null; if(unlocked){try{fd=await api('feed');}catch(e){}}
+  const mine=fd&&fd.me;
+  const mod=f=>(f.author_id&&f.author_id!==mine)?`<div class="mini-mod"><button class="mini-modbtn" data-report="${f.id}">${ic('flag')} Report</button><button class="mini-modbtn" data-block="${f.author_id}">Block</button></div>`:'';
+  const fcard=f=>f.type==='spot'
+    ? `<div class="letter mini spot-post"><img class="spot-img" src="${esc(f.photo)}" alt="meditation spot" onerror="this.remove()"><div class="spot-meta"><div class="letter-head"><span>${esc(f.name)||'Someone'}</span><span class="letter-tag">${niceDate(f.created)}</span></div><div class="spot-where">${ic('pin','g')} ${esc(f.city)||'Somewhere on Earth'} · ${f.minutes} min · ${SS_LABEL[f.soundscape]||esc(f.soundscape)}</div>${f.text?`<div class="mini-body">${esc(f.text)}</div>`:''}${f.mood?`<div class="mini-mood">— felt ${esc(f.mood)}</div>`:''}${mod(f)}</div></div>`
+    : `<div class="letter mini"><div class="letter-head"><span>${esc(f.name)}</span><span class="letter-tag">${niceDate(f.created)}</span></div><div class="mini-body">${esc(f.text)}</div>${f.mood?`<div class="mini-mood">— felt ${esc(f.mood)}</div>`:''}${mod(f)}</div>`;
+  const letterCard=(l,i)=>`<button class="comm-letter" data-i="${i}"><span class="comm-let-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><span class="comm-let-body"><span class="comm-let-eye">${esc(l.by)}</span><span class="comm-let-t">${esc(l.t)}</span><span class="comm-let-teaser">${esc(l.teaser)}</span></span><span class="comm-let-go">${ic('book')}</span></button>`;
+  $('#app').innerHTML=`<section class="nh-hero comm-hero" id="commHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Community</h1><p class="nh-sub">Read a letter, then sit with everyone.</p></div></div></section>`
+    +`<div class="nh-sec-h" style="margin:2px 2px 0"><h2>Letters</h2></div>`
+    +`<p class="comm-intro">Three letters to read slowly. Open one to unlock the community below.</p>`
+    +`<div class="comm-letters">`+COMM_LETTERS.map(letterCard).join('')+`</div>`
+    +`<div class="nh-sec-h" style="margin:20px 2px 10px"><h2>The Community</h2>${unlocked?'':`<span class="comm-locktag">${ic('lock')} Locked</span>`}</div>`
+    +(unlocked
+       ? `<div id="commFeed">`+((fd&&fd.feed&&fd.feed.length)?fd.feed.map(fcard).join(''):`<div class="card center muted">Nothing shared yet. Meditate, snap your spot, and be the first.</div>`)+`</div>`
+       : `<div class="comm-lock"><span class="comm-lock-ic">${ic('lock')}</span><div class="comm-lock-t">The community is resting</div><div class="comm-lock-sub">Read one of the letters above to open everyone's posts.</div></div>`);
+  {const h=$('#commHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/comm-hero.jpg?v=62')";};im.src="/art/comm-hero.jpg?v=62";}}
+  document.querySelectorAll('.comm-letter').forEach(b=>b.onclick=()=>openCommLetter(+b.dataset.i));
+  if(unlocked){
+    document.querySelectorAll('.mini-modbtn[data-report]').forEach(b=>b.onclick=async()=>{try{await api('feed/report','POST',{id:+b.dataset.report});}catch(e){}toast('Reported — hidden from your feed.');renderCommunity();});
+    document.querySelectorAll('.mini-modbtn[data-block]').forEach(b=>b.onclick=async()=>{try{await api('feed/block','POST',{author_id:+b.dataset.block});}catch(e){}toast('Blocked.');renderCommunity();});
+  }
+}
+function openCommLetter(i){
+  const l=COMM_LETTERS[i]; if(!l)return;
+  try{localStorage.setItem('lumen_comm_read','1');}catch(e){}
+  const ov=el(`<div class="comm-reader"><div class="comm-read-card"><button class="comm-read-x" id="crx" aria-label="Close">${ic('close')}</button><span class="comm-read-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><div class="comm-read-eye">${esc(l.by)}</div><h1 class="comm-read-t">${esc(l.t)}</h1>${l.body.map(p=>`<p class="comm-read-p">${esc(p)}</p>`).join('')}<button class="btn gold comm-read-done" id="crdone">Close &amp; open the community</button></div></div>`);
+  document.body.appendChild(ov);
+  const close=()=>{ov.remove();if(TAB==='community')renderCommunity();};
+  ov.querySelector('#crx').onclick=close;
+  ov.querySelector('#crdone').onclick=close;
+  ov.addEventListener('click',e=>{if(e.target===ov)close();});
 }
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
@@ -9881,7 +9955,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v61';
+const CACHE = 'lumen-v62';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
