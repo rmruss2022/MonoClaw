@@ -19,7 +19,7 @@
  * with your lights (a Pi/Mac); a cloud host correctly reports an empty scan.
  * Matter *control* additionally needs a controller installed on the hub.
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, renameSync } from "node:fs";
 import { execFile } from "node:child_process";
 import dgram from "node:dgram";
 import net from "node:net";
@@ -46,7 +46,14 @@ export interface LocalLight {
 
 // ---- persistence ----
 function load(): LocalLight[] { try { return JSON.parse(readFileSync(STORE, "utf8")); } catch { return []; } }
-function save(list: LocalLight[]) { try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(STORE, JSON.stringify(list)); } catch (e) { console.log("[lights] save:", (e as Error).message); } }
+const STORE_TMP = new URL("../.data/local-lights.json.tmp", import.meta.url);
+function save(list: LocalLight[]) {
+  // Atomic write: a hub restart/crash mid-write used to leave a 0-byte file and wipe all
+  // onboarded lights. Write to a temp file then rename over the target (atomic on same fs),
+  // so an interrupted write never corrupts the real store.
+  try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(STORE_TMP, JSON.stringify(list)); renameSync(STORE_TMP, STORE); }
+  catch (e) { console.log("[lights] save:", (e as Error).message); }
+}
 let lights: LocalLight[] = load();
 export function list(): LocalLight[] { return lights.map((l) => ({ ...l })); }
 
