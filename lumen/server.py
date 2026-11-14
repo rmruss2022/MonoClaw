@@ -4335,6 +4335,17 @@ const Haptics=(function(){
   return {light:()=>fire('light'),medium:()=>fire('medium'),heavy:()=>fire('heavy'),
           success:()=>fire('success'),warning:()=>fire('warning'),select:()=>fire('select')};
 })();
+// Ask for an App Store review at good moments via the native bridge. Deduped per
+// milestone and capped at 3 asks (iOS itself also rate-limits to ~3/year). No-op
+// on web / older native builds without the bridge.
+function lumenReview(reason){try{
+  if(!window.__lumenReview)return;
+  var st={};try{st=JSON.parse(localStorage.getItem('lumen_review')||'{}');}catch(e){}
+  if(st.done||st[reason]||(st.n||0)>=3)return;
+  st[reason]=Date.now();st.n=(st.n||0)+1;
+  try{localStorage.setItem('lumen_review',JSON.stringify(st));}catch(e){}
+  setTimeout(function(){try{window.__lumenReview();}catch(e){}}, reason==='firstopen'?2600:1000);
+}catch(e){}}
 // One global tap cue across the whole app: a soft click + light haptic on every
 // interactive control. Capture-phase pointerdown so it fires before handlers and
 // never blocks them. Bottom-nav gets a brighter selection cue instead.
@@ -4374,6 +4385,7 @@ function onbLabel(s){if(typeof Q_INTENT==='undefined')return 'Slide '+(s+1);
   const title=(typeof ONB_SLIDES!=='undefined'&&ONB_SLIDES[s])?ONB_SLIDES[s].h:'';
   return (s>=Q_INTENT)?(m[s]||('Step '+s)):('Slide '+(s+1)+(title?' · '+title:''));}
 async function boot(){
+  try{lumenReview('firstopen');}catch(e){}
   try{const r=await api('me');if(r.authed){ME=r.profile;}}catch(e){}
   try{if(window.Sentry&&Sentry.setUser)Sentry.setUser(ME?{id:String(ME.id||''),email:ME.email}:null);}catch(e){}
   if(!ME){
@@ -4498,6 +4510,7 @@ function renderAuth(){
     if(!email||!password){er.textContent='Enter your email and password.';return;}
     try{if(mode==='signup'){await api('signup','POST',{email,password,name:$('#nm').value,birth_date:($('#bd')&&$('#bd').value)||'',phone:($('#ph')&&$('#ph').value)||'',sms_consent:($('#smsok')&&$('#smsok').checked)?1:0});}else{await api('login','POST',{email,password});}
       const r=await api('me');ME=r.profile;$('#nav').classList.remove('hidden');bindNav();go('meditate');
+      if(mode==='signup'){try{lumenReview('signup');}catch(e){}}
     }catch(e){er.textContent=e;}};
   // Enter submits from any field
   ['em','pw','nm','ph'].forEach(id=>{const el=$('#'+id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('#go').click();}});});
@@ -4920,6 +4933,7 @@ async function onbCreate(){
         await api('notif/prefs','POST',{tz_offset_min:tz,pref_hour:onb.timeHour,sto:true});}catch(e){}
     const r=await api('me');ME=r.profile;
     await onbEnter();
+    try{lumenReview('signup');}catch(e){}
   }catch(e){btn.disabled=false;btn.textContent='Create account & begin';er.textContent=e;}
 }
 
@@ -5490,6 +5504,7 @@ function completeFlow(minutes){
       // best-effort profile refresh — must NOT block showing the reward if it blips
       try{const r=await api('me');if(r&&r.profile)ME=r.profile;}catch(_e){}
       showRewards(res,minutes);
+      try{lumenReview('complete');}catch(e){}
     }catch(e){
       if(btn){btn.disabled=false;btn.innerHTML='Collect your Light '+ic('spark');}
       toast(typeof e==='string'?e:'Could not collect your Light — check your connection and try again.');
@@ -9869,7 +9884,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v59';
+const CACHE = 'lumen-v60';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
