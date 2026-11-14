@@ -2490,7 +2490,7 @@ PAGE = r"""<!doctype html>
 .nh-sub{margin:9px 0 0;color:#c2b9e0;font-size:15px}
 .nh-start{position:relative;width:100%;padding:21px;border-radius:999px;border:0;cursor:pointer;font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;background:linear-gradient(100deg,#7a4ba6 0%,#4e2f9e 42%,#4a2db0 72%,#5736bf 100%);box-shadow:0 0 0 1.5px rgba(214,188,250,.72) inset,0 0 18px 1px rgba(210,175,250,.42) inset,0 0 24px 9px rgba(12,4,28,.5) inset,0 0 10px 0 rgba(216,188,255,.5),0 0 26px 2px rgba(180,122,235,.58),0 9px 26px -8px rgba(80,35,150,.6)}
 .nh-start:active{transform:scale(.99)}
-.nh-play{width:24px;height:24px;color:#fff}
+.nh-play{width:30px;height:30px;color:#fff}
 .nh-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:10px 0 12px}
 .nh-stat{background:#15112480;border:1px solid var(--line);border-radius:18px;padding:19px 8px;display:flex;flex-direction:column;align-items:center;gap:9px}
 .nh-si{width:25px;height:25px;display:flex}.nh-si svg{width:25px;height:25px}
@@ -9845,7 +9845,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v52';
+const CACHE = 'lumen-v53';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
