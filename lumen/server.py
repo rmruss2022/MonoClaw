@@ -2598,6 +2598,9 @@ PAGE = r"""<!doctype html>
 .acc-body .card{margin:0 0 10px;border:0;background:transparent;padding:0}
 .jny-hero{min-height:208px;background-position:center 50%}
 .you-card-ic.img{width:54px;height:54px;border-radius:12px;background-size:cover;background-position:center;box-shadow:0 0 12px -4px color-mix(in srgb,var(--c) 70%,transparent)}
+.you-card.art{background-size:cover;background-position:center;justify-content:flex-end;padding:0;min-height:158px;opacity:1}
+.you-card-scrim{position:absolute;inset:0;background:linear-gradient(0deg,rgba(9,6,18,.9) 6%,rgba(9,6,18,.15) 42%,transparent 66%)}
+.you-card-info{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 10px 13px;width:100%}
 .ach-emblem{display:block;width:96px;height:96px;background-size:cover;background-position:center;border-radius:18px;box-shadow:0 0 20px -4px var(--rc)}
 
 .pil-med{flex:none;width:46px;height:46px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 13px -4px rgba(245,201,119,.5),inset 0 0 0 1px rgba(245,201,119,.28)}
@@ -7668,7 +7671,9 @@ function _canBuy(){try{return !!window.__lumenNativeIAP;}catch(e){return false;}
    offering; until it does, this is the App Store Connect price. Reading it at
    call time means a wrapper update needs no web deploy. */
 function _premPrice(){try{return window.__lumenPrice||'$7';}catch(e){return '$7';}}
-function cardChip(a){const r=RARITY[rarityOf(a.code)];const ih=(a.unlocked&&CARD_CODES[a.code])?`<span class="you-card-ic img" style="background-image:url('/art/card-${a.code}.jpg?v=66')"></span>`:`<span class="you-card-ic">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</span>`;return `<button class="you-card${a.unlocked?' on':''}" data-card="${a.code}" style="--c:${r[1]}">${ih}<span class="you-card-t">${a.unlocked?esc(a.title):'Locked'}</span><span class="you-card-r">${r[0]}</span></button>`;}
+function cardChip(a){const r=RARITY[rarityOf(a.code)];
+  if(a.unlocked&&CARD_CODES[a.code]){return `<button class="you-card on art" data-card="${a.code}" style="--c:${r[1]};background-image:url('/art/card-${a.code}.jpg?v=68')"><span class="you-card-scrim"></span><span class="you-card-info"><span class="you-card-t">${esc(a.title)}</span><span class="you-card-r">${r[0]}</span></span></button>`;}
+  return `<button class="you-card${a.unlocked?' on':''}" data-card="${a.code}" style="--c:${r[1]}"><span class="you-card-ic">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</span><span class="you-card-t">${a.unlocked?esc(a.title):'Locked'}</span><span class="you-card-r">${r[0]}</span></button>`;}
 function leagueSectionHTML(d){if(!d||!d.league)return '<div class="card muted">League loading…</div>';const lg=d.league;const toNext=lg.next_at?Math.max(0,lg.next_at-d.weekly_light):0;const prog=lg.next_at?Math.min(100,100*(d.weekly_light-lg.at)/(lg.next_at-lg.at)):100;
  return `<div class="card center league-hero" style="border-color:${lg.color};--lc:${lg.color};--lc2:${lg.color2||lg.color}"><div class="league-emblem-wrap">${leagueEmblem(lg,110)}</div><div class="muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase">Current league</div><h1 style="margin:6px 0;color:${lg.color}">${esc(lg.name)}</h1><div class="muted">${fmt(d.weekly_light)} light this week</div>${lg.next?`<div class="bar lg-bar" style="margin:14px 0 6px"><i style="width:${prog}%"></i></div><div class="muted" style="font-size:13px">${toNext} light to <b style="color:var(--text)">${leagueIcon(lg.next,'g')} ${esc(lg.next)}</b></div>`:`<div class="pill" style="margin-top:10px;border-color:var(--gold);color:var(--gold)">${ic('spark','g glow')} Top league — keep it lit</div>`}</div>`
  +`<div class="card"><h3 style="margin:0 0 6px;display:flex;align-items:center;gap:7px">${leagueIcon(lg.name,'g')} ${esc(lg.name)} · this week</h3><p class="muted" style="font-size:12px;margin:0 0 8px">Top 5 promote ${ic('up','g')} · resets weekly</p>${(d.members||[]).map(m=>`<div class="lb-row ${m.you?'you':''}"><div class="rk ${m.rank<=5?'g':''}">${m.rank<=5?ic('up','g'):''}${m.rank}</div><div class="nm">${esc(m.name)}${m.you?' (you)':''}</div><div class="vl">${fmt(m.weekly_light)}</div></div>`).join('')||'<div class="muted">No one here yet.</div>'}</div>`;}
@@ -7685,8 +7690,8 @@ async function renderProfile(){
   $('#app').innerHTML=`<section class="nh-hero you-hero" id="youHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">${esc(p.name)}</h1><p class="nh-sub">${esc(p.league.name)} league · Level ${p.level}</p></div></div></section>`
   +`<div class="you-levelcard"><div class="you-lvtop"><span class="you-lvn">Level ${p.level}</span><span class="pill" style="border-color:${p.league.color};color:${p.league.color}">${esc(p.league.name)} league</span></div><div class="nh-lbar"><i style="width:${prog}%"></i></div><div class="you-lvsub">${fmt(p.level_into)} / ${fmt(p.level_into+p.level_need)} light to Level ${p.level+1}</div></div>`
   +`<div class="nh-sec-h" style="margin-top:14px"><h2>Your Mandala</h2></div>`
-  +`<div class="you-mandala">${buildAltar(ach.achievements)}</div>`
-  +`<div class="nh-sec-h"><h2>Your Cards</h2><span class="you-cardhint">tap a petal above</span></div>`
+  +`<div class="you-mandala"><iframe id="mandalaFrame" src="assets/mandala.html?v=5" title="Your mandala" loading="eager" scrolling="no" style="width:100%;height:440px;min-height:420px;border:0;display:block;background:transparent"></iframe></div>`
+  +`<div class="nh-sec-h"><h2>Your Cards</h2><span class="you-cardhint">your collectible cards</span></div>`
   +`<div class="you-cards" id="youCards">${ach.achievements.map(cardChip).join('')}</div>`
   +`<div class="nh-sec-h" style="margin-top:16px"><h2>Your Stats</h2></div>`
   +`<div class="you-stats">${[['Light',fmt(p.light)],['Streak',p.streak],['Sessions',p.total_sessions],['Minutes',p.total_minutes],['Best streak',p.best_streak],['This week',fmt(p.weekly_light)]].map(st=>`<div class="you-stat"><div class="n">${st[1]}</div><div class="l">${st[0]}</div></div>`).join('')}</div>`
@@ -7786,6 +7791,7 @@ async function renderProfile(){
   window._ACH=ach.achievements;
   document.querySelectorAll('.ach').forEach(x=>x.onclick=()=>openAchCard(x.dataset.ac));
   {const h=$('#youHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/you-hero.jpg?v=65')";};im.src="/art/you-hero.jpg?v=65";}}
+  try{window.removeEventListener('message',_onMandalaMsg);window.addEventListener('message',_onMandalaMsg);}catch(e){}
   document.querySelectorAll('.you-card').forEach(x=>x.onclick=()=>openAchCard(x.dataset.card));
   document.querySelectorAll('.apiece').forEach(f=>f.onclick=()=>{const code=f.dataset.ach;const c=document.querySelector('.you-card[data-card="'+code+'"]');if(c){document.querySelectorAll('.you-card.sel').forEach(e=>e.classList.remove('sel'));c.classList.add('sel');c.scrollIntoView({behavior:'smooth',inline:'center',block:'nearest'});try{Haptics.select();}catch(e){}}});
 }
@@ -9967,7 +9973,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v67';
+const CACHE = 'lumen-v68';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
