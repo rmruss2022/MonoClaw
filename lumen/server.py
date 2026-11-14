@@ -7815,7 +7815,7 @@ function _canBuy(){try{return !!window.__lumenNativeIAP;}catch(e){return false;}
 function _premPrice(){try{return window.__lumenPrice||'$7';}catch(e){return '$7';}}
 let _youCat=0;
 const CARD_GROUPS=[{name:'All cards',codes:null},{name:'Milestones',codes:['first_light','centurion','deep_diver','luminary']},{name:'Streaks',codes:['week_warrior','constellation']},{name:'Rhythms',codes:['moon_child','dawn_patrol']},{name:'Journal',codes:['scribe','chronicler']},{name:'Explorer',codes:['globetrotter','pilgrim','marathoner']}];
-function _renderYouCards(){const box=document.getElementById('youCards');if(!box)return;const n=CARD_GROUPS.length;const g=CARD_GROUPS[((_youCat%n)+n)%n];const all=window._ACH||[];const list=g.codes?all.filter(a=>g.codes.includes(a.code)):all;box.innerHTML=list.map(cardChip).join('')||'<div class="muted" style="padding:18px 4px">No cards in this set yet.</div>';const nm=document.getElementById('catName');if(nm)nm.textContent=g.name;box.querySelectorAll('.you-card').forEach(x=>x.onclick=()=>openAchCard(x.dataset.card));}
+function _renderYouCards(){const box=document.getElementById('youCards');if(!box)return;const n=CARD_GROUPS.length;const g=CARD_GROUPS[((_youCat%n)+n)%n];const all=window._ACH||[];const list=(g.codes?all.filter(a=>g.codes.includes(a.code)):all.slice()).sort((x,y)=>(y.unlocked?1:0)-(x.unlocked?1:0));box.innerHTML=list.map(cardChip).join('')||'<div class="muted" style="padding:18px 4px">No cards in this set yet.</div>';const nm=document.getElementById('catName');if(nm)nm.textContent=g.name;box.querySelectorAll('.you-card').forEach(x=>x.onclick=()=>openAchCard(x.dataset.card));}
 function cardChip(a){const r=RARITY[rarityOf(a.code)];
   if(a.unlocked&&CARD_CODES[a.code]){return `<button class="you-card on art" data-card="${a.code}" style="--c:${r[1]};background-image:url('/art/card-${a.code}.jpg?v=68')"><span class="you-card-scrim"></span><span class="you-card-info"><span class="you-card-t">${esc(a.title)}</span><span class="you-card-r">${r[0]}</span></span></button>`;}
   return `<button class="you-card${a.unlocked?' on':''}" data-card="${a.code}" style="--c:${r[1]}"><span class="you-card-ic">${ic(a.unlocked?(ACH_ICON[a.code]||'star'):'lock')}</span><span class="you-card-t">${a.unlocked?esc(a.title):'Locked'}</span><span class="you-card-r">${r[0]}</span></button>`;}
@@ -10122,7 +10122,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v75';
+const CACHE = 'lumen-v76';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
