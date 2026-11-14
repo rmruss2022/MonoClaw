@@ -61,6 +61,9 @@ WAKE_DIAG = float(os.environ.get("WAKE_DIAG", "0"))                   # if >0, l
 # wake word. MAX_TURNS caps a runaway back-and-forth.
 FOLLOWUP_WAIT_S = float(os.environ.get("FOLLOWUP_WAIT_S", "3.5"))
 MAX_TURNS = int(os.environ.get("MAX_TURNS", "6"))
+# How many times a noise/non-speech blip in a listen window re-listens before giving
+# up (so a phone beep right after an open question doesn't end the conversation).
+NONSPEECH_RETRIES = int(os.environ.get("NONSPEECH_RETRIES", "2"))
 FOLLOWUP_SETTLE_S = float(os.environ.get("FOLLOWUP_SETTLE_S", "0.5"))   # let reply's BT tail land, then flush it
 BEEP_SETTLE_S = float(os.environ.get("BEEP_SETTLE_S", "0.3"))           # let a beep land in the pipe, then flush it
 # Grace: after the beep, how long to wait for you to START talking before giving up.
@@ -932,6 +935,10 @@ def main():
                 if music:
                     pause_music(snapshot)   # Only sources freshly observed playing may resume.
                 resume = True
+                # A brief noise (phone beep, cough, music tail) landing in a listen
+                # window shouldn't abandon the conversation — re-listen a couple of
+                # times before giving up, so we don't miss the user's actual words.
+                nonspeech_retries = NONSPEECH_RETRIES
                 try:
                     # Conversation: first turn after the wake word, then keep listening
                     # for follow-ups (no wake word) until the user goes quiet.
@@ -967,7 +974,11 @@ def main():
                             break
                         if is_nonspeech(text):
                             log(f"non-speech ({text!r}) — ignoring")
-                            break   # silence/noise ends the conversation
+                            if nonspeech_retries > 0:
+                                nonspeech_retries -= 1
+                                log(f"noise, not speech — re-listening ({nonspeech_retries} left)")
+                                continue   # give another window (re-beeps + records again)
+                            break   # out of retries: silence/noise ends the conversation
                         clean = strip_annotations(text)   # drop [beeping] etc., keep real words
                         if clean != text:
                             log(f"cleaned transcript: {text!r} -> {clean!r}")
