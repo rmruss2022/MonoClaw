@@ -3256,27 +3256,27 @@ a{color:var(--purple)}
 .mgoal-echo b{color:var(--gold);font-style:normal}
 /* journal home — three full-width doors + links + community feed */
 .jbigs{display:flex;flex-direction:column;gap:9px;margin:4px 2px 18px}
-.jbig{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;border-radius:15px;padding:15px;transition:.16s;color:var(--text);
-  border:1px solid rgba(255,255,255,.07);background:linear-gradient(165deg,#17131f,#110d17 82%)}
+.jbig{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;border-radius:16px;padding:15px;transition:.16s;color:var(--text);
+  background:linear-gradient(165deg,#1b1530,#140f22 82%) padding-box,linear-gradient(180deg,rgba(201,182,255,.42),rgba(128,108,196,.12) 60%,rgba(90,80,150,.05)) border-box;border:1.5px solid transparent;box-shadow:0 8px 22px -14px rgba(140,105,230,.35)}
 .jbig:active{transform:scale(.99)}
-.jbig.rec{border-color:rgba(245,201,119,.34);background:linear-gradient(165deg,#1c1710,#120d17 82%)}
-.jbig-ico{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--gold) 86%,#fff);
-  background:radial-gradient(circle at 34% 28%,rgba(245,201,119,.18),#17121f 72%);border:1px solid rgba(245,201,119,.16)}
+.jbig.rec{background:linear-gradient(165deg,#241a3e,#161028 82%) padding-box,linear-gradient(180deg,rgba(192,132,252,.7),rgba(124,58,237,.22) 70%) border-box}
+.jbig-ico{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:color-mix(in srgb,var(--purple) 72%,#fff);filter:drop-shadow(0 0 6px rgba(168,85,247,.5));
+  background:radial-gradient(circle at 34% 28%,rgba(168,85,247,.22),#17121f 72%);border:1px solid rgba(168,85,247,.24)}
 .jbig-ico .i{width:20px;height:20px}
 .jbig-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
-.jbig-t{font-family:var(--serif);font-size:17px;display:flex;align-items:center;gap:8px;color:#efe7d6}
-.jbig-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#2a1a05;background:linear-gradient(135deg,#f5c977,#e0953a);border-radius:999px;padding:2px 8px}
+.jbig-t{font-family:var(--serif);font-size:17px;display:flex;align-items:center;gap:8px;color:#efeafe}
+.jbig-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:999px;padding:2px 8px}
 .jbig-b{font-size:12px;color:var(--muted);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .jbig-go{flex:none;color:#6f6794;font-size:20px;font-weight:300;line-height:1}
 .jlinks{display:flex;gap:10px;margin:0 2px 20px}
 .jlink{flex:1;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:12px;color:var(--text);transition:.15s}
 .jlink:active{transform:scale(.98)}
-.jlink-ico{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:radial-gradient(circle at 34% 30%,rgba(245,201,119,.32),#1a1330);border:1px solid rgba(245,201,119,.26);box-shadow:0 0 12px -5px var(--gold)}
+.jlink-ico{flex:none;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--purple);background:radial-gradient(circle at 34% 30%,rgba(168,85,247,.32),#1a1330);border:1px solid rgba(168,85,247,.3);box-shadow:0 0 12px -5px var(--purple)}
 .jlink-ico .i{width:16px;height:16px}
 .jlink-txt{display:flex;flex-direction:column;min-width:0}
 .jlink-txt b{font-size:13px}
 .jlink-txt span{font-size:11px;color:var(--muted)}
-.jfeed-h{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:var(--gold);margin:6px 2px 10px}
+.jfeed-h{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#c3b2ee;margin:6px 2px 10px}
 .jfeed-h .i{width:14px;height:14px}
 /* pillars & progress */
 .pp-top{background:#13101f;border:1px solid var(--line);border-radius:16px;padding:16px;margin:4px 2px 14px;text-align:center}
@@ -3285,7 +3285,7 @@ a{color:var(--purple)}
 .pp-bar{height:8px;border-radius:999px;background:#241c3e;overflow:hidden;margin-top:10px}
 .pp-bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#e0953a);border-radius:999px;transition:width .4s}
 .plz-head{background:#13101f;border:1px solid var(--line);border-radius:16px;padding:16px;margin:2px 2px 16px}
-.plz-pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--gold)}
+.plz-pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#c3b2ee}
 .plz-pill .i{width:15px;height:15px}
 .plz-arc{font-family:var(--serif);font-size:14px;color:#d8cff0;line-height:1.42;margin:10px 0 2px}
 .plz-meta{font-size:12px;color:var(--muted);margin-top:8px}
@@ -3305,15 +3305,15 @@ a{color:var(--purple)}
 .pp-sn{font-size:10px;color:var(--muted);margin-top:3px}
 /* Pillars redesign — a display case of focus pillars under an arch + pillar cards + Jungian path */
 .pcase{position:relative;overflow:hidden;background:linear-gradient(180deg,#0c0a16,#080610);border:1px solid #241d38;border-radius:100px 100px 20px 20px;padding:30px 20px 20px;margin:6px 0 18px;text-align:center;box-shadow:inset 0 2px 30px -6px #000,inset 0 0 70px -24px #000,0 14px 36px -18px #000}
-.pcase:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 60% at 50% 0,rgba(245,201,119,.14),transparent 56%)}
+.pcase:before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 60% at 50% 0,rgba(168,85,247,.16),transparent 56%)}
 /* faint fluted pilasters down the sides of the niche */
 .pcase:after{content:"";position:absolute;left:14px;right:14px;top:70px;bottom:14px;pointer-events:none;
-  background:linear-gradient(90deg,rgba(245,201,119,.16),transparent 7%,transparent 93%,rgba(245,201,119,.16)),linear-gradient(90deg,transparent 2.5%,rgba(245,201,119,.08) 3%,transparent 3.5%,transparent 96.5%,rgba(245,201,119,.08) 97%,transparent 97.5%)}
+  background:linear-gradient(90deg,rgba(168,85,247,.16),transparent 7%,transparent 93%,rgba(168,85,247,.16)),linear-gradient(90deg,transparent 2.5%,rgba(168,85,247,.08) 3%,transparent 3.5%,transparent 96.5%,rgba(168,85,247,.08) 97%,transparent 97.5%)}
 /* inner gold outline tracing the arch */
-.pcase-frame{position:absolute;inset:9px;border:1px solid rgba(245,201,119,.22);border-radius:92px 92px 14px 14px;pointer-events:none;box-shadow:inset 0 0 22px -10px rgba(245,201,119,.4)}
+.pcase-frame{position:absolute;inset:9px;border:1px solid rgba(168,85,247,.26);border-radius:92px 92px 14px 14px;pointer-events:none;box-shadow:inset 0 0 22px -10px rgba(168,85,247,.45)}
 .pcase-eyebrow,.pcase-row{position:relative;z-index:1}
 .pcase-eyebrow,.pcols{position:relative;z-index:1}
-.pcase-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin-bottom:10px}
+.pcase-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:#c3b2ee;margin-bottom:10px}
 .pcase-eyebrow .i{width:14px;height:14px}
 /* the four focus pillars, each a recoloured Lottie column standing in the niche */
 .pcols{display:flex;justify-content:center;align-items:flex-end;gap:clamp(4px,3vw,14px)}
@@ -3328,13 +3328,13 @@ a{color:var(--purple)}
 .pcolumn-nm{font-size:11px;font-weight:700;color:#efe6ff;line-height:1.12;text-align:center}
 .pcase-empty{color:var(--muted);font-size:12.5px;max-width:30ch;margin:8px auto 2px}
 .pgrid-h,.jpath-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
-.pgrid-h{color:var(--gold);margin:2px 2px 10px}
+.pgrid-h{color:#c3b2ee;margin:2px 2px 10px}
 .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-.pgrid-card{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;font-family:inherit;padding:13px 6px 11px;border-radius:15px;
-  background:linear-gradient(165deg,#191326,#110d1b 82%);border:1px solid rgba(245,201,119,.14);box-shadow:0 8px 22px -18px #000}
+.pgrid-card{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;font-family:inherit;padding:13px 6px 11px;border-radius:16px;
+  background:linear-gradient(165deg,#1b1530,#130f20 82%) padding-box,linear-gradient(180deg,rgba(201,182,255,.4),rgba(128,108,196,.1) 60%) border-box;border:1.5px solid transparent;box-shadow:0 8px 22px -16px rgba(140,105,230,.3)}
 .pgrid-card:active{transform:scale(.97)}
-.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--gold) 82%,#fff);
-  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--gold) 24%,transparent),#140e26 72%);border:1px solid color-mix(in srgb,var(--gold) 22%,transparent);box-shadow:0 0 12px -5px color-mix(in srgb,var(--gold) 70%,transparent)}
+.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--purple) 72%,#fff);filter:drop-shadow(0 0 7px rgba(168,85,247,.5));
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--purple) 26%,transparent),#140e26 72%);border:1px solid color-mix(in srgb,var(--purple) 26%,transparent);box-shadow:0 0 12px -5px color-mix(in srgb,var(--purple) 70%,transparent)}
 .pgrid-med .i{width:21px;height:21px}
 .pgrid-nm{font-size:10.5px;font-weight:600;color:#d6ccdf;text-align:center;line-height:1.15}
 .jpath{position:relative;overflow:hidden;border:1px solid #2a2144;border-radius:18px;padding:16px;margin-top:20px;background:linear-gradient(165deg,#171127,#100c1b 78%)}
@@ -3354,8 +3354,8 @@ a{color:var(--purple)}
 .jpath-d{display:block;font-size:11.5px;color:var(--muted)}
 .jpath-lock{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8b7fb5}
 .pcase-editrow{display:flex;justify-content:center;margin:-8px 0 16px}
-.pcase-edit{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#cbbfe6;background:rgba(255,255,255,.05);border:1px solid rgba(245,201,119,.25);border-radius:999px;padding:6px 13px;cursor:pointer;font-family:inherit}
-.pcase-edit .i{width:12px;height:12px;color:var(--gold)}
+.pcase-edit{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#cbbfe6;background:rgba(255,255,255,.05);border:1px solid rgba(168,85,247,.3);border-radius:999px;padding:6px 13px;cursor:pointer;font-family:inherit}
+.pcase-edit .i{width:12px;height:12px;color:var(--purple)}
 .pcase-edit:active{transform:scale(.97)}
 .jgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .jcard{position:relative;display:flex;flex-direction:column;gap:5px;padding:14px 13px 13px;border-radius:14px;background:linear-gradient(165deg,#191230,#100c1b 84%);border:1px solid rgba(168,85,247,.16);text-align:left}
@@ -7020,11 +7020,11 @@ async function renderJournalHome(){
       +`<div class="pcase-eyebrow">${ic('seal')} Your focus pillars</div>`
       +`<div class="pcols">${chosen.length?chosen.map(caseItem).join(''):'<span class="pcase-empty">Tap Edit to set your focus pillars and fill the case.</span>'}</div></div>`
     +`<div class="pcase-editrow"><button class="pcase-edit" id="loedit">${ic('compass')} Edit focus pillars</button></div>`
-    +(others.length?`<div class="pgrid-h">${ic('compass','g')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
+    +(others.length?`<div class="pgrid-h">${ic('compass')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
     +`<div class="jpath"><div class="jpath-h"><span class="jpath-eyebrow">${ic('lock')} The Jungian Journal</span><span class="jpath-soon">Coming soon</span></div>`
       +`<p class="jpath-sub">A guided descent through the archetypes — meeting the shadow, the persona, the anima, and the Self.</p>`
       +`<div class="jgrid">${jung.map(jcard).join('')}</div></div>`
-    +`<div class="jfeed-h">${ic('globe','g')} From the community</div>`
+    +`<div class="jfeed-h">${ic('globe')} From the community</div>`
     +`<div id="jbody"></div>`;
   // The pillar to drop straight into when Deep is tapped: the server's deep
   // recommendation, else a focus pillar with the fewest sittings, else the least-
@@ -7375,7 +7375,7 @@ async function renderPillarsSection(){
       +`<div class="pcase-eyebrow">${ic('seal')} Your focus pillars</div>`
       +`<div class="pcols">${chosen.length?chosen.map(caseItem).join(''):'<span class="pcase-empty">Assign pillars on the compass above to fill your case.</span>'}</div>`
     +`</div>`
-    +(others.length?`<div class="pgrid-h">${ic('compass','g')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
+    +(others.length?`<div class="pgrid-h">${ic('compass')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
     +`<div class="jpath">`
       +`<div class="jpath-h"><span class="jpath-eyebrow">${ic('lock')} The Jungian Journal</span><span class="jpath-soon">Coming soon</span></div>`
       +`<p class="jpath-sub">A guided descent through the archetypes — meeting the shadow, the persona, the anima, and the Self.</p>`
@@ -9845,7 +9845,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v56';
+const CACHE = 'lumen-v57';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
