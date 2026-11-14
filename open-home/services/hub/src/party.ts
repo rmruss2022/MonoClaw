@@ -35,12 +35,14 @@ function colorLights() {
 async function step() {
   try {
     const ls = colorLights();
+    const pending: Promise<boolean>[] = [];
     for (let i = 0; i < ls.length; i++) {
       const c = PARTY_COLORS[(tick + i) % PARTY_COLORS.length];
-      lights.control(ls[i].id, { on: true, rgb: c, brightness: 100 }).catch(() => {});
+      pending.push(lights.control(ls[i].id, { on: true, rgb: c, brightness: 100 }).then((r) => r.ok).catch(() => false));
     }
     tick++;
-  } catch { /* keep the party going */ }
+    return (await Promise.all(pending)).filter(Boolean).length;
+  } catch { return 0; }
 }
 
 /** Start the party. Tries to beat-match the current track's tempo, else ~130 BPM feel. */
@@ -55,9 +57,11 @@ export async function start(): Promise<{ ok: boolean; lights: number; intervalMs
       intervalMs = Math.round(60000 / (bpm > 150 ? bpm / 2 : bpm));
     }
   } catch { /* no tempo — use default */ }
-  await step();
+  // Confirm the initial commands before reporting that party mode started.
+  const responding = await step();
+  if (!responding) return { ok: false, lights: 0, intervalMs };
   timer = setInterval(step, intervalMs);
-  return { ok: true, lights: colorLights().length, intervalMs };
+  return { ok: true, lights: responding, intervalMs };
 }
 
 /** Stop the party. By default settles the lights to warm white; pass restore=false when

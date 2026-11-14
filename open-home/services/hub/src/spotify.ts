@@ -10,6 +10,13 @@
  * Tokens persist to <data>/spotify-tokens.json so sign-in survives restarts.
  */
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+// Voice turns propagate cancellation through token refresh and every Spotify call.
+const requestSignal = new AsyncLocalStorage<AbortSignal>();
+export function withRequestSignal<T>(signal: AbortSignal, operation: () => Promise<T>): Promise<T> {
+  return requestSignal.run(signal, operation);
+}
 
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || "";
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || "";
@@ -63,6 +70,7 @@ function basicAuth(): string { return "Basic " + Buffer.from(`${CLIENT_ID}:${CLI
 export async function exchangeCode(code: string): Promise<boolean> {
   const body = new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: REDIRECT_URI });
   const r = await fetch("https://accounts.spotify.com/api/token", {
+    signal: requestSignal.getStore(),
     method: "POST", headers: { Authorization: basicAuth(), "Content-Type": "application/x-www-form-urlencoded" }, body,
   });
   if (!r.ok) { console.log("[spotify] token exchange failed", r.status, await r.text()); return false; }
@@ -79,6 +87,7 @@ async function accessToken(): Promise<string | null> {
   if (Date.now() < tokens.expires_at) return tokens.access_token;
   const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token: tokens.refresh_token });
   const r = await fetch("https://accounts.spotify.com/api/token", {
+    signal: requestSignal.getStore(),
     method: "POST", headers: { Authorization: basicAuth(), "Content-Type": "application/x-www-form-urlencoded" }, body,
   });
   if (!r.ok) { console.log("[spotify] refresh failed", r.status); return null; }
@@ -97,10 +106,12 @@ export function rateLimited(): boolean { return Date.now() < rateLimitedUntil; }
 export function retryAfterMs(): number { return Math.max(0, rateLimitedUntil - Date.now()); }
 
 async function api(path: string, init?: RequestInit): Promise<any> {
+  requestSignal.getStore()?.throwIfAborted();
   if (Date.now() < rateLimitedUntil) throw new Error("rate_limited");
   const tok = await accessToken();
   if (!tok) throw new Error("not_connected");
   const r = await fetch(`https://api.spotify.com/v1${path}`, {
+    signal: requestSignal.getStore(),
     ...init, headers: { ...(init?.headers || {}), Authorization: `Bearer ${tok}` },
   });
   if (r.status === 429) {

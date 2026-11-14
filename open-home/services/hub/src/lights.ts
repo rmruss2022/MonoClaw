@@ -60,9 +60,10 @@ export function state() {
 }
 
 /** Route a control patch to the real backend or the mock model. */
-export async function control(id: string, patch: { on?: boolean; brightness?: number; rgb?: localLights.RGB; colorTempK?: number }): Promise<{ ok: boolean; reason?: string }> {
+export async function control(id: string, patch: { on?: boolean; brightness?: number; rgb?: localLights.RGB; colorTempK?: number }, signal?: AbortSignal): Promise<{ ok: boolean; reason?: string }> {
+  signal?.throwIfAborted();
   const real = localLights.list().find((l) => l.id === id);
-  if (real) { const r = await localLights.control(id, patch); return { ok: r.ok, reason: r.reason }; }
+  if (real) { const r = await localLights.control(id, patch, signal); return { ok: r.ok, reason: r.reason }; }
   // mock
   const dev = home.getDevice(id);
   if (!dev || dev.type !== "light") return { ok: false, reason: "not found" };

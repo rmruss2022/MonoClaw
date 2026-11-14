@@ -51,9 +51,9 @@ let lights: LocalLight[] = load();
 export function list(): LocalLight[] { return lights.map((l) => ({ ...l })); }
 
 // ---- capability detection ----
-function sh(cmd: string, args: string[], timeoutMs = 6000): Promise<{ ok: boolean; out: string }> {
+function sh(cmd: string, args: string[], timeoutMs = 6000, signal?: AbortSignal): Promise<{ ok: boolean; out: string }> {
   return new Promise((resolve) => {
-    execFile(cmd, args, { timeout: timeoutMs }, (err, stdout) => resolve({ ok: !err, out: String(stdout || "") }));
+    execFile(cmd, args, { timeout: timeoutMs, signal }, (err, stdout) => resolve({ ok: !err, out: String(stdout || "") }));
   });
 }
 let matterChecked = false, matterCtl: null | "chip-tool" | "matter-server" = null;
@@ -248,10 +248,10 @@ export async function identify(id: string): Promise<{ ok: boolean; reason?: stri
 }
 
 // ---- control ----
-function httpPost(host: string, port: number, path: string, timeoutMs = 3000): Promise<boolean> {
+function httpPost(host: string, port: number, path: string, timeoutMs = 3000, signal?: AbortSignal): Promise<boolean> {
   return new Promise((resolve) => {
-    const req = http.request({ host, port, path, method: "POST", timeout: timeoutMs }, (res) => {
-      res.resume(); resolve((res.statusCode || 500) < 400);
+    const req = http.request({ host, port, path, method: "POST", timeout: timeoutMs, signal }, (res) => {
+      res.resume(); resolve((res.statusCode || 500) >= 200 && (res.statusCode || 500) < 300);
     });
     req.on("timeout", () => { req.destroy(); resolve(false); });
     req.on("error", () => resolve(false));
@@ -268,26 +268,30 @@ function esphomePath(l: LocalLight, patch: Partial<LocalLight>): string {
   if (patch.colorTempK != null) q.push("color_temp=" + Math.round(1e6 / patch.colorTempK)); // mireds
   return `/light/${entity}/turn_on` + (q.length ? "?" + q.join("&") : "");
 }
-async function applyEsphome(l: LocalLight, patch: Partial<LocalLight>): Promise<{ ok: boolean; reason?: string }> {
+async function applyEsphome(l: LocalLight, patch: Partial<LocalLight>, signal?: AbortSignal): Promise<{ ok: boolean; reason?: string }> {
   if (!l.address) return { ok: false, reason: "No address for this light." };
-  const ok = await httpPost(l.address, l.port || 80, esphomePath(l, patch));
+  const ok = await httpPost(l.address, l.port || 80, esphomePath(l, patch), 3000, signal);
   return ok ? { ok: true } : { ok: false, reason: "Light didn't respond on the LAN (is the hub on the same network?)." };
 }
-async function applyMatter(l: LocalLight, patch: Partial<LocalLight>): Promise<{ ok: boolean; reason?: string }> {
+async function applyMatter(l: LocalLight, patch: Partial<LocalLight>, signal?: AbortSignal): Promise<{ ok: boolean; reason?: string }> {
   const ctl = await matterController();
   if (!ctl) return { ok: false, reason: "No Matter controller on the hub — install chip-tool or matter-server (see Setup)." };
   if (ctl !== "chip-tool" || !l.node) return { ok: false, reason: "Matter control needs chip-tool with a commissioned node." };
   const ep = String(l.endpoint ?? 1);
-  if (patch.on != null) await sh("chip-tool", ["onoff", patch.on ? "on" : "off", l.node, ep], 8000);
-  if (patch.brightness != null) await sh("chip-tool", ["levelcontrol", "move-to-level", String(Math.round(patch.brightness / 100 * 254)), "0", "0", "0", l.node, ep], 8000);
+  signal?.throwIfAborted();
+  if (patch.on != null && !(await sh("chip-tool", ["onoff", patch.on ? "on" : "off", l.node, ep], 8000, signal)).ok) return { ok: false, reason: "Matter power command failed" };
+  signal?.throwIfAborted();
+  if (patch.brightness != null && !(await sh("chip-tool", ["levelcontrol", "move-to-level", String(Math.round(patch.brightness / 100 * 254)), "0", "0", "0", l.node, ep], 8000, signal)).ok) return { ok: false, reason: "Matter brightness command failed" };
+  if (patch.rgb || patch.colorTempK != null) return { ok: false, reason: "Matter color control is not supported" };
   return { ok: true };
 }
 
 /** Apply a control patch to a real light; updates optimistic state on success. */
-export async function control(id: string, patch: Partial<LocalLight>): Promise<{ ok: boolean; reason?: string; light?: LocalLight }> {
+export async function control(id: string, patch: Partial<LocalLight>, signal?: AbortSignal): Promise<{ ok: boolean; reason?: string; light?: LocalLight }> {
+  signal?.throwIfAborted();
   const l = lights.find((x) => x.id === id);
   if (!l) return { ok: false, reason: "not found" };
-  const res = l.backend === "esphome" ? await applyEsphome(l, patch) : await applyMatter(l, patch);
+  const res = l.backend === "esphome" ? await applyEsphome(l, patch, signal) : await applyMatter(l, patch, signal);
   if (res.ok) {
     if (patch.on != null) l.on = patch.on;
     if (patch.brightness != null) { l.brightness = Math.round(patch.brightness); if (patch.brightness > 0) l.on = true; }

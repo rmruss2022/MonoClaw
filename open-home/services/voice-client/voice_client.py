@@ -21,6 +21,7 @@ Config (environment): see README / voice.env.example.
 import base64
 import glob
 import io
+import json
 import os
 import re
 import select
@@ -93,6 +94,8 @@ SPEECH_COMPRESS = float(os.environ.get("SPEECH_COMPRESS", "6"))
 VOICE_LEVEL = float(os.environ.get("VOICE_LEVEL", "0.7"))
 LOG_FILE = os.environ.get("VOICE_LOG", "/home/pi/.openhome/voice.log")
 DEBUG = os.environ.get("VOICE_DEBUG", "1") != "0"
+LOG_MAX_BYTES = int(os.environ.get("VOICE_LOG_MAX_BYTES", "5242880"))
+_log_lock = threading.Lock()
 
 _AENV = {**os.environ, "XDG_RUNTIME_DIR": os.environ.get("XDG_RUNTIME_DIR", "/run/user/1000")}
 
@@ -101,8 +104,12 @@ def log(*a, level="INFO"):
     line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]} [{level}] " + " ".join(str(x) for x in a)
     print(line, flush=True)
     try:
-        with open(LOG_FILE, "a") as f:
-            f.write(line + "\n")
+        with _log_lock:
+            # Keep one bounded backup; serialize rotation with background logging.
+            if LOG_MAX_BYTES > 0 and os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) >= LOG_MAX_BYTES:
+                os.replace(LOG_FILE, LOG_FILE + ".1")
+            with open(LOG_FILE, "a") as f:
+                f.write(line + "\n")
     except Exception:
         pass
 
@@ -134,6 +141,20 @@ def hub_login():
 
 def _auth_headers():
     return {"Cookie": f"oh_auth={HUB_TOKEN}"} if HUB_TOKEN else {}
+
+
+def _hub_request(method, path, **kwargs):
+    """Reject HTTP, authentication and malformed/application-level failures alike."""
+    for attempt in range(2):
+        r = SESSION.request(method, f"{HUB}{path}", headers=_auth_headers(), **kwargs)
+        if r.status_code == 401 and attempt == 0:
+            hub_login()
+            continue
+        r.raise_for_status()
+        result = r.json()
+        if not isinstance(result, dict) or result.get("ok") is False:
+            raise ValueError(f"hub command failed: {result}")
+        return result
 
 
 vad = webrtcvad.Vad(3)   # most aggressive: better at ignoring music bleed, ends sooner
@@ -177,29 +198,39 @@ MIC_PW_SOURCE = os.environ.get("MIC_PW_SOURCE", "").strip()
 
 
 _music_state = {"on": False, "t": 0.0}
+_music_sources = {"spotify": False, "soundcloud": False}
+MIC_READ_TIMEOUT_S = float(os.environ.get("MIC_READ_TIMEOUT_S", "2.0"))
+MIC_REOPEN_BACKOFF_S = float(os.environ.get("MIC_REOPEN_BACKOFF_S", "0.8"))
+MIC_REOPEN_BACKOFF_MAX_S = float(os.environ.get("MIC_REOPEN_BACKOFF_MAX_S", "8.0"))
 
 
-def music_playing():
+def music_playing(fresh=False):
     """True when the X10 is actively playing music. Cached; polls Soloist (and the
     SoundCloud mpv helper) at most every MUSIC_POLL_S so the wake loop stays cheap."""
     now = time.time()
-    if now - _music_state["t"] < MUSIC_POLL_S:
+    if (not fresh) and now - _music_state["t"] < MUSIC_POLL_S:
         return _music_state["on"]
     _music_state["t"] = now
+    if fresh:
+        # Unknown/error is never permission to auto-resume a source.
+        _music_sources.update(spotify=False, soundcloud=False)
     on = False
     try:
-        p = subprocess.run(["soloist", "ctl", "now"], env=_AENV, timeout=2,
+        p = subprocess.run(["soloist", "ctl", "now"], env=_AENV, timeout=2 if fresh else 0.25,
                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         out = p.stdout.decode("utf8", "ignore").lower()
-        on = ("playing" in out) and ("paused" not in out)
+        on = p.returncode == 0 and bool(re.search(r"\bplaying\b", out)) and "paused" not in out
+        _music_sources["spotify"] = on
     except Exception:
-        on = _music_state["on"]   # keep last known on transient error
-    if not on:
+        on = False if fresh else _music_state["on"]
+    if fresh or not on:
         # SoundCloud path (sc-play via mpv) counts as music too
         try:
-            q = subprocess.run(["sc-ctl", "status"], env=_AENV, timeout=2,
+            q = subprocess.run(["sc-ctl", "status"], env=_AENV, timeout=2 if fresh else 0.25,
                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-            if "playing" in q.stdout.decode("utf8", "ignore").lower():
+            out = q.stdout.decode("utf8", "ignore").lower()
+            _music_sources["soundcloud"] = q.returncode == 0 and bool(re.search(r"\bplaying\b", out)) and "paused" not in out
+            if _music_sources["soundcloud"]:
                 on = True
         except Exception:
             pass
@@ -211,6 +242,54 @@ def music_playing():
     return on
 
 
+_keepalive = {"process": None, "heartbeat": 0.0}
+_speaker_lock = threading.Lock()
+_speaker_failures = 0
+_speaker_last_reconnect = 0.0
+
+
+def _recover_speaker(reconnect=False):
+    """Resolve the same BT device's current sink after profile/node recreation."""
+    global SPK_NODE, _speaker_last_reconnect
+    with _speaker_lock:
+        mac = re.search(r"([0-9A-Fa-f]{2}(?:_[0-9A-Fa-f]{2}){5})", SPK_NODE)
+        address = os.environ.get("SPK_MAC", mac.group(1).replace("_", ":") if mac else "")
+        try:
+            if reconnect and address and time.monotonic() - _speaker_last_reconnect > 15:
+                _speaker_last_reconnect = time.monotonic()
+                _run(["bluetoothctl", "connect", address], timeout=5)
+            p = subprocess.run(["pw-dump"], env=_AENV, timeout=3,
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            p.check_returncode()
+            nodes = json.loads(p.stdout)
+            sinks = [(n.get("info") or {}).get("props", {}) for n in nodes]
+            sinks = [s for s in sinks if s.get("media.class") == "Audio/Sink"]
+            found = next((s for s in sinks if s.get("node.name") == SPK_NODE), None)
+            if found is None and address:
+                found = next((s for s in sinks if address.replace(":", "_").lower()
+                              in str(s.get("node.name", "")).lower()), None)
+            if found is None:
+                return False
+            previous = SPK_NODE
+            SPK_NODE = found["node.name"]
+            if previous != SPK_NODE:
+                _restart_keepalive()
+            return True
+        except Exception as e:
+            log("speaker recovery:", e, level="WARN")
+            return False
+
+
+def _restart_keepalive():
+    p = _keepalive["process"]
+    if p is not None and p.poll() is None:
+        # Killing the child releases a writer blocked in flush; its owner reaps it.
+        try:
+            p.kill()
+        except OSError:
+            pass
+
+
 def _start_keepalive():
     """Hold a CONTINUOUS inaudible stream to the X10 so its Bluetooth sink never goes
     idle. Without this the beep is heard (plays instantly on wake) but the voice — played
@@ -219,19 +298,41 @@ def _start_keepalive():
     def run():
         chunk = (np.random.randint(-3, 4, SR // 2, dtype=np.int16)).tobytes()   # ~0.5s, ~-80dB (inaudible)
         while True:
+            p = None
             try:
                 p = subprocess.Popen(
                     ["pw-play", "--target", SPK_NODE, "--rate", str(SR),
                      "--channels", "1", "--format", "s16", "--raw", "-"],
                     stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL, env=_AENV)
+                _keepalive.update(process=p, heartbeat=time.monotonic())
                 while True:
                     p.stdin.write(chunk)       # blocks when the pipe fills → self-throttling, gapless
                     p.stdin.flush()
+                    _keepalive["heartbeat"] = time.monotonic()
             except Exception as e:
                 log("keepalive dropped, restarting:", e, level="WARN")
+            finally:
+                try:
+                    _close_process(p)
+                except (OSError, ValueError):
+                    pass
+                _keepalive["process"] = None
                 time.sleep(1)
+    def watchdog():
+        last_sink_check = 0.0
+        while True:
+            time.sleep(2)
+            if _keepalive["process"] is not None and time.monotonic() - _keepalive["heartbeat"] > 5:
+                log("keepalive stalled; restarting", level="WARN")
+                _restart_keepalive()
+            if time.monotonic() - last_sink_check > 30:
+                last_sink_check = time.monotonic()
+                if not _recover_speaker():
+                    _recover_speaker(reconnect=True)
+                    _restart_keepalive()
     threading.Thread(target=run, daemon=True).start()
+    threading.Thread(target=watchdog, daemon=True).start()
     log("keepalive stream started (keeps the X10 Bluetooth sink alive)")
 
 
@@ -254,7 +355,7 @@ def _soloist_now():
         return None
 
 
-def open_mic():
+def _open_mic_once():
     # When MIC_PW_SOURCE is set we capture from a PipeWire node (the AEC'd
     # echo-cancel source) so the music the X10 is playing is already subtracted
     # out of the frames. Otherwise fall back to raw ALSA via arecord.
@@ -263,13 +364,13 @@ def open_mic():
         return subprocess.Popen(
             ["pw-record", "--target", MIC_PW_SOURCE, "--rate", str(SR),
              "--channels", "1", "--format", "s16", "--raw", "-"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_AENV,
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=_AENV,
         )
     log(f"opening mic: arecord -D {MIC_ALSA} @ {SR}Hz mono")
     return subprocess.Popen(
         ["arecord", "-q", "-D", MIC_ALSA, "-f", "S16_LE", "-r", str(SR),
          "-c", "1", "-t", "raw"],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_AENV,
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=_AENV,
     )
 
 
@@ -291,11 +392,64 @@ def flush_mic(mic):
         log("mic flush err:", e, level="WARN")
 
 
+def _close_process(p):
+    if p is None:
+        return
+    try:
+        if p.poll() is None:
+            p.terminate()
+        try:
+            p.wait(timeout=1)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.wait()
+    finally:
+        for stream in (p.stdin, p.stdout, p.stderr):
+            if stream:
+                try:
+                    stream.close()
+                except (OSError, ValueError):
+                    pass
+
+
+def open_mic(previous=None):
+    """Retry capture startup and recurring failures without killing the assistant."""
+    backoff = getattr(previous, "_reopen_backoff", MIC_REOPEN_BACKOFF_S)
+    if previous is not None:
+        try:
+            _close_process(previous)
+        except (OSError, ValueError):
+            pass
+        time.sleep(backoff)
+        backoff = min(MIC_REOPEN_BACKOFF_MAX_S, backoff * 2)
+    while True:
+        try:
+            mic = _open_mic_once()
+            mic._reopen_backoff = backoff
+            return mic
+        except (OSError, ValueError) as e:
+            log("mic open failed:", e, level="WARN")
+            time.sleep(backoff)
+            backoff = min(MIC_REOPEN_BACKOFF_MAX_S, backoff * 2)
+
+
 def read_samples(mic, n):
     need = n * 2
     buf = b""
+    deadline = time.monotonic() + MIC_READ_TIMEOUT_S
     while len(buf) < need:
-        chunk = mic.stdout.read(need - len(buf))
+        try:
+            fd = mic.stdout.fileno()
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError("mic read timeout")
+            rdy, _, _ = select.select([fd], [], [], remaining)
+            if not rdy:
+                raise RuntimeError("mic read timeout")
+            # Buffered read(size) may wait for more bytes even after select succeeds.
+            chunk = os.read(fd, need - len(buf))
+        except (OSError, ValueError) as e:
+            raise RuntimeError(f"mic pipe error: {e}") from e
         if not chunk:
             err = b""
             try:
@@ -305,12 +459,14 @@ def read_samples(mic, n):
             raise RuntimeError("mic stream ended: " + err.decode("utf8", "ignore")[:160])
         buf += chunk
     arr = np.frombuffer(buf, dtype=np.int16)
+    mic._reopen_backoff = MIC_REOPEN_BACKOFF_S
     if MIC_GAIN != 1.0:
         arr = np.clip(arr.astype(np.float32) * MIC_GAIN, -32768, 32767).astype(np.int16)
     return arr
 
 
 def _play_to_room(pcm_i16, what="audio"):
+    global _speaker_failures
     path = "/tmp/openhome-voice-out.wav"
     with wave.open(path, "wb") as w:
         w.setnchannels(1)
@@ -320,6 +476,16 @@ def _play_to_room(pcm_i16, what="audio"):
     secs = len(pcm_i16) / SR
     t0 = time.time()
     rc, _ = _run(["pw-play", "--target", SPK_NODE, path], timeout=max(10, int(secs) + 10))
+    if rc != 0:
+        _speaker_failures += 1
+        _recover_speaker(reconnect=_speaker_failures >= 2)
+        _restart_keepalive()
+        rc, _ = _run(["pw-play", "--target", SPK_NODE, path], timeout=max(10, int(secs) + 10))
+        if rc != 0:
+            _speaker_failures += 1
+            _recover_speaker(reconnect=True)
+    if rc == 0:
+        _speaker_failures = 0
     log(f"play {what}: {secs:.1f}s -> X10 (pw-play rc={rc}, {time.time()-t0:.1f}s)")
 
 
@@ -347,18 +513,23 @@ def duck(on, level=None):
     _run(["sc-ctl", "vol", str(lvl)])
 
 
-def pause_music():
+def pause_music(snapshot=None):
     # PAUSE (not duck) the music during a wake interaction. A ducked-but-still-active
     # music stream blocks the (later) voice from mixing out to the Bluetooth sink; pausing
     # it lets the voice through. The keepalive stream keeps the sink awake while paused.
     log("music -> pause (for listen + speak)")
-    _run(["soloist", "ctl", "pause"])
-    _run(["sc-ctl", "pause"])
+    if snapshot is None or snapshot.get("spotify"):
+        _run(["soloist", "ctl", "pause"])
+    if snapshot is None or snapshot.get("soundcloud"):
+        _run(["sc-ctl", "pause"])
 
 
-def resume_music():
+def resume_music(snapshot=None):
     log("music -> resume")
-    _run(["soloist", "ctl", "play"])
+    if snapshot is None or snapshot.get("spotify"):
+        _run(["soloist", "ctl", "play"])
+    if snapshot and snapshot.get("soundcloud"):
+        _run(["sc-ctl", "resume"])
 
 
 def beep(freq=660, ms=120, vol=0.25):
@@ -417,8 +588,9 @@ def speak(text):
 
 
 def transcribe(wav_bytes):
+    """Return text (including true silence as ''), or None on STT failure."""
     if not XI_KEY:
-        return ""
+        return None
     t0 = time.time()
     try:
         r = requests.post(
@@ -430,13 +602,13 @@ def transcribe(wav_bytes):
         )
         if r.status_code != 200:
             log(f"STT HTTP {r.status_code}: {r.text[:160]}", level="ERROR")
-            return ""
+            return None
         text = (r.json().get("text") or "").strip()
         log(f"STT ok: {text!r} in {time.time()-t0:.1f}s")
         return text
     except Exception as e:
         log("STT error:", e, level="ERROR")
-        return ""
+        return None
 
 
 NONSPEECH = ("", "clicking", "silence", "blank_audio", "background noise", "music")
@@ -472,15 +644,10 @@ def _hub_room_power(room, on):
     """Flip all lights in a room on/off directly via the hub — no LLM. Returns the
     number of lights that matched (0 = nothing, so the caller falls back to the LLM)."""
     try:
-        r = SESSION.post(f"{HUB}/lights/command",
+        result = _hub_request("POST", "/lights/command",
                          json={"cmd": "room-power", "room": room, "on": on},
-                         headers=_auth_headers(), timeout=6)
-        if r.status_code == 401:
-            hub_login()
-            r = SESSION.post(f"{HUB}/lights/command",
-                             json={"cmd": "room-power", "room": room, "on": on},
-                             headers=_auth_headers(), timeout=6)
-        hint = str((r.json() or {}).get("hint", ""))
+                         timeout=6)
+        hint = str(result.get("hint", ""))
         m = re.search(r"(\d+)\s*light", hint)
         return int(m.group(1)) if m else 0
     except Exception as e:
@@ -509,11 +676,7 @@ def _detect_color(t):
 def _hub_room_lights(room):
     """Real light ids in a room (via the hub), so we can target them for color."""
     try:
-        r = SESSION.get(f"{HUB}/lights/state", headers=_auth_headers(), timeout=6)
-        if r.status_code == 401:
-            hub_login()
-            r = SESSION.get(f"{HUB}/lights/state", headers=_auth_headers(), timeout=6)
-        lights = (r.json() or {}).get("lights", [])
+        lights = _hub_request("GET", "/lights/state", timeout=6).get("lights", [])
         return [l["id"] for l in lights
                 if l.get("real") and room.lower() in str(l.get("room", "")).lower()]
     except Exception as e:
@@ -523,9 +686,9 @@ def _hub_room_lights(room):
 
 def _hub_set_color(lid, rgb):
     try:
-        SESSION.post(f"{HUB}/lights/command",
+        _hub_request("POST", "/lights/command",
                      json={"cmd": "color", "id": lid, "rgb": {"r": rgb[0], "g": rgb[1], "b": rgb[2]}},
-                     headers=_auth_headers(), timeout=6)
+                     timeout=6)
         return True
     except Exception as e:
         log("color cmd error:", e, level="WARN")
@@ -534,13 +697,8 @@ def _hub_set_color(lid, rgb):
 
 def _hub_party(on):
     try:
-        r = SESSION.post(f"{HUB}/lights/command", json={"cmd": "party", "on": on},
-                         headers=_auth_headers(), timeout=8)
-        if r.status_code == 401:
-            hub_login()
-            r = SESSION.post(f"{HUB}/lights/command", json={"cmd": "party", "on": on},
-                             headers=_auth_headers(), timeout=8)
-        return r.status_code == 200
+        _hub_request("POST", "/lights/command", json={"cmd": "party", "on": on}, timeout=8)
+        return True
     except Exception as e:
         log("party cmd error:", e, level="WARN")
         return False
@@ -551,7 +709,7 @@ def _hub_party(on):
 CONVERSATIONAL_FAST = {"greeting"}
 
 
-def fast_intent(text):
+def fast_intent(text, snapshot=None):
     """Common commands handled LOCALLY (no LLM round-trip) for instant response.
     Returns None (→ route to LLM), a string label (acted, stay silent), or a
     (label, say) tuple (acted, speak this short confirmation)."""
@@ -566,7 +724,8 @@ def fast_intent(text):
     # Party mode: flash the lights to the music. "party" / "disco" / "rave" / "light show".
     if "party" in t or "disco" in t or "rave" in t or "light show" in t:
         off = any(w in t for w in ("off", "stop", "end", "over", "no more", "normal"))
-        _hub_party(not off)
+        if not _hub_party(not off):
+            return ("party-error", "Sorry, I couldn't change party mode.")
         return ("party-off" if off else "party", "Party's over." if off else "Party mode!")
     # Lights: turn a room's lights on/off directly via the hub (instant). Requires a
     # command cue (not a question like "is the light on?"). Falls back to the LLM if
@@ -586,7 +745,8 @@ def fast_intent(text):
         if cname:
             room = _detect_room(t) or "Living Room"
             ids = _hub_room_lights(room)
-            if ids and any(_hub_set_color(lid, crgb) for lid in ids):
+            results = [_hub_set_color(lid, crgb) for lid in ids]
+            if results and all(results):
                 return (f"lights-{cname}", f"Okay, {room.lower()} lights {cname}.")
             return None
     # Greetings → instant canned reply
@@ -620,7 +780,8 @@ def fast_intent(text):
         _run(["soloist", "ctl", "pause"]); _run(["sc-ctl", "pause"]); return "pause"
     if t in ("resume", "unpause", "continue", "play", "keep playing", "resume music",
              "play music", "resume the music", "keep the music going"):
-        _run(["soloist", "ctl", "play"]); return "resume"
+        resume_music(snapshot if snapshot and any(snapshot.values()) else None)
+        return "resume"
     if any(p in t for p in ("louder", "volume up", "turn it up", "turn up", "crank it", "bump it up")):
         _run(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "0.12+"]); return "vol-up"
     if any(p in t for p in ("quieter", "volume down", "turn it down", "turn down", "lower it", "lower the volume", "too loud")):
@@ -630,11 +791,11 @@ def fast_intent(text):
 
 def agent_call(text):
     payload = {"text": text}
-    r = SESSION.post(f"{HUB}/agent", json=payload, headers=_auth_headers(), timeout=30)
+    r = SESSION.post(f"{HUB}/agent", json=payload, headers=_auth_headers(), timeout=12)
     if r.status_code == 401:
         log("hub 401 — re-authenticating", level="WARN")
         hub_login()
-        r = SESSION.post(f"{HUB}/agent", json=payload, headers=_auth_headers(), timeout=30)
+        r = SESSION.post(f"{HUB}/agent", json=payload, headers=_auth_headers(), timeout=12)
     r.raise_for_status()
     out = r.json()
     log(f"hub /agent {r.status_code}: reply={out.get('reply')!r}")
@@ -710,7 +871,14 @@ def main():
     confirm = 0
     try:
         while True:
-            samples = read_samples(mic, BLOCK)
+            try:
+                samples = read_samples(mic, BLOCK)
+            except RuntimeError as e:
+                log("mic recovery:", e, level="WARN")
+                mic = open_mic(mic)
+                confirm = 0
+                _reset_wake()
+                continue
             scores = wake.predict(samples)
             top = max(scores.values()) if scores else 0.0
             music = music_playing()
@@ -728,10 +896,12 @@ def main():
             confirm = 0
             if True:
                 log(f"WAKE detected (score={top:.2f}, mode={'music' if music else 'quiet'}, thr={thr:.2f})")
+                music = music_playing(fresh=True)
+                snapshot = dict(_music_sources)
                 beep()
                 _reset_wake()
                 if music:
-                    pause_music()   # PAUSE music for the whole interaction (clean mic + audible voice)
+                    pause_music(snapshot)   # Only sources freshly observed playing may resume.
                 resume = True
                 try:
                     # Conversation: first turn after the wake word, then keep listening
@@ -752,12 +922,20 @@ def main():
                             beep()                         # cue: talk now
                             time.sleep(BEEP_SETTLE_S)      # let the beep land
                             flush_mic(mic)                 # drop the beep too
-                        pcm = record_utterance(mic, wait_s=grace)
+                        try:
+                            pcm = record_utterance(mic, wait_s=grace)
+                        except RuntimeError as e:
+                            log("mic recovery during recording:", e, level="WARN")
+                            mic = open_mic(mic)
+                            break   # Discard the interrupted utterance, then return to wake detection.
                         if not pcm:
                             log(f"no speech within {grace:.1f}s grace — ending"
                                 + (" conversation" if turn else ""))
                             break
                         text = transcribe(to_wav(pcm))
+                        if text is None:
+                            speak("I'm having trouble hearing right now.")
+                            break
                         if is_nonspeech(text):
                             log(f"non-speech ({text!r}) — ignoring")
                             break   # silence/noise ends the conversation
@@ -765,14 +943,14 @@ def main():
                         if clean != text:
                             log(f"cleaned transcript: {text!r} -> {clean!r}")
                         text = clean
-                        fi = fast_intent(text)
+                        fi = fast_intent(text, snapshot)
                         if fi:
                             label, say = fi if isinstance(fi, tuple) else (fi, None)
                             log(f"FAST intent '{label}' — no LLM, instant")
                             if label == "dismiss":
                                 break   # explicit end: go quiet, no follow-up
                             if label in ("pause", "resume"):
-                                resume = (label == "resume")   # honor an explicit pause/stop or play
+                                resume = False   # The explicit transport command already ran.
                             if say:
                                 speak(say)
                             # Action commands (skip/pause/lights/volume/time…) are one-shot:
@@ -788,6 +966,8 @@ def main():
                             speak("Sorry, I couldn't reach the hub.")
                             break
                         speak(out.get("reply") or "Okay.")
+                        if re.search(r"\b(pause[ds]?|stop(?:ped)?|resume[ds]?|play(?:ing)?)\b", text, re.I) and out.get("actions"):
+                            resume = False   # Do not undo an explicit hub media command.
                         # If the agent actually DID something (played music, lights, a
                         # scene…) it's a one-shot command → sleep. A pure conversational
                         # reply (no action) keeps the turn open for a natural back-and-forth.
@@ -795,12 +975,12 @@ def main():
                             break
                 finally:
                     if music and resume:
-                        resume_music()   # resume (only if it was playing & user didn't pause/stop)
+                        resume_music(snapshot)
                     _reset_wake()
                     log("ready — listening again")
     finally:
         try:
-            mic.terminate()
+            _close_process(mic)
         except Exception:
             pass
 

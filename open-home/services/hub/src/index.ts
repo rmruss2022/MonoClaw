@@ -718,19 +718,20 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
     const cmd = String(p.cmd ?? "");
     let hint: string | undefined;
+    let commandOk = true;
     // Any real light change ends the party first (so "set the lights green" takes over),
     // except brightness (which can ride along) and the party command itself.
     if (party.isOn() && cmd !== "party" && cmd !== "brightness") party.stop(false);
     switch (cmd) {
-      case "toggle": { const r = await lights.control(String(p.id), { on: !!p.on }); if (!r.ok) hint = r.reason; break; }
-      case "brightness": { const r = await lights.control(String(p.id), { brightness: Number(p.brightness) }); if (!r.ok) hint = r.reason; break; }
-      case "color": { const r = await lights.control(String(p.id), { rgb: p.rgb }); if (!r.ok) hint = r.reason; break; }
-      case "temp": { const r = await lights.control(String(p.id), { colorTempK: Number(p.colorTempK) }); if (!r.ok) hint = r.reason; break; }
+      case "toggle": { const r = await lights.control(String(p.id), { on: !!p.on }); commandOk = r.ok; if (!r.ok) hint = r.reason; break; }
+      case "brightness": { const r = await lights.control(String(p.id), { brightness: Number(p.brightness) }); commandOk = r.ok; if (!r.ok) hint = r.reason; break; }
+      case "color": { const r = await lights.control(String(p.id), { rgb: p.rgb }); commandOk = r.ok; if (!r.ok) hint = r.reason; break; }
+      case "temp": { const r = await lights.control(String(p.id), { colorTempK: Number(p.colorTempK) }); commandOk = r.ok; if (!r.ok) hint = r.reason; break; }
       case "light-room": { lights.setRoom(String(p.id), String(p.room ?? "—")); break; }
-      case "room-power": { const n = await lights.setRoomPower(String(p.room ?? ""), !!p.on); hint = `${p.on ? "On" : "Off"} · ${n} light${n === 1 ? "" : "s"}`; break; }
+      case "room-power": { const n = await lights.setRoomPower(String(p.room ?? ""), !!p.on); commandOk = n > 0; hint = `${p.on ? "On" : "Off"} · ${n} light${n === 1 ? "" : "s"}`; break; }
       case "party": {
         if (p.on === false) { party.stop(); hint = "Party over"; }
-        else { const r = await party.start(); hint = `Party on · ${r.lights} light${r.lights === 1 ? "" : "s"} @ ${Math.round(60000 / r.intervalMs)} fpm`; }
+        else { const r = await party.start(); commandOk = r.ok && r.lights > 0; hint = `Party on · ${r.lights} light${r.lights === 1 ? "" : "s"} @ ${Math.round(60000 / r.intervalMs)} fpm`; }
         break;
       }
       case "scene": { const s = home.activateScene(String(p.id)); hint = (s as any).name ? `${(s as any).name} scene` : undefined; break; }
@@ -742,7 +743,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       case "commission-light": { const r = await localLights.commission({ code: String(p.code ?? ""), name: p.name, room: p.room }); hint = r.ok ? `Paired ${r.light?.name}` : r.reason; break; }
       default: hint = "Unknown command";
     }
-    json(res, { ok: true, hint, state: lights.state() }); return;
+    json(res, { ok: commandOk, hint, state: lights.state() }); return;
   }
   if (url === "/audio/command" && req.method === "POST") {
     const body = await readBody(req);
