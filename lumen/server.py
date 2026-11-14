@@ -2473,6 +2473,8 @@ PAGE = r"""<!doctype html>
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Lumen — light up the world, one breath at a time</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <style>
 :root{
   --bg:#0b0a12; --bg2:#13111d; --panel:#181527cc; --line:#2a2540;
@@ -3226,7 +3228,7 @@ body.jw-gold .jx-close{display:none}
 .jwrite{position:fixed !important;inset:0;height:100dvh;max-height:100dvh;overflow:hidden}
 /* timer digits stretch to fill the whole panel (both axes) */
 .jt-svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 16px rgba(245,201,119,.45))}
-.jt-time{fill:#ffd98a;font-weight:800;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
+.jt-time{fill:#ffd98a;font-weight:600;letter-spacing:.01em;font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
 /* prompt fills its panel, grown by JS */
 .jw-c-prompt .jw-cbody{padding:2px 4px}
 /* response panel: boxless; a circle + flanking arrows (text mode brings its own box) */
@@ -10183,7 +10185,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v81';
+const CACHE = 'lumen-v82';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
