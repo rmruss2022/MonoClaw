@@ -2510,8 +2510,8 @@ PAGE = r"""<!doctype html>
 .nh-jtitle{font-size:16px;font-weight:700;color:#fff}
 .nh-jmeta{font-size:13px;color:#a99fce;margin-top:2px}
 .nh-jquote{font-size:13.5px;color:#b9b0d8;font-style:italic;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nh-level{display:flex;align-items:center;gap:14px;background:#15112466;border:1px solid var(--line);border-radius:20px;padding:16px;cursor:pointer}
-.nh-lorb{width:64px;height:58px;flex:none;background-size:cover;background-position:center;background-repeat:no-repeat;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.45) 80%,transparent 100%);mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.45) 80%,transparent 100%)}
+.nh-level{display:flex;align-items:center;gap:14px;background:#15112466;border:1px solid var(--line);border-radius:20px;padding:16px;cursor:pointer;margin:9px 0}
+.nh-lorb{width:78px;height:70px;flex:none;background-size:cover;background-position:center;background-repeat:no-repeat;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.45) 80%,transparent 100%);mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.45) 80%,transparent 100%)}
 .nh-lorb svg{width:29px;height:29px;filter:drop-shadow(0 0 6px rgba(245,201,119,.6))}
 .nh-lbody{flex:1;min-width:0}
 .nh-ltop{font-size:14.5px;font-weight:700;color:#fff}
@@ -9845,7 +9845,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v55';
+const CACHE = 'lumen-v56';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
