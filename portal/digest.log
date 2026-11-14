@@ -53,3 +53,156 @@ saved report 2026-11-04.json (audio=digest-2026-11-04.mp3)
 ✅ Sent via telegram. Message ID: 7858
 [2026-11-04 13:01:27 UTC] voice note delivered
 [2026-11-04 13:01:27 UTC] === digest run complete ===
+[2026-11-05 13:00:01 UTC] === digest run start (2026-11-05) ===
+[2026-11-05 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-05 13:00:45 UTC] briefing composed (1901 bytes); generating voice note...
+[2026-11-05 13:00:50 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-05.mp3
+saved report 2026-11-05.json (audio=digest-2026-11-05.mp3)
+[2026-11-05 13:00:50 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 7957
+[2026-11-05 13:00:56 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 7958
+[2026-11-05 13:01:03 UTC] voice note delivered
+[2026-11-05 13:01:03 UTC] === digest run complete ===
+[2026-11-06 13:00:01 UTC] === digest run start (2026-11-06) ===
+[2026-11-06 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-06 13:00:46 UTC] briefing composed (2403 bytes); generating voice note...
+Traceback (most recent call last):
+  File "/usr/local/bin/edge-tts", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/edge_tts/util.py", line 184, in main
+    asyncio.run(amain())
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/edge_tts/util.py", line 179, in amain
+    await _run_tts(args)
+  File "/usr/local/lib/python3.12/dist-packages/edge_tts/util.py", line 95, in _run_tts
+    async for chunk in communicate.stream():
+  File "/usr/local/lib/python3.12/dist-packages/edge_tts/communicate.py", line 588, in stream
+    async for message in self.__stream():
+  File "/usr/local/lib/python3.12/dist-packages/edge_tts/communicate.py", line 562, in __stream
+    raise NoAudioReceived(
+edge_tts.exceptions.NoAudioReceived: No audio was received. Please verify that your parameters are correct.
+[2026-11-06 13:00:49 UTC] WARN: edge-tts failed; delivering text only
+saved report 2026-11-06.json (audio=digest-2026-11-06.mp3)
+[2026-11-06 13:00:49 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8054
+[2026-11-06 13:00:55 UTC] briefing text delivered
+[2026-11-06 13:00:55 UTC] === digest run complete ===
+[2026-11-07 13:00:01 UTC] === digest run start (2026-11-07) ===
+[2026-11-07 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-07 13:00:42 UTC] briefing composed (2103 bytes); generating voice note...
+[2026-11-07 13:00:50 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-07.mp3
+saved report 2026-11-07.json (audio=digest-2026-11-07.mp3)
+[2026-11-07 13:00:50 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8103
+[2026-11-07 13:00:57 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 8104
+[2026-11-07 13:01:06 UTC] voice note delivered
+[2026-11-07 13:01:06 UTC] === digest run complete ===
+[2026-11-08 13:00:01 UTC] === digest run start (2026-11-08) ===
+[2026-11-08 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-08 13:00:47 UTC] briefing composed (2031 bytes); generating voice note...
+[2026-11-08 13:00:52 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-08.mp3
+saved report 2026-11-08.json (audio=digest-2026-11-08.mp3)
+[2026-11-08 13:00:52 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8247
+[2026-11-08 13:00:58 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 8248
+[2026-11-08 13:01:06 UTC] voice note delivered
+[2026-11-08 13:01:06 UTC] === digest run complete ===
+[2026-11-09 13:00:01 UTC] === digest run start (2026-11-09) ===
+[2026-11-09 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-09 13:00:52 UTC] briefing composed (1960 bytes); generating voice note...
+[2026-11-09 13:00:59 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-09.mp3
+saved report 2026-11-09.json (audio=digest-2026-11-09.mp3)
+[2026-11-09 13:00:59 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8340
+[2026-11-09 13:01:07 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 8341
+[2026-11-09 13:01:21 UTC] voice note delivered
+[2026-11-09 13:01:21 UTC] === digest run complete ===
+[2026-11-10 13:00:01 UTC] === digest run start (2026-11-10) ===
+[2026-11-10 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-10 13:00:53 UTC] briefing composed (2145 bytes); generating voice note...
+[2026-11-10 13:01:01 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-10.mp3
+saved report 2026-11-10.json (audio=digest-2026-11-10.mp3)
+[2026-11-10 13:01:01 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8416
+[2026-11-10 13:01:09 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 8417
+[2026-11-10 13:01:23 UTC] voice note delivered
+[2026-11-10 13:01:23 UTC] === digest run complete ===
+[2026-11-11 13:00:01 UTC] === digest run start (2026-11-11) ===
+[2026-11-11 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-11 13:00:37 UTC] briefing composed (2215 bytes); generating voice note...
+[2026-11-11 13:00:46 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-11.mp3
+saved report 2026-11-11.json (audio=digest-2026-11-11.mp3)
+[2026-11-11 13:00:46 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8467
+[2026-11-11 13:00:53 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 8468
+[2026-11-11 13:01:01 UTC] voice note delivered
+[2026-11-11 13:01:01 UTC] === digest run complete ===
+[2026-11-12 09:00:01 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 09:00:01 UTC] skip: ET hour 4 != configured delivery hour 8
+[2026-11-12 10:00:01 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 10:00:01 UTC] skip: ET hour 5 != configured delivery hour 8
+[2026-11-12 11:00:02 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 11:00:02 UTC] skip: ET hour 6 != configured delivery hour 8
+[2026-11-12 12:00:01 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 12:00:01 UTC] skip: ET hour 7 != configured delivery hour 8
+[2026-11-12 13:00:01 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 13:00:01 UTC] delivery hour matched (ET 8 == 8); proceeding
+[2026-11-12 13:00:01 UTC] prompt built from report template (report_config.json)
+[2026-11-12 13:00:01 UTC] calling claude CLI for briefing...
+[2026-11-12 13:00:40 UTC] briefing composed (2099 bytes); generating voice note...
+[2026-11-12 13:00:57 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-12.mp3
+saved report 2026-11-12.json (audio=digest-2026-11-12.mp3)
+[2026-11-12 13:00:57 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8518
+[2026-11-12 13:01:03 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 8519
+[2026-11-12 13:01:11 UTC] voice note delivered
+[2026-11-12 13:01:11 UTC] === digest run complete ===
+[2026-11-12 14:00:01 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 14:00:01 UTC] skip: ET hour 9 != configured delivery hour 8
+[2026-11-12 15:00:01 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 15:00:01 UTC] skip: ET hour 10 != configured delivery hour 8
+[2026-11-12 16:00:01 UTC] === digest run start (2026-11-12) ===
+[2026-11-12 16:00:01 UTC] skip: ET hour 11 != configured delivery hour 8
+[2026-11-13 09:00:01 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 09:00:01 UTC] skip: ET hour 4 != configured delivery hour 8
+[2026-11-13 10:00:01 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 10:00:01 UTC] skip: ET hour 5 != configured delivery hour 8
+[2026-11-13 11:00:01 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 11:00:01 UTC] skip: ET hour 6 != configured delivery hour 8
+[2026-11-13 12:00:01 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 12:00:01 UTC] skip: ET hour 7 != configured delivery hour 8
+[2026-11-13 13:00:02 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 13:00:02 UTC] delivery hour matched (ET 8 == 8); proceeding
+[2026-11-13 13:00:02 UTC] prompt built from report template (report_config.json)
+[2026-11-13 13:00:02 UTC] calling claude CLI for briefing...
+[2026-11-13 13:00:37 UTC] briefing composed (2042 bytes); generating voice note...
+[2026-11-13 13:00:40 UTC] voice note saved: /root/.openclaw/workspace/media/tts/digest-2026-11-13.mp3
+saved report 2026-11-13.json (audio=digest-2026-11-13.mp3)
+[2026-11-13 13:00:40 UTC] report saved to portal
+✅ Sent via telegram. Message ID: 8572
+[2026-11-13 13:00:47 UTC] briefing text delivered
+✅ Sent via telegram. Message ID: 8573
+[2026-11-13 13:00:54 UTC] voice note delivered
+[2026-11-13 13:00:54 UTC] === digest run complete ===
+[2026-11-13 14:00:01 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 14:00:01 UTC] skip: ET hour 9 != configured delivery hour 8
+[2026-11-13 15:00:01 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 15:00:01 UTC] skip: ET hour 10 != configured delivery hour 8
+[2026-11-13 16:00:01 UTC] === digest run start (2026-11-13) ===
+[2026-11-13 16:00:01 UTC] skip: ET hour 11 != configured delivery hour 8

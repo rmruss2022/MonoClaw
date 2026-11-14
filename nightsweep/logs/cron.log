@@ -84,3 +84,283 @@ published to reports app
 approval quiz sent
    ✓ PASS: approval quiz
 ══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-05 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed 26b1b23fdf9b7587b582ec625f7345e85ee3d771
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: rolodex
+   deploy: rolodex-deploy
+   (no auto-deploy for rolodex-deploy)
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-05.mp3 (1727568 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-06 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed 109db2915b90506736dcc8ba285c6bae28abd336
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: .claws
+   (no auto-deploy for .claws)
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-06.mp3 (1591200 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-07 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed d9e32ad264c9472f8343006e1a138b4848b8cc95
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: .claws
+   (no auto-deploy for .claws)
+   deploy: memory
+   (no auto-deploy for memory)
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-07.mp3 (1352592 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-08 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed e67974e427fb70bf13c566a8bbc82dc99b887848
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: lumen
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-08.mp3 (1707264 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-09 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed ead6f0a67eea9f966442f7fa7ec9d72b66faeb48
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: lumen
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-09.mp3 (1726560 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-10 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed c219808ddd0e5a2f536960f834323df294b61c5e
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: lumen
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-10.mp3 (1789632 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-11 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed ca23d19f68ab99f9678a35799f635c519735649d
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: lumen
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-11.mp3 (2034576 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-12 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed 72cd24aac53e0ec80a52c745d2ca1b0e9290c525
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: memory
+   (no auto-deploy for memory)
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-12.mp3 (1907136 bytes, try 2)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════
+══════════ NIGHT SWEEP 2026-11-13 03:00 EST (dry=0) ══════════
+──▶ GATE: doctor: environment
+   ✓ PASS: doctor: environment
+──▶ GATE: gather context
+   ✓ PASS: gather context
+──▶ GATE: review + plan
+   ✓ PASS: review + plan
+──▶ GATE: implement
+   committed 9502d58afd3fed512d55941c44d6c631362d6942
+   ✓ PASS: implement
+──▶ GATE: deploy
+   deploy: memory
+   (no auto-deploy for memory)
+   deploy: open-home
+   (no auto-deploy for open-home)
+   ✓ PASS: deploy
+──▶ GATE: push
+/usr/bin/gh auth git-credential get: 1: /usr/bin/gh: not found
+fatal: could not read Username for 'https://github.com': No such device or address
+   pushed origin/openhome-mvp (main not fast-forward — left as-is)
+   ✓ PASS: push
+──▶ GATE: compose report
+   ✓ PASS: compose report
+──▶ GATE: publish + voice note
+voice note: /root/.openclaw/workspace/media/tts/nightsweep-2026-11-13.mp3 (1719648 bytes, try 1)
+published to reports app
+   ✓ PASS: publish + voice note
+──▶ GATE: deliver
+   ✓ PASS: deliver
+──▶ GATE: approval quiz
+approval quiz sent
+   ✓ PASS: approval quiz
+══════════ DONE — pass: 10  fail: 0 ══════════

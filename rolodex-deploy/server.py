@@ -12,7 +12,7 @@ Env:
   ROLODEX_BASE   base path when mounted under the command hub, e.g. "/rolodex"
   ROLODEX_DB     sqlite path (default ./data/rolodex.db)
 """
-import json, os, re, sqlite3, urllib.parse, hashlib, hmac, secrets, time, threading
+import json, os, re, sqlite3, urllib.parse, hashlib, hmac, secrets, time, threading, base64
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from datetime import datetime, timezone, date
 
@@ -27,6 +27,20 @@ USERS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "use
 SESS_DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "sessions.json")
 _SESS_LOCK = threading.Lock()
 SESSION_TTL = 60 * 60 * 24 * 30
+
+# --- lightweight debug logging (sync diagnostics) ---
+DEBUG_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "debug.jsonl")
+DEBUG_KEY = os.environ.get("ROLODEX_DEBUG_KEY", "rolodbg-9f3a2c")
+def _dbg(event, **fields):
+    try:
+        rec = {"t": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "event": event}
+        rec.update(fields)
+        line = json.dumps(rec, default=str)
+        print("DBG " + line, flush=True)
+        with open(DEBUG_LOG, "a") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
 
 def _load_sessions():
     # Persisted to the data dir (a Railway volume) so a restart/redeploy doesn't
@@ -73,20 +87,38 @@ def verify_login(email, pw):
         return False
     return hmac.compare_digest(_hash_pw(pw or "", u["salt"]), u["hash"])
 
+# Stateless, signed sessions. The token carries email+expiry+HMAC, so ANY server
+# process/replica can validate it with the shared secret — no in-memory session
+# store to get out of sync (which was making a freshly-minted token look invalid
+# on the very next request when Railway load-balanced across >1 process).
+SESSION_SECRET = (os.environ.get("ROLODEX_SECRET") or "rolodex-insecure-default-change-me").encode()
+
+def _sess_sign(payload):
+    return hmac.new(SESSION_SECRET, payload.encode(), hashlib.sha256).hexdigest()
+
 def new_session(email):
-    tok = secrets.token_urlsafe(32)
-    SESSIONS[tok] = (email, time.time() + SESSION_TTL)
-    _save_sessions()
-    return tok
+    email = (email or "").strip().lower()
+    payload = "%s|%d" % (email, int(time.time()) + SESSION_TTL)
+    raw = "%s|%s" % (payload, _sess_sign(payload))
+    return base64.urlsafe_b64encode(raw.encode()).decode().rstrip("=")
+
+def session_email(tok):
+    """Email for a valid, unexpired, correctly-signed token, else None."""
+    if not tok:
+        return None
+    try:
+        raw = base64.urlsafe_b64decode(tok + "=" * (-len(tok) % 4)).decode()
+        email, exp, sig = raw.rsplit("|", 2)
+        if not hmac.compare_digest(sig, _sess_sign("%s|%s" % (email, exp))):
+            return None
+        if int(exp) < time.time():
+            return None
+        return email
+    except Exception:
+        return None
 
 def session_ok(tok):
-    v = SESSIONS.get(tok)
-    if not v:
-        return False
-    if v[1] < time.time():
-        SESSIONS.pop(tok, None); _save_sessions()
-        return False
-    return True
+    return session_email(tok) is not None
 
 FIELDS = ["name","company","title","category","phone","email","location","instagram",
           "how_met","met_date","last_contacted","follow_up_date","follow_up_note",
@@ -396,14 +428,26 @@ class H(BaseHTTPRequestHandler):
         """The owner (email) whose data this request may touch."""
         if not AUTH:
             return os.environ.get("ROLODEX_DEFAULT_OWNER", "matthew.motivate@proton.me").lower()
-        tok = self._cookie("rolo_sess"); v = SESSIONS.get(tok) if tok else None
-        return v[0] if v else None
+        return session_email(self._cookie("rolo_sess"))
 
     def do_GET(self):
         u = urllib.parse.urlparse(self.path)
         qs = urllib.parse.parse_qs(u.query)
         p = u.path
+        if p == "/api/debug/tail":
+            if qs.get("key", [""])[0] != DEBUG_KEY:
+                self._send(403, {"error": "forbidden"}); return
+            try:
+                n = int(qs.get("n", ["100"])[0])
+                lines = open(DEBUG_LOG).read().splitlines()[-n:]
+            except Exception:
+                lines = []
+            self._send(200, {"lines": lines}); return
         if AUTH and not self._authed():
+            if p.startswith("/api/"):
+                tok = self._cookie("rolo_sess")
+                _dbg("auth_fail_get", path=p, has_cookie=bool(tok), tok_prefix=(tok[:10] if tok else None),
+                     valid=session_ok(tok), ua=(self.headers.get("User-Agent", "") or "")[:40])
             if p in ("/", "/index.html"):
                 self._send(200, LOGIN_PAGE.replace("__BASE__", BASE), "text/html; charset=utf-8"); return
             self._send(401, {"error": "auth"}); return
@@ -425,14 +469,19 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/login":
             try: d = json.loads(self._body() or b"{}")
             except Exception: d = {}
+            _em = (d.get("email", "") or "").strip().lower()
             if verify_login(d.get("email", ""), d.get("password", "")):
-                tok = new_session((d.get("email", "") or "").strip().lower())
+                tok = new_session(_em)
+                _dbg("login", email=_em, ok=True, tok_prefix=tok[:10],
+                     ua=(self.headers.get("User-Agent", "") or "")[:40])
                 body = json.dumps({"ok": True, "token": tok}).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Set-Cookie", f"rolo_sess={tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={SESSION_TTL}")
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers(); self.wfile.write(body); return
+            _dbg("login", email=_em, ok=False, known_email=(_em in _users()),
+                 has_pw=bool(d.get("password")), ua=(self.headers.get("User-Agent", "") or "")[:40])
             self._send(401, {"error": "invalid credentials"}); return
         if p == "/api/logout":
             tok = self._cookie("rolo_sess")
@@ -443,16 +492,27 @@ class H(BaseHTTPRequestHandler):
             except Exception: d = {}
             email = (d.get("email", "") or "").strip().lower(); pw = d.get("password", "") or ""
             if "@" not in email or "." not in email.split("@")[-1] or len(pw) < 6:
+                _dbg("signup", email=email, ok=False, reason="invalid_input", pwlen=len(pw))
                 self._send(400, {"error": "Enter a valid email and a password of at least 6 characters."}); return
             users = _users()
             if email in users:
+                _dbg("signup", email=email, ok=False, reason="exists")
                 self._send(400, {"error": "That email already has an account — sign in instead."}); return
             salt = secrets.token_hex(16); users[email] = {"salt": salt, "hash": _hash_pw(pw, salt)}; _save_users(users)
+            _dbg("signup", email=email, ok=True)
             tok = new_session(email); body = json.dumps({"ok": True, "token": tok}).encode()
             self.send_response(200); self.send_header("Content-Type", "application/json")
             self.send_header("Set-Cookie", f"rolo_sess={tok}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={SESSION_TTL}")
             self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body); return
+        if p == "/api/clientlog":
+            try: d = json.loads(self._body() or b"{}")
+            except Exception: d = {}
+            _dbg("client", **{str(k): str(v)[:300] for k, v in (d.items() if isinstance(d, dict) else [])})
+            self._send(200, {"ok": True}); return
         if AUTH and not self._authed():
+            tok = self._cookie("rolo_sess")
+            _dbg("auth_fail", path=p, has_cookie=bool(tok), tok_prefix=(tok[:10] if tok else None),
+                 valid=session_ok(tok), ua=(self.headers.get("User-Agent", "") or "")[:80])
             self._send(401, {"error": "auth"}); return
         owner = self._user()
         try:
@@ -470,12 +530,17 @@ class H(BaseHTTPRequestHandler):
                     self._send(200, {"ok": True}); return
                 upsert(json.loads(self._body() or b"{}"), cid, owner=owner); self._send(200, {"ok": True, "id": cid}); return
             if p == "/api/import":
-                added = import_vcards(self._body().decode("utf-8", "ignore"), owner=owner)
+                raw = self._body().decode("utf-8", "ignore")
+                try: parsed = len(parse_vcards(raw))
+                except Exception: parsed = -1
+                added = import_vcards(raw, owner=owner)
+                _dbg("import", owner=owner, body_len=len(raw), parsed=parsed, added=added)
                 self._send(200, {"ok": True, "added": added}); return
             if p == "/api/import/instagram":
                 added = import_instagram(self._body().decode("utf-8", "ignore"), owner=owner)
                 self._send(200, {"ok": True, "added": added}); return
         except Exception as e:
+            _dbg("post_error", path=p, err=str(e))
             self._send(400, {"error": str(e)}); return
         self._send(404, {"error": "not found"})
 
