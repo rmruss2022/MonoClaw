@@ -2470,7 +2470,7 @@ PAGE = r"""<!doctype html>
 .nh-jmeta{font-size:13px;color:#a99fce;margin-top:2px}
 .nh-jquote{font-size:13.5px;color:#b9b0d8;font-style:italic;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nh-level{display:flex;align-items:center;gap:14px;background:#15112466;border:1px solid var(--line);border-radius:20px;padding:16px;cursor:pointer}
-.nh-lorb{width:56px;height:56px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:radial-gradient(circle at 50% 40%,rgba(245,201,119,.32),transparent 70%);box-shadow:0 0 0 2px rgba(245,201,119,.5),0 0 22px rgba(245,201,119,.35)}
+.nh-lorb{width:64px;height:58px;flex:none;background-size:cover;background-position:center;background-repeat:no-repeat;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.45) 80%,transparent 100%);mask-image:radial-gradient(circle at 50% 50%,#000 58%,rgba(0,0,0,.45) 80%,transparent 100%)}
 .nh-lorb svg{width:29px;height:29px;filter:drop-shadow(0 0 6px rgba(245,201,119,.6))}
 .nh-lbody{flex:1;min-width:0}
 .nh-ltop{font-size:14.5px;font-weight:700;color:#fff}
@@ -5197,7 +5197,7 @@ async function renderMeditate(){
       <div class="nh-card nh-journey"><div class="nh-jthumb" style="background-image:url('/art/home-journey.jpg')"><span class="nh-jpin">${ic('pin')}</span></div>
       <div class="nh-jbody"><div class="nh-jtitle">Meditation Moment</div><div class="nh-jmeta">${esc(loc)} · ${ago}</div>${q?`<div class="nh-jquote">“${esc(q)}”</div>`:''}</div></div></div>`;
   })()}
-  <div class="nh-level" id="nhLevel"><span class="nh-lorb">${ic('lotus')}</span>
+  <div class="nh-level" id="nhLevel"><span class="nh-lorb" style="background-image:url('/art/home-levelorb.jpg?v=45')"></span>
     <div class="nh-lbody"><div class="nh-ltop">Level ${ME.level||1} · ${fmt(ME.level_into||0)} / ${fmt((ME.level_into||0)+(ME.level_need||0))} XP</div>
       <div class="nh-lbar"><i style="width:${Math.min(100,Math.round(100*(ME.level_into||0)/(((ME.level_into||0)+(ME.level_need||0))||1)))}%"></i></div>
       <div class="nh-lsub">Keep meditating to grow your light!</div></div>
@@ -9804,7 +9804,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v44';
+const CACHE = 'lumen-v45';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
