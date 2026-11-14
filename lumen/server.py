@@ -2430,27 +2430,28 @@ PAGE = r"""<!doctype html>
 }
 /* ===== New home — mockup redesign ===== */
 .nh{display:flex;flex-direction:column;gap:18px}
-.nh-hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 0}
+.nh-hdr{display:flex;align-items:center;justify-content:space-between}
 .nh-brand{display:flex;align-items:center;gap:10px}
-.nh-mark{width:32px;height:32px;display:flex;color:var(--gold);filter:drop-shadow(0 0 10px rgba(245,201,119,.55))}
-.nh-mark svg{width:32px;height:32px}
+.nh-mark{width:36px;height:30px;display:flex;color:var(--gold)}
+.nh-mark svg{width:36px;height:30px;filter:drop-shadow(0 0 9px rgba(245,201,119,.7))}
 .nh-name{font-size:25px;font-weight:800;letter-spacing:-.02em;color:#fff}
 .nh-bell{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#19152b;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .nh-bell svg{width:21px;height:21px}
 .nh-dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px var(--purple)}
-.nh-hero{position:relative;border-radius:24px;overflow:hidden;min-height:188px;display:flex;align-items:center;background:linear-gradient(135deg,#241546,#140e2b 60%,#0e0a1e);isolation:isolate}
-.nh-hero-img{position:absolute;inset:0;background-size:cover;background-position:center right;z-index:-1}
-.nh-hero:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(11,8,22,.92) 6%,rgba(11,8,22,.5) 46%,rgba(11,8,22,0) 76%)}
-.nh-hero-txt{padding:22px 20px}
+.nh-hero{position:relative;overflow:hidden;min-height:308px;display:flex;flex-direction:column;margin:calc(-1*(env(safe-area-inset-top) + 8px)) -16px 2px -16px;background:#140e2b;background-size:cover;background-position:center 42%;isolation:isolate}
+.nh-hero-scrim{position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(180deg,rgba(10,7,20,.78) 0%,rgba(10,7,20,.12) 24%,rgba(10,7,20,0) 44%),linear-gradient(90deg,rgba(10,7,20,.86) 2%,rgba(10,7,20,.34) 44%,rgba(10,7,20,0) 74%),linear-gradient(0deg,rgba(10,7,20,.72) 0%,rgba(10,7,20,0) 34%)}
+.nh-hero-inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;gap:14px;padding:calc(env(safe-area-inset-top) + 14px) 18px 22px 18px}
+.nh-hero-txt{margin-top:auto}
+.nh-greet{text-shadow:0 2px 18px rgba(0,0,0,.6)}
 .nh-greet{margin:0;font-size:28px;line-height:1.16;font-weight:600;color:#efeafe}
 .nh-greet b{font-weight:800;color:#fff}
 .nh-sparkle{width:21px;height:21px;color:var(--gold);vertical-align:-3px}
 .nh-sub{margin:9px 0 0;color:#c2b9e0;font-size:15px}
-.nh-start{position:relative;width:100%;padding:17px;border-radius:999px;border:0;cursor:pointer;font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 10px 30px -8px rgba(124,58,237,.7),0 0 0 1px rgba(168,130,255,.5) inset}
+.nh-start{position:relative;width:100%;padding:17px;border-radius:999px;border:0;cursor:pointer;font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;background:linear-gradient(100deg,#4f2fb5 0%,#7c3aed 42%,#a855f7 74%,#c48cff 100%);box-shadow:0 12px 30px -8px rgba(124,58,237,.75),0 0 0 1.5px rgba(200,170,255,.8) inset,0 0 22px -2px rgba(168,130,255,.55)}
 .nh-start:active{transform:scale(.99)}
 .nh-play{width:20px;height:20px;color:#fff}
-.nh-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.nh-stat{background:#15112480;border:1px solid var(--line);border-radius:18px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.nh-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:10px 0 12px}
+.nh-stat{background:#15112480;border:1px solid var(--line);border-radius:18px;padding:19px 8px;display:flex;flex-direction:column;align-items:center;gap:9px}
 .nh-si{width:25px;height:25px;display:flex}.nh-si svg{width:25px;height:25px}
 .nh-si.flame{color:#fb7a3c}.nh-si.star{color:var(--purple)}.nh-si.sun{color:var(--gold)}
 .nh-stat b{font-size:22px;font-weight:800;color:#fff;line-height:1}
@@ -4079,6 +4080,7 @@ const SVGP={
   bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
   sun:'<circle cx="12" cy="12" r="4.3" fill="currentColor" stroke="none"/><g><line x1="12" y1="2.2" x2="12" y2="4.6"/><line x1="12" y1="19.4" x2="12" y2="21.8"/><line x1="2.2" y1="12" x2="4.6" y2="12"/><line x1="19.4" y1="12" x2="21.8" y2="12"/><line x1="5.2" y1="5.2" x2="6.9" y2="6.9"/><line x1="17.1" y1="17.1" x2="18.8" y2="18.8"/><line x1="18.8" y1="5.2" x2="17.1" y2="6.9"/><line x1="6.9" y1="17.1" x2="5.2" y2="18.8"/></g>',
   leaf:'<path d="M5 20c-.6-9 5.4-15.4 15-15 .4 9.6-5.4 15.6-15 15Z"/><path d="M9.3 14.8C11 11.3 14 8.8 17 7.8"/>',
+  starf:'<path d="M12 2.6c.46 0 .87.27 1.05.69l2.2 4.98 5.4.5c.92.08 1.29 1.23.59 1.84l-4.08 3.57 1.2 5.3c.2.9-.77 1.6-1.56 1.12L12 17.86l-4.6 2.79c-.79.48-1.76-.22-1.56-1.12l1.2-5.3-4.08-3.57c-.7-.61-.33-1.76.59-1.84l5.4-.5 2.2-4.98c.18-.42.59-.69 1.05-.69Z" fill="currentColor" stroke="none"/>',
   close:'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
   play:'<path d="M7 4.5 19 12 7 19.5V4.5Z" fill="currentColor" stroke="none"/>',
   stop:'<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
@@ -5170,19 +5172,21 @@ async function renderMeditate(){
   const _nm=(ME&&ME.name)?esc(ME.name.split(' ')[0]):'';
   const _date=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   $('#app').innerHTML=`
-  <header class="nh-hdr">
-    <div class="nh-brand"><span class="nh-mark">${lumenMark('')}</span><span class="nh-name">Lumen</span></div>
-    <button class="nh-bell" id="nhBell" aria-label="Notifications">${ic('bell')}<i class="nh-dot"></i></button>
-  </header>
-  <section class="nh-hero"><div class="nh-hero-img" id="nhHero"></div>
-    <div class="nh-hero-txt">
-      <h1 class="nh-greet">${_greet}${_nm?',':''}<br><b>${_nm||'friend'}</b> ${ic('spark','nh-sparkle')}</h1>
-      <p class="nh-sub">Take a moment to breathe…</p>
+  <section class="nh-hero" id="nhHero"><div class="nh-hero-scrim"></div>
+    <div class="nh-hero-inner">
+      <header class="nh-hdr">
+        <div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 44 34" fill="none" stroke="#f5c977" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M22 3c-2.6 5.6-2.6 11.4 0 17 2.6-5.6 2.6-11.4 0-17Z" fill="rgba(245,201,119,.16)"/><path d="M22 20c-4.6-1.8-7.4-6.3-8.4-12 4.6.9 7.4 5.6 8.4 12Z" fill="rgba(245,201,119,.13)"/><path d="M22 20c4.6-1.8 7.4-6.3 8.4-12-4.6.9-7.4 5.6-8.4 12Z" fill="rgba(245,201,119,.13)"/><path d="M22 21c-6.6 0-12.4-2.8-17-7.6 6.6-1.9 13.2 1 17 7.6Z" fill="rgba(245,201,119,.10)"/><path d="M22 21c6.6 0 12.4-2.8 17-7.6-6.6-1.9-13.2 1-17 7.6Z" fill="rgba(245,201,119,.10)"/></svg></span><span class="nh-name">Lumen</span></div>
+        <button class="nh-bell" id="nhBell" aria-label="Notifications">${ic('bell')}<i class="nh-dot"></i></button>
+      </header>
+      <div class="nh-hero-txt">
+        <h1 class="nh-greet">${_greet}${_nm?',':''}<br><b>${_nm||'friend'}</b> ${ic('spark','nh-sparkle')}</h1>
+        <p class="nh-sub">Take a moment to breathe…</p>
+      </div>
     </div></section>
   <button class="nh-start" id="nhStart">${ic('play','nh-play')} Start Meditation</button>
   <div class="nh-stats">
     <div class="nh-stat"><span class="nh-si flame">${ic('flame')}</span><b>${ME.streak||0}</b><span class="nh-sl">Day Streak</span></div>
-    <div class="nh-stat"><span class="nh-si star">${ic('star')}</span><b>${fmt(ME.light||0)}</b><span class="nh-sl">XP</span></div>
+    <div class="nh-stat"><span class="nh-si star">${ic('starf')}</span><b>${fmt(ME.light||0)}</b><span class="nh-sl">XP</span></div>
     <div class="nh-stat"><span class="nh-si sun">${ic('sun')}</span><b>Lv. ${ME.level||1}</b><span class="nh-sl">Light Level</span></div>
   </div>
   ${(function(){var e=(JENTS&&JENTS[0]);
@@ -5213,7 +5217,7 @@ async function renderMeditate(){
   {const b=$('#nhLevel');if(b)b.onclick=()=>go('profile');}
   {const b=$('#nhPickMore');if(b)b.onclick=()=>go('lessons');}
   {const pk=$('#nhPick');if(pk&&PICK)pk.onclick=()=>{lessonFrom='meditate';lessonDetail(PICK.code);};}
-  {const hero=$('#nhHero');if(hero){var im=new Image();im.onload=function(){hero.style.backgroundImage="url('/art/home-hero.jpg?v=41')";};im.src="/art/home-hero.jpg?v=41";}}
+  {const hero=$('#nhHero');if(hero){var im=new Image();im.onload=function(){hero.style.backgroundImage="url('/art/home-hero.jpg?v=42')";};im.src="/art/home-hero.jpg?v=42";}}
   wireGroupSit(gsit);
   document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
   {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
@@ -9800,7 +9804,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v41';
+const CACHE = 'lumen-v42';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
