@@ -3246,7 +3246,9 @@ body.jw-gold .jx-close{display:none}
 /* record circle reuses jrec visuals but circle-sized */
 .jw-circle .jrec-btn{width:96px;height:96px;padding:0}
 .jw-circle .jrec-ring{width:96px;height:96px;border-color:#caa15a}
-.jw-circle .jrec-core{width:66px;height:66px}
+.jw-circle .jrec-core{width:66px;height:66px;background:radial-gradient(circle at 42% 34%,#d9b163,#8a6420 80%);position:relative;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,236,190,.4)}
+.jw-circle .jrec-core::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 34%,rgba(255,246,214,.6) 50%,transparent 66%);background-size:260% 100%;animation:jrecShine 2.6s ease-in-out infinite;pointer-events:none}
+@keyframes jrecShine{0%{background-position:170% 0}100%{background-position:-70% 0}}
 .jw-circle .jrec-btn.rec .jrec-core{width:30px;height:30px;border-radius:8px}
 /* text mode: the textarea is the only thing that wears a box */
 .jw-c-resp .jw-body{flex:none;width:100%;min-height:40%;max-height:100%;border:1px solid rgba(90,62,24,.5);border-radius:14px;padding:12px;background:rgba(255,248,230,.5);color:#3a2a10;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
@@ -10181,7 +10183,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v79';
+const CACHE = 'lumen-v80';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
