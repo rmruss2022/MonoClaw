@@ -3232,7 +3232,7 @@ body.jw-gold .jx-close{display:none}
 /* prompt fills its panel, grown by JS */
 .jw-c-prompt .jw-cbody{padding:2px 4px}
 /* response panel: boxless; a circle + flanking arrows (text mode brings its own box) */
-.jw-c-resp{background:none !important;border:0 !important;box-shadow:none !important;cursor:default}
+.jw-c-resp{background:none !important;border:0 !important;box-shadow:none !important;cursor:default;overflow:visible !important}
 .jw-c-resp .jw-cbody{flex-direction:row;align-items:center;justify-content:center;gap:6px;overflow:visible;margin-top:0}
 .jw-resp-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .jw-arrow{flex:none;width:44px;height:44px;border:0;background:none;color:#5a431f;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85}
@@ -6979,7 +6979,7 @@ function jFitTimer(){
     const svg=$('#jtsvg'),t=$('#jtdisp');if(!svg||!t)return;
     let bb;try{bb=t.getBBox();}catch(e){return;}
     if(!bb||!bb.width||!bb.height)return;
-    const pad=bb.height*0.06;
+    const pad=bb.height*0.1;
     svg.setAttribute('viewBox',`${bb.x-pad} ${bb.y-pad} ${bb.width+pad*2} ${bb.height+pad*2}`);
   });
 }
@@ -6990,10 +6990,12 @@ function jFitPrompt(){
   _jFitPromptRAF=requestAnimationFrame(()=>{
     const box=document.querySelector('#jp2 .jw-c-prompt .jw-cbody'),el=$('#jwPrompt');
     if(!box||!el)return;
-    const W=box.clientWidth,H=box.clientHeight;if(W<=0||H<=0)return;
+    // Leave a safe margin so text never touches (or clips past) the panel edges.
+    const PAD=12;
+    const W=box.clientWidth-PAD*2,H=box.clientHeight-PAD*2;if(W<=0||H<=0)return;
     // Pin the text to the box width so it WRAPS; then grow the font until it
     // fills the panel height (without a long word spilling past the width).
-    el.style.width='100%';el.style.boxSizing='border-box';el.style.whiteSpace='normal';el.style.lineHeight='1.25';
+    el.style.width=W+'px';el.style.boxSizing='border-box';el.style.whiteSpace='normal';el.style.lineHeight='1.25';
     el.style.transition='none';   // measure at the exact set size, not mid-animation
     let lo=14,hi=200,best=14;
     while(lo<=hi){const mid=(lo+hi)>>1;el.style.fontSize=mid+'px';
@@ -10186,7 +10188,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v83';
+const CACHE = 'lumen-v84';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
