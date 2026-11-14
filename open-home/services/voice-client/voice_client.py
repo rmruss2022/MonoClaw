@@ -456,12 +456,10 @@ def morning_report():
         log("morning report: no report available — skipping")
         return
     spoken = _clean_for_tts(text)
-    log(f"morning report: reading {len(spoken)} chars over ducked jazz ({MORNING_REPORT_DUCK}%)")
-    duck(True, MORNING_REPORT_DUCK)   # lower the jazz
-    try:
-        speak(spoken)                 # read the digest over the still-playing, ducked jazz
-    finally:
-        duck(False)                   # restore the jazz volume
+    log(f"morning report: reading {len(spoken)} chars over music (no duck — both at normal volume)")
+    # Per Matthew: keep both the voice and the jazz at normal volume (no ducking). The
+    # voice is already boosted (VOICE_LEVEL/SPEECH_COMPRESS) so it carries over the music.
+    speak(spoken)
 
 
 def transcribe(wav_bytes):
