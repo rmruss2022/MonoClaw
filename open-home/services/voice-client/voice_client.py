@@ -411,15 +411,22 @@ def flush_mic(mic):
         log("mic flush err:", e, level="WARN")
 
 
-def drain_after_beep(mic, max_s=1.2):
-    """After a beep/reply plays on the Bluetooth speaker, consume mic audio until it
-    goes quiet, THEN flush — so the beep's BT-delayed tail (which a fixed sleep can't
-    reliably cover) can't leak into the next recording and be transcribed as '[beep]'.
-    Breaks on ~100ms of sustained quiet, which lands in the gap between the beep ending
-    and the user reacting, so we don't clip the start of their reply. Bounded by max_s."""
-    deadline = time.time() + max_s
+def drain_after_beep(mic, max_s=1.6, arrive_s=0.7):
+    """Consume mic audio until the Bluetooth-delayed beep has ARRIVED and then passed,
+    THEN flush — so the beep can't leak into the next recording and be transcribed as
+    '[beep]'. The earlier version broke on the quiet BEFORE the beep arrived (BT latency
+    means the beep plays out of the speaker a few hundred ms after we feed it), so it
+    flushed too early and the beep still landed in the recording.
+
+    Fix: keep draining until we've actually heard the beep (a loud frame) — or waited
+    arrive_s for it as a fallback if it's too quiet to detect — and only then break on
+    ~100ms of sustained quiet (the gap between the beep ending and the user reacting, so
+    we don't clip their reply). Bounded by max_s."""
+    flush_mic(mic)                      # drop stale pre-beep buffer so we detect the REAL beep, not old audio
+    start = time.time()
+    seen_beep = False
     quiet_run = 0
-    while time.time() < deadline:
+    while time.time() - start < max_s:
         try:
             samples = read_samples(mic, VAD_FRAME)
         except Exception:
@@ -428,12 +435,15 @@ def drain_after_beep(mic, max_s=1.2):
             rms = float(np.sqrt(np.mean(samples.astype(np.float32) ** 2)))
         except Exception:
             rms = 0.0
-        if rms < VOICE_RMS_FLOOR:
-            quiet_run += 1
-            if quiet_run >= 5:          # ~100ms sustained quiet → beep/tail has passed
-                break
-        else:
+        if rms >= VOICE_RMS_FLOOR:
+            seen_beep = True            # the beep (or other sound) has arrived at the mic
             quiet_run = 0
+        else:
+            quiet_run += 1
+            # Only allow finishing once the beep has arrived (or we've waited arrive_s for
+            # it), then require ~100ms of sustained quiet so the beep tail is fully gone.
+            if (seen_beep or (time.time() - start) >= arrive_s) and quiet_run >= 5:
+                break
     flush_mic(mic)                      # drop anything still buffered
 
 
