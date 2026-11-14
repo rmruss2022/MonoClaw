@@ -93,6 +93,7 @@
   .panel{min-height:0!important;overflow:visible!important;padding-bottom:4px!important}
   .panel .nav{position:static!important;margin:0 0 12px!important;padding:10px 2px 12px!important;
     background:transparent!important;border-bottom:1px solid rgba(255,255,255,.06)!important}
+  .bare .panel,.bare .controls{display:none!important}
 </style>
 </head>
 <body>
@@ -917,5 +918,6 @@ addEventListener('message', e => { if (e.data && e.data.mandalaV1Height) $('v1')
   addEventListener('load', post); setTimeout(post,250); setTimeout(post,900); setTimeout(post,2000);
 })();
 </script>
+<script>try{if(/[?&]bare=1/.test(location.search))document.documentElement.classList.add('bare');}catch(e){}</script>
 </body>
 </html>
