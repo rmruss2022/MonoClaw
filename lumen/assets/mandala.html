@@ -14,7 +14,7 @@
   header h1{font-size:24px;font-weight:700;letter-spacing:-.02em}
   header span{color:var(--muted);font-size:14px}
   .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:12px 10px 20px;overflow:hidden}
-  .card::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 42% at 50% 33%,rgba(255,80,170,.06),transparent 70%);pointer-events:none}
+  .card::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 42% at 50% 33%,rgba(245,201,119,.07),transparent 70%);pointer-events:none}
   .stage{position:relative;width:100%;aspect-ratio:1/1;-webkit-tap-highlight-color:transparent;user-select:none}
   .stage canvas,.stage svg{position:absolute;inset:0;width:100%;height:100%}
   .stage #pearlGL{inset:auto;pointer-events:none}
@@ -112,12 +112,12 @@
           <filter id="lanternBlur" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="2.4"/></filter>
           <filter id="ringGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <radialGradient id="lanternG"><stop offset="0" stop-color="#fff1d6"/><stop offset=".35" stop-color="#ffb35a" stop-opacity=".9"/><stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
-          <radialGradient id="coreGlow"><stop offset="0" stop-color="#ffc173" stop-opacity=".7"/><stop offset=".22" stop-color="#ff5fb8" stop-opacity=".25"/><stop offset=".6" stop-color="#a45bff" stop-opacity=".07"/><stop offset="1" stop-color="#a45bff" stop-opacity="0"/></radialGradient>
+          <radialGradient id="coreGlow"><stop offset="0" stop-color="#ffc173" stop-opacity=".7"/><stop offset=".22" stop-color="#f5c977" stop-opacity=".28"/><stop offset=".6" stop-color="#caa15a" stop-opacity=".08"/><stop offset="1" stop-color="#caa15a" stop-opacity="0"/></radialGradient>
           <radialGradient id="coreFill"><stop offset="0" stop-color="#1d1a28"/><stop offset=".9" stop-color="#15131f"/><stop offset="1" stop-color="#15131f" stop-opacity="0"/></radialGradient>
-          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".5" stop-color="#ff5fb8"/><stop offset="1" stop-color="#2ee6c5"/></linearGradient>
-          <radialGradient id="pearlTeal" cx=".38" cy=".34"><stop offset="0" stop-color="#eafffb"/><stop offset=".35" stop-color="#5ff2d8"/><stop offset="1" stop-color="#0c8f7e"/></radialGradient>
+          <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".5" stop-color="#f5c977"/><stop offset="1" stop-color="#ffd98a"/></linearGradient>
+          <radialGradient id="pearlTeal" cx=".38" cy=".34"><stop offset="0" stop-color="#fff6e0"/><stop offset=".35" stop-color="#f5c977"/><stop offset="1" stop-color="#9a6a1e"/></radialGradient>
           <linearGradient id="roseG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9f1c"/><stop offset=".5" stop-color="#ffd23f"/><stop offset="1" stop-color="#fff6c2"/></linearGradient>
-          <linearGradient id="curlG" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#c2187a"/><stop offset=".55" stop-color="#ff5fb8"/><stop offset="1" stop-color="#ffc2e4"/></linearGradient>
+          <linearGradient id="curlG" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#a9741f"/><stop offset=".55" stop-color="#f5c977"/><stop offset="1" stop-color="#ffeec4"/></linearGradient>
           <linearGradient id="daisyG" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9f1c"/><stop offset=".55" stop-color="#ffe135"/><stop offset="1" stop-color="#fffbe0"/></linearGradient>
         </defs>
         <g id="mand">
@@ -137,7 +137,7 @@
             <circle r="49" fill="url(#coreFill)"/>
             <g id="rose"></g>
             <circle r="39.5" fill="none" stroke="#0d0b14" stroke-width="4.5"/>
-            <circle r="39.5" fill="none" stroke="#2ee6c5" stroke-width="2.2"/>
+            <circle r="39.5" fill="none" stroke="#f5c977" stroke-width="2.2"/>
             <circle r="44" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="1.4"/>
             <circle id="wring" r="44" fill="none" stroke="url(#ringGrad)" stroke-width="1.8" stroke-linecap="round" transform="rotate(-90)" pathLength="1000" stroke-dasharray="0 1000" filter="url(#ringGlow)"/>
             <circle id="pearlHalo" r="20" fill="url(#coreGlow)"/>
@@ -176,19 +176,19 @@ const INK = '#0d0b14';
 
 // ---------------- data ----------------
 const DIMS = [
-  { id:'stillness',   name:'Stillness',   tag:'Time spent in quiet sitting', color:'#FFC83D', accent:'#FF2E93', unit:'minutes',         step:40, value:420,
+  { id:'stillness',   name:'Stillness',   tag:'Time spent in quiet sitting', color:'#F5C977', accent:'#FFE7A8', unit:'minutes',         step:40, value:420,
     tiers:[['First sit','Complete your first session',1],['An hour of quiet','Sit for 60 minutes in total',60],['Steady mind','Sit for 300 minutes in total',300],['Thousand minutes','Sit for 1,000 minutes in total',1000]] },
-  { id:'depth',       name:'Depth',       tag:'Longer, deeper sits',         color:'#8C5CFF', accent:'#2EE6C5', unit:'sits of 20+ min', step:2, value:14,
+  { id:'depth',       name:'Depth',       tag:'Longer, deeper sits',         color:'#C98A2E', accent:'#F0C979', unit:'sits of 20+ min', step:2, value:14,
     tiers:[['Going deeper','Your first 20-minute sit',1],['Settling in','10 sits of 20+ minutes',10],['Deep water','25 sits of 20+ minutes',25],['The long sit','50 sits of 20+ minutes',50]] },
-  { id:'exploration', name:'Exploration', tag:'Journeys and new practices',  color:'#9BE564', accent:'#A45BFF', unit:'journeys',        step:1, value:1,
+  { id:'exploration', name:'Exploration', tag:'Journeys and new practices',  color:'#E8B84B', accent:'#FFDC8C', unit:'journeys',        step:1, value:1,
     tiers:[['First journey','Complete a journey',1],['Wayfinder','Complete 3 journeys',3],['Cartographer','Complete 8 journeys',8],['Whole map','Complete 15 journeys',15]] },
-  { id:'breath',      name:'Breath',      tag:'Breathwork practice',         color:'#22D3B6', accent:'#FFE135', unit:'breath sessions', step:4, value:130,
+  { id:'breath',      name:'Breath',      tag:'Breathwork practice',         color:'#D7A64A', accent:'#F5D28A', unit:'breath sessions', step:4, value:130,
     tiers:[['First breath','Complete a breathwork session',1],['Rhythm','15 breathwork sessions',15],['Tidal','40 breathwork sessions',40],['Ocean','120 breathwork sessions',120]] },
-  { id:'connection',  name:'Connection',  tag:'Sitting alongside others',    color:'#4D7CFF', accent:'#FF7AC6', unit:'group sits',      step:1, value:0,
+  { id:'connection',  name:'Connection',  tag:'Sitting alongside others',    color:'#EAC774', accent:'#FFE6AC', unit:'group sits',      step:1, value:0,
     tiers:[['Not alone','Sit while others are meditating',1],['Kindred','5 group sits',5],['Sangha','20 group sits',20],['Lantern','50 group sits',50]] },
-  { id:'reflection',  name:'Reflection',  tag:'Journaling what you notice',  color:'#FF2E93', accent:'#FFD23F', unit:'reflections',     step:2, value:12,
+  { id:'reflection',  name:'Reflection',  tag:'Journaling what you notice',  color:'#C9922E', accent:'#F3C977', unit:'reflections',     step:2, value:12,
     tiers:[['First page','Write your first reflection',1],['Noticing','10 reflections',10],['Inner voice','30 reflections',30],['A life examined','100 reflections',100]] },
-  { id:'consistency', name:'Consistency', tag:'Showing up, day after day',   color:'#FF8A1F', accent:'#2EE6C5', unit:'day best streak', step:2, value:12,
+  { id:'consistency', name:'Consistency', tag:'Showing up, day after day',   color:'#F0B64A', accent:'#FFD98A', unit:'day best streak', step:2, value:12,
     tiers:[['Three in a row','A 3-day streak',3],['A full week','A 7-day streak',7],['Moon cycle','A 30-day streak',30],['Unbroken','A 100-day streak',100]] },
 ];
 const RARE = [
@@ -255,7 +255,7 @@ el('circle', { r:100, fill:'none', stroke:'rgba(255,255,255,.07)', 'stroke-width
 for (let i = 0; i < 84; i++){
   if (i % 12 === 0) continue;
   const [x, y] = polar(i * 360 / 84, LANT_R);
-  el('circle', { cx:f2(x), cy:f2(y), r:.9, fill: i % 2 ? '#7ff0dc' : '#ff9fd2', opacity: .18 + .2 * ((i * 37) % 7) / 7 }, spin);
+  el('circle', { cx:f2(x), cy:f2(y), r:.9, fill: i % 2 ? '#ffe0a0' : '#f5c977', opacity: .18 + .2 * ((i * 37) % 7) / 7 }, spin);
 }
 for (let i = 0; i < 7; i++){
   const a = i * 360 / 7, [x, y] = polar(a, LANT_R);
@@ -331,7 +331,7 @@ for (let g = 0; g < N; g++){
   });
   const dots = [
     el('circle', { cy:-90, r:3.6, fill:'url(#pearlTeal)', stroke:INK, 'stroke-width':1.3 }, G),
-    el('circle', { cy:-78, r:2.5, fill:'#b8f36b', stroke:INK, 'stroke-width':1.1 }, G),
+    el('circle', { cy:-78, r:2.5, fill:'#f0c877', stroke:INK, 'stroke-width':1.1 }, G),
     el('circle', { cy:-68, r:1.8, fill:'#ffe135', stroke:INK, 'stroke-width':1 }, G),
   ];
   CURLS.push({ a, G, sides, dots, s:0, sv:0 });
@@ -367,7 +367,7 @@ function styleRare(r){
 // center rosette: 14 small petals, each pair lit by one dimension
 const rose = $('rose'); const ROSE = [];
 for (let k = 0; k < 14; k++){
-  const p = el('path', { d:ogee(13, 22, 6.2), fill:k % 2 ? '#2ee6c5' : 'url(#roseG)', stroke:INK, 'stroke-width':1.3, transform:`rotate(${k * 360 / 14})` }, rose);
+  const p = el('path', { d:ogee(13, 22, 6.2), fill:k % 2 ? '#e8b84b' : 'url(#roseG)', stroke:INK, 'stroke-width':1.3, transform:`rotate(${k * 360 / 14})` }, rose);
   ROSE.push(p);
 }
 $('core').addEventListener('click', () => select(null));
@@ -433,13 +433,13 @@ function renderPanel(){
     const tot = DIMS.reduce((s, d) => s + d.tiers.length, 0) + RARE.length;
     const got = DIMS.reduce((s, d) => s + earnedOf(d), 0) + RARE.filter(r => r.got).length;
     const w = Math.round(wholeness() * 100);
-    h = `<div class="fade" style="--c:#ff5fb8;--a:#ffc83d">
+    h = `<div class="fade" style="--c:#f5c977;--a:#ffe7a8">
       ${navRow()}
       <div class="ph"><canvas class="mini" id="mini" width="96" height="96"></canvas><div><h3>Wholeness</h3><p>${got} of ${tot} achievements grown</p></div><div class="pct">${w}%</div></div>
       <div class="bar"><i style="width:${w}%"></i></div>
       <div class="sub">Every achievement adds a layer to a petal. Tap one to see what's next.</div>
       <div class="chips">${DIMS.map((d, i) => `<button class="chip" data-i="${i}" style="--c:${d.color};--a:${d.accent}"><span class="d"></span>${d.name}<span class="v">${Math.round(fillOf(d)*100)}%</span></button>`).join('')}
-        <button class="chip" data-r="1" style="--c:#ffe135;--a:#2ee6c5"><span class="d"></span>Rare<span class="v">${RARE.filter(r => r.got).length}/${RARE.length}</span></button></div>
+        <button class="chip" data-r="1" style="--c:#ffe135;--a:#f5c977"><span class="d"></span>Rare<span class="v">${RARE.filter(r => r.got).length}/${RARE.length}</span></button></div>
     </div>`;
   } else if (sel.kind === 'main'){
     const d = DIMS[sel.i], f = fillOf(d), e = earnedOf(d), next = d.tiers[e];
@@ -457,7 +457,7 @@ function renderPanel(){
     </div>`;
   } else {
     const r = RARE[sel.i];
-    h = `<div class="fade" style="--c:#ffe135;--a:#2ee6c5">
+    h = `<div class="fade" style="--c:#ffe135;--a:#f5c977">
       ${navRow()}
       <div class="ph"><div class="sw"></div><div><h3>${r.got ? r.name : 'Hidden blossom'}</h3><p>Rare achievement</p></div><div class="pct">${r.got ? '✦' : '?'}</div></div>
       <ul class="ach"><li class="${r.got ? 'got' : ''}"><div class="ic">${r.got ? '✓' : '?'}</div>
@@ -478,7 +478,7 @@ const cv = $('fx'), ctx = cv.getContext('2d');
 let scale = 1;
 function resize(){ const w = $('stage').clientWidth, dpr = Math.min(devicePixelRatio || 1, 2); cv.width = cv.height = Math.round(w * dpr); scale = cv.width / 430; }
 addEventListener('resize', resize); resize();
-const ambient = [...Array(64)].map(() => ({ r: 55 + Math.random() * 155, a: Math.random() * 6.283, sp: (Math.random() - .5) * .05, s: .35 + Math.random() * 1.0, o: .08 + Math.random() * .3, tw: Math.random() * 6, c: Math.random() < .5 ? [255,170,220] : [170,255,235] }));
+const ambient = [...Array(64)].map(() => ({ r: 55 + Math.random() * 155, a: Math.random() * 6.283, sp: (Math.random() - .5) * .05, s: .35 + Math.random() * 1.0, o: .08 + Math.random() * .3, tw: Math.random() * 6, c: Math.random() < .5 ? [255,220,150] : [245,201,119] }));
 const sparks = [];
 function spark(x, y, vx, vy, life, s, rgb){ sparks.push({ x, y, vx, vy, life, max:life, s, rgb }); }
 function burst(x, y, color, n = 30){
@@ -835,8 +835,8 @@ function frame(ms){
   const C = 215 * scale;
   const lg = ctx.createRadialGradient(C, C, 0, C, C, lightR * scale);
   lg.addColorStop(0, `rgba(255,140,120,${(.08 + .11 * bIn) * (.6 + wDisp)})`);
-  lg.addColorStop(.5, `rgba(200,90,255,${(.025 + .045 * bIn) * (.6 + wDisp)})`);
-  lg.addColorStop(1, 'rgba(160,80,255,0)');
+  lg.addColorStop(.5, `rgba(245,201,119,${(.03 + .05 * bIn) * (.6 + wDisp)})`);
+  lg.addColorStop(1, 'rgba(220,170,90,0)');
   ctx.fillStyle = lg; ctx.fillRect(0, 0, cv.width, cv.height);
   drawWeb(now, bIn, C, bOut);
 
@@ -871,7 +871,7 @@ function frame(ms){
     const f = Math.min(1, s.life / .6) * Math.min(1, (s.max - s.life) / .4);
     const hx = C + s.x * scale, hy = C + s.y * scale;
     const g = ctx.createLinearGradient(hx - dx * s.len * scale, hy - dy * s.len * scale, hx, hy);
-    const col = s.pink ? '255,170,220' : '170,255,235';
+    const col = s.pink ? '255,222,152' : '245,201,119';
     g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(1, `rgba(${col},${(.34 * f).toFixed(3)})`);
     ctx.strokeStyle = g; ctx.lineWidth = .9 * scale;
     ctx.beginPath(); ctx.moveTo(hx - dx * s.len * scale, hy - dy * s.len * scale); ctx.lineTo(hx, hy); ctx.stroke();

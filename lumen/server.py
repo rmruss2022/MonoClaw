@@ -7697,7 +7697,7 @@ async function renderProfile(){
   $('#app').innerHTML=`<section class="nh-hero you-hero" id="youHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">${esc(p.name)}</h1><p class="nh-sub">${esc(p.league.name)} league · Level ${p.level}</p></div></div></section>`
   +`<div class="you-levelcard"><div class="you-lvtop"><span class="you-lvn">Level ${p.level}</span><span class="pill" style="border-color:${p.league.color};color:${p.league.color}">${esc(p.league.name)} league</span></div><div class="nh-lbar"><i style="width:${prog}%"></i></div><div class="you-lvsub">${fmt(p.level_into)} / ${fmt(p.level_into+p.level_need)} light to Level ${p.level+1}</div></div>`
   +`<div class="nh-sec-h" style="margin-top:14px"><h2>Your Mandala</h2></div>`
-  +`<div class="you-mandala"><iframe id="mandalaFrame" src="assets/mandala.html?v=6&bare=1" title="Your mandala" loading="eager" scrolling="no" style="width:100%;height:360px;min-height:340px;border:0;display:block;background:transparent"></iframe></div>`
+  +`<div class="you-mandala"><iframe id="mandalaFrame" src="assets/mandala.html?v=7&bare=1" title="Your mandala" loading="eager" scrolling="no" style="width:100%;height:360px;min-height:340px;border:0;display:block;background:transparent"></iframe></div>`
   +`<div class="nh-sec-h"><h2>Your Cards</h2></div>`
   +`<div class="you-catnav"><button class="you-catbtn" id="catPrev" aria-label="Previous">‹</button><span class="you-catname" id="catName">All cards</span><button class="you-catbtn" id="catNext" aria-label="Next">›</button></div>`
   +`<div class="you-cards" id="youCards"></div>`
@@ -7918,7 +7918,7 @@ async function renderAltar(){
   window.addEventListener('message',_onMandalaMsg);
   $('#cbody').innerHTML=`
   <div class="mandala-wrap">
-    <iframe id="mandalaFrame" src="assets/mandala.html?v=5" title="Your mandala" loading="eager" scrolling="no"
+    <iframe id="mandalaFrame" src="assets/mandala.html?v=7" title="Your mandala" loading="eager" scrolling="no"
       style="width:100%;height:600px;min-height:560px;border:0;display:block;background:transparent"></iframe>
   </div>`;
 }
@@ -9981,7 +9981,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v70';
+const CACHE = 'lumen-v71';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
