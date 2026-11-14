@@ -2568,6 +2568,9 @@ PAGE = r"""<!doctype html>
 .jmode-chev{font-size:22px;font-weight:300;line-height:1}
 .you-hero{min-height:200px;background-position:center 46%}
 .you-levelcard{background:#15112466;border:1px solid var(--line);border-radius:18px;padding:16px;margin:2px 0 4px}
+.you-nhlevel{cursor:default;margin:2px 0 8px}
+.you-nhlevel .nh-lsub{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.you-nhlevel .nh-lsub .pill{font-size:11px;padding:2px 9px}
 .you-lvtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
 .you-lvn{font-weight:800;font-size:17px;color:#fff}
 .you-lvsub{font-size:12.5px;color:var(--muted);margin-top:7px}
@@ -7830,7 +7833,10 @@ async function renderProfile(){
     ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6"><span class="zsym">${horo.glyph}︎</span> <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
     : `<p class="muted" style="font-size:13px;margin:0 0 12px">Add your birthday to receive your daily Vedic reading.</p>`;
   $('#app').innerHTML=`<section class="nh-hero you-hero" id="youHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">${esc(p.name)}</h1><p class="nh-sub">${esc(p.league.name)} league · Level ${p.level}</p></div></div></section>`
-  +`<div class="you-levelcard"><div class="you-lvtop"><span class="you-lvn">Level ${p.level}</span><span class="pill" style="border-color:${p.league.color};color:${p.league.color}">${esc(p.league.name)} league</span></div><div class="nh-lbar"><i style="width:${prog}%"></i></div><div class="you-lvsub">${fmt(p.level_into)} / ${fmt(p.level_into+p.level_need)} light to Level ${p.level+1}</div></div>`
+  +`<div class="nh-level you-nhlevel"><span class="nh-lorb" style="background-image:url('/art/home-levelorb.jpg?v=45')"></span>`
+    +`<div class="nh-lbody"><div class="nh-ltop">Level ${p.level} · ${fmt(p.level_into)} / ${fmt(p.level_into+p.level_need)} XP</div>`
+      +`<div class="nh-lbar"><i style="width:${prog}%"></i></div>`
+      +`<div class="nh-lsub"><span class="pill" style="border-color:${p.league.color};color:${p.league.color}">${esc(p.league.name)} league</span> · ${fmt(p.level_need)} XP to Level ${p.level+1}</div></div></div>`
   +`<div class="nh-sec-h" style="margin-top:14px"><h2>Your Mandala</h2></div>`
   +`<div class="you-mandala"><iframe id="mandalaFrame" src="assets/mandala.html?v=7&bare=1" title="Your mandala" loading="eager" scrolling="no" style="width:100%;height:360px;min-height:340px;border:0;display:block;background:transparent"></iframe></div>`
   +`<div class="nh-sec-h"><h2>Your Cards</h2></div>`
@@ -10116,7 +10122,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v74';
+const CACHE = 'lumen-v75';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
