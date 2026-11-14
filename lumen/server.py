@@ -2492,9 +2492,9 @@ PAGE = r"""<!doctype html>
 .nh-start:active{transform:scale(.99)}
 .nh-play{width:28px;height:28px;color:#fff}
 .nh-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:10px 0 12px}
-.nh-stat{background:#15112480;border:1px solid var(--line);border-radius:18px;padding:19px 8px;display:flex;flex-direction:column;align-items:center;gap:9px}
-.nh-si{width:25px;height:25px;display:flex}.nh-si svg{width:25px;height:25px}
-.nh-si.flame{color:#fb7a3c}.nh-si.star{color:var(--purple)}.nh-si.sun{color:var(--gold)}
+.nh-stat{background:linear-gradient(180deg,#1c1530,#15101f) padding-box,linear-gradient(180deg,rgba(201,182,255,.55),rgba(128,108,196,.14) 55%,rgba(90,80,150,.06)) border-box;border:1.5px solid transparent;border-radius:18px;padding:19px 8px;display:flex;flex-direction:column;align-items:center;gap:9px;box-shadow:0 8px 22px -12px rgba(140,105,230,.4)}
+.nh-si{width:33px;height:33px;display:flex;align-items:center;justify-content:center}.nh-si svg{width:33px;height:33px}
+.nh-si.flame{color:#fb7a3c;filter:drop-shadow(0 0 9px rgba(251,130,60,.85))}.nh-si.star{color:var(--purple);filter:drop-shadow(0 0 9px rgba(168,85,247,.85))}.nh-si.sun{color:var(--gold);filter:drop-shadow(0 0 9px rgba(245,201,119,.85))}
 .nh-stat b{font-size:22px;font-weight:800;color:#fff;line-height:1}
 .nh-sl{font-size:11px;color:var(--muted);text-align:center;line-height:1.25}
 .nh-sec{display:flex;flex-direction:column;gap:12px}
@@ -5226,7 +5226,7 @@ async function renderMeditate(){
     </div></section>
   <button class="nh-start" id="nhStart">${ic('play','nh-play')} Start Meditation</button>
   <div class="nh-stats">
-    <div class="nh-stat"><span class="nh-si flame">${ic('flame')}</span><b>${ME.streak||0}</b><span class="nh-sl">Day Streak</span></div>
+    <div class="nh-stat"><span class="nh-si flame"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="flg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffd24a"/><stop offset=".45" stop-color="#ff9227"/><stop offset="1" stop-color="#f4511e"/></linearGradient></defs><path d="M12 2.3c3 3.4 5.1 6 5.1 9.5a5.1 5.1 0 0 1-10.2 0c0-2 .7-3.4 2-4.7C9.1 9 9.7 9.9 10.2 10.5 10.8 7.5 11 5 12 2.3Z" fill="url(#flg)"/><path d="M12 12.6c1.7 1.1 2.5 2.4 2.5 3.9a2.5 2.5 0 0 1-5 0c0-1 .5-1.9 1.4-2.6.2.5.6.9 1 1.2C11.8 13.6 11.9 13.1 12 12.6Z" fill="#ffe9a0"/></svg></span><b>${ME.streak||0}</b><span class="nh-sl">Day Streak</span></div>
     <div class="nh-stat"><span class="nh-si star">${ic('starf')}</span><b>${fmt(ME.light||0)}</b><span class="nh-sl">XP</span></div>
     <div class="nh-stat"><span class="nh-si sun">${ic('sun')}</span><b>Lv. ${ME.level||1}</b><span class="nh-sl">Light Level</span></div>
   </div>
@@ -9845,7 +9845,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v54';
+const CACHE = 'lumen-v55';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
