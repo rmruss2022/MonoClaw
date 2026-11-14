@@ -130,6 +130,7 @@ def init_db():
                      ("sms_consent", "sms_consent INTEGER DEFAULT 0"),  # 1 = opted in to SMS notifications
                      ("sms_optout", "sms_optout INTEGER DEFAULT 0"),    # 1 = texted STOP / unsubscribed
                      ("last_journey", "last_journey TEXT"),         # track key of the most recently practiced journey
+                     ("sess_cutoff", "sess_cutoff INTEGER DEFAULT 0"),  # signed session tokens issued before this epoch are rejected (bumped on password reset)
                      ("onboarded_at", "onboarded_at TEXT")):        # when the user completed onboarding (NULL = not yet)
         if col not in cols:
             c.execute(f"ALTER TABLE users ADD COLUMN {ddl}")
@@ -292,6 +293,16 @@ def session_email(tok):
     if v and v[1] > time.time():
         return v[0]
     return None
+
+def session_issued(tok):
+    """Issue epoch of a stateless signed token (exp - SESSION_TTL), or None for legacy/invalid tokens."""
+    try:
+        pad = "=" * (-len(tok) % 4)
+        raw = base64.urlsafe_b64decode(tok + pad).decode()
+        _email, exp, _sig = raw.rsplit("|", 2)
+        return int(float(exp)) - SESSION_TTL
+    except Exception:
+        return None
 
 # Catch obvious email typos at signup (a ".con" address can never receive mail).
 _TYPO_DOMAINS = {
@@ -3271,6 +3282,7 @@ a{color:var(--purple)}
 .jbig-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#fff;background:linear-gradient(135deg,#a855f7,#7c3aed);border-radius:999px;padding:2px 8px}
 .jbig-b{font-size:12px;color:var(--muted);line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .jbig-go{flex:none;color:#6f6794;font-size:20px;font-weight:300;line-height:1}
+.planband{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;margin:14px 0 8px;padding:15px 16px;border-radius:16px;color:var(--text);background:linear-gradient(120deg,#1e1636,#140f24 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.55),rgba(168,85,247,.28) 58%,rgba(90,80,150,.08)) border-box;border:1.5px solid transparent;box-shadow:0 10px 26px -14px rgba(140,105,230,.4)}.planband:active{transform:scale(.99)}.planband-glow{position:absolute;right:-24px;top:-24px;width:130px;height:130px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(245,201,119,.24),transparent 68%);filter:blur(7px)}.planband-l{position:relative;z-index:1;flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}.planband-eye{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#f5c977}.planband-eye .i{width:14px;height:14px;color:#f5c977}.planband-sub{font-size:12.5px;color:var(--muted);line-height:1.35}.planband-bar{height:7px;border-radius:999px;background:#241c3c;overflow:hidden;margin-top:3px}.planband-bar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#f5c977,#a855f7);transition:width .4s}.planband-go{position:relative;z-index:1;flex:none;color:var(--purple);font-size:22px;font-weight:300;line-height:1}.jbig.rec .jbig-ico{color:color-mix(in srgb,var(--gold) 88%,#fff);background:radial-gradient(circle at 34% 28%,rgba(245,201,119,.24),#17121f 72%);border-color:rgba(245,201,119,.34);filter:drop-shadow(0 0 7px rgba(245,201,119,.6))}
 .jlinks{display:flex;gap:10px;margin:0 2px 20px}
 .jlink{flex:1;display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer;background:#13101f;border:1px solid var(--line);border-radius:14px;padding:12px;color:var(--text);transition:.15s}
 .jlink:active{transform:scale(.98)}
@@ -7010,7 +7022,7 @@ async function renderJournalHome(){
     +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
   const jung=[['The Shadow','Meet what you suppress','jg_shadow'],['The Persona','The mask you wear','jg_persona'],['Anima &amp; Animus','Your inner opposite','jg_anima'],['The Self','Wholeness &amp; integration','jg_self']];
   const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-med">${ic(j[2])}</span><span class="jcard-n">${i+1}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span><span class="jcard-lk">${ic('lock')}</span></div>`;
-  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="jnlHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="talkbtn">${ic('chat')} Talk</button></header><div class="nh-hero-txt"><h1 class="nh-greet">The Journal</h1><p class="nh-sub">A letter to yourself \u2014 one honest line at a time.</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="jnlHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="talkbtn">${ic('chat')} Talk</button></header><div class="nh-hero-txt"><h1 class="nh-greet">${(ME&&ME.name)?esc(ME.name.split(' ')[0])+'’s Journal':'The Journal'}</h1><p class="nh-sub">A letter to yourself \u2014 one honest line at a time.</p></div></div></section>`
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
     +(()=>{const pd=(plan&&plan.done)||0,pt=(plan&&plan.total)||8,ppct=pt?Math.round(100*pd/pt):0;
        return `<button class="planband" id="planband"><span class="planband-glow"></span>`
@@ -8047,7 +8059,16 @@ class H(BaseHTTPRequestHandler):
         email = session_email(tok) if tok else None
         if not email:
             return None
-        return user_by_email(c, email)
+        u = user_by_email(c, email)
+        if u is not None:
+            try:
+                cutoff = int(u["sess_cutoff"] or 0)
+            except Exception:
+                cutoff = 0
+            issued = session_issued(tok)
+            if cutoff and issued is not None and issued < cutoff:
+                return None
+        return u
 
     def _owner(self, c):
         u = self._me(c)
@@ -9213,7 +9234,7 @@ class H(BaseHTTPRequestHandler):
             if not u:
                 self._send(400, {"error": "That code isn't right."}); return
             salt = secrets.token_hex(16)
-            c.execute("UPDATE users SET salt=?, hash=? WHERE id=?", (salt, _hash_pw(pw, salt), u["id"]))
+            c.execute("UPDATE users SET salt=?, hash=?, sess_cutoff=? WHERE id=?", (salt, _hash_pw(pw, salt), int(time.time()), u["id"]))
             c.execute("DELETE FROM password_resets WHERE email=?", (email,))
             c.commit()
             # invalidate any existing sessions for this email, then sign them in fresh
@@ -9848,7 +9869,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v58';
+const CACHE = 'lumen-v59';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
