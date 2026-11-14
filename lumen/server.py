@@ -2432,8 +2432,8 @@ PAGE = r"""<!doctype html>
 .nh{display:flex;flex-direction:column;gap:18px}
 .nh-hdr{display:flex;align-items:center;justify-content:space-between}
 .nh-brand{display:flex;align-items:center;gap:10px}
-.nh-mark{width:36px;height:30px;display:flex;color:var(--gold)}
-.nh-mark svg{width:36px;height:30px;filter:drop-shadow(0 0 9px rgba(245,201,119,.7))}
+.nh-mark{width:37px;height:33px;display:flex;color:var(--gold)}
+.nh-mark svg{width:37px;height:33px;filter:drop-shadow(0 0 8px rgba(245,201,119,.7))}
 .nh-name{font-size:25px;font-weight:800;letter-spacing:-.02em;color:#fff}
 .nh-bell{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#19152b;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .nh-bell svg{width:21px;height:21px}
@@ -5175,7 +5175,7 @@ async function renderMeditate(){
   <section class="nh-hero" id="nhHero"><div class="nh-hero-scrim"></div>
     <div class="nh-hero-inner">
       <header class="nh-hdr">
-        <div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 44 34" fill="none" stroke="#f5c977" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M22 3c-2.6 5.6-2.6 11.4 0 17 2.6-5.6 2.6-11.4 0-17Z" fill="rgba(245,201,119,.16)"/><path d="M22 20c-4.6-1.8-7.4-6.3-8.4-12 4.6.9 7.4 5.6 8.4 12Z" fill="rgba(245,201,119,.13)"/><path d="M22 20c4.6-1.8 7.4-6.3 8.4-12-4.6.9-7.4 5.6-8.4 12Z" fill="rgba(245,201,119,.13)"/><path d="M22 21c-6.6 0-12.4-2.8-17-7.6 6.6-1.9 13.2 1 17 7.6Z" fill="rgba(245,201,119,.10)"/><path d="M22 21c6.6 0 12.4-2.8 17-7.6-6.6-1.9-13.2 1-17 7.6Z" fill="rgba(245,201,119,.10)"/></svg></span><span class="nh-name">Lumen</span></div>
+        <div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div>
         <button class="nh-bell" id="nhBell" aria-label="Notifications">${ic('bell')}<i class="nh-dot"></i></button>
       </header>
       <div class="nh-hero-txt">
@@ -9804,7 +9804,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v43';
+const CACHE = 'lumen-v44';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
