@@ -3233,7 +3233,7 @@ body.jw-gold .jx-close{display:none}
 .jw-c-prompt .jw-cbody{padding:2px 4px}
 /* response panel: boxless; a circle + flanking arrows (text mode brings its own box) */
 .jw-c-resp{background:none !important;border:0 !important;box-shadow:none !important;cursor:default;overflow:visible !important}
-.jw-c-resp .jw-cbody{flex-direction:row;align-items:center;justify-content:center;gap:6px;overflow:visible;margin-top:0}
+.jw-c-resp .jw-cbody{flex-direction:row;align-items:flex-end;justify-content:center;gap:6px;overflow:visible;margin-top:0;padding-bottom:6px}
 .jw-resp-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .jw-arrow{flex:none;width:44px;height:44px;border:0;background:none;color:#5a431f;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85}
 .jw-arrow .i{width:30px;height:30px}
@@ -10188,7 +10188,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v85';
+const CACHE = 'lumen-v86';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
