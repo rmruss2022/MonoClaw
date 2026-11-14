@@ -2529,6 +2529,9 @@ PAGE = r"""<!doctype html>
 .nh-pmeta .lf{color:#6ee7b7;display:flex}.nh-pmeta .ck{color:var(--muted);display:flex}
 .nh-pplay{width:48px;height:48px;flex:none;border-radius:50%;border:0;cursor:pointer;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -6px rgba(124,58,237,.7)}
 .nh-pplay svg{width:20px;height:20px}
+.jnl-hero{min-height:236px;background-position:center 60%}
+.jnl-hero .nh-greet{font-size:30px}
+
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -7007,8 +7010,7 @@ async function renderJournalHome(){
     +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
   const jung=[['The Shadow','Meet what you suppress','jg_shadow'],['The Persona','The mask you wear','jg_persona'],['Anima &amp; Animus','Your inner opposite','jg_anima'],['The Self','Wholeness &amp; integration','jg_self']];
   const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-med">${ic(j[2])}</span><span class="jcard-n">${i+1}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span><span class="jcard-lk">${ic('lock')}</span></div>`;
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b>`
-    +`<button class="lo-btn" id="talkbtn" style="margin-left:auto">${ic('chat')} Talk</button></div>`
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="jnlHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="talkbtn">${ic('chat')} Talk</button></header><div class="nh-hero-txt"><h1 class="nh-greet">The Journal</h1><p class="nh-sub">A letter to yourself \u2014 one honest line at a time.</p></div></div></section>`
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
     +(()=>{const pd=(plan&&plan.done)||0,pt=(plan&&plan.total)||8,ppct=pt?Math.round(100*pd/pt):0;
        return `<button class="planband" id="planband"><span class="planband-glow"></span>`
@@ -7046,6 +7048,7 @@ async function renderJournalHome(){
     else{jScreen='compose';}
     renderJournal();};
   document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
+  {const h=$('#jnlHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journal-hero.jpg?v=58')";};im.src="/art/journal-hero.jpg?v=58";}}
   document.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;journalChapter=null;jScreen='plessons';renderJournal();});
   _mountCols();
   journalView='feed';renderJournalBody();
@@ -9845,7 +9848,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v57';
+const CACHE = 'lumen-v58';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
