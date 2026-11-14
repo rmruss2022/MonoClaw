@@ -3219,8 +3219,38 @@ a{color:var(--purple)}
 .jw-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:auto;padding-top:6px}
 .jw-foot .letter-seal-btn{margin:0;width:100%;max-width:420px;border-radius:999px;padding:16px 28px;font-size:17px}
 /* --- journal write: gold-bar stage holding 3 depth-gold components --- */
-body.jw-gold{background:linear-gradient(175deg,#fde7ad 0%,#f6cf83 24%,#eaba60 50%,#dba747 76%,#cd9531 100%) fixed !important}
+body.jw-gold{background:linear-gradient(175deg,#fde7ad 0%,#f6cf83 24%,#eaba60 50%,#dba747 76%,#cd9531 100%) fixed !important;overflow:hidden !important}
+html.jw-gold-h{overflow:hidden !important}
 body.jw-gold .jx-close{display:none}
+/* journal write: locked to the viewport, never scrolls */
+.jwrite{position:fixed !important;inset:0;height:100dvh;max-height:100dvh;overflow:hidden}
+/* timer digits stretch to fill the whole panel (both axes) */
+.jt-svg{display:block;width:100%;height:100%;filter:drop-shadow(0 0 16px rgba(245,201,119,.45))}
+.jt-time{fill:#ffd98a;font-weight:800;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
+/* prompt fills its panel, grown by JS */
+.jw-c-prompt .jw-cbody{padding:2px 4px}
+/* response panel: boxless; a circle + flanking arrows (text mode brings its own box) */
+.jw-c-resp{background:none !important;border:0 !important;box-shadow:none !important;cursor:default}
+.jw-c-resp .jw-cbody{flex-direction:row;align-items:center;justify-content:center;gap:6px;overflow:visible;margin-top:0}
+.jw-resp-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+.jw-arrow{flex:none;width:44px;height:44px;border:0;background:none;color:#5a431f;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85}
+.jw-arrow .i{width:30px;height:30px}
+.jw-arrow:active{transform:scale(.9)}
+.jw-circle{display:flex;flex-direction:column;align-items:center;gap:10px}
+.jw-circle[hidden]{display:none}
+.jw-circ-btn{width:96px;height:96px;border-radius:50%;border:2px solid rgba(90,62,24,.5);background:radial-gradient(circle at 42% 36%,#6a5024,#36280f);color:#ffd98a;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 22px -8px rgba(40,24,4,.6),inset 0 1px 0 rgba(255,228,160,.25)}
+.jw-circ-btn svg,.jw-circ-btn .i{width:38px;height:38px}
+.jw-circ-btn:active{transform:scale(.95)}
+.jw-circ-lbl{font-size:12.5px;font-weight:600;color:#5a431f;text-align:center;max-width:220px}
+.jw-circ-lbl#jreclbl,.jw-c-resp .jcap-status{color:#5a431f}
+/* record circle reuses jrec visuals but circle-sized */
+.jw-circle .jrec-btn{width:96px;height:96px;padding:0}
+.jw-circle .jrec-ring{width:96px;height:96px;border-color:#caa15a}
+.jw-circle .jrec-core{width:66px;height:66px}
+.jw-circle .jrec-btn.rec .jrec-core{width:30px;height:30px;border-radius:8px}
+/* text mode: the textarea is the only thing that wears a box */
+.jw-c-resp .jw-body{flex:none;width:100%;min-height:40%;max-height:100%;border:1px solid rgba(90,62,24,.5);border-radius:14px;padding:12px;background:rgba(255,248,230,.5);color:#3a2a10;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.jw-c-resp .jw-body::placeholder{color:rgba(90,62,24,.5)}
 .jwrite{height:100dvh;max-height:100dvh;overflow:hidden;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 8px);background:transparent}
 .jw-stage{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:0;background:none;border:0;box-shadow:none}
 .jw-x{position:absolute;top:10px;right:10px;z-index:7;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
@@ -3237,34 +3267,15 @@ body.jw-gold .jx-close{display:none}
 .jw-exp{color:#f3c877;opacity:.55;font-size:15px;line-height:1}
 .jw-comp.expanded .jw-exp{opacity:.22}
 .jw-cbody{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:auto;margin-top:8px}
-.jw-c-resp .jw-cbody{align-items:stretch;justify-content:flex-start}
 .jw-comp .jtimer{border:0;background:transparent;padding:0}
 .jw-comp .jtimer{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
 .jw-comp .jtimer .jt-time{color:#ffd98a;text-shadow:0 0 20px rgba(245,201,119,.5);font-size:clamp(52px,16vw,96px);line-height:1;transition:font-size .3s}
 .jw-comp.jw-c-timer.expanded .jtimer .jt-time{font-size:clamp(72px,22vw,128px)}
 .jw-comp .jtimer .jt-lbl{display:none}
 .jw-comp.jw-c-timer.expanded .jw-cbody{gap:4px}
-.jw-comp .jw-prompt{border-left:0;padding:0;color:#ffe3ad;font-size:15.5px;text-align:center;text-shadow:0 0 14px rgba(245,201,119,.22);transition:font-size .3s}
+.jw-comp .jw-prompt{border-left:0;padding:0 10px;width:100%;box-sizing:border-box;color:#ffe3ad;font-size:15.5px;text-align:center;text-shadow:0 0 14px rgba(245,201,119,.22);transition:font-size .3s}
 .jw-comp.jw-c-prompt.expanded .jw-prompt{font-size:22px;line-height:1.5}
-.jw-c-resp .jw-body{flex:1;width:100%;min-height:92px;border:1px solid rgba(245,201,119,.3);border-radius:12px;
-  padding:12px;background:rgba(20,13,4,.4);color:#ffe8bf;font-size:15px}
-.jw-c-resp .jw-body::placeholder{color:rgba(245,201,119,.5)}
-.jw-c-resp .jcap{padding:6px 0}
-.jw-c-resp .jcap-label{color:#ffe3ad;font-weight:600}
-.jw-c-resp .jcap-status{color:#e8c074}
-.jw-c-resp .jcap-btn{width:66px;height:66px;border-radius:16px;background:rgba(20,13,4,.4);border-color:rgba(245,201,119,.55);color:#ffd98a}
-.jw-c-resp .jcap-btn svg{width:28px;height:28px}
-.jw-c-resp .jrec-btn,.jw-c-resp .jrec-ring{width:66px;height:66px}
-.jw-c-resp .jrec-core{width:44px;height:44px}
-.jw-c-resp .jrec-btn.rec .jrec-core{width:22px;height:22px;border-radius:6px}
-.jw-c-resp .jcap{gap:10px}
-.jw-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:none}
-.jw-mode{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:14px;cursor:pointer;
-  border:1px solid rgba(90,62,24,.45);background:linear-gradient(160deg,#54401d,#352813);color:#f3c877;font:600 11px/1 inherit;transition:border-color .18s,background .18s,box-shadow .18s,transform .1s}
-.jw-mode .i{width:18px;height:18px;color:#e8c074}
-.jw-mode.on{border-color:rgba(255,230,160,.75);color:#ffe3ad;background:linear-gradient(160deg,#6a5024,#44341a);box-shadow:0 0 0 1px rgba(255,230,160,.35),0 5px 14px -6px rgba(60,38,8,.6)}
-.jw-mode.on .i{color:#ffd98a;filter:drop-shadow(0 0 6px rgba(255,220,150,.7))}
-.jw-mode:active{transform:scale(.96)}
+.jw-c-resp .jcap-status{color:#5a431f}
 /* seal stays hidden until there's a photo or enough written */
 #jp2 .jw-foot{display:none}
 #jp2 .jw-foot.ready{display:flex}
@@ -4231,6 +4242,8 @@ const fmt=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':''+n;
 
 /* ---- inline SVG icon set (no asset files; currentColor-driven) ---- */
 const SVGP={
+  chevL:'<path d="M15 5l-7 7 7 7"/>',
+  chevR:'<path d="M9 5l7 7-7 7"/>',
   jg_shadow:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17 10 10 0 0 1 0 -17Z" fill="currentColor" stroke="none"/>',
   jg_persona:'<path d="M12 3.4c3.6 0 5.6 2.9 5.6 7.6 0 5.1-2.9 9.6-5.6 9.6S6.4 16.1 6.4 11s2-7.6 5.6-7.6Z"/><path d="M8.6 10.5c.6-.7 1.7-.7 2.3 0"/><path d="M13.1 10.5c.6-.7 1.7-.7 2.3 0"/><path d="M9.5 14.7c1.5 1.2 3.5 1.2 5 0"/>',
   jg_anima:'<circle cx="9.4" cy="12" r="5.6"/><circle cx="14.6" cy="12" r="5.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
@@ -6756,42 +6769,31 @@ function composerHTML(o){
   +`<div class="jphase jwrite" id="jp2" hidden>`
     +`<div class="jw-stage" id="jwStage">`
       +`<button type="button" class="jw-x" id="jwx" aria-label="Close">${ic('x')}</button>`
-      // component 1 · the timer
+      // component 1 · the timer — digits stretch to fill the whole panel
       +`<section class="jw-comp jw-c-timer" data-comp="timer">`
         +`<div class="jw-chead"><span class="jw-ctag">${ic('clock')}</span><span class="jw-exp">⤢</span></div>`
-        +`<div class="jw-cbody"><div class="jtimer" id="jtimer"><span class="jt-time" id="jtdisp">3:00</span><span class="jt-lbl" id="jtlbl" hidden></span></div></div>`
+        +`<div class="jw-cbody"><svg id="jtsvg" class="jt-svg" preserveAspectRatio="none" aria-hidden="true"><text id="jtdisp" x="0" y="100" class="jt-time">3:00</text></svg></div>`
       +`</section>`
-      // component 2 · the prompt
+      // component 2 · the prompt — text grows to fill the whole panel
       +`<section class="jw-comp jw-c-prompt" data-comp="prompt">`
         +`<div class="jw-chead"><span class="jw-ctag">${ic('spark')}</span><span class="jw-exp">⤢</span></div>`
         +`<div class="jw-cbody"><div class="jw-prompt" id="jwPrompt">“${esc(o.prompt||'')}”</div></div>`
       +`</section>`
-      // component 3 · your response (text / voice / photo)
-      +`<section class="jw-comp jw-c-resp expanded" data-comp="resp">`
-        +`<div class="jw-chead"><span class="jw-ctag" id="jwRespTag">${ic('camera')}</span><span class="jw-exp">⤢</span></div>`
+      // component 3 · your response — boxless; a circle + side arrows (text mode shows the box)
+      +`<section class="jw-comp jw-c-resp" data-comp="resp">`
         +`<div class="jw-cbody jw-resp-body">`
-          +`<textarea id="jt" class="letter-body jw-body" rows="6" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}"></textarea>`
-          +`<div id="jvoice" class="jcap" hidden>`
-            +`<button type="button" class="jrec-btn" id="jrecbtn"><span class="jrec-ring"><span class="jrec-core"></span></span></button>`
-            +`<div class="jcap-label" id="jreclbl">Tap to record</div>`
-            +`<div class="jcap-status" id="jrecstatus"></div>`
+          +`<button type="button" class="jw-arrow" id="jwPrev" aria-label="Previous way to journal">${ic('chevL')}</button>`
+          +`<div class="jw-resp-center" id="jwRespCenter">`
+            +`<div id="jphoto" class="jw-circle"><button type="button" class="jw-circ-btn" id="jphotobtn">${ic('camera')}</button><div class="jw-circ-lbl">Photograph your page</div><div class="jcap-status" id="jphotostatus"></div></div>`
+            +`<div id="jvoice" class="jw-circle" hidden><button type="button" class="jw-circ-btn jrec-btn" id="jrecbtn"><span class="jrec-ring"><span class="jrec-core"></span></span></button><div class="jw-circ-lbl" id="jreclbl">Tap to record</div><div class="jcap-status" id="jrecstatus"></div></div>`
+            +`<textarea id="jt" class="letter-body jw-body" rows="4" placeholder="${o.placeholder||'Dear me,&#10;&#10;Today I noticed…'}" hidden></textarea>`
+            +`<div id="jprev" class="letter-interim"></div>`
+            +`<div class="mic-hint" id="michint"></div>`
+            +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
           +`</div>`
-          +`<div id="jphoto" class="jcap" hidden>`
-            +`<button type="button" class="jcap-btn" id="jphotobtn">${ic('camera','jcap-ic')}</button>`
-            +`<div class="jcap-label">Tap to photograph your handwritten page</div>`
-            +`<div class="jcap-status" id="jphotostatus"></div>`
-          +`</div>`
-          +`<div id="jprev" class="letter-interim"></div>`
-          +`<div class="mic-hint" id="michint"></div>`
-          +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
+          +`<button type="button" class="jw-arrow" id="jwNext" aria-label="Next way to journal">${ic('chevR')}</button>`
         +`</div>`
       +`</section>`
-    +`</div>`
-    // bottom input switcher — start on Photo to anchor the practice physically
-    +`<div class="jw-modes" id="jwModes" role="radiogroup" aria-label="How to journal">`
-      +`<button type="button" class="jw-mode on" data-mode="photo" role="radio" aria-checked="true">${ic('camera')}<span>Photo</span></button>`
-      +`<button type="button" class="jw-mode" data-mode="type" role="radio" aria-checked="false">${ic('book')}<span>Text</span></button>`
-      +`<button type="button" class="jw-mode" data-mode="voice" role="radio" aria-checked="false">${ic('mic')}<span>Record</span></button>`
     +`</div>`
     +`<div class="jw-foot">`
       +`<button class="btn gold letter-seal-btn" id="jsave">${ic('seal','seal-ic')} Seal &amp; keep</button>`
@@ -6805,7 +6807,7 @@ function composerHTML(o){
         +`<li><b>Prompt</b> — what to sit with.</li>`
         +`<li><b>Your page</b> — a photo, a few typed lines, or a voice note.</li>`
       +`</ul>`
-      +`<p>Tap any section to <b>enlarge</b> it. Switch between <b>Photo · Text · Record</b> at the bottom — start by <b>photographing your handwritten page</b> to anchor the practice.</p>`
+      +`<p>Tap any section to <b>enlarge</b> it. Use the <b>arrows</b> to switch between <b>photo · text · voice</b> — start by <b>photographing your handwritten page</b> to anchor the practice.</p>`
       +`<button class="btn gold" id="jwWalkGo">Begin</button>`
     +`</div></div>`
   +`</div>`
@@ -6818,7 +6820,7 @@ function jStartTimer(secs){
   jStopTimer();
   let left=(typeof secs==='number')?secs:180;   // 3:00 — bite-sized
   const disp=$('#jtdisp'),lbl=$('#jtlbl');
-  const paint=()=>{if(disp)disp.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;};
+  const paint=()=>{if(disp)disp.textContent=`${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}`;jFitTimer();};
   paint();
   jTimerInt=setInterval(()=>{
     left--;
@@ -6915,8 +6917,21 @@ function enterWritePhase(){
   const walking=jMaybeWalk();          // show the 3-part walkthrough on first ever open
   jSetWriteMode(jChosenMode||'photo',walking); // suppress auto-focus while the walkthrough is up
   jUpdateSeal();
-  jFitTimer();setTimeout(jFitTimer,80);
+  jFitTimer();jFitPrompt();setTimeout(()=>{jFitTimer();jFitPrompt();},80);
+  jWatchFit();   // refit the moment the flex panels settle into their real size
   try{window.scrollTo(0,0);}catch(e){}
+}
+// The timer/prompt panels only reach full height after flex layout settles, so
+// a one-shot fit measures them while collapsed. Observe their boxes and refit
+// whenever they resize (layout settle, expand/collapse, rotation).
+let _jFitRO=null;
+function jWatchFit(){
+  try{
+    if(!window.ResizeObserver)return;
+    if(_jFitRO){_jFitRO.disconnect();}
+    _jFitRO=new ResizeObserver(()=>{jFitTimer();jFitPrompt();});
+    document.querySelectorAll('#jp2 .jw-c-timer .jw-cbody,#jp2 .jw-c-prompt .jw-cbody').forEach(el=>_jFitRO.observe(el));
+  }catch(e){}
 }
 // Reveal "Seal & keep" only once there's a photo uploaded or enough written.
 function jUpdateSeal(){
@@ -6926,46 +6941,63 @@ function jUpdateSeal(){
 }
 // Show just the chosen input inside the response component, light up the bottom
 // switcher, and expand the response so the chosen input is roomy.
+const JMODES=['photo','type','voice'];  // arrow-cycle order
+function jCycleMode(dir){
+  const i=JMODES.indexOf(jChosenMode);const n=JMODES.length;
+  jSetWriteMode(JMODES[((i<0?0:i)+dir+n)%n]);
+  try{Haptics.select();}catch(e){}try{Sound.pop();}catch(e){}
+}
 function jSetWriteMode(m,noFocus){
   jChosenMode=m;
   const ta=$('#jt'),jv=$('#jvoice'),jph=$('#jphoto');
   if(ta)ta.hidden=(m!=='type');
   if(jv)jv.hidden=(m!=='voice');
   if(jph)jph.hidden=(m!=='photo');
-  document.querySelectorAll('#jwModes .jw-mode').forEach(b=>{const on=b.dataset.mode===m;b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');});
-  const tag=$('#jwRespTag');if(tag)tag.innerHTML=ic(m==='photo'?'camera':m==='voice'?'mic':'book');
-  jExpand(m==='type'?'resp':null);
+  // the response panel only wears a box in text mode (the textbox); circle otherwise
+  const resp=document.querySelector('#jp2 .jw-c-resp');if(resp)resp.classList.toggle('has-box',m==='type');
   if(m!=='voice'&&jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}
   _jRecUI(false);
+  jFitTimer();jFitPrompt();
   if(m==='type'&&ta&&!noFocus)setTimeout(()=>{try{ta.focus();}catch(e){}},80);
 }
 // Accordion: the tapped component grows to ~half the stage; the others shrink.
 function jExpand(which){
   document.querySelectorAll('#jwStage .jw-comp').forEach(c=>c.classList.toggle('expanded',c.dataset.comp===which));
-  jFitTimer();setTimeout(jFitTimer,370); // refit after the grow/shrink transition
+  jFitTimer();jFitPrompt();setTimeout(()=>{jFitTimer();jFitPrompt();},370); // refit after the transition
 }
-// Grow the countdown so the digits fill the entire height of their panel
-// (capped so they never spill past the panel width), recomputed on layout change.
+// Stretch the countdown so the digits fill the ENTIRE panel (both axes) — the
+// SVG viewBox is set to the glyphs' tight bbox and preserveAspectRatio=none, so
+// the text stretches vertically and horizontally to fill the box with no clip.
 let _jFitRAF=null;
 function jFitTimer(){
   if(_jFitRAF)cancelAnimationFrame(_jFitRAF);
   _jFitRAF=requestAnimationFrame(()=>{
-    const box=document.querySelector('#jp2 .jw-c-timer .jw-cbody'),t=$('#jtdisp');
-    if(!box||!t)return;
-    const H=box.clientHeight,W=box.clientWidth;if(!H||!W)return;
-    t.style.lineHeight='1';
-    // measure the glyph advance accurately (canvas) at 100px, then pick the
-    // largest size that fills the panel height without spilling past its width.
-    const cs=getComputedStyle(t);
-    const cv=jFitTimer._cv||(jFitTimer._cv=document.createElement('canvas'));
-    const cx=cv.getContext('2d');
-    cx.font=`${cs.fontWeight||800} 100px ${cs.fontFamily||'sans-serif'}`;
-    const w100=(cx.measureText(t.textContent||'0:00').width)||100;
-    const byWidth=Math.floor(W*100/w100*0.96);   // 4% side breathing room
-    t.style.fontSize=Math.max(40,Math.min(Math.floor(H*0.98),byWidth))+'px';
+    const svg=$('#jtsvg'),t=$('#jtdisp');if(!svg||!t)return;
+    let bb;try{bb=t.getBBox();}catch(e){return;}
+    if(!bb||!bb.width||!bb.height)return;
+    const pad=bb.height*0.06;
+    svg.setAttribute('viewBox',`${bb.x-pad} ${bb.y-pad} ${bb.width+pad*2} ${bb.height+pad*2}`);
   });
 }
-try{addEventListener('resize',()=>{if(jComposePhase==='write')jFitTimer();});}catch(e){}
+// Grow the prompt text so it fills its panel (with padding) — largest readable size.
+let _jFitPromptRAF=null;
+function jFitPrompt(){
+  if(_jFitPromptRAF)cancelAnimationFrame(_jFitPromptRAF);
+  _jFitPromptRAF=requestAnimationFrame(()=>{
+    const box=document.querySelector('#jp2 .jw-c-prompt .jw-cbody'),el=$('#jwPrompt');
+    if(!box||!el)return;
+    const W=box.clientWidth,H=box.clientHeight;if(W<=0||H<=0)return;
+    // Pin the text to the box width so it WRAPS; then grow the font until it
+    // fills the panel height (without a long word spilling past the width).
+    el.style.width='100%';el.style.boxSizing='border-box';el.style.whiteSpace='normal';el.style.lineHeight='1.25';
+    el.style.transition='none';   // measure at the exact set size, not mid-animation
+    let lo=14,hi=200,best=14;
+    while(lo<=hi){const mid=(lo+hi)>>1;el.style.fontSize=mid+'px';
+      if(el.scrollHeight<=H&&el.scrollWidth<=W){best=mid;lo=mid+1;}else hi=mid-1;}
+    el.style.fontSize=best+'px';
+  });
+}
+try{addEventListener('resize',()=>{if(jComposePhase==='write'){jFitTimer();jFitPrompt();}});}catch(e){}
 function jMaybeWalk(){
   let seen=false;try{seen=localStorage.getItem('lumen_jwrite_walk')==='1';}catch(e){}
   const w=$('#jwWalk');if(w)w.hidden=seen;
@@ -6997,8 +7029,9 @@ function wireComposerCommon(getPrompt){
   const begin=$('#jbegin');if(begin)begin.onclick=enterWritePhase;
   // write-stage wiring (jp2 is in the DOM already, just hidden)
   jChosenMode='photo';
-  document.querySelectorAll('#jwStage .jw-comp').forEach(c=>{const h=c.querySelector('.jw-chead');if(h)h.onclick=()=>{try{Haptics.select();}catch(e){}jExpand(c.dataset.comp);};});
-  document.querySelectorAll('#jwModes .jw-mode').forEach(b=>b.onclick=()=>{try{Sound.pop();}catch(e){}try{Haptics.select();}catch(e){}jSetWriteMode(b.dataset.mode);});
+  document.querySelectorAll('#jwStage .jw-comp[data-comp="timer"] .jw-chead,#jwStage .jw-comp[data-comp="prompt"] .jw-chead').forEach(h=>{const c=h.closest('.jw-comp');if(c)h.onclick=()=>{try{Haptics.select();}catch(e){}jExpand(c.dataset.comp);};});
+  const jwp=$('#jwPrev');if(jwp)jwp.onclick=()=>jCycleMode(-1);
+  const jwn=$('#jwNext');if(jwn)jwn.onclick=()=>jCycleMode(1);
   const jwxb=$('#jwx');if(jwxb)jwxb.onclick=()=>{try{Haptics.light();}catch(e){}exitToPrompt();};
   const jwgo=$('#jwWalkGo');if(jwgo)jwgo.onclick=()=>{const w=$('#jwWalk');if(w)w.hidden=true;try{localStorage.setItem('lumen_jwrite_walk','1');}catch(e){}jSetWriteMode(jChosenMode||'photo');};
   const f=$('#jfile');if(f)f.onchange=(e)=>{jPhotoTaken=true;jUpdateSeal();transcribePhoto(e.target.files&&e.target.files[0]);};
@@ -10148,7 +10181,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v78';
+const CACHE = 'lumen-v79';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
