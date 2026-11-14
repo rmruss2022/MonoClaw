@@ -6775,12 +6775,12 @@ function composerHTML(o){
       +`<button type="button" class="jw-x" id="jwx" aria-label="Close">${ic('x')}</button>`
       // component 1 · the timer — digits stretch to fill the whole panel
       +`<section class="jw-comp jw-c-timer" data-comp="timer">`
-        +`<div class="jw-chead"><span class="jw-ctag">${ic('clock')}</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-chead"><span class="jw-ctag">${ic('clock')}</span></div>`
         +`<div class="jw-cbody"><svg id="jtsvg" class="jt-svg" preserveAspectRatio="none" aria-hidden="true"><text id="jtdisp" x="0" y="100" class="jt-time">3:00</text></svg></div>`
       +`</section>`
       // component 2 · the prompt — text grows to fill the whole panel
       +`<section class="jw-comp jw-c-prompt" data-comp="prompt">`
-        +`<div class="jw-chead"><span class="jw-ctag">${ic('spark')}</span><span class="jw-exp">⤢</span></div>`
+        +`<div class="jw-chead"><span class="jw-ctag">${ic('spark')}</span></div>`
         +`<div class="jw-cbody"><div class="jw-prompt" id="jwPrompt">“${esc(o.prompt||'')}”</div></div>`
       +`</section>`
       // component 3 · your response — boxless; a circle + side arrows (text mode shows the box)
@@ -10188,7 +10188,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v84';
+const CACHE = 'lumen-v85';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
