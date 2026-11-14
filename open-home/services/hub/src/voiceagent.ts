@@ -318,6 +318,13 @@ async function execActions(actions: any[]): Promise<string[]> {
 
 // ---- main entry ------------------------------------------------------------
 export async function runAgent(text: string): Promise<{ reply: string; actions: string[]; understood: boolean }> {
+  // Deterministic scene trigger: the core "good morning" scene must not depend on the
+  // (occasionally empty/slow) LLM. Match the phrase and run the configured scene directly.
+  if (/\bgood morning\b|\bwake up\b/i.test(text)) {
+    const done = await execActions([{ type: "scene", id: "good_morning" }]);
+    const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
+    return { reply: "Good morning! Starting your morning scene.", actions: cleanDone, understood: true };
+  }
   const state = JSON.stringify(home.summary());
   // Pre-search obvious live-info questions so they're a single LLM round-trip (faster).
   const needsLive = /weather|forecast|temperatur|rain|snow|news|headline|today|tonight|latest|score|who won|standings|game|price|stock|how much|right now|currently|open now|hours|what time|near me/i.test(text);

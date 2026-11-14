@@ -19,14 +19,13 @@
  * with your lights (a Pi/Mac); a cloud host correctly reports an empty scan.
  * Matter *control* additionally needs a controller installed on the hub.
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { durableStore } from "./durableStore.ts";
 import { execFile } from "node:child_process";
 import dgram from "node:dgram";
 import net from "node:net";
 import http from "node:http";
 
 const DATA_DIR = new URL("../.data/", import.meta.url);
-const STORE = new URL("../.data/local-lights.json", import.meta.url);
 
 export type LightBackend = "esphome" | "matter";
 export type ConnStatus = "connected" | "reconnecting" | "offline";
@@ -45,9 +44,11 @@ export interface LocalLight {
 }
 
 // ---- persistence ----
-function load(): LocalLight[] { try { return JSON.parse(readFileSync(STORE, "utf8")); } catch { return []; } }
-function save(list: LocalLight[]) { try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(STORE, JSON.stringify(list)); } catch (e) { console.log("[lights] save:", (e as Error).message); } }
-let lights: LocalLight[] = load();
+// Crash/power-loss safe: fsync + .bak recovery, so an unclean reboot can't NUL-wipe
+// the onboarded lights (which kept happening with the plain write). See durableStore.ts.
+const store = durableStore<LocalLight[]>(DATA_DIR, "local-lights.json", "lights");
+function save(list: LocalLight[]) { store.save(list); }
+let lights: LocalLight[] = store.load([]);
 export function list(): LocalLight[] { return lights.map((l) => ({ ...l })); }
 
 // ---- capability detection ----
