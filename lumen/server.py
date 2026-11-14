@@ -2565,6 +2565,8 @@ PAGE = r"""<!doctype html>
 .comm-read-t{text-align:center;font-family:var(--serif);font-size:26px;margin:4px 0 14px;color:#f3ecdf}
 .comm-read-p{font-size:15px;line-height:1.62;color:#d8cff0;margin:0 0 13px}
 .comm-read-done{width:100%;margin-top:6px}
+.jmode-chev{font-size:22px;font-weight:300;line-height:1}
+.comm-letter.jmodecard-rec{background:linear-gradient(120deg,#241a3e,#161028 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.9),rgba(192,132,252,.42) 70%) border-box}
 
 .jnl-hero .nh-greet{font-size:30px}
 
@@ -3294,7 +3296,7 @@ a{color:var(--purple)}
 .mgoal-echo{font-size:12px;color:var(--muted);margin-top:14px;font-style:italic;font-family:var(--serif)}
 .mgoal-echo b{color:var(--gold);font-style:normal}
 /* journal home — three full-width doors + links + community feed */
-.jbigs{display:flex;flex-direction:column;gap:9px;margin:4px 2px 18px}
+.jbigs{display:flex;flex-direction:column;gap:12px;margin:4px 2px 18px}
 .jbig{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;border-radius:16px;padding:15px;transition:.16s;color:var(--text);
   background:linear-gradient(165deg,#1b1530,#140f22 82%) padding-box,linear-gradient(180deg,rgba(201,182,255,.42),rgba(128,108,196,.12) 60%,rgba(90,80,150,.05)) border-box;border:1.5px solid transparent;box-shadow:0 8px 22px -14px rgba(140,105,230,.35)}
 .jbig:active{transform:scale(.99)}
@@ -7096,10 +7098,14 @@ async function renderJournalHome(){
   const recMode=jRec&&jRec.mode;
   const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
   const JDOOR_COL={deep:['#a855f7','#c084fc'],daily:['#38bdf8','#0ea5e9'],season:['#f59e0b','#f97316']};
+  const JMODE_IMG={deep:'jmode-deep',daily:'jmode-daily',season:'jmode-season'};
+  const JMODE_EYE={deep:'Guided inner work',daily:"Today's letter",season:'This chapter of life'};
   const door=([k,lbl,icn])=>{const isRec=recMode===k;
-    return `<button class="jbig${isRec?' rec':''}" data-m="${k}"><span class="jbig-ico">${ic(icn)}</span>`
-      +`<span class="jbig-txt"><span class="jbig-t">${lbl}${isRec?`<span class="jbig-badge">Today</span>`:''}</span>`
-      +`<span class="jbig-b">${J_MODE_BLURB[k]||''}</span></span><span class="jbig-go">›</span></button>`;};
+    return `<button class="comm-letter jmodecard${isRec?' jmodecard-rec':''}" data-m="${k}">`
+      +`<span class="comm-let-ic" style="background-image:url('/art/${JMODE_IMG[k]}.jpg?v=63')"></span>`
+      +`<span class="comm-let-body"><span class="comm-let-eye">${JMODE_EYE[k]||''}${isRec?' \u00b7 Today':''}</span>`
+      +`<span class="comm-let-t">${lbl}</span><span class="comm-let-teaser">${J_MODE_BLURB[k]||''}</span></span>`
+      +`<span class="comm-let-go jmode-chev">›</span></button>`;};
   const pillars=(pp&&pp.pillars)||[];
   const chosenNames=(pp&&pp.focus)||[];
   const chosen=chosenNames.map(nm=>pillars.find(p=>p.name===nm)).filter(Boolean);
@@ -7146,7 +7152,7 @@ async function renderJournalHome(){
     if(k==='deep'){const pil=nextDeepPillar();if(pil){journalPillar=pil;jScreen='compose';}else{jScreen='pillars';}}
     else{jScreen='compose';}
     renderJournal();};
-  document.querySelectorAll('.jbig').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
+  document.querySelectorAll('.jmodecard').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
   {const h=$('#jnlHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journal-hero.jpg?v=58')";};im.src="/art/journal-hero.jpg?v=58";}}
   document.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;journalChapter=null;jScreen='plessons';renderJournal();});
   _mountCols();
@@ -9955,7 +9961,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v62';
+const CACHE = 'lumen-v63';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
