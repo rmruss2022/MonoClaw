@@ -2447,7 +2447,7 @@ PAGE = r"""<!doctype html>
 .nh-greet b{font-weight:800;color:#fff}
 .nh-sparkle{width:21px;height:21px;color:var(--gold);vertical-align:-3px}
 .nh-sub{margin:9px 0 0;color:#c2b9e0;font-size:15px}
-.nh-start{position:relative;width:100%;padding:17px;border-radius:999px;border:0;cursor:pointer;font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;background:linear-gradient(110deg,#7a51d8 0%,#6241c2 46%,#4b3394 100%);box-shadow:0 12px 30px -8px rgba(90,50,170,.7),0 0 0 1.6px rgba(216,188,255,.85) inset,0 0 18px -1px rgba(150,110,230,.5)}
+.nh-start{position:relative;width:100%;padding:17px;border-radius:999px;border:0;cursor:pointer;font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;background:linear-gradient(145deg,rgba(255,255,255,.17),rgba(255,255,255,0) 42%),linear-gradient(120deg,#8552ee 0%,#6e3ad8 48%,#5329ad 100%);box-shadow:0 10px 26px -8px rgba(80,40,160,.75),0 0 0 2px rgba(214,192,255,1) inset,0 0 20px 1px rgba(160,115,245,.6)}
 .nh-start:active{transform:scale(.99)}
 .nh-play{width:20px;height:20px;color:#fff}
 .nh-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:10px 0 12px}
@@ -9804,7 +9804,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v45';
+const CACHE = 'lumen-v46';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
