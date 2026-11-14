@@ -14,6 +14,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import * as home from "./home.ts";
 import * as lights from "./lights.ts";
 import * as spotify from "./spotify.ts";
+import * as sceneConfig from "./sceneConfig.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -190,7 +191,11 @@ const PLAYLIST_MARKERS = ["hit", "top ", "mix", "playlist", "radio", "station", 
 function wantsPlaylist(q: string): boolean {
   const s = q.toLowerCase().trim();
   if (GENRES.includes(s)) return true;
-  return PLAYLIST_MARKERS.some((m) => s.includes(m));
+  if (PLAYLIST_MARKERS.some((m) => s.includes(m))) return true;
+  // A genre word anywhere in a multi-word query ("2026 jazz", "90s rock", "smooth
+  // jazz") → a genre/mood playlist, not a literal track-title search.
+  const words = s.split(/[^a-z0-9&-]+/).filter(Boolean);
+  return GENRES.some((g) => (g.includes(" ") ? s.includes(g) : words.includes(g)));
 }
 
 // Tidy a playlist title for speaking: drop SEO spam after | / • / - separators,
@@ -318,13 +323,57 @@ async function doMusic(a: any): Promise<string> {
   }
 }
 
+// Run a scene's REAL configured actions (lights + music) on actual devices.
+// Returns a short spoken summary, or null if the scene has no real config.
+async function runSceneReal(id: string): Promise<string | null> {
+  const cfg = sceneConfig.getScene(id);
+  if (!cfg) return null;
+  const parts: string[] = [];
+  for (const la of cfg.lights || []) {
+    try {
+      const all = lights.listLights().filter((x: any) => x.real);
+      const targets = la.id
+        ? all.filter((x: any) => x.id === la.id)
+        : la.room
+          ? all.filter((x: any) => String(x.room || "").toLowerCase().includes(la.room!.toLowerCase()))
+          : all;
+      let hit = 0;
+      for (const l of targets) {
+        remainingMs();
+        try {
+          const patch: any = { on: la.on };
+          if (la.brightness != null) patch.brightness = la.brightness;
+          if (la.rgb) patch.rgb = la.rgb;
+          const r = await lights.control(l.id, patch, turnBudget.getStore()?.signal);
+          if (r.ok) hit++;
+        } catch { /* skip a light that won't answer */ }
+      }
+      if (hit) parts.push(la.on ? `${la.room || "lights"} on` : `${la.room || "lights"} off`);
+    } catch { /* ignore light group errors */ }
+  }
+  if (cfg.music && cfg.music.query) {
+    try {
+      await doMusic({ op: "play", source: cfg.music.source, query: cfg.music.query });
+      parts.push(`playing ${cfg.music.query}`);
+    } catch (e) { console.log("[scene] music failed:", (e as Error)?.message); }
+  }
+  return parts.length ? parts.join(", ") : null;
+}
+
 async function execActions(actions: any[]): Promise<string[]> {
   const done: string[] = [];
   for (const a of actions || []) {
     remainingMs();   // Never start another action after the caller's deadline.
     try {
       switch (a.type) {
-        case "scene": home.activateScene(String(a.id)); done.push(`scene ${a.id}`); break;
+        case "scene": {
+          // Run the user-configured REAL actions (lights + music), then keep the
+          // mock home model in sync so the UI reflects the scene too.
+          const real = await runSceneReal(String(a.id));
+          home.activateScene(String(a.id));
+          done.push(real || `scene ${a.id}`);
+          break;
+        }
         case "lights": {
           const on = !!a.on;
           const room = String(a.room || "all").toLowerCase();
