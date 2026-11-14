@@ -2566,6 +2566,7 @@ PAGE = r"""<!doctype html>
 .comm-read-p{font-size:15px;line-height:1.62;color:#d8cff0;margin:0 0 13px}
 .comm-read-done{width:100%;margin-top:6px}
 .jmode-chev{font-size:22px;font-weight:300;line-height:1}
+.pil-med{flex:none;width:46px;height:46px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 0 13px -4px rgba(245,201,119,.5),inset 0 0 0 1px rgba(245,201,119,.28)}
 .comm-letter.jmodecard-rec{background:linear-gradient(120deg,#241a3e,#161028 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.9),rgba(192,132,252,.42) 70%) border-box}
 
 .jnl-hero .nh-greet{font-size:30px}
@@ -7114,7 +7115,7 @@ async function renderJournalHome(){
     +`<span class="pcolumn-glow"></span><span class="pcolumn-art" data-pc="#d8c6a0"></span>`
     +`<span class="pcolumn-base"></span><span class="pcolumn-nm">${esc(p.name)}</span></button>`;
   const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
-    +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
+    +`<span class="pil-med" style="background-image:url('/art/${PILLAR_IMG[p.name]||'pil-purpose'}.jpg?v=64')"></span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
   const jung=[['The Shadow','Meet what you suppress','jg_shadow'],['The Persona','The mask you wear','jg_persona'],['Anima &amp; Animus','Your inner opposite','jg_anima'],['The Self','Wholeness &amp; integration','jg_self']];
   const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-med">${ic(j[2])}</span><span class="jcard-n">${i+1}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span><span class="jcard-lk">${ic('lock')}</span></div>`;
   $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="jnlHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="talkbtn">${ic('chat')} Talk</button></header><div class="nh-hero-txt"><h1 class="nh-greet">${(ME&&ME.name)?esc(ME.name.split(' ')[0])+'’s Journal':'The Journal'}</h1><p class="nh-sub">A letter to yourself \u2014 one honest line at a time.</p></div></div></section>`
@@ -7382,6 +7383,7 @@ let LO=null, LO_PILLARS=[];
 const DIRS=[['N','North'],['E','East'],['S','South'],['W','West']];
 const PILLAR_ICON={Family:'p_home',Relationships:'p_rel',Career:'p_career',Finances:'p_coin',Health:'p_health',Hobbies:'p_music','Inner Growth':'p_growth',Purpose:'p_purpose'};
 const picon=(p)=>PILLAR_ICON[p]||'spark';
+const PILLAR_IMG={Family:'pil-family',Relationships:'pil-relationships',Career:'pil-career',Finances:'pil-finances',Health:'pil-health',Hobbies:'pil-hobbies','Inner Growth':'pil-innergrowth',Purpose:'pil-purpose'};
 // the eight life pillars of Lumen's deep journaling
 const PILLAR_META={
   Family:['#e0953a','Where you came from — and how you carry it.'],
@@ -7474,7 +7476,7 @@ async function renderPillarsSection(){
     +`<span class="pcolumn-base"></span>`
     +`<span class="pcolumn-nm">${esc(p.name)}</span></button>`;
   const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
-    +`<span class="pgrid-med">${ic(picon(p.name))}</span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
+    +`<span class="pil-med" style="background-image:url('/art/${PILLAR_IMG[p.name]||'pil-purpose'}.jpg?v=64')"></span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
   const jung=[['The Shadow','Meet what you suppress'],['The Persona','The mask you wear'],['Anima &amp; Animus','Your inner opposite'],['The Self','Wholeness &amp; integration']];
   box.innerHTML=
     `<div class="pcase">`
@@ -9961,7 +9963,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v63';
+const CACHE = 'lumen-v64';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
