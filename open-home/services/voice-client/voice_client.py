@@ -81,6 +81,11 @@ MIC_GAIN = float(os.environ.get("MIC_GAIN", "1.0"))   # digital boost for far-fi
 SPK_NODE = os.environ.get("SPK_NODE", "bluez_output.F4_4E_FD_49_83_98.1")
 DUCK_LEVEL = int(os.environ.get("DUCK_LEVEL", "25"))
 SPEAK_DUCK_LEVEL = int(os.environ.get("SPEAK_DUCK_LEVEL", "35"))   # (legacy) music level while WE speak a reply
+# Morning report: a few seconds after the "good morning" scene starts the jazz, read the
+# NYC daily digest (from the dash app) OVER the music with the jazz ducked, then restore.
+DASH_REPORT_URL = os.environ.get("DASH_REPORT_URL", "https://dash.bedrock.casa/api/report-latest")
+MORNING_REPORT_DELAY_S = float(os.environ.get("MORNING_REPORT_DELAY_S", "6"))   # let the jazz settle first
+MORNING_REPORT_DUCK = int(os.environ.get("MORNING_REPORT_DUCK", "30"))          # jazz volume % while reading
 SPEAK_GAIN = float(os.environ.get("SPEAK_GAIN", "1.0"))           # PCM gain (TTS is already near full-scale)
 SPEAK_SINK_VOL = float(os.environ.get("SPEAK_SINK_VOL", "0.9"))   # raise the X10 output to this while speaking, then restore
 # The X10's Bluetooth AVRCP volume drifts DOWN on its own between interactions, which
@@ -418,6 +423,45 @@ def speak(text):
     # the voice becomes inaudible. Keeping music playing quietly keeps the sink alive so
     # the voice is always heard (same reason the beep is only audible while music plays).
     _say(text)
+
+
+def fetch_daily_report():
+    """Fetch the latest NYC daily digest text from the dash app (dash.bedrock.casa)."""
+    try:
+        r = SESSION.get(DASH_REPORT_URL, timeout=10)
+        r.raise_for_status()
+        rep = (r.json() or {}).get("report") or {}
+        return (str(rep.get("text") or "").strip() or None)
+    except Exception as e:
+        log("daily report fetch failed:", e, level="WARN")
+        return None
+
+
+def _clean_for_tts(text):
+    """Strip emoji/bullets/section glyphs so TTS reads the words, not the symbols, and
+    turn paragraph breaks into sentence pauses."""
+    t = re.sub(r"\n\s*\n+", ". ", text)                       # blank lines -> sentence break
+    t = t.replace("\n", ". ")
+    t = re.sub(r"[^0-9A-Za-z\s.,:;!?'\"()%&/°–\-]+", " ", t)   # drop emoji/• etc, keep basic punctuation
+    t = re.sub(r"\s+([.,:;!?])", r"\1", t)                     # tidy spaces before punctuation
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def morning_report():
+    """A few seconds after the morning scene starts the jazz, read the NYC daily report
+    OVER the music with the jazz ducked down, then restore the music volume."""
+    time.sleep(MORNING_REPORT_DELAY_S)
+    text = fetch_daily_report()
+    if not text:
+        log("morning report: no report available — skipping")
+        return
+    spoken = _clean_for_tts(text)
+    log(f"morning report: reading {len(spoken)} chars over ducked jazz ({MORNING_REPORT_DUCK}%)")
+    duck(True, MORNING_REPORT_DUCK)   # lower the jazz
+    try:
+        speak(spoken)                 # read the digest over the still-playing, ducked jazz
+    finally:
+        duck(False)                   # restore the jazz volume
 
 
 def transcribe(wav_bytes):
@@ -798,6 +842,10 @@ def main():
                             speak("Sorry, I couldn't reach the hub.")
                             break
                         speak(out.get("reply") or "Okay.")
+                        # Morning scene → after the jazz starts, read the NYC daily report
+                        # over the ducked music (then restore it), before going to sleep.
+                        if out.get("actions") and re.search(r"\bgood morning\b|\bwake up\b", text, re.I):
+                            morning_report()
                         # If the agent actually DID something (played music, lights, a
                         # scene…) it's a one-shot command → sleep. A pure conversational
                         # reply (no action) keeps the turn open for a natural back-and-forth.
