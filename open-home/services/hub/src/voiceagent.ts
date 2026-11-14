@@ -275,8 +275,23 @@ async function runSceneReal(id: string): Promise<string | null> {
   if (cfg.music && cfg.music.playlistUri) {
     try {
       const dev = await spotify.deviceForRoom("Living Room");
-      await spotify.play({ contextUri: cfg.music.playlistUri, deviceId: dev?.id });
-      parts.push(`playing ${cfg.music.name || "music"}`);
+      // Spotify throws transient 502/503/429s (esp. when another stream is already
+      // playing) — retry a few times so the scene's music isn't dropped on a hiccup.
+      let played = false;
+      for (let attempt = 0; attempt < 4 && !played; attempt++) {
+        try {
+          await spotify.play({ contextUri: cfg.music.playlistUri, deviceId: dev?.id });
+          played = true;
+        } catch (e) {
+          const msg = (e as Error)?.message || "";
+          if (attempt < 3 && /50[0-9]|429|rate|timeout/i.test(msg)) {
+            await new Promise((r) => setTimeout(r, 700));
+            continue;
+          }
+          throw e;
+        }
+      }
+      if (played) parts.push(`playing ${cfg.music.name || "music"}`);
     } catch (e) { console.log("[scene] music failed:", (e as Error)?.message); }
   }
   return parts.length ? parts.join(", ") : null;
