@@ -2428,6 +2428,66 @@ PAGE = r"""<!doctype html>
   --purple2:#7c3aed; --pink:#ec4899; --good:#6ee7b7;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
 }
+/* ===== New home — mockup redesign ===== */
+.nh{display:flex;flex-direction:column;gap:18px}
+.nh-hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 0}
+.nh-brand{display:flex;align-items:center;gap:10px}
+.nh-mark{width:32px;height:32px;display:flex;color:var(--gold);filter:drop-shadow(0 0 10px rgba(245,201,119,.55))}
+.nh-mark svg{width:32px;height:32px}
+.nh-name{font-size:25px;font-weight:800;letter-spacing:-.02em;color:#fff}
+.nh-bell{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#19152b;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.nh-bell svg{width:21px;height:21px}
+.nh-dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px var(--purple)}
+.nh-hero{position:relative;border-radius:24px;overflow:hidden;min-height:188px;display:flex;align-items:center;background:linear-gradient(135deg,#241546,#140e2b 60%,#0e0a1e);isolation:isolate}
+.nh-hero-img{position:absolute;inset:0;background-size:cover;background-position:center right;z-index:-1}
+.nh-hero:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(11,8,22,.92) 6%,rgba(11,8,22,.5) 46%,rgba(11,8,22,0) 76%)}
+.nh-hero-txt{padding:22px 20px}
+.nh-greet{margin:0;font-size:28px;line-height:1.16;font-weight:600;color:#efeafe}
+.nh-greet b{font-weight:800;color:#fff}
+.nh-sparkle{width:21px;height:21px;color:var(--gold);vertical-align:-3px}
+.nh-sub{margin:9px 0 0;color:#c2b9e0;font-size:15px}
+.nh-start{position:relative;width:100%;padding:17px;border-radius:999px;border:0;cursor:pointer;font-size:17px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;gap:11px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);box-shadow:0 10px 30px -8px rgba(124,58,237,.7),0 0 0 1px rgba(168,130,255,.5) inset}
+.nh-start:active{transform:scale(.99)}
+.nh-play{width:20px;height:20px;color:#fff}
+.nh-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.nh-stat{background:#15112480;border:1px solid var(--line);border-radius:18px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:7px}
+.nh-si{width:25px;height:25px;display:flex}.nh-si svg{width:25px;height:25px}
+.nh-si.flame{color:#fb7a3c}.nh-si.star{color:var(--purple)}.nh-si.sun{color:var(--gold)}
+.nh-stat b{font-size:22px;font-weight:800;color:#fff;line-height:1}
+.nh-sl{font-size:11px;color:var(--muted);text-align:center;line-height:1.25}
+.nh-sec{display:flex;flex-direction:column;gap:12px}
+.nh-sec-h{display:flex;align-items:center;justify-content:space-between}
+.nh-sec-h h2{margin:0;font-size:18px;font-weight:800;color:#fff}
+.nh-link{background:none;border:0;color:#b794f6;font-size:14px;font-weight:600;cursor:pointer;padding:4px 2px}
+.nh-card{background:#15112466;border:1px solid var(--line);border-radius:20px;padding:14px}
+.nh-journey{display:flex;align-items:center;gap:14px}
+.nh-jthumb{position:relative;width:62px;height:62px;border-radius:16px;flex:none;background-size:cover;background-position:center;background-image:linear-gradient(135deg,#3a2a5e,#1c1536)}
+.nh-jpin{position:absolute;right:-5px;bottom:-5px;width:24px;height:24px;border-radius:50%;background:#1a1330;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--gold)}
+.nh-jpin svg{width:13px;height:13px}
+.nh-jbody{min-width:0;flex:1}
+.nh-jtitle{font-size:16px;font-weight:700;color:#fff}
+.nh-jmeta{font-size:13px;color:#a99fce;margin-top:2px}
+.nh-jquote{font-size:13.5px;color:#b9b0d8;font-style:italic;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nh-level{display:flex;align-items:center;gap:14px;background:#15112466;border:1px solid var(--line);border-radius:20px;padding:16px;cursor:pointer}
+.nh-lorb{width:56px;height:56px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--gold);background:radial-gradient(circle at 50% 40%,rgba(245,201,119,.32),transparent 70%);box-shadow:0 0 0 2px rgba(245,201,119,.5),0 0 22px rgba(245,201,119,.35)}
+.nh-lorb svg{width:29px;height:29px;filter:drop-shadow(0 0 6px rgba(245,201,119,.6))}
+.nh-lbody{flex:1;min-width:0}
+.nh-ltop{font-size:14.5px;font-weight:700;color:#fff}
+.nh-lbar{height:9px;border-radius:999px;background:#241c3c;overflow:hidden;margin:9px 0 7px}
+.nh-lbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#a855f7,#7c3aed)}
+.nh-lsub{font-size:12.5px;color:var(--muted)}
+.nh-lchev{color:var(--purple);align-self:flex-start;display:flex}.nh-lchev svg{width:20px;height:20px}
+.nh-pick{display:flex;align-items:center;gap:14px;background:#15112466;border:1px solid var(--line);border-radius:20px;padding:12px;cursor:pointer}
+.nh-pimg{width:92px;height:72px;border-radius:14px;flex:none;background-size:cover;background-position:center;background-image:linear-gradient(135deg,#4a2f6e,#241640)}
+.nh-pbody{flex:1;min-width:0}
+.nh-ptitle{font-size:16px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nh-pmeta{display:flex;align-items:center;gap:14px;margin-top:6px;font-size:13px;color:#a99fce}
+.nh-pmeta>span{display:flex;align-items:center;gap:5px}
+.nh-pmeta svg{width:15px;height:15px}
+.nh-pmeta .lf{color:#6ee7b7;display:flex}.nh-pmeta .ck{color:var(--muted);display:flex}
+.nh-pplay{width:48px;height:48px;flex:none;border-radius:50%;border:0;cursor:pointer;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -6px rgba(124,58,237,.7)}
+.nh-pplay svg{width:20px;height:20px}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{
@@ -4016,6 +4076,9 @@ const SVGP={
   star:'<path d="M12 3l2.6 5.5 6 .8-4.4 4.1 1.1 5.9L12 16.6 6.7 19.3l1.1-5.9L3.4 9.3l6-.8L12 3Z" fill="currentColor" stroke="none"/>',
   lotus:'<path d="M12 20c-4.2 0-7.5-2.6-7.5-5.2 2 0 3.2.5 4.2 1.3C8 13 9.6 10.2 12 7.5c2.4 2.7 4 5.5 3.3 8.6 1-.8 2.2-1.3 4.2-1.3C19.5 17.4 16.2 20 12 20Z" fill="currentColor" stroke="none"/>',
   lock:'<rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  sun:'<circle cx="12" cy="12" r="4.3" fill="currentColor" stroke="none"/><g><line x1="12" y1="2.2" x2="12" y2="4.6"/><line x1="12" y1="19.4" x2="12" y2="21.8"/><line x1="2.2" y1="12" x2="4.6" y2="12"/><line x1="19.4" y1="12" x2="21.8" y2="12"/><line x1="5.2" y1="5.2" x2="6.9" y2="6.9"/><line x1="17.1" y1="17.1" x2="18.8" y2="18.8"/><line x1="18.8" y1="5.2" x2="17.1" y2="6.9"/><line x1="6.9" y1="17.1" x2="5.2" y2="18.8"/></g>',
+  leaf:'<path d="M5 20c-.6-9 5.4-15.4 15-15 .4 9.6-5.4 15.6-15 15Z"/><path d="M9.3 14.8C11 11.3 14 8.8 17 7.8"/>',
   close:'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
   play:'<path d="M7 4.5 19 12 7 19.5V4.5Z" fill="currentColor" stroke="none"/>',
   stop:'<rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/>',
@@ -5090,6 +5153,7 @@ function wireGroupSit(gs){
     paint(); clearInterval(window._gsInt); window._gsInt=setInterval(paint,30000);
   }
 }
+function nhAgo(iso){try{var d=new Date(iso);var s=(Date.now()-d.getTime())/1000;if(s<3600)return Math.max(1,Math.round(s/60))+'m ago';if(s<86400)return Math.round(s/3600)+'h ago';var dy=Math.round(s/86400);return dy===1?'1 day ago':dy+' days ago';}catch(e){return'recently';}}
 async function renderMeditate(){
   if(!_mediPledged()){renderMeditatePledge();return;}
   let pres={now:0,today_sessions:0};try{pres=await api('presence');}catch(e){}
@@ -5097,6 +5161,7 @@ async function renderMeditate(){
   let chal=null;try{chal=await api('challenge?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
   let horo=null;try{horo=await api('horoscope?tz='+(-new Date().getTimezoneOffset()));}catch(e){}
   let gsit=null;try{gsit=await api('groupsit');}catch(e){}
+  let JENTS=[];try{JENTS=(await api('journal')).entries||[];}catch(e){}
   const durs=[5,10,20,30];
   const PICK=todaysPick();
   const REST=recommendedLessons().filter(l=>!PICK||l.code!==PICK.code);
@@ -5105,65 +5170,50 @@ async function renderMeditate(){
   const _nm=(ME&&ME.name)?esc(ME.name.split(' ')[0]):'';
   const _date=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
   $('#app').innerHTML=`
-  <header class="hdr">
-    <div class="hdr-l">
-      <span class="hdr-mark">${lumenMark('')}</span>
-      <div class="hdr-wm"><span class="hdr-name">lumen</span><span class="hdr-tag">light, one breath at a time</span></div>
-    </div>
-    <div class="hdr-r">
-      <div class="hdr-greet">${_greet}${_nm?', '+_nm:''}</div>
-      <div class="hdr-date">${_date}</div>
-    </div>
+  <header class="nh-hdr">
+    <div class="nh-brand"><span class="nh-mark">${lumenMark('')}</span><span class="nh-name">Lumen</span></div>
+    <button class="nh-bell" id="nhBell" aria-label="Notifications">${ic('bell')}<i class="nh-dot"></i></button>
   </header>
-  <div class="card home-hero" style="--lc:${ME.league.color};--lc2:${ME.league.color2||ME.league.color}">
-    <div class="orb-hero">
-      <div class="orb-stage" id="lumStage" role="img" aria-label="Your light — Level ${ME.level}">
-        <div class="orb-fallback" id="lumFallback"></div>
-        <canvas id="lumOrbCanvas"></canvas>
-        <svg viewBox="0 0 100 100" aria-hidden="true">
-          <defs>
-            <linearGradient id="arcGrad" gradientUnits="userSpaceOnUse" x1="50" y1="4" x2="96" y2="50">
-              <stop id="g0" offset="0" stop-color="#ff6a13" stop-opacity=".15"/>
-              <stop id="g1" offset=".6" stop-color="#ff9a3a" stop-opacity=".85"/>
-              <stop id="g2" offset="1" stop-color="#ffe2b0"/>
-            </linearGradient>
-            <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation=".9"/></filter>
-            <radialGradient id="head"><stop offset="0" stop-color="#fff6e6"/><stop id="h1" offset=".35" stop-color="#ffc173" stop-opacity=".9"/><stop id="h2" offset="1" stop-color="#ff7a1a" stop-opacity="0"/></radialGradient>
-          </defs>
-          <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.055)" stroke-width=".35"/>
-          <g transform="rotate(-90 50 50)">
-            <circle class="arcGlow" cx="50" cy="50" r="46" fill="none" stroke="url(#arcGrad)" stroke-width="1.6" stroke-linecap="round" filter="url(#soft)" opacity=".55" pathLength="1000" stroke-dasharray="0 1000"/>
-            <circle class="arc" cx="50" cy="50" r="46" fill="none" stroke="url(#arcGrad)" stroke-width=".5" stroke-linecap="round" pathLength="1000" stroke-dasharray="0 1000"/>
-          </g>
-          <g class="headDot"><circle r="3.2" fill="url(#head)"/><circle r=".75" fill="#fff8ec"/></g>
-        </svg>
-      </div>
-      <div class="orb-lv">Level ${ME.level}</div>
-      <div class="orb-sub muted">${fmt(ME.level_into)} / ${fmt(ME.level_into+ME.level_need)} light to Level ${ME.level+1}</div>
-    </div>
-    <div class="hh-top">
-      <div class="hh-league"><span class="hh-badge" style="color:${ME.league.color}">${leagueIcon(ME.league.name)}</span>
-        <div><div class="hh-lg-name" style="color:${ME.league.color}">${ME.league.name} league</div>
-        <div class="muted" style="font-size:12px">Lv ${ME.level} · ${fmt(ME.light)} light</div></div></div>
-      <div class="hh-streak">${ic('flame','flame grad-flame glow')}<b>${ME.streak}</b><span>day${ME.streak===1?'':'s'}</span></div>
-    </div>
-    ${ME.league.next?`<div class="bar hh-bar"><i style="width:${Math.min(100,Math.round(100*(ME.weekly_light-ME.league.at)/((ME.league.next_at-ME.league.at)||1)))}%;background:linear-gradient(90deg,${ME.league.color},${ME.league.color2||ME.league.color})"></i></div>
-      <div class="muted" style="font-size:12px;margin-top:5px">${fmt(Math.max(0,ME.league.next_at-ME.weekly_light))} light to <b style="color:var(--text)">${leagueIcon(ME.league.next,'g')} ${ME.league.next}</b></div>`
-      :`<div class="pill" style="border-color:var(--gold);color:var(--gold);align-self:flex-start">${ic('nova','g glow')} Top league — keep it lit</div>`}
-    <div class="hh-live">${ic('globe','live-globe')} <b>${pres.now}</b>&nbsp;meditating now · ${pres.today_sessions} sat today</div>
+  <section class="nh-hero"><div class="nh-hero-img" id="nhHero"></div>
+    <div class="nh-hero-txt">
+      <h1 class="nh-greet">${_greet}${_nm?',':''}<br><b>${_nm||'friend'}</b> ${ic('spark','nh-sparkle')}</h1>
+      <p class="nh-sub">Take a moment to breathe…</p>
+    </div></section>
+  <button class="nh-start" id="nhStart">${ic('play','nh-play')} Start Meditation</button>
+  <div class="nh-stats">
+    <div class="nh-stat"><span class="nh-si flame">${ic('flame')}</span><b>${ME.streak||0}</b><span class="nh-sl">Day Streak</span></div>
+    <div class="nh-stat"><span class="nh-si star">${ic('star')}</span><b>${fmt(ME.light||0)}</b><span class="nh-sl">XP</span></div>
+    <div class="nh-stat"><span class="nh-si sun">${ic('sun')}</span><b>Lv. ${ME.level||1}</b><span class="nh-sl">Light Level</span></div>
   </div>
+  ${(function(){var e=(JENTS&&JENTS[0]);
+    if(!e)return `<div class="nh-sec"><div class="nh-sec-h"><h2>Your Journey</h2><button class="nh-link" id="nhJourneyAll">View All →</button></div><div class="nh-card nh-journey"><div class="nh-jthumb" style="background-image:url('/art/home-journey.jpg')"><span class="nh-jpin">${ic('pin')}</span></div><div class="nh-jbody"><div class="nh-jtitle">Begin your journey</div><div class="nh-jmeta">Your meditation moments appear here</div></div></div></div>`;
+    var q=(e.text||'').split('\n').map(function(x){return x.trim();}).filter(Boolean)[0]||'';if(q.length>88)q=q.slice(0,86)+'…';
+    var loc=e.place||(ME.city||'Your practice');var ago=nhAgo(e.created);
+    return `<div class="nh-sec"><div class="nh-sec-h"><h2>Your Journey</h2><button class="nh-link" id="nhJourneyAll">View All →</button></div>
+      <div class="nh-card nh-journey"><div class="nh-jthumb" style="background-image:url('/art/home-journey.jpg')"><span class="nh-jpin">${ic('pin')}</span></div>
+      <div class="nh-jbody"><div class="nh-jtitle">Meditation Moment</div><div class="nh-jmeta">${esc(loc)} · ${ago}</div>${q?`<div class="nh-jquote">“${esc(q)}”</div>`:''}</div></div></div>`;
+  })()}
+  <div class="nh-level" id="nhLevel"><span class="nh-lorb">${ic('lotus')}</span>
+    <div class="nh-lbody"><div class="nh-ltop">Level ${ME.level||1} · ${fmt(ME.level_into||0)} / ${fmt((ME.level_into||0)+(ME.level_need||0))} XP</div>
+      <div class="nh-lbar"><i style="width:${Math.min(100,Math.round(100*(ME.level_into||0)/(((ME.level_into||0)+(ME.level_need||0))||1)))}%"></i></div>
+      <div class="nh-lsub">Keep meditating to grow your light!</div></div>
+    <span class="nh-lchev">${ic('up')}</span></div>
+  ${PICK?`<div class="nh-sec"><div class="nh-sec-h"><h2>Today's Pick</h2><button class="nh-link" id="nhPickMore">See More →</button></div>
+    <div class="nh-pick" id="nhPick"><div class="nh-pimg" style="background-image:url('/art/home-pick.jpg')"></div>
+    <div class="nh-pbody"><div class="nh-ptitle">${esc(PICK.title||'Relax & Recharge')}</div>
+      <div class="nh-pmeta"><span><span class="ck">${ic('clock')}</span>${PICK.minutes||10} min</span><span><span class="lf">${ic('leaf')}</span>${esc(PICK.mood||PICK.subtitle||'Calm')}</span></div></div>
+    <button class="nh-pplay" id="nhPickPlay">${ic('play')}</button></div></div>`:''}
   ${groupSitCardHTML(gsit)}
-  <button class="journal-cta" id="journalCta" type="button"><svg class="jbook" viewBox="0 0 44 48" aria-hidden="true"><defs><linearGradient id="jbCov" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0bd69"/><stop offset="1" stop-color="#b9792e"/></linearGradient><linearGradient id="jbSpn" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6f4616"/><stop offset=".5" stop-color="#b9823a"/><stop offset="1" stop-color="#7a4e1a"/></linearGradient></defs><rect x="12" y="7.5" width="26" height="35" rx="2" fill="#f1e3c2"/><g stroke="#cdb888" stroke-width=".5" opacity=".7"><path d="M35.5 10 V40"/><path d="M36.6 10.5 V39.5"/></g><rect x="9" y="5" width="26" height="36" rx="2.6" fill="url(#jbCov)" stroke="#5e3b12" stroke-width="1"/><rect x="9" y="5" width="6.5" height="36" rx="2.6" fill="url(#jbSpn)"/><rect x="14.4" y="5" width="1.3" height="36" fill="#5e3b12" opacity=".55"/><g stroke="#4f3110" stroke-width="1.5" opacity=".6"><path d="M9 12.5 H15.5"/><path d="M9 19.5 H15.5"/><path d="M9 26.5 H15.5"/><path d="M9 33.5 H15.5"/></g><g stroke="#fbe3a4" stroke-width=".5" opacity=".45"><path d="M9 11.7 H15.5"/><path d="M9 18.7 H15.5"/><path d="M9 25.7 H15.5"/><path d="M9 32.7 H15.5"/></g><rect x="18" y="9" width="14" height="28" rx="1.5" fill="none" stroke="#5e3b12" stroke-width=".9" opacity=".75"/><rect x="19.4" y="10.4" width="11.2" height="25.2" rx="1" fill="none" stroke="#fbe3a4" stroke-width=".5" opacity=".5"/><g transform="translate(25,23)"><circle r="2.7" fill="#fbe3a4" stroke="#5e3b12" stroke-width=".7"/><g stroke="#5e3b12" stroke-width="1" stroke-linecap="round"><path d="M0 -4.4 V-6 M0 4.4 V6 M-4.4 0 H-6 M4.4 0 H6 M-3.1 -3.1 L-4.3 -4.3 M3.1 -3.1 L4.3 -4.3 M-3.1 3.1 L-4.3 4.3 M3.1 3.1 L4.3 4.3"/></g></g><g fill="#fbe3a4" stroke="#5e3b12" stroke-width=".5"><circle cx="19.6" cy="9.6" r="1"/><circle cx="31.4" cy="9.6" r="1"/><circle cx="19.6" cy="36.4" r="1"/><circle cx="31.4" cy="36.4" r="1"/></g><path d="M34.5 19.5 H38.8 V26.5 H34.5" fill="#d8af63" stroke="#5e3b12" stroke-width=".6" stroke-linejoin="round"/><circle cx="37" cy="23" r=".95" fill="#5e3b12"/></svg><span class="jc-txt">Unlock today’s journal entry</span>${ic('seal')}</button>
-  ${PICK?`<div class="rec-feature">${lessonCardHTML(PICK)}</div>
-  <button class="btn ghost" id="allles" style="width:auto;padding:9px 16px;margin:14px auto 0;display:flex;align-items:center;gap:7px">${ic('lotus')} Explore all ${LESSONS.length} journeys &rarr;</button>`:''}
-  <button class="quick-med" id="quickMed" type="button">
-    <span class="qm-ic">${ic('medlotus')}</span>
-    <span class="qm-body"><span class="qm-title">Quick meditate</span><span class="qm-sub" id="quickSummary">${sessionSummary()}</span></span>
-    <span class="qm-go">${ic('play')}</span>
-  </button>
   ${horoscopeCardHTML(horo)}
   ${challengeCardHTML(chal)}`;
   {const qm=$('#quickMed');if(qm)qm.onclick=openSessionSheet;}
+  {const b=$('#nhStart');if(b)b.onclick=openSessionSheet;}
+  {const b=$('#nhBell');if(b)b.onclick=()=>go('profile');}
+  {const b=$('#nhJourneyAll');if(b)b.onclick=()=>go('map');}
+  {const b=$('#nhLevel');if(b)b.onclick=()=>go('profile');}
+  {const b=$('#nhPickMore');if(b)b.onclick=()=>go('lessons');}
+  {const pk=$('#nhPick');if(pk&&PICK)pk.onclick=()=>{lessonFrom='meditate';lessonDetail(PICK.code);};}
+  {const hero=$('#nhHero');if(hero){var im=new Image();im.onload=function(){hero.style.backgroundImage="url('/art/home-hero.jpg?v=41')";};im.src="/art/home-hero.jpg?v=41";}}
   wireGroupSit(gsit);
   document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
   {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
@@ -5173,7 +5223,7 @@ async function renderMeditate(){
   {const jc=$('#journalCta');if(jc)jc.onclick=()=>openJournalDaily(dp?dp.focus:undefined);}
   document.querySelectorAll('.lesson-card,.pickcard').forEach(c=>c.onclick=(e)=>{if(e.target.closest('.pick-listen'))return;lessonFrom='meditate';lessonDetail(c.dataset.l);});
   const al=$('#allles');if(al)al.onclick=()=>go('lessons');
-  if(window.mountLumenOrb)mountLumenOrb({level:ME.level,into:ME.level_into,need:ME.level_need,palette:(window.LUM_LEAGUE_PAL&&window.LUM_LEAGUE_PAL[ME.league.name])||'Ember'});
+  if(window.mountLumenOrb&&document.getElementById('lumOrbCanvas'))mountLumenOrb({level:ME.level,into:ME.level_into,need:ME.level_need,palette:(window.LUM_LEAGUE_PAL&&window.LUM_LEAGUE_PAL[ME.league.name])||'Ember'});
   try{ctaSparks();}catch(e){}
 }
 
@@ -9750,7 +9800,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v39';
+const CACHE = 'lumen-v41';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
