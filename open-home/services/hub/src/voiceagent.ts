@@ -226,6 +226,12 @@ async function doMusic(a: any): Promise<string> {
   if (src === "soundcloud") {
     if (op === "stop") return commandReply("sc-ctl", ["stop"], "stopped SoundCloud");
     if (["pause", "resume", "next"].includes(op)) return commandReply("sc-ctl", [op], op + " SoundCloud");
+    // "my liked songs" → the user's OWN public likes page (configured handle), not a text search
+    // that lands on some stranger's playlist named "my liked songs".
+    const scUser = (process.env.SOUNDCLOUD_USER || "").trim();
+    if (scUser && /\bliked\b|liked songs|my songs|my music|my library|my likes|saved songs/.test(query.toLowerCase())) {
+      return commandReply("sc-play", [`https://soundcloud.com/${scUser}/likes`], "playing your SoundCloud likes");
+    }
     return commandReply("sc-play", query ? query.split(" ") : ["lofi"], `playing ${query || "music"} on SoundCloud`);
   }
   // --- Spotify control ---

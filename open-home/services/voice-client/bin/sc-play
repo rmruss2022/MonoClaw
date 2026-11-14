@@ -11,13 +11,14 @@ pkill -f "input-ipc-server=$SOCK" 2>/dev/null; sleep 0.3
 soloist ctl pause >/dev/null 2>&1   # one source at a time: stop Spotify so the X10 has a single stream
 arg="$*"
 case "$arg" in
-  http*|https*) src="$arg" ;;              # a track / set / "<user>/likes" URL
-  *)            src="scsearch25:$arg" ;;   # free text → up to 25 individual tracks (so music keeps going)
+  http*|https*) src="$arg"; shuf="--shuffle" ;;   # a track / set / "<user>/likes" URL → shuffle the collection
+  *)            src="scsearch25:$arg"; shuf="" ;; # free text → up to 25 tracks, best match FIRST (no shuffle)
 esac
 # Flatten to individual track page URLs — sets, /likes and searches all expand here.
-yt-dlp --no-warnings --flat-playlist --print webpage_url "$src" 2>/dev/null > "$PLST"
+# Cap at 100 items so a huge "likes" page (hundreds of tracks) can't stall the voice turn.
+yt-dlp --no-warnings --flat-playlist -I 1:100 --print webpage_url "$src" 2>/dev/null > "$PLST"
 if [ ! -s "$PLST" ]; then echo "no SoundCloud match for: $arg"; exit 1; fi
-setsid mpv --no-video --no-terminal --volume=100 \
+setsid mpv --no-video --no-terminal --volume=100 $shuf \
   --audio-device=pipewire/bluez_output.F4_4E_FD_49_83_98.1 \
   --input-ipc-server=$SOCK --playlist="$PLST" >/tmp/sc-mpv.log 2>&1 &
 echo "SoundCloud playing ($(wc -l < "$PLST") tracks): $(head -1 "$PLST")"
