@@ -3346,10 +3346,10 @@ a{color:var(--purple)}
 .pgrid-h{color:#c3b2ee;margin:2px 2px 10px}
 .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .pgrid-card{display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;font-family:inherit;padding:13px 6px 11px;border-radius:16px;
-  background:linear-gradient(165deg,#1b1530,#130f20 82%) padding-box,linear-gradient(180deg,rgba(201,182,255,.4),rgba(128,108,196,.1) 60%) border-box;border:1.5px solid transparent;box-shadow:0 8px 22px -16px rgba(140,105,230,.3)}
+  background:linear-gradient(165deg,#1b1530,#130f20 82%) padding-box,linear-gradient(180deg,rgba(245,201,119,.5),rgba(168,85,247,.18) 55%,rgba(128,108,196,.06)) border-box;border:1.5px solid transparent;box-shadow:0 8px 22px -16px rgba(150,120,80,.3)}
 .pgrid-card:active{transform:scale(.97)}
-.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--purple) 72%,#fff);filter:drop-shadow(0 0 7px rgba(168,85,247,.5));
-  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--purple) 26%,transparent),#140e26 72%);border:1px solid color-mix(in srgb,var(--purple) 26%,transparent);box-shadow:0 0 12px -5px color-mix(in srgb,var(--purple) 70%,transparent)}
+.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--gold) 86%,#fff);filter:drop-shadow(0 0 7px rgba(245,201,119,.55));
+  background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--gold) 26%,transparent),#140e26 72%);border:1px solid color-mix(in srgb,var(--gold) 28%,transparent);box-shadow:0 0 12px -5px color-mix(in srgb,var(--gold) 72%,transparent)}
 .pgrid-med .i{width:21px;height:21px}
 .pgrid-nm{font-size:10.5px;font-weight:600;color:#d6ccdf;text-align:center;line-height:1.15}
 .jpath{position:relative;overflow:hidden;border:1px solid #2a2144;border-radius:18px;padding:16px;margin-top:20px;background:linear-gradient(165deg,#171127,#100c1b 78%)}
@@ -3373,11 +3373,11 @@ a{color:var(--purple)}
 .pcase-edit .i{width:12px;height:12px;color:var(--purple)}
 .pcase-edit:active{transform:scale(.97)}
 .jgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.jcard{position:relative;display:flex;flex-direction:column;gap:5px;padding:14px 13px 13px;border-radius:14px;background:linear-gradient(165deg,#191230,#100c1b 84%);border:1px solid rgba(168,85,247,.16);text-align:left}
+.jcard{position:relative;display:flex;flex-direction:column;gap:5px;padding:14px 13px 13px;border-radius:14px;background:linear-gradient(165deg,#191230,#100c1b 84%);border:1px solid rgba(245,201,119,.18);text-align:left}
 .jcard-top{display:flex;align-items:center;gap:9px;margin-bottom:3px}
-.jcard-med{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#c8b6f5;background:radial-gradient(circle at 34% 30%,rgba(168,85,247,.28),#140e26 72%);border:1px solid rgba(168,85,247,.28)}
+.jcard-med{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--gold) 86%,#fff);filter:drop-shadow(0 0 6px rgba(245,201,119,.5));background:radial-gradient(circle at 34% 30%,rgba(245,201,119,.26),#140e26 72%);border:1px solid rgba(245,201,119,.3)}
 .jcard-med .i{width:18px;height:18px}
-.jcard-n{font-family:var(--serif);font-size:20px;font-weight:600;color:#8f82b8;line-height:1;margin-left:auto}
+.jcard-n{font-family:var(--serif);font-size:20px;font-weight:700;color:#e0b86a;line-height:1;margin-left:auto}
 .jcard-lk{position:absolute;bottom:12px;right:12px;color:#6b5f93}
 .jcard-lk .i{width:13px;height:13px}
 .jcard-t{font-weight:700;font-size:13.5px;color:#e4dcf6;line-height:1.15}
@@ -7052,9 +7052,7 @@ async function renderJournalHome(){
     +(others.length?`<div class="pgrid-h">${ic('compass')} More pillars</div><div class="pgrid">${others.map(otherCard).join('')}</div>`:'')
     +`<div class="jpath"><div class="jpath-h"><span class="jpath-eyebrow">${ic('lock')} The Jungian Journal</span><span class="jpath-soon">Coming soon</span></div>`
       +`<p class="jpath-sub">A guided descent through the archetypes — meeting the shadow, the persona, the anima, and the Self.</p>`
-      +`<div class="jgrid">${jung.map(jcard).join('')}</div></div>`
-    +`<div class="jfeed-h">${ic('globe')} From the community</div>`
-    +`<div id="jbody"></div>`;
+      +`<div class="jgrid">${jung.map(jcard).join('')}</div></div>`;
   // The pillar to drop straight into when Deep is tapped: the server's deep
   // recommendation, else a focus pillar with the fewest sittings, else the least-
   // worked pillar overall. So "Deep" takes you right to the next suggested sitting.
@@ -7078,7 +7076,6 @@ async function renderJournalHome(){
   {const h=$('#jnlHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journal-hero.jpg?v=58')";};im.src="/art/journal-hero.jpg?v=58";}}
   document.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;journalChapter=null;jScreen='plessons';renderJournal();});
   _mountCols();
-  journalView='feed';renderJournalBody();
 }
 
 // A single pillar's lesson plan — every chapter listed (like the Journeys view),
@@ -9884,7 +9881,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v60';
+const CACHE = 'lumen-v61';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
