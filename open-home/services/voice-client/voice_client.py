@@ -55,6 +55,10 @@ WAKE_THRESHOLD_MUSIC = float(os.environ.get("WAKE_THRESHOLD_MUSIC", "0.25"))
 WAKE_CONFIRM_MUSIC = int(os.environ.get("WAKE_CONFIRM_MUSIC", "2"))   # consecutive frames in music mode
 MUSIC_POLL_S = float(os.environ.get("MUSIC_POLL_S", "3"))             # how often to recheck playback state
 WAKE_DIAG = float(os.environ.get("WAKE_DIAG", "0"))                   # if >0, log wake scores >= this (incl. sub-threshold) for tuning
+# After we speak a reply / start music, ignore wake detection for this long so our OWN
+# audio (the reply TTS tail + music starting) bleeding back into the mic can't trigger a
+# false wake (and an unwanted beep) right after a one-shot command.
+WAKE_COOLDOWN_S = float(os.environ.get("WAKE_COOLDOWN_S", "2.0"))
 # Multi-turn: after a reply, keep listening (no wake word) for a follow-up. If the
 # user stays silent this many seconds, the conversation ends and we go back to the
 # wake word. MAX_TURNS caps a runaway back-and-forth.
@@ -708,9 +712,15 @@ def main():
     mic = open_mic()
     log("listening — say the wake word")
     confirm = 0
+    cooldown_until = 0.0
     try:
         while True:
             samples = read_samples(mic, BLOCK)
+            # Post-reply cooldown: don't let our own emitted audio (reply tail / music
+            # onset) self-trigger a wake right after a one-shot command.
+            if time.time() < cooldown_until:
+                confirm = 0
+                continue
             scores = wake.predict(samples)
             top = max(scores.values()) if scores else 0.0
             music = music_playing()
@@ -797,6 +807,8 @@ def main():
                     if music and resume:
                         resume_music()   # resume (only if it was playing & user didn't pause/stop)
                     _reset_wake()
+                    flush_mic(mic)                              # drop the reply/music audio we just emitted
+                    cooldown_until = time.time() + WAKE_COOLDOWN_S   # don't self-trigger on our own output
                     log("ready — listening again")
     finally:
         try:
