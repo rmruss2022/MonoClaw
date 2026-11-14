@@ -3241,12 +3241,16 @@ body.jw-writing .jx-close{display:none}
 .jw-c-prompt .jw-cbody{padding:2px 4px}
 /* response panel: boxless; a circle + flanking arrows (text mode brings its own box) */
 .jw-c-resp{background:none !important;border:0 !important;box-shadow:none !important;cursor:default;overflow:visible !important}
-.jw-c-resp .jw-cbody{flex-direction:row;align-items:flex-end;justify-content:center;gap:6px;overflow:visible;margin-top:0;padding-bottom:6px}
+.jw-c-resp .jw-cbody{flex-direction:row;align-items:center;justify-content:center;gap:6px;overflow:visible;margin-top:0}
 .jw-resp-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .jw-arrow{flex:none;width:44px;height:44px;border:0;background:none;color:#5a431f;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85}
 .jw-arrow .i{width:30px;height:30px}
 .jw-arrow:active{transform:scale(.9)}
-.jw-circle{display:flex;flex-direction:column;align-items:center;gap:10px}
+.jw-circle{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px}
+/* float the label/status below the circle so the arrows line up with the icon's centre */
+.jw-circle .jw-circ-lbl,.jw-circle .jcap-status{position:absolute;left:50%;transform:translateX(-50%);width:220px;max-width:none;text-align:center}
+.jw-circle .jw-circ-lbl{top:calc(100% + 12px)}
+.jw-circle .jcap-status{top:calc(100% + 36px)}
 .jw-circle[hidden]{display:none}
 .jw-circ-btn{width:96px;height:96px;border-radius:50%;border:2px solid rgba(90,62,24,.5);background:radial-gradient(circle at 42% 36%,#6a5024,#36280f);color:#ffd98a;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 22px -8px rgba(40,24,4,.6),inset 0 1px 0 rgba(255,228,160,.25)}
 .jw-circ-btn svg,.jw-circ-btn .i{width:38px;height:38px}
@@ -3274,7 +3278,9 @@ body.jw-writing .jx-close{display:none}
   box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -14px 26px rgba(0,0,0,.26),0 6px 16px -8px rgba(0,0,0,.42)}
 .jw-comp.expanded{flex-grow:2.6;cursor:default}
 /* the prompt panel sits a little taller than the others by default */
-.jw-c-prompt{flex-grow:1.45}
+.jw-c-timer{flex-grow:1.4}
+.jw-c-prompt{flex-grow:1.7}
+.jw-c-resp{flex-grow:.72}
 /* ornamental inset frame — echoes the gold-emblem iconography (a fine gold
    hairline inside the panel edge, like the linework on the generated icons) */
 .jw-c-timer::before,.jw-c-prompt::before,.jp1-hero .jp-card::before{content:"";position:absolute;inset:7px;border-radius:21px;border:1px solid rgba(255,232,180,.34);box-shadow:inset 0 0 0 3px rgba(90,62,24,.12);pointer-events:none;z-index:3}
@@ -10202,7 +10208,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v87';
+const CACHE = 'lumen-v88';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
