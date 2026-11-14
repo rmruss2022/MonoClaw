@@ -9,14 +9,23 @@ const DATA_DIR = new URL("../.data/", import.meta.url);
 
 export interface RGB { r: number; g: number; b: number }
 export interface SceneLight { room?: string; id?: string; on: boolean; brightness?: number; rgb?: RGB }
-export interface SceneMusic { playlistUri?: string; name?: string }
+// contextUri is any Spotify context: a playlist (spotify:playlist:…) or an artist
+// (spotify:artist:…). shuffle plays it in a random order.
+export interface SceneMusic { contextUri?: string; name?: string; shuffle?: boolean }
 export interface SceneActions { lights?: SceneLight[]; music?: SceneMusic | null }
 
-// good_morning: Living Room light ON, warm white at 100%, + the Morning Café Jazz playlist.
+// Time-of-day scenes. Morning also turns on the warm-orange Living Room light + reads
+// the NYC daily report (the report is wired to the "good morning" trigger, not here).
 const DEFAULTS: Record<string, SceneActions> = {
   good_morning: {
     lights: [{ room: "Living Room", on: true, brightness: 100, rgb: { r: 255, g: 130, b: 30 } }],
-    music: { playlistUri: "spotify:playlist:37talafIK8enbbryNV5ZCg", name: "Morning Café Jazz" },
+    music: { contextUri: "spotify:playlist:6SzaqnY0tHF6TY6EUtp0EQ", name: "Upbeat Morning Jazz", shuffle: true },
+  },
+  afternoon: {
+    music: { contextUri: "spotify:artist:2M3sfEXSEDYBurdjeExx6G", name: "Palm Monkey", shuffle: true },
+  },
+  evening: {
+    music: { contextUri: "spotify:playlist:37talafIK8enbbryNV5ZCg", name: "Morning Café Jazz", shuffle: true },
   },
 };
 

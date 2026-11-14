@@ -272,7 +272,7 @@ async function runSceneReal(id: string): Promise<string | null> {
       if (hit) parts.push(`${la.room || "lights"} on`);
     } catch { /* ignore light group errors */ }
   }
-  if (cfg.music && cfg.music.playlistUri) {
+  if (cfg.music && cfg.music.contextUri) {
     try {
       const dev = await spotify.deviceForRoom("Living Room");
       // Spotify throws transient 502/503/429s (esp. when another stream is already
@@ -280,7 +280,7 @@ async function runSceneReal(id: string): Promise<string | null> {
       let played = false;
       for (let attempt = 0; attempt < 4 && !played; attempt++) {
         try {
-          await spotify.play({ contextUri: cfg.music.playlistUri, deviceId: dev?.id });
+          await spotify.play({ contextUri: cfg.music.contextUri, deviceId: dev?.id });
           played = true;
         } catch (e) {
           const msg = (e as Error)?.message || "";
@@ -291,7 +291,15 @@ async function runSceneReal(id: string): Promise<string | null> {
           throw e;
         }
       }
-      if (played) parts.push(`playing ${cfg.music.name || "music"}`);
+      if (played) {
+        if (cfg.music.shuffle) {
+          // Let the device actually start the context before toggling shuffle, else the
+          // shuffle command races the device warm-up and silently no-ops.
+          await new Promise((r) => setTimeout(r, 900));
+          try { await spotify.shuffle(true); } catch { /* best effort */ }
+        }
+        parts.push(`playing ${cfg.music.name || "music"}`);
+      }
     } catch (e) { console.log("[scene] music failed:", (e as Error)?.message); }
   }
   return parts.length ? parts.join(", ") : null;
@@ -339,6 +347,16 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     const done = await execActions([{ type: "scene", id: "good_morning" }]);
     const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
     return { reply: "Good morning! Starting your morning scene.", actions: cleanDone, understood: true };
+  }
+  if (/\bgood afternoon\b|\bafternoon\b/i.test(text)) {
+    const done = await execActions([{ type: "scene", id: "afternoon" }]);
+    const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
+    return { reply: "Good afternoon! Putting on Palm Monkey.", actions: cleanDone, understood: true };
+  }
+  if (/\bgood evening\b|\bevening\b/i.test(text)) {
+    const done = await execActions([{ type: "scene", id: "evening" }]);
+    const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
+    return { reply: "Good evening! Starting your evening playlist.", actions: cleanDone, understood: true };
   }
   const state = JSON.stringify(home.summary());
   // Pre-search obvious live-info questions so they're a single LLM round-trip (faster).
