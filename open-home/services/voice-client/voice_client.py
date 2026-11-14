@@ -76,6 +76,9 @@ MAX_UTTER_S = float(os.environ.get("MAX_UTTER_S", "12"))
 # so ducked music/ambient (which webrtcvad alone flags as "speech") isn't recorded
 # as if you were talking. Tune with the logged recorded-rms values.
 VOICE_RMS_FLOOR = float(os.environ.get("VOICE_RMS_FLOOR", "450"))
+# Consecutive voiced frames (20ms each) needed to confirm real speech onset, so a brief
+# transient (click/beep) can't start — then prematurely end — a capture before you speak.
+ONSET_FRAMES = int(os.environ.get("ONSET_FRAMES", "3"))
 MIC_ALSA = os.environ.get("MIC_ALSA", "plughw:CARD=A21,DEV=0")
 MIC_GAIN = float(os.environ.get("MIC_GAIN", "1.0"))   # digital boost for far-field pickup
 SPK_NODE = os.environ.get("SPK_NODE", "bluez_output.F4_4E_FD_49_83_98.1")
@@ -855,6 +858,7 @@ def record_utterance(mic, wait_s=None):
         FROM ONSET (so a worst-case bleed can never run the full wait+record)."""
     frames, silence_ms, started = [], 0, time.time()
     onset_t = None
+    voiced_run, pending = 0, []
     frame_ms = VAD_FRAME * 1000 // SR
     while True:
         samples = read_samples(mic, VAD_FRAME)
@@ -869,12 +873,21 @@ def record_utterance(mic, wait_s=None):
             speech = True
         voiced = speech and rms >= VOICE_RMS_FLOOR   # energy gate rejects ducked music/ambient
         if onset_t is None:
+            # Require ONSET_FRAMES consecutive voiced frames to confirm REAL speech, so a
+            # single transient (mouse click, phone beep, music tick) can't start a capture
+            # that then closes on silence before you've actually spoken.
             if voiced:
-                onset_t = time.time()
-                frames.append(pcm)
-            elif (time.time() - started) > (wait_s if wait_s is not None else MAX_UTTER_S):
-                return b""                            # never started talking → end quietly
-            continue                                  # trim leading silence/music before onset
+                voiced_run += 1
+                pending.append(pcm)
+                if voiced_run >= ONSET_FRAMES:
+                    onset_t = time.time()
+                    frames.extend(pending)            # keep the confirming frames (don't clip word start)
+                    pending = []
+            else:
+                voiced_run, pending = 0, []           # transient — reset, keep waiting for real speech
+                if (time.time() - started) > (wait_s if wait_s is not None else MAX_UTTER_S):
+                    return b""                         # never started talking → end quietly
+            continue                                   # trim leading silence/music before onset
         frames.append(pcm)
         silence_ms = 0 if voiced else silence_ms + frame_ms
         if silence_ms >= SILENCE_MS and len(frames) > 12:
