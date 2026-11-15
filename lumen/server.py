@@ -3245,9 +3245,10 @@ body.jw-writing .jx-close{display:none}
 /* prev/next row lives low on the screen, beneath the content */
 .jw-resp-arrows{flex:none;display:flex;align-items:center;justify-content:center;gap:120px;margin-top:auto;padding-bottom:2px}
 .jw-resp-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
-.jw-arrow{flex:none;width:44px;height:44px;border:0;background:none;color:#5a431f;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85}
-.jw-arrow .i{width:30px;height:30px}
-.jw-arrow:active{transform:scale(.9)}
+.jw-arrow{flex:none;width:54px;height:54px;border-radius:50%;border:1px solid rgba(245,201,119,.45);color:#ffd98a;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  background:radial-gradient(circle at 42% 34%,#6f5427,#3a2b12 86%);box-shadow:inset 0 1px 0 rgba(255,228,160,.28),0 7px 18px -8px rgba(40,24,4,.55)}
+.jw-arrow .i{width:24px;height:24px;filter:drop-shadow(0 0 5px rgba(245,201,119,.4))}
+.jw-arrow:active{transform:scale(.92)}
 .jw-circle{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px}
 /* float the label/status below the circle so the arrows line up with the icon's centre */
 .jw-circle .jw-circ-lbl,.jw-circle .jcap-status{position:absolute;left:50%;transform:translateX(-50%);width:220px;max-width:none;text-align:center}
@@ -4276,6 +4277,8 @@ const fmt=(n)=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':''+n;
 const SVGP={
   chevL:'<path d="M15 5l-7 7 7 7"/>',
   chevR:'<path d="M9 5l7 7-7 7"/>',
+  jnavL:'<path d="M13 6l-6 6 6 6"/><path d="M18.5 12H8"/>',
+  jnavR:'<path d="M11 6l6 6-6 6"/><path d="M5.5 12H16"/>',
   jg_shadow:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17 10 10 0 0 1 0 -17Z" fill="currentColor" stroke="none"/>',
   jg_persona:'<path d="M12 3.4c3.6 0 5.6 2.9 5.6 7.6 0 5.1-2.9 9.6-5.6 9.6S6.4 16.1 6.4 11s2-7.6 5.6-7.6Z"/><path d="M8.6 10.5c.6-.7 1.7-.7 2.3 0"/><path d="M13.1 10.5c.6-.7 1.7-.7 2.3 0"/><path d="M9.5 14.7c1.5 1.2 3.5 1.2 5 0"/>',
   jg_anima:'<circle cx="9.4" cy="12" r="5.6"/><circle cx="14.6" cy="12" r="5.6"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
@@ -6825,8 +6828,8 @@ function composerHTML(o){
           // prev / next now sit in a row BELOW the content, low on the screen,
           // so the text box (and the photo/record icon) can use the full width
           +`<div class="jw-resp-arrows">`
-            +`<button type="button" class="jw-arrow" id="jwPrev" aria-label="Previous way to journal">${ic('chevL')}</button>`
-            +`<button type="button" class="jw-arrow" id="jwNext" aria-label="Next way to journal">${ic('chevR')}</button>`
+            +`<button type="button" class="jw-arrow" id="jwPrev" aria-label="Previous way to journal">${ic('jnavL')}</button>`
+            +`<button type="button" class="jw-arrow" id="jwNext" aria-label="Next way to journal">${ic('jnavR')}</button>`
           +`</div>`
         +`</div>`
       +`</section>`
@@ -10238,7 +10241,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v94';
+const CACHE = 'lumen-v95';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
