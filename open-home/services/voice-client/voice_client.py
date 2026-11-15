@@ -84,6 +84,8 @@ SPEAK_DUCK_LEVEL = int(os.environ.get("SPEAK_DUCK_LEVEL", "35"))   # (legacy) mu
 # Morning report: a few seconds after the "good morning" scene starts the jazz, read the
 # NYC daily digest (from the dash app) OVER the music with the jazz ducked, then restore.
 DASH_REPORT_URL = os.environ.get("DASH_REPORT_URL", "https://dash.bedrock.casa/api/report-latest")
+DASH_BASE = os.environ.get("DASH_BASE", "https://dash.bedrock.casa")            # to-do list API
+MARQUEE_BASE = os.environ.get("MARQUEE_BASE", "https://marquee.bedrock.casa")   # events + personal calendar
 MORNING_REPORT_DELAY_S = float(os.environ.get("MORNING_REPORT_DELAY_S", "6"))   # let the jazz settle first
 MORNING_REPORT_DUCK = int(os.environ.get("MORNING_REPORT_DUCK", "30"))          # jazz volume % while reading
 SPEAK_GAIN = float(os.environ.get("SPEAK_GAIN", "1.0"))           # PCM gain (TTS is already near full-scale)
@@ -462,6 +464,67 @@ def morning_report():
     speak(spoken)
 
 
+# ---- Dash to-do list + Marquee events/calendar (same bedrock.casa account) ----
+def _say_list(items, max_n=5):
+    """Join items into a natural spoken list: 'a, b, and c' (capped)."""
+    items = [str(i).strip() for i in items if str(i).strip()][:max_n]
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return ", ".join(items[:-1]) + f", and {items[-1]}"
+
+
+def _dash_todos():
+    try:
+        r = SESSION.get(f"{DASH_BASE}/api/todo", timeout=8)
+        r.raise_for_status()
+        return (r.json() or {}).get("todos") or []
+    except Exception as e:
+        log("todo fetch failed:", e, level="WARN")
+        return None
+
+
+def _dash_todo_act(path, body):
+    try:
+        r = SESSION.post(f"{DASH_BASE}/api/todo{path}", json=body, timeout=8)
+        r.raise_for_status()
+        return (r.json() or {}).get("todos")
+    except Exception as e:
+        log("todo act failed:", e, level="WARN")
+        return None
+
+
+def _marquee_events(limit=3):
+    try:
+        r = SESSION.get(f"{MARQUEE_BASE}/api/events", timeout=8)
+        r.raise_for_status()
+        evs = (r.json() or {}).get("events") or []
+        near = [e for e in evs if e.get("near_home")]
+        return (near or evs)[:limit]
+    except Exception as e:
+        log("events fetch failed:", e, level="WARN")
+        return None
+
+
+def _marquee_calendar(limit=4):
+    try:
+        r = SESSION.get(f"{MARQUEE_BASE}/api/personal", timeout=8)
+        r.raise_for_status()
+        return ((r.json() or {}).get("personal") or [])[:limit]
+    except Exception as e:
+        log("calendar fetch failed:", e, level="WARN")
+        return None
+
+
+def _clean_title(s):
+    """Shorten an event title for speech: drop everything after a | or — separator."""
+    s = re.split(r"\s*[|–—:]\s*", str(s or ""), 1)[0].strip()
+    return s[:70]
+
+
 def transcribe(wav_bytes):
     if not XI_KEY:
         return ""
@@ -635,6 +698,74 @@ def fast_intent(text):
             if ids and any(_hub_set_color(lid, crgb) for lid in ids):
                 return (f"lights-{cname}", f"Okay, {room.lower()} lights {cname}.")
             return None
+    # --- To-do list (Dash) ---
+    # Add: "add milk to my todo list / my list / my todos", "put milk on my list"
+    m = re.search(r"\b(?:add|put)\s+(.+?)\s+(?:to|on|onto|in)\s+(?:my|the)\s+(?:to[\s-]?do(?:\s+list)?|todos?|list|tasks?)\b", t)
+    if m:
+        item = m.group(1).strip().strip(".")
+        res = _dash_todo_act("/add", {"text": item})
+        return ("todo-add", f"Added {item} to your to-do list." if res is not None
+                else "I couldn't reach your to-do list right now.")
+    # Complete: "mark groceries done", "check off groceries", "cross off groceries"
+    m = re.search(r"\b(?:mark|check|cross|tick)\s+(?:off\s+)?(.+?)\s+(?:as\s+)?(?:done|complete|completed|off)\b", t)
+    if not m:
+        m = re.search(r"\b(?:check|cross|tick|knock)\s+off\s+(.+)$", t)   # "check off get phones"
+    if m:
+        target = m.group(1).strip().strip(".")
+        todos = _dash_todos() or []
+        match = (next((td for td in todos if not td.get("done") and target in td.get("text", "").lower()), None)
+                 or next((td for td in todos if target in td.get("text", "").lower()), None))
+        if match:
+            _dash_todo_act("/toggle", {"id": match["id"]})
+            return ("todo-done", f"Marked {match['text']} as done.")
+        return ("todo-done", f"I couldn't find {target} on your list.")
+    # Read: "what's on my todo list", "my to-do list", "read my todos", "my tasks"
+    if ("todo" in t or "to do" in t or "to-do" in t or "to dos" in t
+            or ("my list" in t and ("what" in t or "read" in t or "on" in t))
+            or "my tasks" in t or "my task list" in t):
+        todos = _dash_todos()
+        if todos is None:
+            return ("todo", "I couldn't reach your to-do list right now.")
+        openi = [td.get("text", "") for td in todos if not td.get("done")]
+        if not openi:
+            return ("todo", "Your to-do list is clear — nothing pending.")
+        noun = "thing" if len(openi) == 1 else "things"
+        return ("todo", f"You have {len(openi)} {noun} on your list: {_say_list(openi)}.")
+    # --- Events (Marquee) ---
+    if (("happening" in t or "any events" in t or "any event" in t or "events near" in t
+         or "events this" in t or "events going" in t or "going on" in t)
+            and ("what" in t or "any" in t or "anything" in t or "near" in t or "events" in t)):
+        evs = _marquee_events(limit=3)
+        if evs is None:
+            return ("events", "I couldn't reach the events list right now.")
+        if not evs:
+            return ("events", "I don't see any events near you right now.")
+        parts = []
+        for e in evs:
+            p = _clean_title(e.get("title"))
+            if e.get("neighborhood"):
+                p += f" in {e['neighborhood']}"
+            tm = str(e.get("time") or "").strip()
+            if tm and tm.lower() != "none":
+                p += f", {tm}"
+            parts.append(p)
+        return ("events", "Here's what's happening near you: " + "; ".join(parts) + ".")
+    # --- Calendar (Marquee personal) ---
+    if ("my calendar" in t or "on my calendar" in t or "my schedule" in t
+            or ("coming up" in t and ("what" in t or "anything" in t))):
+        cal = _marquee_calendar(limit=4)
+        if cal is None:
+            return ("calendar", "I couldn't reach your calendar right now.")
+        if not cal:
+            return ("calendar", "Your calendar looks clear.")
+        parts = []
+        for c in cal:
+            p = _clean_title(c.get("title"))
+            tm = str(c.get("time") or "").strip()
+            if tm and tm.lower() != "none":
+                p += f" at {tm}"
+            parts.append(p)
+        return ("calendar", "On your calendar: " + "; ".join(parts) + ".")
     # Greetings → instant canned reply
     if t in ("hello", "hi", "hey", "yo", "sup", "hey jarvis", "hi jarvis", "hello jarvis",
              "hey there", "what's up", "whats up", "how's it going", "hows it going"):
