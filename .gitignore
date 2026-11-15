@@ -37,6 +37,7 @@ nyc-events/data/
 portal/.token
 rolodex-deploy/data/
 **/sessions.json
+lumen/data/.session_secret
 
 # Nested repos (own their own git history — tracked separately)
 /contentforge/
