@@ -3161,14 +3161,14 @@ a{color:var(--purple)}
 .jpr-t{font-size:45px;font-weight:800;letter-spacing:.5px;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1;font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif}
 .jpr-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:2.2px}
 .jp-ways{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
-.jp-way{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);letter-spacing:.2px;font-family:inherit;cursor:pointer;
-  background:#13101f;border:1px solid var(--line);border-radius:999px;padding:9px 15px;transition:border-color .15s,color .15s,background .15s}
-.jp-way svg,.jp-way .i{width:15px;height:15px;color:var(--gold);opacity:.8}
+.jp-way{display:inline-flex;flex-direction:column;align-items:center;gap:7px;font-size:13px;color:var(--muted);letter-spacing:.2px;font-family:inherit;cursor:pointer;
+  background:#13101f;border:1px solid var(--line);border-radius:16px;padding:12px 16px;transition:border-color .15s,color .15s,background .15s}
+.jp-way svg,.jp-way .i{width:22px;height:22px;color:var(--gold);opacity:.8}
 .jp-way.sel{border-color:var(--gold);color:var(--text);background:rgba(245,201,119,.13)}
 .jp-way.sel svg,.jp-way.sel .i{opacity:1}
 /* Compose: full-screen with just an X; no header; hero timer floats (no card bg) */
 .jx-close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:12px;z-index:40;width:40px;height:40px;border-radius:50%;
-  background:#1b1630;border:1px solid var(--line);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  background:linear-gradient(160deg,#6f5427,#574121);border:1px solid rgba(245,201,119,.42);color:#ffe3ad;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,236,190,.22)}
 .jx-close svg{width:17px;height:17px}
 .jflow{padding-top:52px}
 .jp1-hero .jp-card{position:relative;margin:0 auto;max-width:460px;border-radius:28px;padding:26px 20px 24px;
@@ -3181,7 +3181,7 @@ a{color:var(--purple)}
 .jp1-hero .jpr-t{color:#ffe3ad;text-shadow:0 0 18px rgba(245,201,119,.45)}
 .jp1-hero .jpr-l{color:#e8c98f}
 .jp1-hero .letter-head{justify-content:center;opacity:.85}
-.jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
+.jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
 .jbegin .seal-ic{width:22px;height:22px}
 .jbegin-sub{text-align:center;font-size:13px;color:var(--muted);max-width:360px;margin:0 auto}
 .jwrite{display:flex;flex-direction:column;gap:14px;min-height:calc(100dvh - 88px)}
@@ -10238,7 +10238,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v90';
+const CACHE = 'lumen-v91';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
