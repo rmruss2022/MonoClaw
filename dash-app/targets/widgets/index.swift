@@ -37,7 +37,12 @@ func widgetBackground<Content: View>(_ content: Content) -> some View {
 
 // MARK: - To-do widget
 
-struct TodoItem: Decodable { let id: String?; let text: String; let done: Bool }
+struct TodoItem: Decodable {
+    let id: String?; let text: String; let done: Bool
+    // Explicit memberwise init: a Decodable struct does not get one for free
+    // once it is also constructed by hand, and PendingToggles rebuilds rows.
+    init(id: String?, text: String, done: Bool) { self.id = id; self.text = text; self.done = done }
+}
 struct TodoResp: Decodable { let todos: [TodoItem] }
 
 // Interactive: check a task off straight from the widget (iOS 17+). Toggles via
@@ -51,6 +56,13 @@ struct ToggleTodoIntent: AppIntent {
     init(id: String) { self.id = id }
 
     func perform() async throws -> some IntentResult {
+        // Record the intended state *before* the round trip. The reload below
+        // refetches the list, and between the write landing and the read showing
+        // it the row would otherwise redraw unticked — the checkbox springing
+        // back under the finger that just tapped it.
+        PendingToggles.set(id: id, done: true)
+        WidgetCenter.shared.reloadAllTimelines()
+
         if let url = URL(string: "https://dash.bedrock.casa/api/todo/toggle") {
             var req = URLRequest(url: url)
             req.httpMethod = "POST"
@@ -61,6 +73,48 @@ struct ToggleTodoIntent: AppIntent {
         }
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
+    }
+}
+
+// Toggles this widget has made but not yet seen confirmed by the API.
+//
+// Deliberately the extension's own UserDefaults and not an App Group: no group
+// is configured for this app, adding one is a provisioning change, and nothing
+// outside the widget needs to read this.
+//
+// Entries are reconciled, never just accumulated — once the API reports a task
+// at the state recorded here the note is dropped. Left to grow, a stale local
+// override would eventually mask a genuine change made on another device.
+enum PendingToggles {
+    private static let key = "dash.todo.pending"
+
+    static func all() -> [String: Bool] {
+        (UserDefaults.standard.dictionary(forKey: key) as? [String: Bool]) ?? [:]
+    }
+    static func set(id: String, done: Bool) {
+        var m = all(); m[id] = done
+        UserDefaults.standard.set(m, forKey: key)
+    }
+    static func reconcile(against todos: [TodoItem]) {
+        var m = all()
+        guard !m.isEmpty else { return }
+        // uniquingKeysWith, not uniqueKeysWithValues: the latter traps on a
+        // duplicate key, and a repeated id from the API would crash the widget
+        // rather than merely confuse it.
+        let byID = Dictionary(todos.compactMap { t in t.id.map { ($0, t.done) } },
+                              uniquingKeysWith: { first, _ in first })
+        for (id, want) in m where byID[id] == want || byID[id] == nil {
+            m.removeValue(forKey: id)
+        }
+        UserDefaults.standard.set(m, forKey: key)
+    }
+    static func apply(to todos: [TodoItem]) -> [TodoItem] {
+        let m = all()
+        guard !m.isEmpty else { return todos }
+        return todos.map { t in
+            guard let id = t.id, let want = m[id], want != t.done else { return t }
+            return TodoItem(id: t.id, text: t.text, done: want)
+        }
     }
 }
 
@@ -76,8 +130,16 @@ struct TodoProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodoEntry>) -> Void) {
         Task {
             let r = await fetchJSON("https://dash.bedrock.casa/api/todo", as: TodoResp.self)
-            let entry = TodoEntry(date: Date(), todos: r?.todos ?? [])
-            completion(Timeline(entries: [entry], policy: .after(nextRefresh())))
+            let fetched = r?.todos ?? []
+            // Drop any local override the server has now caught up with, then
+            // show the rest on top of the fetched list.
+            PendingToggles.reconcile(against: fetched)
+            let entry = TodoEntry(date: Date(), todos: PendingToggles.apply(to: fetched))
+            // Ten rather than thirty: a to-do list changes through the day, and
+            // nothing else in this app asks the widget to reload. iOS still
+            // decides — the policy is a request against a daily budget — but
+            // asking for ten lands far closer than asking for thirty.
+            completion(Timeline(entries: [entry], policy: .after(nextRefresh(minutes: 10))))
         }
     }
 }
