@@ -3251,6 +3251,8 @@ body.jw-writing .jx-close{display:none}
 .jw-circle .jw-circ-lbl,.jw-circle .jcap-status{position:absolute;left:50%;transform:translateX(-50%);width:220px;max-width:none;text-align:center}
 .jw-circle .jw-circ-lbl{top:calc(100% + 12px)}
 .jw-circle .jcap-status{top:calc(100% + 36px)}
+/* empty live-transcript / mic-hint rows carry a min-height — drop them so the circle truly centres on the arrows */
+.jw-resp-center #jprev:empty,.jw-resp-center #michint:empty{display:none}
 .jw-circle[hidden]{display:none}
 .jw-circ-btn{width:96px;height:96px;border-radius:50%;border:2px solid rgba(90,62,24,.5);background:radial-gradient(circle at 42% 36%,#6a5024,#36280f);color:#ffd98a;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 22px -8px rgba(40,24,4,.6),inset 0 1px 0 rgba(255,228,160,.25)}
 .jw-circ-btn svg,.jw-circ-btn .i{width:38px;height:38px}
@@ -3265,7 +3267,12 @@ body.jw-writing .jx-close{display:none}
 @keyframes jrecShine{0%{background-position:170% 0}100%{background-position:-70% 0}}
 .jw-circle .jrec-btn.rec .jrec-core{width:30px;height:30px;border-radius:8px}
 /* text mode: the textarea is the only thing that wears a box */
-.jw-c-resp .jw-body{flex:none;width:100%;min-height:40%;max-height:100%;border:1px solid rgba(90,62,24,.5);border-radius:14px;padding:12px;background:rgba(255,248,230,.5);color:#3a2a10;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.jw-c-resp .jw-body{flex:none;width:100%;height:92px;min-height:0;max-height:100%;border:1px solid rgba(90,62,24,.5);border-radius:14px;padding:12px;background:rgba(255,248,230,.5);color:#3a2a10;font-size:15px;line-height:1.6;box-shadow:inset 0 1px 0 rgba(255,255,255,.4);transition:height .3s}
+/* tapping the compact text box first enlarges the response (no keyboard yet) */
+.jw-c-resp.expanded .jw-body{height:100%;min-height:200px}
+.jw-c-resp.expanded .jw-cbody{align-items:stretch}
+.jw-c-resp.expanded .jw-arrow{align-self:center}
+.jw-c-resp .jw-body[readonly]{cursor:pointer}
 .jw-c-resp .jw-body::placeholder{color:rgba(90,62,24,.5)}
 .jwrite{height:100dvh;max-height:100dvh;overflow:hidden;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 8px);background:transparent}
 .jw-stage{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:0;background:none;border:0;box-shadow:none}
@@ -6980,8 +6987,12 @@ function jSetWriteMode(m,noFocus){
   const resp=document.querySelector('#jp2 .jw-c-resp');if(resp)resp.classList.toggle('has-box',m==='type');
   if(m!=='voice'&&jMediaRec&&jMediaRec.state==='recording'){try{jMediaRec.stop();}catch(e){}}
   _jRecUI(false);
+  // switching modes always resets the stage to equal panels (collapse any expand)
+  jExpand(null);
+  // text mode starts as a compact, read-only box — a tap enlarges it first (no
+  // keyboard), then a second tap focuses it to write. Other modes clear that.
+  if(ta){ta.readOnly=(m==='type');try{ta.blur();}catch(e){}}
   jFitTimer();jFitPrompt();
-  if(m==='type'&&ta&&!noFocus)setTimeout(()=>{try{ta.focus();}catch(e){}},80);
 }
 // Accordion: the tapped component grows to ~half the stage; the others shrink.
 function jExpand(which){
@@ -7063,6 +7074,19 @@ function wireComposerCommon(getPrompt){
   const jwgo=$('#jwWalkGo');if(jwgo)jwgo.onclick=()=>{const w=$('#jwWalk');if(w)w.hidden=true;try{localStorage.setItem('lumen_jwrite_walk','1');}catch(e){}jSetWriteMode(jChosenMode||'photo');};
   const f=$('#jfile');if(f)f.onchange=(e)=>{jPhotoTaken=true;jUpdateSeal();transcribePhoto(e.target.files&&e.target.files[0]);};
   const jtEl=$('#jt');if(jtEl)jtEl.addEventListener('input',jUpdateSeal);
+  // First tap on the compact text box enlarges the response (no keyboard). It's
+  // read-only until then, so the tap can't focus it; once enlarged we make it
+  // editable, and the next tap focuses it to write.
+  if(jtEl)jtEl.addEventListener('click',(e)=>{
+    const resp=document.querySelector('#jp2 .jw-c-resp');
+    if(jChosenMode==='type'&&resp&&!resp.classList.contains('expanded')){
+      e.preventDefault();
+      try{Haptics.select();}catch(_){}
+      jExpand('resp');
+      jtEl.readOnly=false;            // now editable — but don't focus yet
+      try{jtEl.blur();}catch(_){}
+    }
+  });
   const recb=$('#jrecbtn');if(recb)recb.onclick=()=>{try{Haptics.medium();}catch(e){}toggleRecord();};
   const phb=$('#jphotobtn');if(phb)phb.onclick=()=>{try{Haptics.medium();}catch(e){}const ff=$('#jfile');if(ff)ff.click();};
   // On open: start the ambient background music + an ElevenLabs welcome line.
@@ -10208,7 +10232,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v88';
+const CACHE = 'lumen-v89';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
