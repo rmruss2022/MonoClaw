@@ -3241,7 +3241,9 @@ body.jw-writing .jx-close{display:none}
 .jw-c-prompt .jw-cbody{padding:2px 4px}
 /* response panel: boxless; a circle + flanking arrows (text mode brings its own box) */
 .jw-c-resp{background:none !important;border:0 !important;box-shadow:none !important;cursor:default;overflow:visible !important}
-.jw-c-resp .jw-cbody{flex-direction:row;align-items:center;justify-content:center;gap:6px;overflow:visible;margin-top:0}
+.jw-c-resp .jw-cbody{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:8px;overflow:visible;margin-top:0}
+/* prev/next row lives low on the screen, beneath the content */
+.jw-resp-arrows{flex:none;display:flex;align-items:center;justify-content:center;gap:120px;margin-top:auto;padding-bottom:2px}
 .jw-resp-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
 .jw-arrow{flex:none;width:44px;height:44px;border:0;background:none;color:#5a431f;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:.85}
 .jw-arrow .i{width:30px;height:30px}
@@ -3287,7 +3289,7 @@ body.jw-writing .jx-close{display:none}
 /* the prompt panel sits a little taller than the others by default */
 .jw-c-timer{flex-grow:1.4}
 .jw-c-prompt{flex-grow:1.7}
-.jw-c-resp{flex-grow:.72}
+.jw-c-resp{flex-grow:1}
 /* ornamental inset frame — echoes the gold-emblem iconography (a fine gold
    hairline inside the panel edge, like the linework on the generated icons) */
 .jw-c-timer::before,.jw-c-prompt::before,.jp1-hero .jp-card::before{content:"";position:absolute;inset:7px;border-radius:21px;border:1px solid rgba(255,232,180,.34);box-shadow:inset 0 0 0 3px rgba(90,62,24,.12);pointer-events:none;z-index:3}
@@ -6812,7 +6814,6 @@ function composerHTML(o){
       // component 3 · your response — boxless; a circle + side arrows (text mode shows the box)
       +`<section class="jw-comp jw-c-resp" data-comp="resp">`
         +`<div class="jw-cbody jw-resp-body">`
-          +`<button type="button" class="jw-arrow" id="jwPrev" aria-label="Previous way to journal">${ic('chevL')}</button>`
           +`<div class="jw-resp-center" id="jwRespCenter">`
             +`<div id="jphoto" class="jw-circle"><button type="button" class="jw-circ-btn" id="jphotobtn">${ic('camera')}</button><div class="jw-circ-lbl">Photograph your page</div><div class="jcap-status" id="jphotostatus"></div></div>`
             +`<div id="jvoice" class="jw-circle" hidden><button type="button" class="jw-circ-btn jrec-btn" id="jrecbtn"><span class="jrec-ring"><span class="jrec-core"></span></span></button><div class="jw-circ-lbl" id="jreclbl">Tap to record</div><div class="jcap-status" id="jrecstatus"></div></div>`
@@ -6821,7 +6822,12 @@ function composerHTML(o){
             +`<div class="mic-hint" id="michint"></div>`
             +`<input type="file" id="jfile" accept="image/*" capture="environment" style="display:none">`
           +`</div>`
-          +`<button type="button" class="jw-arrow" id="jwNext" aria-label="Next way to journal">${ic('chevR')}</button>`
+          // prev / next now sit in a row BELOW the content, low on the screen,
+          // so the text box (and the photo/record icon) can use the full width
+          +`<div class="jw-resp-arrows">`
+            +`<button type="button" class="jw-arrow" id="jwPrev" aria-label="Previous way to journal">${ic('chevL')}</button>`
+            +`<button type="button" class="jw-arrow" id="jwNext" aria-label="Next way to journal">${ic('chevR')}</button>`
+          +`</div>`
         +`</div>`
       +`</section>`
     +`</div>`
@@ -10232,7 +10238,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v89';
+const CACHE = 'lumen-v90';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
