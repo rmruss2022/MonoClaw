@@ -3171,7 +3171,7 @@ a{color:var(--purple)}
   background:linear-gradient(160deg,#6f5427,#574121);border:1px solid rgba(245,201,119,.42);color:#ffe3ad;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,236,190,.22)}
 .jx-close svg{width:17px;height:17px}
 .jflow{padding-top:52px}
-.jp1-hero .jp-card{position:relative;margin:0 auto;max-width:460px;border-radius:28px;padding:26px 20px 24px;
+.jp1-hero .jp-card{position:relative;margin:0 auto;width:100%;max-width:460px;box-sizing:border-box;border-radius:28px;padding:26px 20px 24px;
   background:linear-gradient(160deg,#8a6a33 0%,#6f5427 50%,#574121 100%);border:1px solid rgba(245,201,119,.42);
   box-shadow:inset 0 1px 0 rgba(255,236,190,.26),inset 0 -14px 26px rgba(0,0,0,.24),0 10px 26px -12px rgba(40,24,4,.5)}
 .jp1-hero .jp-card .letter-head span{color:#f0dcae}
@@ -3181,7 +3181,7 @@ a{color:var(--purple)}
 .jp1-hero .jpr-t{color:#ffe3ad;text-shadow:0 0 18px rgba(245,201,119,.45)}
 .jp1-hero .jpr-l{color:#e8c98f}
 .jp1-hero .letter-head{justify-content:center;opacity:.85}
-.jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:420px;padding:16px 28px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
+.jbegin{position:relative;z-index:1;margin:18px auto 6px;width:100%;max-width:460px;padding:16px 28px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:17px}
 .jbegin .seal-ic{width:22px;height:22px}
 .jbegin-sub{text-align:center;font-size:13px;color:var(--muted);max-width:360px;margin:0 auto}
 .jwrite{display:flex;flex-direction:column;gap:14px;min-height:calc(100dvh - 88px)}
@@ -10238,7 +10238,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v93';
+const CACHE = 'lumen-v94';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
