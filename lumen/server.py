@@ -3229,7 +3229,7 @@ a{color:var(--purple)}
 .jw-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:auto;padding-top:6px}
 .jw-foot .letter-seal-btn{margin:0;width:100%;max-width:420px;border-radius:999px;padding:16px 28px;font-size:17px}
 /* --- journal write: gold-bar stage holding 3 depth-gold components --- */
-body.jw-gold{background:linear-gradient(175deg,#fde7ad 0%,#f6cf83 24%,#eaba60 50%,#dba747 76%,#cd9531 100%) fixed !important;overflow:hidden !important}
+body.jw-gold{background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=93') center center / cover no-repeat fixed,linear-gradient(175deg,#fde7ad,#cd9531) fixed !important;overflow:hidden !important}
 html.jw-gold-h{overflow:hidden !important}
 body.jw-writing .jx-close{display:none}
 /* journal write: locked to the viewport, never scrolls */
@@ -10238,7 +10238,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v91';
+const CACHE = 'lumen-v92';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
