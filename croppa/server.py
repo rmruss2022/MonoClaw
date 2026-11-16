@@ -570,6 +570,19 @@ class H(BaseHTTPRequestHandler):
             self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
         else:
             self.send_response(404); self.end_headers(); self.wfile.write(b'not found')
+    def do_HEAD(self):
+        p=self._route()
+        if p in ('/health','/healthz'):
+            self.send_response(200); self.send_header('Content-Length','2'); self.end_headers(); return
+        if p in ('/','/index.html'):
+            ok = not AUTH or self._authed()
+            b = PAGE.encode() if ok else LOGIN_PAGE.encode()
+            self.send_response(200); self.send_header('Content-Type','text/html; charset=utf-8')
+            self.send_header('Content-Length',str(len(b)))
+            self.send_header('Cache-Control','no-cache' if ok else 'no-store'); self.end_headers(); return
+        if AUTH and not self._authed():
+            self.send_response(401); self.end_headers(); return
+        self.send_response(404); self.end_headers()
 
 if __name__=='__main__':
     print(f"Croppa on :{PORT} base='{BASE or '/'}'")
