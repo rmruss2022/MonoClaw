@@ -2567,6 +2567,7 @@ PAGE = r"""<!doctype html>
 .comm-read-t{text-align:center;font-family:var(--serif);font-size:26px;margin:4px 0 14px;color:#f3ecdf}
 .comm-read-p{font-size:15px;line-height:1.62;color:#d8cff0;margin:0 0 13px}
 .comm-read-done{width:100%;margin-top:6px}
+.comm-read-mod{display:flex;gap:10px;justify-content:center;margin:2px 0 14px}
 .jmode-chev{font-size:22px;font-weight:300;line-height:1}
 .you-hero{min-height:200px;background-position:center 46%}
 .you-levelcard{background:#15112466;border:1px solid var(--line);border-radius:18px;padding:16px;margin:2px 0 4px}
@@ -7342,22 +7343,41 @@ const COMM_LETTERS=[
         'On the next out-breath, loosen that grip by ten percent. Not forever. Just for this breath. You can pick it back up after, if you still want it.',
         'This is all letting go ever is: a long series of small releases, one breath at a time. You do not have to drop everything. Only this, only now.']},
 ];
+let _commLetters=COMM_LETTERS;
 async function renderCommunity(){
   const unlocked=(function(){try{return localStorage.getItem('lumen_comm_read')==='1';}catch(e){return false;}})();
-  let fd=null; if(unlocked){try{fd=await api('feed');}catch(e){}}
+  // Fetch the feed always — the "Letters" at the top are real letters shared by
+  // other members. (Reading one still unlocks the full community below.)
+  let fd=null; try{fd=await api('feed');}catch(e){}
   const mine=fd&&fd.me;
+  const allFeed=(fd&&fd.feed)||[];
+  const _firstLine=(t)=>{t=(t||'').trim().replace(/\s+/g,' ');const m=t.match(/^(.{0,54}?[.!?])(\s|$)/);let s=m?m[1]:t.slice(0,54);if(!m&&t.length>54)s=s.replace(/\s+\S*$/,'')+'…';return s;};
+  // real letters from OTHER users (shared journal entries with enough text)
+  const userLetters=allFeed.filter(f=>f.type==='letter'&&(f.text||'').trim().length>24&&f.author_id&&f.author_id!==mine).slice(0,3);
+  const usingUser=userLetters.length>0;
+  _commLetters = usingUser ? userLetters.map((f,i)=>({
+      ic:['comm-letter','comm-quill','comm-leaf'][i%3],
+      by:`A letter from ${f.name||'a member'}`,
+      t:_firstLine(f.text),
+      teaser:(f.text.trim().slice(0,110)+(f.text.trim().length>110?'…':'')),
+      body:f.text.trim().split(/\n{2,}|\n/).filter(x=>x.trim()),
+      meta:niceDate(f.created), id:f.id, author_id:f.author_id, user:true
+    })) : COMM_LETTERS;
+  const featuredIds=new Set(usingUser?userLetters.map(f=>f.id):[]);
+  const feedBelow=allFeed.filter(f=>!featuredIds.has(f.id));
   const mod=f=>(f.author_id&&f.author_id!==mine)?`<div class="mini-mod"><button class="mini-modbtn" data-report="${f.id}">${ic('flag')} Report</button><button class="mini-modbtn" data-block="${f.author_id}">Block</button></div>`:'';
   const fcard=f=>f.type==='spot'
     ? `<div class="letter mini spot-post"><img class="spot-img" src="${esc(f.photo)}" alt="meditation spot" onerror="this.remove()"><div class="spot-meta"><div class="letter-head"><span>${esc(f.name)||'Someone'}</span><span class="letter-tag">${niceDate(f.created)}</span></div><div class="spot-where">${ic('pin','g')} ${esc(f.city)||'Somewhere on Earth'} · ${f.minutes} min · ${SS_LABEL[f.soundscape]||esc(f.soundscape)}</div>${f.text?`<div class="mini-body">${esc(f.text)}</div>`:''}${f.mood?`<div class="mini-mood">— felt ${esc(f.mood)}</div>`:''}${mod(f)}</div></div>`
     : `<div class="letter mini"><div class="letter-head"><span>${esc(f.name)}</span><span class="letter-tag">${niceDate(f.created)}</span></div><div class="mini-body">${esc(f.text)}</div>${f.mood?`<div class="mini-mood">— felt ${esc(f.mood)}</div>`:''}${mod(f)}</div>`;
-  const letterCard=(l,i)=>`<button class="comm-letter" data-i="${i}"><span class="comm-let-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><span class="comm-let-body"><span class="comm-let-eye">${esc(l.by)}</span><span class="comm-let-t">${esc(l.t)}</span><span class="comm-let-teaser">${esc(l.teaser)}</span></span><span class="comm-let-go">${ic('book')}</span></button>`;
+  const letterCard=(l,i)=>`<button class="comm-letter" data-i="${i}"><span class="comm-let-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><span class="comm-let-body"><span class="comm-let-eye">${esc(l.by)}${l.meta?' · '+esc(l.meta):''}</span><span class="comm-let-t">${esc(l.t)}</span><span class="comm-let-teaser">${esc(l.teaser)}</span></span><span class="comm-let-go">${ic('book')}</span></button>`;
+  const introTxt=usingUser?'Letters shared by other meditators. Open one to unlock the community below.':'Three letters to read slowly. Open one to unlock the community below.';
   $('#app').innerHTML=`<section class="nh-hero comm-hero" id="commHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Community</h1><p class="nh-sub">Read a letter, then sit with everyone.</p></div></div></section>`
     +`<div class="nh-sec-h" style="margin:2px 2px 0"><h2>Letters</h2></div>`
-    +`<p class="comm-intro">Three letters to read slowly. Open one to unlock the community below.</p>`
-    +`<div class="comm-letters">`+COMM_LETTERS.map(letterCard).join('')+`</div>`
+    +`<p class="comm-intro">${introTxt}</p>`
+    +`<div class="comm-letters">`+_commLetters.map(letterCard).join('')+`</div>`
     +`<div class="nh-sec-h" style="margin:20px 2px 10px"><h2>The Community</h2>${unlocked?'':`<span class="comm-locktag">${ic('lock')} Locked</span>`}</div>`
     +(unlocked
-       ? `<div id="commFeed">`+((fd&&fd.feed&&fd.feed.length)?fd.feed.map(fcard).join(''):`<div class="card center muted">Nothing shared yet. Meditate, snap your spot, and be the first.</div>`)+`</div>`
+       ? `<div id="commFeed">`+(feedBelow.length?feedBelow.map(fcard).join(''):`<div class="card center muted">Nothing shared yet. Meditate, snap your spot, and be the first.</div>`)+`</div>`
        : `<div class="comm-lock"><span class="comm-lock-ic">${ic('lock')}</span><div class="comm-lock-t">The community is resting</div><div class="comm-lock-sub">Read one of the letters above to open everyone's posts.</div></div>`);
   {const h=$('#commHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/comm-hero.jpg?v=62')";};im.src="/art/comm-hero.jpg?v=62";}}
   document.querySelectorAll('.comm-letter').forEach(b=>b.onclick=()=>openCommLetter(+b.dataset.i));
@@ -7367,13 +7387,16 @@ async function renderCommunity(){
   }
 }
 function openCommLetter(i){
-  const l=COMM_LETTERS[i]; if(!l)return;
+  const l=_commLetters[i]; if(!l)return;
   try{localStorage.setItem('lumen_comm_read','1');}catch(e){}
-  const ov=el(`<div class="comm-reader"><div class="comm-read-card"><button class="comm-read-x" id="crx" aria-label="Close">${ic('close')}</button><span class="comm-read-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><div class="comm-read-eye">${esc(l.by)}</div><h1 class="comm-read-t">${esc(l.t)}</h1>${l.body.map(p=>`<p class="comm-read-p">${esc(p)}</p>`).join('')}<button class="btn gold comm-read-done" id="crdone">Close &amp; open the community</button></div></div>`);
+  const modRow=l.user?`<div class="comm-read-mod"><button class="mini-modbtn" id="crrep">${ic('flag')} Report</button><button class="mini-modbtn" id="crblk">Block</button></div>`:'';
+  const ov=el(`<div class="comm-reader"><div class="comm-read-card"><button class="comm-read-x" id="crx" aria-label="Close">${ic('close')}</button><span class="comm-read-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><div class="comm-read-eye">${esc(l.by)}${l.meta?' · '+esc(l.meta):''}</div><h1 class="comm-read-t">${esc(l.t)}</h1>${l.body.map(p=>`<p class="comm-read-p">${esc(p)}</p>`).join('')}${modRow}<button class="btn gold comm-read-done" id="crdone">Close &amp; open the community</button></div></div>`);
   document.body.appendChild(ov);
   const close=()=>{ov.remove();if(TAB==='community')renderCommunity();};
   ov.querySelector('#crx').onclick=close;
   ov.querySelector('#crdone').onclick=close;
+  const rep=ov.querySelector('#crrep');if(rep)rep.onclick=async()=>{try{await api('feed/report','POST',{id:l.id});}catch(e){}toast('Reported — thank you.');close();};
+  const blk=ov.querySelector('#crblk');if(blk)blk.onclick=async()=>{try{await api('feed/block','POST',{author_id:l.author_id});}catch(e){}toast('Blocked.');close();};
   ov.addEventListener('click',e=>{if(e.target===ov)close();});
 }
 async function renderJournal(){
