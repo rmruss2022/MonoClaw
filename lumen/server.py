@@ -3537,6 +3537,9 @@ body.jw-writing .jx-close{display:none}
   background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--gold) 26%,transparent),#140e26 72%);border:1px solid color-mix(in srgb,var(--gold) 28%,transparent);box-shadow:0 0 12px -5px color-mix(in srgb,var(--gold) 72%,transparent)}
 .pgrid-med .i{width:24px;height:24px}
 .pgrid-nm{font-size:13px;font-weight:600;color:#d6ccdf;text-align:center;line-height:1.2}
+/* per-pillar "light up" progress bar */
+.pil-bar{width:100%;margin-top:2px;height:6px;border-radius:999px;background:rgba(245,201,119,.12);box-shadow:inset 0 0 0 1px rgba(245,201,119,.14);overflow:hidden}
+.pil-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#d8a24a,#f5c977 60%,#ffe9bf);box-shadow:0 0 9px 1px rgba(245,201,119,.7),0 0 3px rgba(255,233,191,.9);transition:width .6s ease}
 .jpath{position:relative;overflow:hidden;border:1px solid #2a2144;border-radius:18px;padding:16px;margin-top:20px;background:linear-gradient(165deg,#171127,#100c1b 78%)}
 .jpath:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:radial-gradient(120% 70% at 92% -10%,rgba(168,85,247,.2),transparent 55%)}
 .jpath>*{position:relative;z-index:1}
@@ -7422,7 +7425,8 @@ async function renderJournalHome(){
     +`<span class="pcolumn-glow"></span><span class="pcolumn-art" data-pc="#d8c6a0"></span>`
     +`<span class="pcolumn-base"></span><span class="pcolumn-nm">${esc(p.name)}</span></button>`;
   const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
-    +`<span class="pil-med" style="background-image:url('/art/${PILLAR_IMG[p.name]||'pil-purpose'}.jpg?v=64')"></span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
+    +`<span class="pil-med" style="background-image:url('/art/${PILLAR_IMG[p.name]||'pil-purpose'}.jpg?v=64')"></span><span class="pgrid-nm">${esc(p.name)}</span>`
+    +`<span class="pil-bar" aria-hidden="true"><i style="width:${p.chapters?Math.min(100,Math.round(100*(p.sittings||0)/p.chapters)):0}%"></i></span></button>`;
   const jung=[['The Shadow','Meet what you suppress','jg_shadow'],['The Persona','The mask you wear','jg_persona'],['Anima &amp; Animus','Your inner opposite','jg_anima'],['The Self','Wholeness &amp; integration','jg_self']];
   const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-med">${ic(j[2])}</span><span class="jcard-n">${i+1}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span><span class="jcard-lk">${ic('lock')}</span></div>`;
   $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="jnlHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="talkbtn">${ic('chat')} Talk</button></header><div class="nh-hero-txt"><h1 class="nh-greet">${(ME&&ME.name)?esc(ME.name.split(' ')[0])+'’s Journal':'The Journal'}</h1><p class="nh-sub">A letter to yourself \u2014 one honest line at a time.</p></div></div></section>`
@@ -7783,7 +7787,8 @@ async function renderPillarsSection(){
     +`<span class="pcolumn-base"></span>`
     +`<span class="pcolumn-nm">${esc(p.name)}</span></button>`;
   const otherCard=(p)=>`<button class="pgrid-card" data-p="${esc(p.name)}" style="--pc:${pcolor(p.name)}">`
-    +`<span class="pil-med" style="background-image:url('/art/${PILLAR_IMG[p.name]||'pil-purpose'}.jpg?v=64')"></span><span class="pgrid-nm">${esc(p.name)}</span></button>`;
+    +`<span class="pil-med" style="background-image:url('/art/${PILLAR_IMG[p.name]||'pil-purpose'}.jpg?v=64')"></span><span class="pgrid-nm">${esc(p.name)}</span>`
+    +`<span class="pil-bar" aria-hidden="true"><i style="width:${p.chapters?Math.min(100,Math.round(100*(p.sittings||0)/p.chapters)):0}%"></i></span></button>`;
   const jung=[['The Shadow','Meet what you suppress'],['The Persona','The mask you wear'],['Anima &amp; Animus','Your inner opposite'],['The Self','Wholeness &amp; integration']];
   box.innerHTML=
     `<div class="pcase">`
@@ -8915,7 +8920,8 @@ class H(BaseHTTPRequestHandler):
                 ex = PILLAR_EXERCISES.get(name)
                 out.append({"name": name, "title": ex[0] if ex else name,
                             "invitation": ex[1] if ex else "", "steps": ex[2] if ex else [],
-                            "sittings": counts[name], "last": last.get(name)})
+                            "sittings": counts[name], "chapters": len(pillar_chapters(name)),
+                            "last": last.get(name)})
             done = sum(1 for n in PILLARS if counts[n] > 0)
             self._send(200, {"pillars": out, "focus": focus, "counts": counts,
                              "done": done, "total": len(PILLARS)}); return
@@ -10241,7 +10247,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v97';
+const CACHE = 'lumen-v98';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
