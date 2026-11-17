@@ -3530,13 +3530,13 @@ body.jw-writing .jx-close{display:none}
 .pgrid-h,.jpath-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
 .pgrid-h{color:#c3b2ee;margin:2px 2px 10px}
 .pgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.pgrid-card{display:flex;flex-direction:row;align-items:center;gap:11px;cursor:pointer;font-family:inherit;padding:12px 13px;border-radius:16px;
+.pgrid-card{display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;font-family:inherit;padding:16px 10px 14px;border-radius:16px;
   background:linear-gradient(165deg,#1b1530,#130f20 82%) padding-box,linear-gradient(180deg,rgba(245,201,119,.5),rgba(168,85,247,.18) 55%,rgba(128,108,196,.06)) border-box;border:1.5px solid transparent;box-shadow:0 8px 22px -16px rgba(150,120,80,.3)}
 .pgrid-card:active{transform:scale(.97)}
-.pgrid-med{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--gold) 86%,#fff);filter:drop-shadow(0 0 7px rgba(245,201,119,.55));
+.pgrid-med{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:color-mix(in srgb,var(--gold) 86%,#fff);filter:drop-shadow(0 0 7px rgba(245,201,119,.55));
   background:radial-gradient(circle at 34% 30%,color-mix(in srgb,var(--gold) 26%,transparent),#140e26 72%);border:1px solid color-mix(in srgb,var(--gold) 28%,transparent);box-shadow:0 0 12px -5px color-mix(in srgb,var(--gold) 72%,transparent)}
-.pgrid-med .i{width:21px;height:21px}
-.pgrid-nm{font-size:12.5px;font-weight:600;color:#d6ccdf;text-align:left;line-height:1.2}
+.pgrid-med .i{width:24px;height:24px}
+.pgrid-nm{font-size:13px;font-weight:600;color:#d6ccdf;text-align:center;line-height:1.2}
 .jpath{position:relative;overflow:hidden;border:1px solid #2a2144;border-radius:18px;padding:16px;margin-top:20px;background:linear-gradient(165deg,#171127,#100c1b 78%)}
 .jpath:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;background:radial-gradient(120% 70% at 92% -10%,rgba(168,85,247,.2),transparent 55%)}
 .jpath>*{position:relative;z-index:1}
@@ -10241,7 +10241,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v96';
+const CACHE = 'lumen-v97';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
