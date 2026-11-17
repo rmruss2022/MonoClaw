@@ -3253,8 +3253,9 @@ a{color:var(--purple)}
 .jw-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:auto;padding-top:6px}
 .jw-foot .letter-seal-btn{margin:0;width:100%;max-width:420px;border-radius:999px;padding:16px 28px;font-size:17px}
 /* --- journal write: gold-bar stage holding 3 depth-gold components --- */
-body.jw-gold{background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=94') center center / cover no-repeat fixed,linear-gradient(175deg,#fde7ad,#cd9531) fixed !important;overflow:hidden !important}
-html.jw-gold-h{overflow:hidden !important}
+body.jw-gold{background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=94') center center / cover no-repeat,linear-gradient(175deg,#fde7ad,#cd9531) !important;background-color:#cd9531 !important;overflow:hidden !important}
+/* gold the root too, so when the keyboard opens no dark base shows behind it */
+html.jw-gold-h{overflow:hidden !important;background:linear-gradient(175deg,#fde7ad,#cd9531) !important;background-color:#cd9531 !important}
 body.jw-writing .jx-close{display:none}
 /* journal write: locked to the viewport, never scrolls */
 .jwrite{position:fixed !important;inset:0;height:100dvh;max-height:100dvh;overflow:hidden}
@@ -3303,6 +3304,17 @@ body.jw-writing .jx-close{display:none}
 .jw-c-resp .jw-body::placeholder{color:rgba(90,62,24,.5)}
 .jwrite{height:100dvh;max-height:100dvh;overflow:hidden;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 8px);background:transparent}
 .jw-stage{position:relative;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;padding:0;background:none;border:0;box-shadow:none}
+/* keyboard up (typing): shrink the stage to the VISIBLE area above the keyboard
+   (var set from visualViewport), hide the timer, keep the prompt as a compact
+   strip at the TOP, and give the text box all the remaining room. No black. */
+body.jw-typing .jwrite{height:var(--jw-vh,100dvh) !important;max-height:var(--jw-vh,100dvh) !important}
+body.jw-typing #jp2 .jw-c-timer{display:none !important}
+body.jw-typing #jp2 .jw-c-prompt{flex:0 0 auto !important;max-height:24vh}
+body.jw-typing #jp2 .jw-c-prompt .jw-cbody{overflow:auto}
+body.jw-typing #jp2 .jw-c-resp{flex:1 1 auto !important}
+body.jw-typing #jp2 .jw-resp-arrows{display:none}
+body.jw-typing #jp2 .jw-foot{display:none !important}
+body.jw-typing #jp2 .jw-c-resp .jw-body{height:100% !important;min-height:0 !important}
 .jw-x{position:absolute;top:10px;right:10px;z-index:7;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
   background:rgba(60,40,10,.42);color:#ffe6ab;display:flex;align-items:center;justify-content:center}
 .jw-x .i{width:18px;height:18px}
@@ -6979,7 +6991,7 @@ function enterWritePhase(){
   try{Haptics.medium();}catch(e){}
   jStartTimer(180);
   jPhotoTaken=false;
-  try{document.body.classList.add('jw-gold','jw-writing');}catch(e){}   // whole-screen gold ground; jw-writing hides the back-X (jp2 has its own)
+  try{document.body.classList.add('jw-gold','jw-writing');document.documentElement.classList.add('jw-gold-h');}catch(e){}   // whole-screen gold ground; jw-writing hides the back-X (jp2 has its own)
   const walking=jMaybeWalk();          // show the 3-part walkthrough on first ever open
   jSetWriteMode(jChosenMode||'photo',walking); // suppress auto-focus while the walkthrough is up
   jUpdateSeal();
@@ -7029,6 +7041,32 @@ function jSetWriteMode(m,noFocus){
   // keyboard), then a second tap focuses it to write. Other modes clear that.
   if(ta){ta.readOnly=(m==='type');try{ta.blur();}catch(e){}}
   jFitTimer();jFitPrompt();
+}
+// --- keyboard-aware typing mode ---------------------------------------------
+// When the textarea is focused the on-screen keyboard covers the bottom of the
+// screen. 100dvh doesn't shrink for it, so we read the real visible height from
+// visualViewport and clamp the stage to it: the prompt stays a compact strip at
+// the top, the text box fills the space ABOVE the keyboard, and the gold ground
+// covers everything (no dark base peeking out behind the keyboard).
+function jSyncKbd(){
+  const vv=window.visualViewport; if(!vv)return;
+  document.documentElement.style.setProperty('--jw-vh', Math.round(vv.height)+'px');
+}
+let _jvvBound=false;
+function jBindKbd(){
+  const vv=window.visualViewport; if(!vv||_jvvBound)return; _jvvBound=true;
+  vv.addEventListener('resize',jSyncKbd); vv.addEventListener('scroll',jSyncKbd);
+}
+function jKbdFocus(){
+  document.body.classList.add('jw-typing');
+  jBindKbd(); jSyncKbd();
+  // the keyboard animates in over a few hundred ms — keep re-measuring + refit
+  [80,220,420].forEach(t=>setTimeout(()=>{jSyncKbd();jFitPrompt();},t));
+}
+function jKbdBlur(){
+  document.body.classList.remove('jw-typing');
+  document.documentElement.style.removeProperty('--jw-vh');
+  setTimeout(()=>{jFitTimer();jFitPrompt();},60);
 }
 // Accordion: the tapped component grows to ~half the stage; the others shrink.
 function jExpand(which){
@@ -7091,7 +7129,7 @@ function exitToPrompt(){
 }
 function wireComposerCommon(getPrompt){
   jGetPrompt=getPrompt;
-  try{document.body.classList.add('jw-gold');document.body.classList.remove('jw-writing');}catch(e){}  // the whole journal flow sits on the gold ground now
+  try{document.body.classList.add('jw-gold');document.body.classList.remove('jw-writing');document.documentElement.classList.add('jw-gold-h');}catch(e){}  // the whole journal flow sits on the gold ground now
   // Type / Record / Photograph radio — selecting one sets the write-screen input.
   jChosenMode='photo';
   document.querySelectorAll('#jpWays .jp-way').forEach(b=>b.onclick=()=>{
@@ -7110,6 +7148,7 @@ function wireComposerCommon(getPrompt){
   const jwgo=$('#jwWalkGo');if(jwgo)jwgo.onclick=()=>{const w=$('#jwWalk');if(w)w.hidden=true;try{localStorage.setItem('lumen_jwrite_walk','1');}catch(e){}jSetWriteMode(jChosenMode||'photo');};
   const f=$('#jfile');if(f)f.onchange=(e)=>{jPhotoTaken=true;jUpdateSeal();transcribePhoto(e.target.files&&e.target.files[0]);};
   const jtEl=$('#jt');if(jtEl)jtEl.addEventListener('input',jUpdateSeal);
+  if(jtEl){jtEl.addEventListener('focus',jKbdFocus);jtEl.addEventListener('blur',jKbdBlur);}
   // First tap on the compact text box enlarges the response (no keyboard). It's
   // read-only until then, so the tap can't focus it; once enlarged we make it
   // editable, and the next tap focuses it to write.
@@ -7140,7 +7179,7 @@ function sealHandler(payload){
     // completion screen, so the writer decides after they've read it back.
     const btn=$('#jsave');const orig=btn.innerHTML;btn.disabled=true;btn.innerHTML=`<span class="spinner"></span> Sealing & reflecting…`;
     try{const r=await api('journal','POST',{text:t,prompt:ex.prompt||'',share:false,kind:ex.kind,pillar:ex.pillar||'',place:ex.place||'',chapter:ex.chapter||null});
-      $('#jt').value='';try{jStopTimer();}catch(_){}try{document.body.classList.remove('jw-gold','jw-writing');}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,false);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
+      $('#jt').value='';try{jStopTimer();}catch(_){}try{document.body.classList.remove('jw-gold','jw-writing');document.documentElement.classList.remove('jw-gold-h');document.body.classList.remove('jw-typing');}catch(_){}if(r&&r.week)jWeek={counts:r.week.counts};showJournalSealed(r,words,false);}catch(e){toast(e);}finally{btn.disabled=false;btn.innerHTML=orig;}
   };
 }
 
@@ -7464,7 +7503,7 @@ async function renderJournal(){
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
   // it covers the whole screen; restore it on every other journal screen.
   try{const nv=document.getElementById('nav');if(nv){if(jScreen==='compose')nv.classList.add('hidden');else nv.classList.remove('hidden');}}catch(e){}
-  try{if(jScreen!=='compose'){jStopTimer();Sound.bedStop();document.body.classList.remove('jw-gold','jw-writing');}}catch(e){}
+  try{if(jScreen!=='compose'){jStopTimer();Sound.bedStop();document.body.classList.remove('jw-gold','jw-writing');document.documentElement.classList.remove('jw-gold-h');document.body.classList.remove('jw-typing');}}catch(e){}
   // The free tier, enforced in the one place every door funnels through.
   if(!_isPrem() && (jScreen==='compose'||jScreen==='plessons')){
     if(journalMode==='season')
@@ -10380,7 +10419,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v100';
+const CACHE = 'lumen-v101';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
