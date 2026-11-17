@@ -97,6 +97,12 @@ def init_db():
     CREATE TABLE IF NOT EXISTS mod_blocks(
       blocker_id INTEGER, blocked_id INTEGER, created TEXT,
       UNIQUE(blocker_id, blocked_id));
+    CREATE TABLE IF NOT EXISTS letter_replies(
+      id INTEGER PRIMARY KEY, letter_id INTEGER, user_id INTEGER, text TEXT, created TEXT);
+    CREATE INDEX IF NOT EXISTS ix_letter_replies ON letter_replies(letter_id);
+    CREATE TABLE IF NOT EXISTS reply_reports(
+      id INTEGER PRIMARY KEY, reply_id INTEGER, reporter_id INTEGER, created TEXT,
+      UNIQUE(reply_id, reporter_id));
     CREATE TABLE IF NOT EXISTS companions(
       id INTEGER PRIMARY KEY, user_id INTEGER, code TEXT,
       fed INTEGER DEFAULT 0, created TEXT,
@@ -2568,6 +2574,23 @@ PAGE = r"""<!doctype html>
 .comm-read-p{font-size:15px;line-height:1.62;color:#d8cff0;margin:0 0 13px}
 .comm-read-done{width:100%;margin-top:6px}
 .comm-read-mod{display:flex;gap:10px;justify-content:center;margin:2px 0 14px}
+.comm-share-btn{width:100%;margin:0 0 14px}
+.comm-share-hint{font-size:12.5px;color:var(--muted);margin:2px 0 10px;line-height:1.45}
+.comm-share-ta{width:100%;min-height:150px;border-radius:14px;border:1px solid rgba(245,201,119,.3);background:rgba(20,13,4,.4);color:#efe9f8;font-family:var(--serif);font-size:15px;line-height:1.6;padding:12px;margin-bottom:12px;resize:vertical}
+.comm-share-ta::placeholder{color:#6f6790;font-style:italic}
+.comm-thread{margin:16px 0 6px;border-top:1px solid #2a2144;padding-top:14px}
+.comm-thread-h{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:#c3b2ee;margin-bottom:10px}
+.comm-reply{background:rgba(20,16,40,.5);border:1px solid #241d3e;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.comm-reply-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:3px}
+.comm-reply-nm{font-weight:600;color:#e6dcff;font-size:13px}
+.comm-reply-dt{font-size:11px;color:var(--muted)}
+.comm-reply-b{font-size:14px;line-height:1.5;color:#d8cff0}
+.comm-reply-rep{margin-top:7px}
+.comm-reply-empty{font-size:13px;color:var(--muted);font-style:italic;padding:2px 0 8px}
+.comm-reply-box{margin-top:10px}
+.comm-reply-ta{width:100%;border-radius:12px;border:1px solid rgba(245,201,119,.3);background:rgba(20,13,4,.4);color:#efe9f8;font-family:inherit;font-size:14px;line-height:1.5;padding:10px;resize:vertical}
+.comm-reply-ta::placeholder{color:#6f6790}
+.comm-reply-send{width:100%;margin-top:8px}
 .jmode-chev{font-size:22px;font-weight:300;line-height:1}
 .you-hero{min-height:200px;background-position:center 46%}
 .you-levelcard{background:#15112466;border:1px solid var(--line);border-radius:18px;padding:16px;margin:2px 0 4px}
@@ -7374,6 +7397,7 @@ async function renderCommunity(){
   $('#app').innerHTML=`<section class="nh-hero comm-hero" id="commHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Community</h1><p class="nh-sub">Read a letter, then sit with everyone.</p></div></div></section>`
     +`<div class="nh-sec-h" style="margin:2px 2px 0"><h2>Letters</h2></div>`
     +`<p class="comm-intro">${introTxt}</p>`
+    +`<button class="btn gold comm-share-btn" id="commShare">${ic('book','seal-ic')} Share a letter</button>`
     +`<div class="comm-letters">`+_commLetters.map(letterCard).join('')+`</div>`
     +`<div class="nh-sec-h" style="margin:20px 2px 10px"><h2>The Community</h2>${unlocked?'':`<span class="comm-locktag">${ic('lock')} Locked</span>`}</div>`
     +(unlocked
@@ -7381,6 +7405,7 @@ async function renderCommunity(){
        : `<div class="comm-lock"><span class="comm-lock-ic">${ic('lock')}</span><div class="comm-lock-t">The community is resting</div><div class="comm-lock-sub">Read one of the letters above to open everyone's posts.</div></div>`);
   {const h=$('#commHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/comm-hero.jpg?v=62')";};im.src="/art/comm-hero.jpg?v=62";}}
   document.querySelectorAll('.comm-letter').forEach(b=>b.onclick=()=>openCommLetter(+b.dataset.i));
+  {const sb=$('#commShare');if(sb)sb.onclick=openShareLetter;}
   if(unlocked){
     document.querySelectorAll('.mini-modbtn[data-report]').forEach(b=>b.onclick=async()=>{try{await api('feed/report','POST',{id:+b.dataset.report});}catch(e){}toast('Reported — hidden from your feed.');renderCommunity();});
     document.querySelectorAll('.mini-modbtn[data-block]').forEach(b=>b.onclick=async()=>{try{await api('feed/block','POST',{author_id:+b.dataset.block});}catch(e){}toast('Blocked.');renderCommunity();});
@@ -7390,7 +7415,10 @@ function openCommLetter(i){
   const l=_commLetters[i]; if(!l)return;
   try{localStorage.setItem('lumen_comm_read','1');}catch(e){}
   const modRow=l.user?`<div class="comm-read-mod"><button class="mini-modbtn" id="crrep">${ic('flag')} Report</button><button class="mini-modbtn" id="crblk">Block</button></div>`:'';
-  const ov=el(`<div class="comm-reader"><div class="comm-read-card"><button class="comm-read-x" id="crx" aria-label="Close">${ic('close')}</button><span class="comm-read-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><div class="comm-read-eye">${esc(l.by)}${l.meta?' · '+esc(l.meta):''}</div><h1 class="comm-read-t">${esc(l.t)}</h1>${l.body.map(p=>`<p class="comm-read-p">${esc(p)}</p>`).join('')}${modRow}<button class="btn gold comm-read-done" id="crdone">Close &amp; open the community</button></div></div>`);
+  // Real member letters can be read AND written back to — any number of times.
+  const thread=l.user?`<div class="comm-thread"><div class="comm-thread-h">Responses</div><div id="comm-thread-list"><div class="comm-reply-empty">Loading…</div></div>`
+    +`<div class="comm-reply-box"><textarea id="comm-reply-text" class="comm-reply-ta" rows="2" placeholder="Write back to ${esc((l.by||'').replace('A letter from ','')||'them')}…"></textarea><button class="btn gold comm-reply-send" id="comm-reply-send">${ic('book')} Respond</button></div></div>`:'';
+  const ov=el(`<div class="comm-reader"><div class="comm-read-card"><button class="comm-read-x" id="crx" aria-label="Close">${ic('close')}</button><span class="comm-read-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><div class="comm-read-eye">${esc(l.by)}${l.meta?' · '+esc(l.meta):''}</div><h1 class="comm-read-t">${esc(l.t)}</h1>${l.body.map(p=>`<p class="comm-read-p">${esc(p)}</p>`).join('')}${modRow}${thread}<button class="btn gold comm-read-done" id="crdone">Close &amp; open the community</button></div></div>`);
   document.body.appendChild(ov);
   const close=()=>{ov.remove();if(TAB==='community')renderCommunity();};
   ov.querySelector('#crx').onclick=close;
@@ -7398,6 +7426,38 @@ function openCommLetter(i){
   const rep=ov.querySelector('#crrep');if(rep)rep.onclick=async()=>{try{await api('feed/report','POST',{id:l.id});}catch(e){}toast('Reported — thank you.');close();};
   const blk=ov.querySelector('#crblk');if(blk)blk.onclick=async()=>{try{await api('feed/block','POST',{author_id:l.author_id});}catch(e){}toast('Blocked.');close();};
   ov.addEventListener('click',e=>{if(e.target===ov)close();});
+  if(l.user&&l.id){
+    const loadThread=async()=>{
+      let t=null; try{t=await api('letter/thread?id='+l.id);}catch(e){}
+      const me=t&&t.me; const reps=(t&&t.replies)||[];
+      const box=ov.querySelector('#comm-thread-list'); if(!box)return;
+      box.innerHTML = reps.length ? reps.map(r=>`<div class="comm-reply"><div class="comm-reply-h"><span class="comm-reply-nm">${esc(r.name||'Someone')}</span><span class="comm-reply-dt">${niceDate(r.created)}</span></div><div class="comm-reply-b">${esc(r.text)}</div>${(r.author_id&&r.author_id!==me)?`<button class="mini-modbtn comm-reply-rep" data-rid="${r.id}">${ic('flag')} Report</button>`:''}</div>`).join('') : `<div class="comm-reply-empty">No responses yet. Be the first to write back.</div>`;
+      box.querySelectorAll('.comm-reply-rep').forEach(b=>b.onclick=async()=>{try{await api('letter/reply/report','POST',{id:+b.dataset.rid});}catch(e){}toast('Reported — thank you.');loadThread();});
+    };
+    loadThread();
+    const sb=ov.querySelector('#comm-reply-send');
+    if(sb)sb.onclick=async()=>{const ta=ov.querySelector('#comm-reply-text');const v=(ta.value||'').trim();if(!v)return;sb.disabled=true;try{await api('letter/reply','POST',{letter_id:l.id,text:v});ta.value='';try{Haptics.select();}catch(e){}await loadThread();}catch(e){toast(e);}finally{sb.disabled=false;}};
+  }
+}
+// Share a letter to the community — intelligently pre-filled from your most
+// recent private reflection, which you can edit or replace before sharing.
+async function openShareLetter(){
+  let draft='';
+  try{const r=await api('journal');const es=(r&&r.entries)||[];const mine=es.find(e=>e.text&&e.text.trim().length>12&&!e.shared)||es.find(e=>e.text&&e.text.trim());if(mine)draft=mine.text.trim();}catch(e){}
+  const ov=el(`<div class="comm-reader"><div class="comm-read-card"><button class="comm-read-x" id="shx" aria-label="Close">${ic('close')}</button><div class="comm-read-eye">Share a letter</div><h1 class="comm-read-t">Write to the community</h1><p class="comm-share-hint">${draft?'Pulled from your latest reflection — edit it, then share. Only what you send here is public.':'A few honest lines from your practice. Only what you send here is public.'}</p><textarea id="shtext" class="comm-share-ta" rows="7" placeholder="Dear fellow traveler,&#10;&#10;Today I noticed…">${esc(draft)}</textarea><button class="btn gold comm-read-done" id="shsend">${ic('seal','seal-ic')} Share with the community</button></div></div>`);
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  ov.querySelector('#shx').onclick=close;
+  ov.addEventListener('click',e=>{if(e.target===ov)close();});
+  ov.querySelector('#shsend').onclick=async()=>{
+    const v=(ov.querySelector('#shtext').value||'').trim(); if(v.length<4){toast('Write a few words first.');return;}
+    const btn=ov.querySelector('#shsend');btn.disabled=true;
+    try{await api('journal','POST',{text:v,prompt:'',kind:'daily',share:true});
+      try{localStorage.setItem('lumen_comm_read','1');}catch(e){}
+      try{Haptics.medium();}catch(e){}
+      toast('Shared — thank you for lighting the way.');close();if(TAB==='community')renderCommunity();
+    }catch(e){toast(e);btn.disabled=false;}
+  };
 }
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
@@ -7949,7 +8009,7 @@ function chatVoice(){
 }
 
 /* ---- profile ---- */
-const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['journal','Journal rhythm (deep · daily · season)'],['community','Community activity'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
+const NCATS=[['reminder','Daily reminder to sit'],['streak','Streak saves'],['progress','Milestones & celebrations'],['journal','Journal rhythm (deep · daily · season)'],['community','Community activity'],['letters','Invitations to write a letter'],['discovery','New places to explore'],['winback','We-miss-you nudges']];
 function hoursOpts(sel){let h='';for(let i=0;i<24;i++){const lbl=(i===0?'12 AM':i<12?i+' AM':i===12?'12 PM':(i-12)+' PM');h+=`<option value="${i}" ${i===sel?'selected':''}>${lbl}</option>`;}return h;}
 /* The purchase bridge is only present inside the iOS wrapper, which sets
    __lumenNativeIAP in injectedJavaScriptBeforeContentLoaded — so it is reliably
@@ -9092,6 +9152,23 @@ class H(BaseHTTPRequestHandler):
             feed.sort(key=lambda f: f["created"] or "", reverse=True)
             self._send(200, {"feed": feed[:60], "me": uid}); return
 
+        if p == "/api/letter/thread":
+            me = self._me(c)
+            uid = me["id"] if me else 0
+            try:
+                lid = int(q.get("id", "0") or 0)
+            except Exception:
+                lid = 0
+            reps = c.execute(
+                """SELECT r.id id, r.text text, r.created created, u.name name, u.id author_id
+                   FROM letter_replies r JOIN users u ON u.id=r.user_id
+                   WHERE r.letter_id=?
+                     AND r.user_id NOT IN (SELECT blocked_id FROM mod_blocks WHERE blocker_id=?)
+                     AND r.id NOT IN (SELECT reply_id FROM reply_reports WHERE reporter_id=?)
+                     AND (SELECT COUNT(*) FROM reply_reports rr WHERE rr.reply_id=r.id) < 2
+                   ORDER BY r.id ASC LIMIT 200""", (lid, uid, uid)).fetchall()
+            self._send(200, {"replies": [dict(r) for r in reps], "me": uid}); return
+
         if p == "/api/achievements":
             u = self._me(c)
             have = {}
@@ -9373,6 +9450,39 @@ class H(BaseHTTPRequestHandler):
                 c.execute("INSERT OR IGNORE INTO mod_blocks(blocker_id,blocked_id,created) VALUES(?,?,?)",
                           (u["id"], bid, now_iso()))
                 c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/letter/reply":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            try:
+                lid = int(d.get("letter_id") or 0)
+            except Exception:
+                lid = 0
+            text = (d.get("text") or "").strip()
+            if not lid or not text:
+                self._send(400, {"error": "A letter and a note are required."}); return
+            # the letter must be a real shared journal entry
+            row = c.execute("SELECT id FROM journal WHERE id=? AND shared=1", (lid,)).fetchone()
+            if not row:
+                self._send(404, {"error": "That letter is no longer available."}); return
+            c.execute("INSERT INTO letter_replies(letter_id,user_id,text,created) VALUES(?,?,?,?)",
+                      (lid, u["id"], text[:1200], now_iso())); c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/letter/reply/report":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            try:
+                rid = int(self._body().get("id") or 0)
+            except Exception:
+                rid = 0
+            if rid:
+                c.execute("INSERT OR IGNORE INTO reply_reports(reply_id,reporter_id,created) VALUES(?,?,?)",
+                          (rid, u["id"], now_iso())); c.commit()
             self._send(200, {"ok": True}); return
 
         if p == "/api/push/register":
@@ -10270,7 +10380,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v99';
+const CACHE = 'lumen-v100';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -11458,7 +11568,7 @@ footer a{color:var(--gold);text-decoration:none}
 # ===========================================================================
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
-NOTIF_CATS = ["reminder", "streak", "progress", "journal", "community", "discovery", "winback"]
+NOTIF_CATS = ["reminder", "streak", "progress", "journal", "community", "letters", "discovery", "winback"]
 DEFAULT_CATS = {k: 1 for k in NOTIF_CATS}
 TIME_CATS = ("daily_reminder", "streak_save", "weekly_recap", "winback")  # count toward daily cap
 DAILY_CAP = 1          # automatic time-based sends per local day
@@ -11552,6 +11662,8 @@ def notif_copy(kind, user, ctx=None, personalize=False):
         "milestone": (f"{streak}-day streak 🔥", "That's real consistency. Proud of you."),
         "journal_nudge": (ctx.get("title", "Your journal is waiting"),
                           ctx.get("body", "A few honest lines, whenever you're ready.")),
+        "letter_invite": ("Write a letter",
+                          f"{name}, a few honest lines to share with the community?"),
         "broadcast": (ctx.get("title", "Lumen"), ctx.get("body", "")),
     }
     title, body = T.get(kind, ("Lumen", ""))
@@ -11720,6 +11832,10 @@ def _notif_candidate(c, u, prefs, lt):
             title, body = _JOURNAL_NUDGE[cat_k]
             return ("journal", *notif_copy("journal_nudge", u, {"title": title, "body": body}),
                     f"journal_week:{week_str()}:{cat_k}")
+    # 2c) letters — a gentle weekly invitation to write a letter to the community.
+    #     Engaged users only (never a cold nag); Saturday late-morning, once a week.
+    if cats.get("letters", 1) and tier in ("new", "habitual", "at_risk") and wd == 5 and h == 11:
+        return ("letters", *notif_copy("letter_invite", u), f"letters_week:{week_str()}")
     # 3) daily reminder — send-time optimized (learned modal hour once we have
     #    history, else the practice time they chose during onboarding, else 7pm)
     if cats.get("reminder", 1) and not sat_today and tier in ("new", "habitual", "at_risk"):
