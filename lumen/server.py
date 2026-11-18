@@ -5553,8 +5553,9 @@ let _jnyFocusH=null;
 function _jnyClearFocus(){if(_jnyFocusH){removeEventListener('scroll',_jnyFocusH);removeEventListener('resize',_jnyFocusH);_jnyFocusH=null;}document.querySelectorAll('.jrny-card.infocus').forEach(c=>c.classList.remove('infocus'));}
 async function renderLessons(){
   try{const r=await api('me');ME=r.profile;}catch(e){}
-  // order journeys by most-recently practiced (saved last_journey wins the tie / drives the pulse)
-  const tracks=[...TRACKS].sort((a,b)=>_trackLast(b.key)-_trackLast(a.key));
+  // fixed editorial order (Philosophy · Deities · Foundations); the active journey
+  // is still highlighted via recentKey below, we just don't reorder the list.
+  const tracks=[...TRACKS];
   let recentKey=(ME&&ME.last_journey&&TRACKS.some(t=>t.key===ME.last_journey))?ME.last_journey:null;
   if(!recentKey&&_trackLast(tracks[0].key)>0)recentKey=tracks[0].key;
   const card=(t)=>{
@@ -6339,9 +6340,9 @@ const LESSONS=[{
 }];
 // --- curriculum: tracks group the lessons; roadmap shows the program is growing ---
 const TRACKS=[
-  {key:'foundations', name:'Foundations', sub:'The practice itself — start here. Universal, secular, science-grounded.', accent:'#5fd0c8'},
-  {key:'devotion', name:'Deities & Devotion', sub:'Contemplative journeys through the great figures of the Hindu tradition — myth as a mirror for the mind.', accent:'#f5c977'},
   {key:'philosophy', name:'Philosophy & the Stoics', sub:'Practical philosophy as meditation — the Greeks and Romans on what is ours to control, and what is not.', accent:'#7f9ec4'},
+  {key:'devotion', name:'Deities & Devotion', sub:'Contemplative journeys through the great figures of the Hindu tradition — myth as a mirror for the mind.', accent:'#f5c977'},
+  {key:'foundations', name:'Foundations', sub:'The practice itself — start here. Universal, secular, science-grounded.', accent:'#5fd0c8'},
 ];
 const ROADMAP={
   philosophy:[{title:'Seneca on Time', sub:'Why the days feel stolen'},{title:'Marcus · The Obstacle', sub:'What blocks the way becomes the way'},{title:'The Four Virtues', sub:'Wisdom, justice, courage, temperance'}],
@@ -10431,7 +10432,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v108';
+const CACHE = 'lumen-v109';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
