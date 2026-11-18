@@ -9512,9 +9512,11 @@ class H(BaseHTTPRequestHandler):
             if not lid or not text:
                 self._send(400, {"error": "A letter and a note are required."}); return
             # the letter must be a real shared journal entry
-            row = c.execute("SELECT id FROM journal WHERE id=? AND shared=1", (lid,)).fetchone()
+            row = c.execute("SELECT id, user_id FROM journal WHERE id=? AND shared=1", (lid,)).fetchone()
             if not row:
                 self._send(404, {"error": "That letter is no longer available."}); return
+            if c.execute("SELECT 1 FROM mod_blocks WHERE blocker_id=? AND blocked_id=?", (row[1], u["id"])).fetchone():
+                self._send(403, {"error": "You can't respond to this letter."}); return
             c.execute("INSERT INTO letter_replies(letter_id,user_id,text,created) VALUES(?,?,?,?)",
                       (lid, u["id"], text[:1200], now_iso())); c.commit()
             self._send(200, {"ok": True}); return
