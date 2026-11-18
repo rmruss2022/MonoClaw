@@ -1201,7 +1201,7 @@ def shop_for(c, u):
 PROMPTS = [
     "What are you carrying today that isn't yours to hold?",
     "Where did you feel most alive this week — and what were you doing?",
-    "What is one small thing you did today that moved you toward the person you're becoming — or away from them?",
+    "What is one small thing you did today that moved you toward the person you're becoming?",
     "What is one thing you can set down right now, even for an hour?",
     "Who deserves your gratitude today — and have you told them?",
     "What does your body need that your mind keeps overruling?",
@@ -6722,7 +6722,7 @@ function splitSents(text){return (text||'').match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+
 const JPROMPTS=[
   "What are you carrying today that isn't yours to hold?",
   "Where did you feel most alive this week — and what were you doing?",
-  "What is one small thing you did today that moved you toward the person you're becoming — or away from them?",
+  "What is one small thing you did today that moved you toward the person you're becoming?",
   "What is one thing you can set down right now, even for an hour?",
   "Who deserves your gratitude today — and have you told them?",
   "What does your body need that your mind keeps overruling?",
@@ -10431,7 +10431,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v104';
+const CACHE = 'lumen-v105';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
