@@ -3256,7 +3256,9 @@ a{color:var(--purple)}
 /* the gold ground is a FIXED backdrop (own layer), so it never scrolls with the
    content and the keyboard can't reveal anything behind it. Body itself is
    transparent; the fixed ::before paints the gold; html stays gold as the floor. */
-body.jw-gold{background:transparent !important;background-color:#cd9531 !important;overflow:hidden !important;overscroll-behavior:none !important}
+/* body MUST stay fully transparent — a background-color here would paint over the
+   z-index:-1 ::before (painting order), hiding the lotus hero. html is the gold floor. */
+body.jw-gold{background:transparent !important;overflow:hidden !important;overscroll-behavior:none !important}
 body.jw-gold::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=94') center center / cover no-repeat,linear-gradient(175deg,#fde7ad,#cd9531);background-color:#cd9531}
 /* gold the root too, so no dark base can ever show (keyboard, overscroll, etc.) */
@@ -10429,7 +10431,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v102';
+const CACHE = 'lumen-v103';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
