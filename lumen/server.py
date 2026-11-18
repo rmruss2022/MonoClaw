@@ -3253,9 +3253,14 @@ a{color:var(--purple)}
 .jw-foot{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:auto;padding-top:6px}
 .jw-foot .letter-seal-btn{margin:0;width:100%;max-width:420px;border-radius:999px;padding:16px 28px;font-size:17px}
 /* --- journal write: gold-bar stage holding 3 depth-gold components --- */
-body.jw-gold{background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=94') center center / cover no-repeat,linear-gradient(175deg,#fde7ad,#cd9531) !important;background-color:#cd9531 !important;overflow:hidden !important}
-/* gold the root too, so when the keyboard opens no dark base shows behind it */
-html.jw-gold-h{overflow:hidden !important;background:linear-gradient(175deg,#fde7ad,#cd9531) !important;background-color:#cd9531 !important}
+/* the gold ground is a FIXED backdrop (own layer), so it never scrolls with the
+   content and the keyboard can't reveal anything behind it. Body itself is
+   transparent; the fixed ::before paints the gold; html stays gold as the floor. */
+body.jw-gold{background:transparent !important;background-color:#cd9531 !important;overflow:hidden !important;overscroll-behavior:none !important}
+body.jw-gold::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=94') center center / cover no-repeat,linear-gradient(175deg,#fde7ad,#cd9531);background-color:#cd9531}
+/* gold the root too, so no dark base can ever show (keyboard, overscroll, etc.) */
+html.jw-gold-h{overflow:hidden !important;background:#cd9531 !important;overscroll-behavior:none !important}
 body.jw-writing .jx-close{display:none}
 /* journal write: locked to the viewport, never scrolls */
 .jwrite{position:fixed !important;inset:0;height:100dvh;max-height:100dvh;overflow:hidden}
@@ -3315,6 +3320,9 @@ body.jw-typing #jp2 .jw-c-resp{flex:1 1 auto !important}
 body.jw-typing #jp2 .jw-resp-arrows{display:none}
 body.jw-typing #jp2 .jw-foot{display:none !important}
 body.jw-typing #jp2 .jw-c-resp .jw-body{height:100% !important;min-height:0 !important}
+/* only the inner items scroll — never the page/background under them */
+.jwrite{overscroll-behavior:none}
+.jw-c-resp .jw-body,.jw-c-prompt .jw-cbody{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .jw-x{position:absolute;top:10px;right:10px;z-index:7;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
   background:rgba(60,40,10,.42);color:#ffe6ab;display:flex;align-items:center;justify-content:center}
 .jw-x .i{width:18px;height:18px}
@@ -10419,7 +10427,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v101';
+const CACHE = 'lumen-v102';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
