@@ -1,0 +1,92 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:#000}
+  .frame{position:relative;width:1290px;height:2796px;overflow:hidden;
+    background:
+      radial-gradient(60% 42% at 50% 46%, #241c4a 0%, rgba(36,28,74,0) 60%),
+      linear-gradient(180deg,#0c0a1f 0%,#110d27 52%,#08071a 100%);}
+  .stars,.lattice{position:absolute;inset:0;pointer-events:none}
+  .cap{position:absolute;left:110px;right:110px;top:170px}
+  .eyebrow{font-family:Inter;font-weight:600;font-size:34px;letter-spacing:.32em;color:#f5c977;text-transform:uppercase;margin-bottom:26px}
+  .head{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:132px;line-height:1.0;color:#fff;letter-spacing:-.5px}
+  .head em{font-weight:600;font-style:italic;color:#f5c977}
+  .sub{font-family:Inter;font-weight:400;font-size:46px;line-height:1.32;color:#c9c3e3;margin-top:34px;max-width:1010px}
+  /* device */
+  .device{position:absolute;left:50%;transform:translateX(-50%);top:820px;width:880px;
+    border-radius:122px;padding:20px;
+    background:linear-gradient(150deg,#51566b,#2a2d3b 30%,#14161f 60%,#3a3e4f 100%);
+    box-shadow:0 50px 120px -30px rgba(0,0,0,.8),0 0 0 2px rgba(255,255,255,.04) inset,0 2px 6px rgba(255,255,255,.14) inset;}
+  .screen{position:relative;border-radius:104px;overflow:hidden;background:#0b0a12;aspect-ratio:1320/2856}
+  .screen img{width:100%;display:block}
+  .island{position:absolute;top:26px;left:50%;transform:translateX(-50%);width:230px;height:66px;background:#000;border-radius:40px;z-index:3}
+  .sbar{position:absolute;top:34px;left:0;right:0;z-index:2;display:flex;justify-content:space-between;padding:0 58px;color:#fff;font-family:Inter;font-weight:600;font-size:34px}
+  .sbar .r{display:flex;gap:12px;align-items:center;font-size:30px}
+  /* gold callout pill */
+  .callout{position:absolute;z-index:5;font-family:Inter;font-weight:600;font-size:38px;color:#fff;
+    background:rgba(20,16,32,.82);border:2.5px solid rgba(245,201,119,.6);border-radius:999px;padding:20px 34px;
+    box-shadow:0 0 44px rgba(245,201,119,.35),0 20px 50px -20px #000;display:flex;align-items:center;gap:16px;backdrop-filter:blur(4px)}
+  .callout .dot{width:22px;height:22px;border-radius:50%;background:#c084fc;box-shadow:0 0 16px #c084fc}
+  .callout .g{color:#f5c977;font-weight:700}
+  /* frame 8 brand */
+  .brandwrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 120px}
+  .orb{width:620px;height:620px;border-radius:50%;position:relative;margin-bottom:40px;
+    background:radial-gradient(circle at 42% 36%,#fff 0%,#f7d9a0 12%,#c79bf5 40%,#7b4fd0 68%,#3a1f6e 100%);
+    box-shadow:0 0 180px 40px rgba(170,110,245,.45),0 0 90px 10px rgba(245,201,119,.3)}
+  .orb:before{content:"";position:absolute;inset:-60px;border-radius:50%;border:2px solid rgba(255,231,176,.25);
+    transform:rotate(-20deg) scaleY(.32)}
+  .orb .mote{position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 0 18px #fff}
+  .chips{display:flex;flex-wrap:wrap;gap:16px 16px;justify-content:center;max-width:1000px;margin-top:20px}
+  .chip{font-family:Inter;font-weight:500;font-size:36px;color:#e7e0f5;border:1.5px solid rgba(245,201,119,.4);
+    border-radius:999px;padding:14px 28px;background:rgba(245,201,119,.06)}
+  .tagline{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:600;font-size:56px;color:#f5c977;margin-top:30px}
+  .brand-head{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:150px;line-height:1.0;color:#fff;margin-bottom:10px}
+  .brand-head em{font-weight:600;font-style:italic;color:#f5c977}
+</style></head>
+<body>
+<div class="frame" id="frame"></div>
+<canvas id="noise" style="display:none"></canvas>
+<script>
+const FRAMES = {
+  1:{img:'ui/home.png',eyebrow:'Lumen',head:'Meditation<br>you can <em>see</em>',sub:'Every breath adds light to a living world.',hero:true},
+  2:{img:'ui/map.png',eyebrow:'A living community',head:'Meditate with<br>the <em>world</em>',sub:'Every glow is a real session, lit live on the map.',callout:{t:'<span class="dot"></span> <span class="g">11</span>&nbsp;meditating now · worldwide',x:120,y:1760}},
+  3:{img:'ui/journalwrite.png',eyebrow:'Journal, reimagined',head:'A journal<br>you will <em>keep</em>',sub:'A calm, timed page — write, speak, or photograph your handwritten entry.'},
+  4:{img:'ui/community.png',eyebrow:'You are not alone',head:'Letters from<br><em>real</em> people',sub:'Read what other meditators are moving through — and write back.'},
+  5:{img:'ui/mandala.png',eyebrow:'Your practice, kept',head:'Watch your<br>practice <em>bloom</em>',sub:'Each milestone adds a petal to your mandala.'},
+  6:{img:'ui/leagues.png',eyebrow:'Showing up is rewarded',head:'Earn light.<br>Climb the <em>leagues</em>',sub:'Friendly weekly tiers, from Ember to Supernova.'},
+  7:{img:'ui/journey.png',eyebrow:'Depth, not soundbites',head:'Journeys from<br><em>real</em> traditions',sub:'Narrated courses that build, lesson by lesson.'},
+  8:{brand:true}
+};
+function device(img){return '<div class="device"><div class="screen"><img src="'+img+'"></div></div>';}
+function render(){
+  const f = FRAMES[+(new URLSearchParams(location.search).get('f')||1)];
+  const root = document.getElementById('frame');
+  // starfield
+  let stars='<svg class="stars" width="1290" height="2796">';
+  let seed=99; const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+  for(let i=0;i<150;i++){const x=rnd()*1290,y=rnd()*2796,r=rnd()*2.4+0.6,gold=rnd()<0.18;
+    stars+='<circle cx="'+x.toFixed(0)+'" cy="'+y.toFixed(0)+'" r="'+r.toFixed(1)+'" fill="'+(gold?'#f5c977':'#cfc8e8')+'" opacity="'+(rnd()*0.5+0.2).toFixed(2)+'"/>';}
+  stars+='</svg>';
+  let lat='<svg class="lattice" width="1290" height="2796" opacity="0.07">';
+  for(let i=0;i<7;i++){const y=rnd()*2796;lat+='<line x1="0" y1="'+y+'" x2="1290" y2="'+(y+rnd()*300-150)+'" stroke="#f5c977" stroke-width="1"/>';}
+  lat+='</svg>';
+  root.innerHTML = stars+lat;
+  if(f.brand){
+    root.innerHTML += '<div class="brandwrap"><div class="orb"><div class="mote" style="top:20%;left:-4%"></div><div class="mote" style="bottom:12%;right:2%;width:12px;height:12px"></div></div>'
+      +'<div class="brand-head">Your practice,<br>made <em>visible</em></div>'
+      +'<div class="tagline">light, one breath at a time</div>'
+      +'<div class="chips">'+['Live world map','Community letters','Gold journal','Weekly leagues','Guided journeys','Wholeness mandala','Daily Vedic reading','Streaks & levels'].map(c=>'<span class="chip">'+c+'</span>').join('')+'</div></div>';
+    return;
+  }
+  const top = f.hero ? 860 : 820;
+  root.innerHTML += '<div class="cap"><div class="eyebrow">'+f.eyebrow+'</div><div class="head">'+f.head+'</div><div class="sub">'+f.sub+'</div></div>';
+  let dev = device(f.img);
+  root.innerHTML += dev;
+  document.querySelector('.device').style.top = top+'px';
+  if(f.callout){root.innerHTML += '<div class="callout" style="left:'+f.callout.x+'px;top:'+f.callout.y+'px">'+f.callout.t+'</div>';}
+}
+render();
+</script></body></html>
