@@ -5583,8 +5583,8 @@ async function renderLessons(){
     </button>`;
   };
   $('#app').innerHTML=`
-  <section class="nh-hero jny-hero" id="jnyHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Journeys</h1><p class="nh-sub">Guided courses that build, one lesson at a time.</p></div></div></section>
-  <p class="muted" style="font-size:13px;margin:10px 2px 16px">Each journey is a guided course that builds over time. Open one to pick up your next lesson.</p>
+  <section class="nh-hero jny-hero" id="jnyHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Journeys</h1><p class="nh-sub">Drawn from real spiritual traditions — time-tested techniques and philosophy worth studying.</p></div></div></section>
+  <p class="muted" style="font-size:13px;margin:10px 2px 16px">Tend your practice and watch it deepen. Open one to pick up your next lesson.</p>
   <div class="jrny-grid">${tracks.map(card).join('')}</div>
   <p class="muted center" style="font-size:12px;margin:20px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
   document.querySelectorAll('.jrny-card').forEach(c=>c.onclick=()=>renderJourney(c.dataset.k));
@@ -10431,7 +10431,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v107';
+const CACHE = 'lumen-v108';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
