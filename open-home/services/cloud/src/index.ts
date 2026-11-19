@@ -17,6 +17,7 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { resolve, sep } from "node:path";
 import { accounts, homes, sessions, type Account } from "./db.ts";
 import * as auth from "./auth.ts";
 import { signinPage } from "./pages.ts";
@@ -152,8 +153,10 @@ const MIME: Record<string, string> = {
   ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".woff2": "font/woff2",
 };
 function serveStatic(res: ServerResponse, urlPath: string): boolean {
-  const clean = urlPath.replace(/\.\.+/g, "").replace(/^\/+/, "");   // no path traversal
-  const full = PUBLIC_DIR + clean;
+  let clean: string;
+  try { clean = decodeURIComponent(urlPath.split("?")[0]).replace(/^\/+/, ""); } catch { return false; }
+  const full = resolve(PUBLIC_DIR, clean);
+  if (full !== resolve(PUBLIC_DIR) && !full.startsWith(resolve(PUBLIC_DIR) + sep)) return false;   // no path traversal
   if (!existsSync(full)) return false;
   try {
     const body = readFileSync(full);
@@ -240,6 +243,10 @@ const handler = async (req: IncomingMessage, res: ServerResponse) => {
   // Marketing landing page at the root; its assets under /assets/.
   if (url === "/" && serveStatic(res, "/index.html")) return;
   if (url.startsWith("/assets/") && serveStatic(res, url)) return;
+
+  // Archived full-length landing (pre-redesign) kept for reference — mine
+  // sections from it to re-add later. Shares the same /assets/.
+  if ((url === "/old" || url === "/classic") && serveStatic(res, "/old.html")) return;
 
   // Sign-in web entry moved to /login (and /app).
   if (url === "/login" || url === "/app") {
