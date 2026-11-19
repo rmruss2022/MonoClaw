@@ -15,6 +15,8 @@
  */
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
+import { readFileSync, existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { accounts, homes, sessions, type Account } from "./db.ts";
 import * as auth from "./auth.ts";
 import { signinPage } from "./pages.ts";
@@ -142,6 +144,28 @@ async function handleAuth(
   });
 }
 
+// Static marketing site (public/) — the landing page at "/" + its assets.
+const PUBLIC_DIR = fileURLToPath(new URL("../public/", import.meta.url));
+const MIME: Record<string, string> = {
+  ".html": "text/html; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png",
+  ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".ico": "image/x-icon",
+  ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".woff2": "font/woff2",
+};
+function serveStatic(res: ServerResponse, urlPath: string): boolean {
+  const clean = urlPath.replace(/\.\.+/g, "").replace(/^\/+/, "");   // no path traversal
+  const full = PUBLIC_DIR + clean;
+  if (!existsSync(full)) return false;
+  try {
+    const body = readFileSync(full);
+    const ext = clean.slice(clean.lastIndexOf("."));
+    res.statusCode = 200;
+    res.setHeader("Content-Type", MIME[ext] || "application/octet-stream");
+    res.setHeader("Cache-Control", clean === "index.html" ? "no-store" : "public, max-age=3600");
+    res.end(body);
+    return true;
+  } catch { return false; }
+}
+
 const handler = async (req: IncomingMessage, res: ServerResponse) => {
   const url = (req.url ?? "/").split("?")[0];
   const method = req.method ?? "GET";
@@ -149,6 +173,19 @@ const handler = async (req: IncomingMessage, res: ServerResponse) => {
   if (url === "/health") {
     json(res, { status: "ok", service: "openhome-cloud", homeTokens: auth.homeTokenConfigured() });
     return;
+  }
+
+  // One-step installer:  curl -fsSL https://openhome.studio/install | bash
+  // Served as plain text so it also reads cleanly in a browser before running.
+  if (url === "/install" || url === "/install.sh") {
+    const script = PUBLIC_DIR + "install.sh";
+    if (existsSync(script)) {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      res.end(readFileSync(script));
+      return;
+    }
   }
 
   if (url === "/api/signup" && method === "POST") return handleAuth(req, res, "signup");
@@ -200,7 +237,12 @@ const handler = async (req: IncomingMessage, res: ServerResponse) => {
     return;
   }
 
-  if (url === "/" || url === "/login") {
+  // Marketing landing page at the root; its assets under /assets/.
+  if (url === "/" && serveStatic(res, "/index.html")) return;
+  if (url.startsWith("/assets/") && serveStatic(res, url)) return;
+
+  // Sign-in web entry moved to /login (and /app).
+  if (url === "/login" || url === "/app") {
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
