@@ -3431,20 +3431,35 @@ body.jw-typing #jp2 .jw-c-resp .jw-body{height:100% !important;min-height:0 !imp
 /* Season map — the stages someone fills out */
 .sm-prog{display:flex;align-items:center;gap:10px;margin:2px 2px 14px}
 .sm-prog-bar{flex:1;height:8px;border-radius:999px;background:#1a1330;overflow:hidden;border:1px solid var(--line)}
-.sm-prog-bar i{display:block;height:100%;background:linear-gradient(90deg,#f5c977,#e0a648);box-shadow:0 0 12px rgba(245,201,119,.6);transition:width .5s}
+.sm-prog-bar i{position:relative;overflow:hidden;display:block;height:100%;background:linear-gradient(90deg,#f5c977,#e0a648);box-shadow:0 0 12px rgba(245,201,119,.6);transition:width .6s cubic-bezier(.22,1,.36,1)}
+.sm-prog-bar i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent);transform:translateX(-100%);animation:smShimmer 2.6s ease-in-out infinite}
+@keyframes smShimmer{0%{transform:translateX(-100%)}55%,100%{transform:translateX(240%)}}
 .sm-prog-n{font-size:12px;font-weight:700;color:var(--gold)}
 .sm-viz{margin:0 2px 14px;border-radius:18px;overflow:hidden;border:1px solid rgba(245,201,119,.25);box-shadow:0 10px 30px -16px rgba(0,0,0,.7)}
 .sm-viz img{width:100%;display:block}
-.sm-list{display:flex;flex-direction:column;gap:11px;margin:4px 2px 16px}
-.sm-row{display:flex;gap:13px;align-items:center;width:100%;text-align:left;cursor:pointer;background:#15112466;border:1px solid var(--line);border-radius:16px;padding:12px 13px;transition:transform .12s}
-.sm-row:active{transform:scale(.99)}
-.sm-row.done{opacity:.82}
-.sm-bk{flex:none;width:52px;height:52px;border-radius:12px;background-size:cover;background-position:center;box-shadow:0 0 14px -5px rgba(245,201,119,.5)}
-.sm-rt{display:block;font-weight:700;font-size:15px;color:#efeafe}
-.sm-rb{display:block;font-size:12.5px;line-height:1.4;color:var(--muted);margin-top:2px}
-.sm-row.done .sm-rt{color:#b9b0d4}
-.sm-chk{flex:none;margin-left:auto;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
-.sm-chk.d{color:#6fcf97}.sm-chk.n{color:var(--gold)}
+/* Season stages — a 2-column card grid (the lesson plan) */
+.sm-list{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 2px 16px;align-items:stretch}
+.sm-card{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;cursor:pointer;
+  background:linear-gradient(165deg,#1b1437,#110c24 86%) padding-box,linear-gradient(150deg,rgba(245,201,119,.5),rgba(168,85,247,.32) 60%,rgba(245,201,119,.18)) border-box;
+  border:1.4px solid transparent;border-radius:18px;padding:18px 12px 15px;transition:transform .14s ease,box-shadow .25s ease;box-shadow:0 12px 28px -20px rgba(0,0,0,.85)}
+.sm-card:active{transform:scale(.97)}
+.sm-card-glow{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(130px 92px at 50% -6%,rgba(245,201,119,.2),transparent 72%)}
+.sm-card>*{position:relative;z-index:1}
+.sm-card-no{position:absolute;top:10px;left:12px;font-size:11px;font-weight:800;color:var(--gold);opacity:.7;z-index:2;letter-spacing:.04em}
+.sm-card-bk{width:64px;height:64px;border-radius:15px;background-size:cover;background-position:center;box-shadow:0 0 20px -4px rgba(245,201,119,.65),inset 0 0 0 1px rgba(255,236,190,.25);margin-top:4px}
+.sm-card-t{font-weight:700;font-size:14.5px;line-height:1.2;color:#efeafe}
+.sm-card-b{font-size:11.5px;line-height:1.4;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sm-card-chk{margin-top:auto;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;padding:5px 14px;border-radius:999px}
+.sm-card-chk.n{color:#2a1a05;background:linear-gradient(95deg,#f8dd9b,#e0a648);box-shadow:0 0 16px -3px rgba(245,201,119,.65)}
+.sm-card-chk.d{color:#7ee0a6;background:rgba(111,207,151,.12);border:1px solid rgba(111,207,151,.42)}
+.sm-card.done{opacity:.66}
+.sm-card.done .sm-card-t{color:#b3abcf}
+.sm-card.done .sm-card-bk{box-shadow:0 0 10px -6px rgba(245,201,119,.3)}
+.sm-card.sm-retro{grid-column:1 / -1;flex-direction:row;gap:13px;text-align:left;align-items:center;
+  background:linear-gradient(150deg,#2a1a1a,#140e22 86%) padding-box,linear-gradient(150deg,rgba(245,201,119,.55),rgba(192,132,252,.32)) border-box}
+.sm-card.sm-retro .sm-card-bk{width:50px;height:50px;margin-top:0}
+.sm-card.sm-retro .sm-card-chk{margin-top:0;margin-left:auto}
+.sm-card.sm-retro .sm-card-no{position:static}
 /* Season map — "next one to do" CTA pinned at the top */
 .sm-next{display:flex;gap:13px;align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:18px;padding:14px;margin:0 2px 15px;color:#fff5e0;
   background:linear-gradient(120deg,#3a2a12,#241a0e 85%) padding-box,linear-gradient(135deg,rgba(245,201,119,.85),rgba(192,132,252,.34)) border-box;border:1.6px solid transparent;box-shadow:0 12px 32px -14px rgba(245,201,119,.5);transition:transform .12s}
@@ -3457,6 +3472,8 @@ body.jw-typing #jp2 .jw-c-resp .jw-body{height:100% !important;min-height:0 !imp
 .sm-weekly{display:flex;gap:12px;align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:16px;padding:14px;margin:0 2px 14px;color:var(--text);
   background:linear-gradient(120deg,#241a3e,#161028 82%) padding-box,linear-gradient(135deg,rgba(90,160,245,.6),rgba(192,132,252,.3)) border-box;border:1.5px solid transparent}
 .sm-weekly .i{width:24px;height:24px;color:#8ab4f8}
+.sm-weekly .sm-rt{display:block;font-weight:700;font-size:15px;color:#efeafe}
+.sm-weekly .sm-rb{display:block;font-size:12.5px;line-height:1.4;color:var(--muted);margin-top:2px}
 .sm-new{width:100%;max-width:420px;margin:2px auto 24px;display:flex}
 .sm-retro{background:linear-gradient(120deg,#2a1a1a,#1a1024 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.5),rgba(192,132,252,.25)) border-box;border:1.5px solid transparent}
 /* Season stage compose (on the gold ground) */
@@ -7644,7 +7661,13 @@ async function renderSeasonMap(){
   const nextCard=nextStage
     ? `<button class="sm-next" id="smNext" data-k="${nextStage.key}"><span class="sm-next-bk" style="background-image:url('/art/season-book.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">${done?'Continue · next up':'Start here'}</span><span class="sm-next-t">${esc(nextStage.title)}</span><span class="sm-next-b">${nextStage.blurb}</span></span><span class="sm-next-go">›</span></button>`
     : `<button class="sm-next" id="smNext" data-k="weekly"><span class="sm-next-bk" style="background-image:url('/art/season-book-done.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">Season complete ✦</span><span class="sm-next-t">Weekly review &amp; plan</span><span class="sm-next-b">Every stage is sealed. Keep it alive with your Sunday review.</span></span><span class="sm-next-go">›</span></button>`;
-  const row=(s)=>{const d=_stDone(s.key);return `<button class="sm-row${d?' done':''}${s.key==='retro'?' sm-retro':''}" data-k="${s.key}"><span class="sm-bk" style="background-image:url('/art/${d?'season-book-done':'season-book'}.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-rt">${esc(s.title)}</span><span class="sm-rb">${s.blurb}</span></span><span class="sm-chk ${d?'d':'n'}">${d?'Done':'Begin'}</span></button>`;};
+  const row=(s,i)=>{const d=_stDone(s.key);const retro=s.key==='retro';const num=retro?'★':(seasonPrior?i:i+1);
+    return `<button class="sm-card${d?' done':''}${retro?' sm-retro':''}" data-k="${s.key}"><span class="sm-card-glow"></span>`
+      +`<span class="sm-card-no">${num}</span>`
+      +`<span class="sm-card-bk" style="background-image:url('/art/${d?'season-book-done':'season-book'}.jpg?v=112')"></span>`
+      +`<span class="sm-card-t">${esc(s.title)}</span>`
+      +`<span class="sm-card-b">${s.blurb}</span>`
+      +`<span class="sm-card-chk ${d?'d':'n'}">${d?'✓ Done':'Begin'}</span></button>`;};
   $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="smHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="smBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('season')} Season</div><h1 class="nh-greet">${seasonDoc.name?esc(seasonDoc.name):'This season'}</h1><p class="nh-sub">Fill it out stage by stage — it becomes the map you live by.</p></div></div></section>`
     +nextCard
     +`<div class="sm-prog"><span class="sm-prog-n">${done}/${tot}</span><div class="sm-prog-bar"><i style="width:${pct}%"></i></div></div>`
@@ -7655,7 +7678,7 @@ async function renderSeasonMap(){
   {const h=$('#smHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=112')";};im.src="/art/season-hero.jpg?v=112";}}
   const bk=$('#smBack');if(bk)bk.onclick=()=>{jScreen='home';journalMode='daily';renderJournal();};
   {const nx=$('#smNext');if(nx)nx.onclick=()=>{seasonStageKey=nx.dataset.k;jScreen='seasonstage';renderJournal();};}
-  document.querySelectorAll('.sm-row').forEach(b=>b.onclick=()=>{seasonStageKey=b.dataset.k;jScreen='seasonstage';renderJournal();});
+  document.querySelectorAll('.sm-card').forEach(b=>b.onclick=()=>{seasonStageKey=b.dataset.k;jScreen='seasonstage';renderJournal();});
   const w=$('#smWeekly');if(w)w.onclick=()=>{seasonStageKey='weekly';jScreen='seasonstage';renderJournal();};
   const nw=$('#smNew');if(nw)nw.onclick=async()=>{try{await api('season/new','POST',{});}catch(e){}toast('New season started — a fresh page.');seasonDoc=null;seasonBegin();};
 }
@@ -10683,7 +10706,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v112';
+const CACHE = 'lumen-v113';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
