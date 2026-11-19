@@ -103,6 +103,14 @@ def init_db():
     CREATE TABLE IF NOT EXISTS reply_reports(
       id INTEGER PRIMARY KEY, reply_id INTEGER, reporter_id INTEGER, created TEXT,
       UNIQUE(reply_id, reporter_id));
+    -- Season: the structured "season of life" the user fills out. One live doc per
+    -- user (JSON blob of stages/answers/viz), plus an archive of past seasons that
+    -- feeds the next season's retrospective.
+    CREATE TABLE IF NOT EXISTS season_doc(
+      user_id INTEGER PRIMARY KEY, data TEXT, started TEXT, updated TEXT);
+    CREATE TABLE IF NOT EXISTS season_archive(
+      id INTEGER PRIMARY KEY, user_id INTEGER, data TEXT, started TEXT, ended TEXT);
+    CREATE INDEX IF NOT EXISTS ix_season_archive ON season_archive(user_id);
     CREATE TABLE IF NOT EXISTS companions(
       id INTEGER PRIMARY KEY, user_id INTEGER, code TEXT,
       fed INTEGER DEFAULT 0, created TEXT,
@@ -3420,6 +3428,57 @@ body.jw-typing #jp2 .jw-c-resp .jw-body{height:100% !important;min-height:0 !imp
 .si-benefit p{font-size:14px;line-height:1.55;color:#d8cff0}
 .si-cite{display:block;font-size:11px;color:var(--muted);margin-top:5px;font-style:italic}
 .si-begin{width:100%;max-width:420px;margin:0 auto 26px;display:flex}
+/* Season map — the stages someone fills out */
+.sm-prog{display:flex;align-items:center;gap:10px;margin:2px 2px 14px}
+.sm-prog-bar{flex:1;height:8px;border-radius:999px;background:#1a1330;overflow:hidden;border:1px solid var(--line)}
+.sm-prog-bar i{display:block;height:100%;background:linear-gradient(90deg,#f5c977,#e0a648);box-shadow:0 0 12px rgba(245,201,119,.6);transition:width .5s}
+.sm-prog-n{font-size:12px;font-weight:700;color:var(--gold)}
+.sm-viz{margin:0 2px 14px;border-radius:18px;overflow:hidden;border:1px solid rgba(245,201,119,.25);box-shadow:0 10px 30px -16px rgba(0,0,0,.7)}
+.sm-viz img{width:100%;display:block}
+.sm-list{display:flex;flex-direction:column;gap:11px;margin:4px 2px 16px}
+.sm-row{display:flex;gap:13px;align-items:center;width:100%;text-align:left;cursor:pointer;background:#15112466;border:1px solid var(--line);border-radius:16px;padding:12px 13px;transition:transform .12s}
+.sm-row:active{transform:scale(.99)}
+.sm-row.done{opacity:.82}
+.sm-bk{flex:none;width:52px;height:52px;border-radius:12px;background-size:cover;background-position:center;box-shadow:0 0 14px -5px rgba(245,201,119,.5)}
+.sm-rt{display:block;font-weight:700;font-size:15px;color:#efeafe}
+.sm-rb{display:block;font-size:12.5px;line-height:1.4;color:var(--muted);margin-top:2px}
+.sm-row.done .sm-rt{color:#b9b0d4}
+.sm-chk{flex:none;margin-left:auto;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.sm-chk.d{color:#6fcf97}.sm-chk.n{color:var(--gold)}
+/* Season map — "next one to do" CTA pinned at the top */
+.sm-next{display:flex;gap:13px;align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:18px;padding:14px;margin:0 2px 15px;color:#fff5e0;
+  background:linear-gradient(120deg,#3a2a12,#241a0e 85%) padding-box,linear-gradient(135deg,rgba(245,201,119,.85),rgba(192,132,252,.34)) border-box;border:1.6px solid transparent;box-shadow:0 12px 32px -14px rgba(245,201,119,.5);transition:transform .12s}
+.sm-next:active{transform:scale(.99)}
+.sm-next-bk{flex:none;width:50px;height:50px;border-radius:12px;background-size:cover;background-position:center;box-shadow:0 0 16px -4px rgba(245,201,119,.7)}
+.sm-next-eye{display:block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--gold)}
+.sm-next-t{display:block;font-weight:700;font-size:16px;color:#fff5e0;margin-top:2px;line-height:1.2}
+.sm-next-b{display:block;font-size:12.5px;line-height:1.4;color:#d8c7a2;margin-top:3px}
+.sm-next-go{flex:none;margin-left:auto;font-size:24px;color:var(--gold);line-height:1}
+.sm-weekly{display:flex;gap:12px;align-items:center;width:100%;text-align:left;cursor:pointer;border-radius:16px;padding:14px;margin:0 2px 14px;color:var(--text);
+  background:linear-gradient(120deg,#241a3e,#161028 82%) padding-box,linear-gradient(135deg,rgba(90,160,245,.6),rgba(192,132,252,.3)) border-box;border:1.5px solid transparent}
+.sm-weekly .i{width:24px;height:24px;color:#8ab4f8}
+.sm-new{width:100%;max-width:420px;margin:2px auto 24px;display:flex}
+.sm-retro{background:linear-gradient(120deg,#2a1a1a,#1a1024 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.5),rgba(192,132,252,.25)) border-box;border:1.5px solid transparent}
+/* Season stage compose (on the gold ground) */
+.ss-wrap{min-height:100dvh;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 14px)}
+.ss-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ss-x{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid rgba(90,62,24,.5);background:linear-gradient(160deg,#4c3718,#2b2010);color:#ffe6ab;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ss-x .i{width:17px;height:17px}
+.ss-eyebrow{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#7c5a24}
+.ss-title{font-family:var(--serif);font-size:23px;color:#4a3410;line-height:1.15}
+.ss-prompt{background:linear-gradient(160deg,#8a6a33,#574121);border:1px solid rgba(245,201,119,.42);border-radius:20px;padding:16px 16px;color:#ffe3ad;margin-bottom:14px;max-height:42vh;overflow:auto;overscroll-behavior:contain;box-shadow:inset 0 1px 0 rgba(255,236,190,.26)}
+.ss-prompt-q{font-family:var(--serif);font-size:18px;line-height:1.5;text-shadow:0 0 14px rgba(245,201,119,.22)}
+.ss-prompt img{width:100%;border-radius:12px;margin-bottom:12px;display:block}
+.ss-ta{width:100%;flex:1;min-height:180px;border-radius:16px;border:1px solid rgba(90,62,24,.5);padding:14px;background:rgba(255,248,230,.6);color:#3a2a10;font-family:var(--serif);font-size:16px;line-height:1.6;resize:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.ss-ta::placeholder{color:rgba(90,62,24,.5)}
+.ss-field{margin-bottom:12px}
+.ss-flabel{font-size:12px;font-weight:700;color:#5a431f;margin-bottom:6px}
+.ss-area-row{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.ss-area-num{flex:none;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f5c977,#e0a648);color:#2a1a05;font-weight:800;display:flex;align-items:center;justify-content:center}
+.ss-area-in{flex:1;border-radius:12px;border:1px solid rgba(90,62,24,.5);padding:11px 12px;background:rgba(255,248,230,.6);color:#3a2a10;font-size:15px}
+.ss-save{width:100%;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:9px;padding:15px;font-size:16px;font-weight:800;color:#3a2408;border:0;border-radius:16px;cursor:pointer;
+  background:linear-gradient(170deg,#fbe08f,#e9b24e);box-shadow:0 10px 24px -12px rgba(233,178,78,.8)}
+.ss-sub{font-size:13px;color:#6a4f22;margin-bottom:10px}
 .jhero-eyebrow .i{width:13px;height:13px}
 .jhero-facets{display:flex;justify-content:center;gap:clamp(18px,8vw,34px)}
 .jfacet{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:0;padding:0;font-family:inherit}
@@ -7536,7 +7595,117 @@ function renderSeasonIntro(){
     +`<button class="btn gold si-begin" id="siBegin">${ic('seal','seal-ic')} Begin your season</button>`;
   const back=$('#siBack');if(back)back.onclick=()=>{jScreen='home';journalMode='daily';renderJournal();};
   const begin=$('#siBegin');if(begin)begin.onclick=()=>{journalMode='season';jSeason='';jScreen='compose';renderJournal();};
-  {const h=$('#siHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journal-hero.jpg?v=58')";};im.src="/art/journal-hero.jpg?v=58";}}
+  {const h=$('#siHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=112')";};im.src="/art/season-hero.jpg?v=112";}}
+  const bg=$('#siBegin');if(bg)bg.onclick=()=>seasonBegin();
+}
+// ===================== SEASON: a structured season-of-life you fill out =====================
+let seasonDoc=null, seasonPrior=false, seasonStageKey=null;
+const SEASON_DAYS=60;
+const SEASON_STAGES=[
+  {key:'areas', kind:'areas', title:'Your five focus areas', blurb:'The five parts of your life that matter most right now — ranked.'},
+  {key:'working', kind:'perarea', title:'What you’re working toward', blurb:'In each area, what you’re moving toward this season.', q:a=>`In <b>${esc(a)}</b> — what are you working toward this season? What would real progress look like?`},
+  {key:'actions', kind:'perarea', title:'Daily & weekly actions', blurb:'The top 3 things you can actually do for each area.', q:a=>`Your top 3 daily / weekly actions for <b>${esc(a)}</b>.`},
+  {key:'constraints', kind:'text', title:'Constraints & stressors', blurb:'What’s pulling at you — and where it belongs.', q:'What are the main constraints or stressors in your life right now? Name them, and decide where each one belongs so it stops bleeding into everything.'},
+  {key:'growth', kind:'text', title:'Your biggest opportunity', blurb:'Where the most growth is hiding this season.', q:'What is your single biggest opportunity for growth this season? If you did the work here, what would make this time most worth it?'},
+  {key:'support', kind:'text', title:'Your support system', blurb:'Who holds you up — and how to lean on it better.', q:'Who and what is your support this season? How can you let yourself be supported — and support yourself — better?'},
+  {key:'visualize', kind:'text', title:'Visualize it', blurb:'Your life with these goals already in place.', q:'Picture your life with these goals already implemented. Walk through an ordinary day — what does it feel like, and who are you being?'},
+  {key:'name', kind:'name', title:'Name this season', blurb:'Now that it’s clear — what is this chapter called?', q:'Give this season a name, then summarize it in a few honest lines.'},
+  {key:'quote', kind:'quote', title:'A quote & an affirmation', blurb:'Two lines to carry through the season.'},
+];
+const RETRO_STAGE={key:'retro', kind:'retro', title:'Look back first', blurb:'Before the new season — what the last one taught you.'};
+function seasonStages(){ return seasonPrior ? [RETRO_STAGE].concat(SEASON_STAGES) : SEASON_STAGES.slice(); }
+function _stDone(k){ return !!(seasonDoc&&seasonDoc.stages&&seasonDoc.stages[k]&&seasonDoc.stages[k].done); }
+function _seasonAge(){ if(!seasonDoc||!seasonDoc.started)return 0; return Math.floor((Date.now()-new Date(seasonDoc.started).getTime())/86400000); }
+async function seasonSave(){ if(!seasonDoc)return; seasonDoc.updated=new Date().toISOString(); try{await api('season','POST',{season:seasonDoc});}catch(e){} }
+async function seasonBegin(){
+  try{const r=await api('season');seasonDoc=r.season;seasonPrior=!!r.has_prior;}catch(e){seasonDoc=null;seasonPrior=false;}
+  if(!seasonDoc){seasonDoc={started:new Date().toISOString(),name:'',areas:[],stages:{},weekly:[]};await seasonSave();}
+  if(!seasonDoc.stages)seasonDoc.stages={}; if(!seasonDoc.areas)seasonDoc.areas=[]; if(!seasonDoc.weekly)seasonDoc.weekly=[];
+  jScreen='seasonmap';renderJournal();
+}
+// SVG radial map of the five ranked focus areas — app-styled, no API needed
+function seasonRadialSVG(items){
+  const cx=500,cy=512,R=330,N=items.length||5; let seed=7;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280;};
+  let stars='';for(let i=0;i<140;i++){const x=rnd()*1000,y=rnd()*1000,r=rnd()*1.7+.4,g=rnd()<.25;stars+=`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="${g?'#f5c977':'#cfc8e8'}" opacity="${(rnd()*.55+.2).toFixed(2)}"/>`;}
+  let spokes='',nodes='';
+  items.forEach((it,i)=>{const a=(-90+i*(360/N))*Math.PI/180,x=cx+R*Math.cos(a),y=cy+R*Math.sin(a);
+    spokes+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="url(#spk)" stroke-width="3.5" opacity=".8"/><circle cx="${(cx+(x-cx)*.5).toFixed(1)}" cy="${(cy+(y-cy)*.5).toFixed(1)}" r="3" fill="#ffe9ad" opacity=".8"/>`;
+    const nr=78,lbl=esc((it.t||'').slice(0,15));
+    nodes+=`<g filter="url(#gl)"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${nr+10}" fill="url(#halo)"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${nr}" fill="url(#nd)" stroke="#ffe9ad" stroke-width="2.5"/><text x="${x.toFixed(1)}" y="${(y-nr+30).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="21" fill="#2a1a05">${i+1}</text><text x="${x.toFixed(1)}" y="${(y+12).toFixed(1)}" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="25" fill="#2a1a05">${lbl}</text></g>`;});
+  return `<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="bg" cx="50%" cy="48%" r="62%"><stop offset="0%" stop-color="#2a1d4d"/><stop offset="42%" stop-color="#1a1133"/><stop offset="100%" stop-color="#0b0718"/></radialGradient><radialGradient id="core" cx="50%" cy="42%" r="60%"><stop offset="0%" stop-color="#fff6d9"/><stop offset="38%" stop-color="#f5c977"/><stop offset="100%" stop-color="#9c6f22"/></radialGradient><radialGradient id="nd" cx="50%" cy="38%" r="65%"><stop offset="0%" stop-color="#f8e2a6"/><stop offset="45%" stop-color="#e3b25f"/><stop offset="100%" stop-color="#7c541c"/></radialGradient><radialGradient id="halo" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#f5c977" stop-opacity=".45"/><stop offset="70%" stop-color="#f5c977" stop-opacity="0"/></radialGradient><linearGradient id="spk" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#f5c977" stop-opacity=".9"/><stop offset="100%" stop-color="#f5c977" stop-opacity=".35"/></linearGradient><filter id="gl" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><rect width="1000" height="1000" fill="url(#bg)"/>${stars}${spokes}<g filter="url(#gl)"><circle cx="${cx}" cy="${cy}" r="132" fill="url(#halo)"/><circle cx="${cx}" cy="${cy}" r="90" fill="url(#core)" stroke="#fff3cf" stroke-width="3"/><text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="serif" font-style="italic" font-size="33" fill="#3a2408">This</text><text x="${cx}" y="${cy+30}" text-anchor="middle" font-family="serif" font-style="italic" font-size="33" fill="#3a2408">Season</text></g>${nodes}</svg>`;
+}
+function seasonVizURL(){const a=(seasonDoc&&seasonDoc.areas)||[];if(a.length<2)return '';return 'data:image/svg+xml;utf8,'+encodeURIComponent(seasonRadialSVG(a));}
+async function renderSeasonMap(){
+  try{document.body.classList.remove('jw-gold','jw-writing','jw-typing');document.documentElement.classList.remove('jw-gold-h');}catch(e){}
+  if(!seasonDoc){return seasonBegin();}
+  const stages=seasonStages(),done=stages.filter(s=>_stDone(s.key)).length,tot=stages.length,pct=Math.round(100*done/tot);
+  const viz=seasonVizURL(),age=_seasonAge();
+  const nextStage=stages.find(s=>!_stDone(s.key));  // the next entry they're supposed to do
+  const nextCard=nextStage
+    ? `<button class="sm-next" id="smNext" data-k="${nextStage.key}"><span class="sm-next-bk" style="background-image:url('/art/season-book.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">${done?'Continue · next up':'Start here'}</span><span class="sm-next-t">${esc(nextStage.title)}</span><span class="sm-next-b">${nextStage.blurb}</span></span><span class="sm-next-go">›</span></button>`
+    : `<button class="sm-next" id="smNext" data-k="weekly"><span class="sm-next-bk" style="background-image:url('/art/season-book-done.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">Season complete ✦</span><span class="sm-next-t">Weekly review &amp; plan</span><span class="sm-next-b">Every stage is sealed. Keep it alive with your Sunday review.</span></span><span class="sm-next-go">›</span></button>`;
+  const row=(s)=>{const d=_stDone(s.key);return `<button class="sm-row${d?' done':''}${s.key==='retro'?' sm-retro':''}" data-k="${s.key}"><span class="sm-bk" style="background-image:url('/art/${d?'season-book-done':'season-book'}.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-rt">${esc(s.title)}</span><span class="sm-rb">${s.blurb}</span></span><span class="sm-chk ${d?'d':'n'}">${d?'Done':'Begin'}</span></button>`;};
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="smHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="smBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('season')} Season</div><h1 class="nh-greet">${seasonDoc.name?esc(seasonDoc.name):'This season'}</h1><p class="nh-sub">Fill it out stage by stage — it becomes the map you live by.</p></div></div></section>`
+    +nextCard
+    +`<div class="sm-prog"><span class="sm-prog-n">${done}/${tot}</span><div class="sm-prog-bar"><i style="width:${pct}%"></i></div></div>`
+    +(viz?`<div class="sm-viz"><img src="${viz}" alt="your focus areas"></div>`:'')
+    +`<div class="sm-list">`+stages.map(row).join('')+`</div>`
+    +`<button class="sm-weekly" id="smWeekly">${ic('sunrise')}<span style="flex:1"><span class="sm-rt">Weekly review &amp; plan</span><span class="sm-rb">Sunday night — review your season, then plan the week.</span></span></button>`
+    +(age>=SEASON_DAYS?`<button class="btn gold sm-new" id="smNew">${ic('seal','seal-ic')} Start a new season</button>`:'');
+  {const h=$('#smHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=112')";};im.src="/art/season-hero.jpg?v=112";}}
+  const bk=$('#smBack');if(bk)bk.onclick=()=>{jScreen='home';journalMode='daily';renderJournal();};
+  {const nx=$('#smNext');if(nx)nx.onclick=()=>{seasonStageKey=nx.dataset.k;jScreen='seasonstage';renderJournal();};}
+  document.querySelectorAll('.sm-row').forEach(b=>b.onclick=()=>{seasonStageKey=b.dataset.k;jScreen='seasonstage';renderJournal();});
+  const w=$('#smWeekly');if(w)w.onclick=()=>{seasonStageKey='weekly';jScreen='seasonstage';renderJournal();};
+  const nw=$('#smNew');if(nw)nw.onclick=async()=>{try{await api('season/new','POST',{});}catch(e){}toast('New season started — a fresh page.');seasonDoc=null;seasonBegin();};
+}
+function _seasonAreas(){const a=(seasonDoc&&seasonDoc.areas)||[];return a.map(x=>x.t);}
+function renderSeasonStage(){
+  let s=seasonStageKey==='weekly'?{key:'weekly',kind:'weekly',title:'Weekly review & plan'}:seasonStages().find(x=>x.key===seasonStageKey);
+  if(!s){jScreen='seasonmap';return renderJournal();}
+  try{document.body.classList.add('jw-gold');document.documentElement.classList.add('jw-gold-h');document.body.classList.remove('jw-writing','jw-typing');}catch(e){}
+  const back=()=>{try{document.body.classList.remove('jw-gold');document.documentElement.classList.remove('jw-gold-h');}catch(e){}jScreen='seasonmap';renderJournal();};
+  const st=(seasonDoc.stages&&seasonDoc.stages[s.key])||{};
+  const viz=seasonVizURL();
+  const head=`<div class="ss-top"><button class="ss-x" id="ssX">${ic('close')}</button><div><div class="ss-eyebrow">${esc(s.title)}</div></div></div>`;
+  const pbox=(html,withViz)=>`<div class="ss-prompt">${(withViz&&viz)?`<img src="${viz}" alt="your season">`:''}<div class="ss-prompt-q">${html}</div></div>`;
+  let body='';
+  if(s.kind==='areas'){
+    const cur=_seasonAreas();const rows=[0,1,2,3,4].map(i=>`<div class="ss-area-row"><span class="ss-area-num">${i+1}</span><input class="ss-area-in" id="ssa${i}" maxlength="28" placeholder="${['Most important…','Second…','Third…','Fourth…','Fifth…'][i]}" value="${esc(cur[i]||'')}"></div>`).join('');
+    body=pbox('The five areas of your life that matter most right now. Rank them 1–5 — most important first.')+`<div>${rows}</div>`;
+    $('#app').innerHTML=`<div class="ss-wrap jw-gold-wrap">${head}${body}<button class="ss-save" id="ssSave">${ic('seal','seal-ic')} Save &amp; see your map</button></div>`;
+    $('#ssSave').onclick=async()=>{const arr=[0,1,2,3,4].map(i=>(($('#ssa'+i)||{}).value||'').trim()).filter(Boolean).map((t,i)=>({t,rank:i+1}));if(arr.length<3){toast('Name at least three areas.');return;}seasonDoc.areas=arr;seasonDoc.stages[s.key]={done:true};await seasonSave();try{Haptics.medium();}catch(e){}back();};
+  } else if(s.kind==='perarea'){
+    const areas=_seasonAreas();if(!areas.length){toast('Do “Your five focus areas” first.');back();return;}
+    const per=(st.per)||{};
+    const flds=areas.map((a,i)=>`<div class="ss-field"><div class="ss-flabel">${i+1}. ${esc(a)}</div><textarea class="ss-ta" id="ssp${i}" style="min-height:92px" placeholder="…">${esc(per[a]||'')}</textarea></div>`).join('');
+    body=pbox(typeof s.q==='function'?'For each of your five areas:':esc(s.q),true)+`<div>${flds}</div>`;
+    $('#app').innerHTML=`<div class="ss-wrap">${head}${body}<button class="ss-save" id="ssSave">${ic('seal','seal-ic')} Save</button></div>`;
+    $('#ssSave').onclick=async()=>{const per={};let n=0;areas.forEach((a,i)=>{const v=(($('#ssp'+i)||{}).value||'').trim();if(v){per[a]=v;n++;}});seasonDoc.stages[s.key]={done:n>0,per};await seasonSave();try{Haptics.medium();}catch(e){}back();};
+  } else if(s.kind==='quote'){
+    body=pbox('Two lines to carry through the season.')+`<div class="ss-field"><div class="ss-flabel">A quote</div><textarea class="ss-ta" id="ssq" style="min-height:90px" placeholder="A line that steadies you…">${esc(st.quote||'')}</textarea></div><div class="ss-field"><div class="ss-flabel">An affirmation</div><textarea class="ss-ta" id="ssaf" style="min-height:90px" placeholder="Something true you’ll tell yourself…">${esc(st.affirmation||'')}</textarea></div>`;
+    $('#app').innerHTML=`<div class="ss-wrap">${head}${body}<button class="ss-save" id="ssSave">${ic('seal','seal-ic')} Save</button></div>`;
+    $('#ssSave').onclick=async()=>{const quote=(($('#ssq')||{}).value||'').trim(),affirmation=(($('#ssaf')||{}).value||'').trim();seasonDoc.stages[s.key]={done:!!(quote||affirmation),quote,affirmation};await seasonSave();try{Haptics.medium();}catch(e){}back();};
+  } else if(s.kind==='name'){
+    body=pbox(esc(s.q))+`<div class="ss-field"><div class="ss-flabel">Season name</div><input class="ss-area-in" id="ssnm" maxlength="40" placeholder="e.g. “The Rebuild”" value="${esc(seasonDoc.name||'')}"></div><textarea class="ss-ta" id="ssbody" placeholder="What this season is about…">${esc(st.text||'')}</textarea>`;
+    $('#app').innerHTML=`<div class="ss-wrap">${head}${body}<button class="ss-save" id="ssSave">${ic('seal','seal-ic')} Save</button></div>`;
+    $('#ssSave').onclick=async()=>{const nm=(($('#ssnm')||{}).value||'').trim(),tx=(($('#ssbody')||{}).value||'').trim();seasonDoc.name=nm;seasonDoc.stages[s.key]={done:!!(nm||tx),text:tx};await seasonSave();try{Haptics.medium();}catch(e){}back();};
+  } else if(s.kind==='retro'){
+    body=pbox('Before you begin again — look back at your last season.')+`<div class="ss-field"><div class="ss-flabel">What went well</div><textarea class="ss-ta" id="ssw" style="min-height:90px">${esc(st.well||'')}</textarea></div><div class="ss-field"><div class="ss-flabel">What didn’t</div><textarea class="ss-ta" id="ssb" style="min-height:90px">${esc(st.bad||'')}</textarea></div><div class="ss-field"><div class="ss-flabel">What you’ll do better this time</div><textarea class="ss-ta" id="ssbt" style="min-height:90px">${esc(st.better||'')}</textarea></div>`;
+    $('#app').innerHTML=`<div class="ss-wrap">${head}${body}<button class="ss-save" id="ssSave">${ic('seal','seal-ic')} Save</button></div>`;
+    $('#ssSave').onclick=async()=>{const well=(($('#ssw')||{}).value||'').trim(),bad=(($('#ssb')||{}).value||'').trim(),better=(($('#ssbt')||{}).value||'').trim();seasonDoc.stages[s.key]={done:!!(well||bad||better),well,bad,better};await seasonSave();try{Haptics.medium();}catch(e){}back();};
+  } else if(s.kind==='weekly'){
+    body=pbox('Sunday night. Review your season — your top priorities and how it’s going — then plan the week with them in mind.',true)
+      +`<div class="ss-field"><div class="ss-flabel">Reviewing this season</div><textarea class="ss-ta" id="ssrv" style="min-height:90px" placeholder="How are your focus areas going? What slipped, what held?"></textarea></div>`
+      +`<div class="ss-field"><div class="ss-flabel">The week ahead</div><textarea class="ss-ta" id="sspl" style="min-height:120px" placeholder="Goals · intentions · stressors that may come up · how you’ll meet them"></textarea></div>`;
+    $('#app').innerHTML=`<div class="ss-wrap">${head}${body}<button class="ss-save" id="ssSave">${ic('seal','seal-ic')} Save this week</button></div>`;
+    $('#ssSave').onclick=async()=>{const review=(($('#ssrv')||{}).value||'').trim(),plan=(($('#sspl')||{}).value||'').trim();if(!review&&!plan){toast('Write a line first.');return;}seasonDoc.weekly=seasonDoc.weekly||[];seasonDoc.weekly.unshift({review,plan,created:new Date().toISOString()});await seasonSave();try{Haptics.medium();}catch(e){}toast('Week planned ✦');back();};
+  } else { // text / visualize
+    body=pbox(esc(s.q), s.key!=='constraints')+`<textarea class="ss-ta" id="sstx" placeholder="Take your time…">${esc(st.text||'')}</textarea>`;
+    $('#app').innerHTML=`<div class="ss-wrap">${head}${body}<button class="ss-save" id="ssSave">${ic('seal','seal-ic')} Save</button></div>`;
+    $('#ssSave').onclick=async()=>{const tx=(($('#sstx')||{}).value||'').trim();seasonDoc.stages[s.key]={done:tx.length>0,text:tx};await seasonSave();try{Haptics.medium();}catch(e){}back();};
+  }
+  const x=$('#ssX');if(x)x.onclick=back;
 }
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
@@ -7554,6 +7723,8 @@ async function renderJournal(){
         'Deep journaling walks each of your eight pillars in turn. '+FREE_PILLAR+' is open to everyone; the rest come with Premium.');
   }
   if(jScreen==='seasonintro')return renderSeasonIntro();
+  if(jScreen==='seasonmap')return renderSeasonMap();
+  if(jScreen==='seasonstage')return renderSeasonStage();
   if(jScreen==='compose')return renderJournalCompose();
   if(jScreen==='plessons')return renderPillarLessons();
   if(jScreen==='pillars')return renderLifeOS();
@@ -9250,6 +9421,29 @@ class H(BaseHTTPRequestHandler):
                    ORDER BY r.id ASC LIMIT 200""", (lid, uid, uid)).fetchall()
             self._send(200, {"replies": [dict(r) for r in reps], "me": uid}); return
 
+        if p == "/api/season":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            row = c.execute("SELECT data, started FROM season_doc WHERE user_id=?", (u["id"],)).fetchone()
+            doc = None
+            if row and row["data"]:
+                try:
+                    doc = json.loads(row["data"])
+                except Exception:
+                    doc = None
+            prior = c.execute("SELECT data, started, ended FROM season_archive WHERE user_id=? "
+                              "ORDER BY id DESC LIMIT 1", (u["id"],)).fetchone()
+            prior_out = None
+            if prior and prior["data"]:
+                try:
+                    pd = json.loads(prior["data"])
+                    prior_out = {"name": pd.get("name") or "", "started": prior["started"],
+                                 "ended": prior["ended"], "areas": pd.get("areas") or []}
+                except Exception:
+                    prior_out = None
+            self._send(200, {"season": doc, "has_prior": bool(prior_out), "prior": prior_out}); return
+
         if p == "/api/achievements":
             u = self._me(c)
             have = {}
@@ -9531,6 +9725,32 @@ class H(BaseHTTPRequestHandler):
                 c.execute("INSERT OR IGNORE INTO mod_blocks(blocker_id,blocked_id,created) VALUES(?,?,?)",
                           (u["id"], bid, now_iso()))
                 c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/season":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            d = self._body()
+            doc = d.get("season")
+            if not isinstance(doc, dict):
+                self._send(400, {"error": "bad season"}); return
+            started = (doc.get("started") or now_iso())[:40]
+            blob = json.dumps(doc)[:200000]
+            c.execute("INSERT INTO season_doc(user_id,data,started,updated) VALUES(?,?,?,?) "
+                      "ON CONFLICT(user_id) DO UPDATE SET data=excluded.data, updated=excluded.updated",
+                      (u["id"], blob, started, now_iso())); c.commit()
+            self._send(200, {"ok": True}); return
+
+        if p == "/api/season/new":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            cur = c.execute("SELECT data, started FROM season_doc WHERE user_id=?", (u["id"],)).fetchone()
+            if cur and cur["data"]:
+                c.execute("INSERT INTO season_archive(user_id,data,started,ended) VALUES(?,?,?,?)",
+                          (u["id"], cur["data"], cur["started"], now_iso()))
+            c.execute("DELETE FROM season_doc WHERE user_id=?", (u["id"],)); c.commit()
             self._send(200, {"ok": True}); return
 
         if p == "/api/letter/reply":
@@ -10463,7 +10683,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v111';
+const CACHE = 'lumen-v112';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
