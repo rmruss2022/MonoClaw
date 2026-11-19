@@ -3474,6 +3474,42 @@ body.jw-typing #jp2 .jw-c-resp .jw-body{height:100% !important;min-height:0 !imp
 .sm-weekly .i{width:24px;height:24px;color:#8ab4f8}
 .sm-weekly .sm-rt{display:block;font-weight:700;font-size:15px;color:#efeafe}
 .sm-weekly .sm-rb{display:block;font-size:12.5px;line-height:1.4;color:var(--muted);margin-top:2px}
+.sm-readback{background:linear-gradient(120deg,#2a2012,#161028 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.65),rgba(192,132,252,.32)) border-box !important;border:1.5px solid transparent !important}
+.sm-readback .i{color:#f5c977}
+.sm-readback .sm-next-go{flex:none;margin-left:auto;font-size:22px;color:var(--gold)}
+/* Season review — "Read it back" */
+.sr-wrap{padding:4px 2px 10px}
+.sr-sum{position:relative;overflow:hidden;border-radius:20px;padding:17px 17px;margin:2px 2px 16px;
+  background:linear-gradient(160deg,#3a2a12,#241a0e 86%) padding-box,linear-gradient(140deg,rgba(245,201,119,.6),rgba(192,132,252,.3)) border-box;border:1.5px solid transparent;box-shadow:0 14px 34px -20px rgba(245,201,119,.5)}
+.sr-sum-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--gold);margin-bottom:11px}
+.sr-sum-h .i{width:16px;height:16px}
+.sr-sum ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+.sr-sum li{position:relative;padding-left:20px;font-size:14px;line-height:1.5;color:#f3e7cf}
+.sr-sum li::before{content:"";position:absolute;left:3px;top:7px;width:7px;height:7px;border-radius:50%;background:linear-gradient(90deg,#f5c977,#e0a648);box-shadow:0 0 8px rgba(245,201,119,.85)}
+.sr-sum li b{color:#fff6df}
+.sr-viz{margin:0 2px 16px;border-radius:18px;overflow:hidden;border:1px solid rgba(245,201,119,.25);box-shadow:0 10px 30px -16px rgba(0,0,0,.7)}
+.sr-viz img{width:100%;display:block}
+.sr-sec{border-radius:16px;padding:14px 16px;margin:0 2px 12px;background:#15112466;border:1px solid var(--line)}
+.sr-sec-empty{opacity:.55}
+.sr-sec-h{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.sr-sec-no{flex:none;min-width:24px;height:24px;padding:0 5px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#2a1a05;background:linear-gradient(95deg,#f8dd9b,#e0a648)}
+.sr-sec-no .i{width:14px;height:14px;color:#2a1a05}
+.sr-sec-t{font-family:var(--serif);font-size:17px;color:#efeafe;line-height:1.2}
+.sr-txt{font-size:14px;line-height:1.6;color:#d9d2ec;white-space:pre-wrap}
+.sr-areas{display:flex;flex-direction:column;gap:8px}
+.sr-area{display:flex;gap:10px;align-items:center;font-size:14.5px;color:#e7e0f5}
+.sr-area-n{flex:none;width:22px;height:22px;border-radius:50%;background:rgba(245,201,119,.16);color:var(--gold);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.sr-area b{color:#fff}
+.sr-per{margin:0 0 2px;padding:0;list-style:none;display:flex;flex-direction:column;gap:11px}
+.sr-per li{font-size:14px;line-height:1.55;color:#d9d2ec}
+.sr-per .k{display:block;font-weight:700;color:#f3e2b8;font-size:12.5px;letter-spacing:.02em;margin-bottom:3px}
+.sr-quote{font-family:var(--serif);font-style:italic;font-size:17px;color:#f3e7cf;line-height:1.5}
+.sr-aff{margin-top:10px;font-size:14px;color:#bfe6cb}
+.sr-wk{padding:10px 0;border-top:1px solid var(--line)}
+.sr-wk:first-of-type{border-top:0;padding-top:0}
+.sr-wk-d{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);opacity:.8;margin-bottom:6px}
+.sr-empty{font-size:13px;color:var(--muted);font-style:italic}
+.sr-done{width:100%;max-width:420px;margin:10px auto 26px;display:flex}
 .sm-new{width:100%;max-width:420px;margin:2px auto 24px;display:flex}
 .sm-retro{background:linear-gradient(120deg,#2a1a1a,#1a1024 82%) padding-box,linear-gradient(135deg,rgba(245,201,119,.5),rgba(192,132,252,.25)) border-box;border:1.5px solid transparent}
 /* Season stage compose (on the gold ground) */
@@ -7660,7 +7696,7 @@ async function renderSeasonMap(){
   const nextStage=stages.find(s=>!_stDone(s.key));  // the next entry they're supposed to do
   const nextCard=nextStage
     ? `<button class="sm-next" id="smNext" data-k="${nextStage.key}"><span class="sm-next-bk" style="background-image:url('/art/season-book.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">${done?'Continue · next up':'Start here'}</span><span class="sm-next-t">${esc(nextStage.title)}</span><span class="sm-next-b">${nextStage.blurb}</span></span><span class="sm-next-go">›</span></button>`
-    : `<button class="sm-next" id="smNext" data-k="weekly"><span class="sm-next-bk" style="background-image:url('/art/season-book-done.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">Season complete ✦</span><span class="sm-next-t">Weekly review &amp; plan</span><span class="sm-next-b">Every stage is sealed. Keep it alive with your Sunday review.</span></span><span class="sm-next-go">›</span></button>`;
+    : `<button class="sm-next" id="smNext" data-k="review"><span class="sm-next-bk" style="background-image:url('/art/season-book-done.jpg?v=112')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">Season complete ✦</span><span class="sm-next-t">Read it back</span><span class="sm-next-b">Every stage is sealed — see your whole season, gathered.</span></span><span class="sm-next-go">›</span></button>`;
   const row=(s,i)=>{const d=_stDone(s.key);const retro=s.key==='retro';const num=retro?'★':(seasonPrior?i:i+1);
     return `<button class="sm-card${d?' done':''}${retro?' sm-retro':''}" data-k="${s.key}"><span class="sm-card-glow"></span>`
       +`<span class="sm-card-no">${num}</span>`
@@ -7673,14 +7709,66 @@ async function renderSeasonMap(){
     +`<div class="sm-prog"><span class="sm-prog-n">${done}/${tot}</span><div class="sm-prog-bar"><i style="width:${pct}%"></i></div></div>`
     +(viz?`<div class="sm-viz"><img src="${viz}" alt="your focus areas"></div>`:'')
     +`<div class="sm-list">`+stages.map(row).join('')+`</div>`
+    +(done?`<button class="sm-weekly sm-readback" id="smReview">${ic('book')}<span style="flex:1"><span class="sm-rt">Read it back</span><span class="sm-rb">Your whole season, gathered — a summary and all your responses.</span></span><span class="sm-next-go">›</span></button>`:'')
     +`<button class="sm-weekly" id="smWeekly">${ic('sunrise')}<span style="flex:1"><span class="sm-rt">Weekly review &amp; plan</span><span class="sm-rb">Sunday night — review your season, then plan the week.</span></span></button>`
     +(age>=SEASON_DAYS?`<button class="btn gold sm-new" id="smNew">${ic('seal','seal-ic')} Start a new season</button>`:'');
   {const h=$('#smHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=112')";};im.src="/art/season-hero.jpg?v=112";}}
   const bk=$('#smBack');if(bk)bk.onclick=()=>{jScreen='home';journalMode='daily';renderJournal();};
-  {const nx=$('#smNext');if(nx)nx.onclick=()=>{seasonStageKey=nx.dataset.k;jScreen='seasonstage';renderJournal();};}
+  {const nx=$('#smNext');if(nx)nx.onclick=()=>{if(nx.dataset.k==='review'){jScreen='seasonreview';}else{seasonStageKey=nx.dataset.k;jScreen='seasonstage';}renderJournal();};}
   document.querySelectorAll('.sm-card').forEach(b=>b.onclick=()=>{seasonStageKey=b.dataset.k;jScreen='seasonstage';renderJournal();});
+  {const rv=$('#smReview');if(rv)rv.onclick=()=>{jScreen='seasonreview';renderJournal();};}
   const w=$('#smWeekly');if(w)w.onclick=()=>{seasonStageKey='weekly';jScreen='seasonstage';renderJournal();};
   const nw=$('#smNew');if(nw)nw.onclick=async()=>{try{await api('season/new','POST',{});}catch(e){}toast('New season started — a fresh page.');seasonDoc=null;seasonBegin();};
+}
+// ===================== SEASON REVIEW — "Read it back": gather every response =====================
+function _sstage(k){return (seasonDoc&&seasonDoc.stages&&seasonDoc.stages[k])||{};}
+function _firstline(t){t=(t||'').trim().replace(/\s+/g,' ');if(t.length>96)t=t.slice(0,94).replace(/[\s,.;:]+\S*$/,'')+'…';return t;}
+function _seasonReviewBody(k){
+  const st=_sstage(k);
+  if(k==='areas'){const a=((seasonDoc.areas)||[]).slice().sort((x,y)=>(x.rank||99)-(y.rank||99));if(!a.length)return '';
+    return `<div class="sr-areas">`+a.map((it,i)=>`<div class="sr-area"><span class="sr-area-n">${it.rank||i+1}</span><span><b>${esc(it.t)}</b></span></div>`).join('')+`</div>`;}
+  if(k==='working'||k==='actions'){const per=st.per||{};const ks=Object.keys(per);if(!ks.length)return '';
+    return `<ul class="sr-per">`+ks.map(a=>`<li><span class="k">${esc(a)}</span>${esc(per[a])}</li>`).join('')+`</ul>`;}
+  if(k==='name'){const t=st.text||'';if(!seasonDoc.name&&!t)return '';return (seasonDoc.name?`<div class="sr-quote">“${esc(seasonDoc.name)}”</div>`:'')+(t?`<div class="sr-txt" style="margin-top:9px">${esc(t)}</div>`:'');}
+  if(k==='quote'){if(!st.quote&&!st.affirmation)return '';return (st.quote?`<div class="sr-quote">“${esc(st.quote)}”</div>`:'')+(st.affirmation?`<div class="sr-aff">✦ ${esc(st.affirmation)}</div>`:'');}
+  if(k==='retro'){return [['What went well',st.well],['What didn’t',st.bad],['Next time, better',st.better]].filter(x=>x[1]).map(x=>`<ul class="sr-per"><li><span class="k">${x[0]}</span>${esc(x[1])}</li></ul>`).join('');}
+  const t=st.text||'';if(!t)return '';return `<div class="sr-txt">${esc(t)}</div>`;
+}
+function renderSeasonReview(){
+  try{document.body.classList.remove('jw-gold','jw-writing','jw-typing');document.documentElement.classList.remove('jw-gold-h');}catch(e){}
+  if(!seasonDoc){return seasonBegin();}
+  const S=seasonDoc;
+  const stages=seasonStages();
+  const areas=((S.areas)||[]).slice().sort((x,y)=>(x.rank||99)-(y.rank||99));
+  const working=(_sstage('working').per)||{};
+  const viz=seasonVizURL();
+  const q=_sstage('quote');
+  // --- deterministic "Keeper's summary" bullets, drawn only from what they wrote ---
+  const bits=[];
+  if(S.name)bits.push(`This season is <b>${esc(S.name)}</b>.`);
+  if(areas.length)bits.push(`You're centering ${areas.map(a=>`<b>${esc(a.t)}</b>`).join(' · ')}.`);
+  areas.forEach(a=>{const w=working[a.t];if(w)bits.push(`In ${esc(a.t)}, toward ${esc(_firstline(w))}`);});
+  const g=_sstage('growth').text;if(g)bits.push(`Your biggest opening: ${esc(_firstline(g))}`);
+  const sup=_sstage('support').text;if(sup)bits.push(`Leaning on ${esc(_firstline(sup))}`);
+  if(q&&q.affirmation)bits.push(`Carrying: <i>“${esc(q.affirmation)}”</i>`);
+  const sumHtml=bits.length?`<div class="sr-sum"><div class="sr-sum-h">${ic('spark')} The throughline</div><ul>${bits.map(b=>`<li>${b}</li>`).join('')}</ul></div>`
+    :`<div class="sr-sum"><div class="sr-sum-h">${ic('spark')} The throughline</div><p class="sr-empty">Write a few stages and your season's shape will gather here.</p></div>`;
+  // --- full sections, in order ---
+  let sections='';
+  stages.forEach((s,i)=>{const num=s.key==='retro'?'★':(seasonPrior?i:i+1);const body=_seasonReviewBody(s.key);
+    sections+=`<div class="sr-sec${body?'':' sr-sec-empty'}"><div class="sr-sec-h"><span class="sr-sec-no">${num}</span><span class="sr-sec-t">${esc(s.title)}</span></div>${body||`<div class="sr-empty">Not yet written.</div>`}</div>`;});
+  const wk=(S.weekly)||[];
+  if(wk.length){sections+=`<div class="sr-sec"><div class="sr-sec-h"><span class="sr-sec-no">${ic('sunrise')}</span><span class="sr-sec-t">Weekly reviews</span></div>`
+    +wk.slice(0,8).map(w=>{const d=w.created?new Date(w.created).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'';return `<div class="sr-wk"><div class="sr-wk-d">${esc(d)}</div>${w.review?`<ul class="sr-per"><li><span class="k">Reviewed</span>${esc(w.review)}</li></ul>`:''}${w.plan?`<ul class="sr-per"><li><span class="k">The week ahead</span>${esc(w.plan)}</li></ul>`:''}</div>`;}).join('')
+    +`</div>`;}
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="srHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="srBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('book')} Season · Read it back</div><h1 class="nh-greet">${S.name?esc(S.name):'This season'}</h1><p class="nh-sub">Everything you've written, gathered into one place.</p></div></div></section>`
+    +`<div class="sr-wrap">`+sumHtml
+    +(viz?`<div class="sr-viz"><img src="${viz}" alt="your focus areas"></div>`:'')
+    +sections
+    +`<button class="btn gold sr-done" id="srDone">${ic('seal','seal-ic')} Back to your season</button></div>`;
+  {const h=$('#srHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=112')";};im.src="/art/season-hero.jpg?v=112";}}
+  const back=()=>{jScreen='seasonmap';renderJournal();};
+  const bk=$('#srBack');if(bk)bk.onclick=back;const dn=$('#srDone');if(dn)dn.onclick=back;
 }
 function _seasonAreas(){const a=(seasonDoc&&seasonDoc.areas)||[];return a.map(x=>x.t);}
 function renderSeasonStage(){
@@ -7747,6 +7835,7 @@ async function renderJournal(){
   }
   if(jScreen==='seasonintro')return renderSeasonIntro();
   if(jScreen==='seasonmap')return renderSeasonMap();
+  if(jScreen==='seasonreview')return renderSeasonReview();
   if(jScreen==='seasonstage')return renderSeasonStage();
   if(jScreen==='compose')return renderJournalCompose();
   if(jScreen==='plessons')return renderPillarLessons();
@@ -10706,7 +10795,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v113';
+const CACHE = 'lumen-v114';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
