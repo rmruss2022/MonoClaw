@@ -3408,6 +3408,18 @@ body.jw-typing #jp2 .jw-c-resp .jw-body{height:100% !important;min-height:0 !imp
   background:radial-gradient(120% 82% at 50% -12%,rgba(168,85,247,.22),rgba(56,189,248,.13) 42%,transparent 64%)}
 .jhero>*{position:relative;z-index:1}
 .jhero-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);margin-bottom:15px}
+/* Season journaling explainer */
+.si-stages{display:flex;flex-direction:column;gap:12px;margin:6px 2px 16px}
+.si-stage{display:flex;gap:13px;align-items:flex-start;background:#15112466;border:1px solid var(--line);border-radius:16px;padding:14px 15px}
+.si-num{flex:none;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#f5c977,#e0a648);color:#2a1a05;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center}
+.si-ic{flex:none;color:var(--gold)}.si-ic .i{width:22px;height:22px}
+.si-t{font-weight:700;font-size:15px;color:#efeafe;margin-bottom:3px}
+.si-d{font-size:13.5px;line-height:1.5;color:var(--muted)}
+.si-benefit{margin:0 2px 18px}
+.si-ben-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--gold);display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.si-benefit p{font-size:14px;line-height:1.55;color:#d8cff0}
+.si-cite{display:block;font-size:11px;color:var(--muted);margin-top:5px;font-style:italic}
+.si-begin{width:100%;max-width:420px;margin:0 auto 26px;display:flex}
 .jhero-eyebrow .i{width:13px;height:13px}
 .jhero-facets{display:flex;justify-content:center;gap:clamp(18px,8vw,34px)}
 .jfacet{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:0;padding:0;font-family:inherit}
@@ -7509,6 +7521,23 @@ async function openShareLetter(){
     }catch(e){toast(e);btn.disabled=false;}
   };
 }
+// Season journaling explainer — what the mode is, the three stages, and the
+// evidence behind it. Shown when you open Season (before composing).
+function renderSeasonIntro(){
+  try{document.body.classList.remove('jw-gold','jw-writing','jw-typing');document.documentElement.classList.remove('jw-gold-h');}catch(e){}
+  const stages=[
+    ['season','Name your season','Give the chapter of life you’re living through a name — “The Rebuild,” “Letting Go,” “The Long Wait.” Naming it is the first step to seeing it clearly.'],
+    ['book','Walk it, sitting by sitting','Season isn’t one entry. You return over several sittings, and each prompt widens the lens — what’s ending, what’s beginning, what this time is quietly asking of you.'],
+    ['lumen','Read it back','The Keeper gathers your sittings and reflects the throughline, so the shape of the chapter you’re living becomes something you can actually see.'],
+  ];
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="siHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="siBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('season')} Season journaling</div><h1 class="nh-greet">The chapter you’re in</h1><p class="nh-sub">Most journaling is about today. Season is about the arc — the whole stretch of life you’re moving through right now.</p></div></div></section>`
+    +`<div class="si-stages">`+stages.map((s,i)=>`<div class="si-stage"><span class="si-num">${i+1}</span><span class="si-ic">${ic(s[0])}</span><div class="si-body"><div class="si-t">${s[1]}</div><div class="si-d">${s[2]}</div></div></div>`).join('')+`</div>`
+    +`<div class="card si-benefit"><div class="si-ben-h">${ic('spark')} Why it helps</div><p>Stepping back to write about your life’s larger arc and goals is one of the most striking findings in the research: it <b>lifted mood for months</b> afterward and even <b>cut illness-related doctor visits</b> later on.<span class="si-cite">King, 2001 · “The Health Benefits of Writing about Life Goals”</span></p><p class="muted" style="margin-top:9px">Naming a season gives you perspective, turns a blur of days into a story with meaning, and makes the hard stretches feel navigable instead of endless.</p></div>`
+    +`<button class="btn gold si-begin" id="siBegin">${ic('seal','seal-ic')} Begin your season</button>`;
+  const back=$('#siBack');if(back)back.onclick=()=>{jScreen='home';journalMode='daily';renderJournal();};
+  const begin=$('#siBegin');if(begin)begin.onclick=()=>{journalMode='season';jSeason='';jScreen='compose';renderJournal();};
+  {const h=$('#siHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journal-hero.jpg?v=58')";};im.src="/art/journal-hero.jpg?v=58";}}
+}
 async function renderJournal(){
   if(!_journalPledged()){renderJournalWelcome();return;}
   // The compose flow is a dedicated full-screen page — hide the bottom tab bar so
@@ -7524,6 +7553,7 @@ async function renderJournal(){
       return renderPremiumGate('Deep · '+journalPillar,
         'Deep journaling walks each of your eight pillars in turn. '+FREE_PILLAR+' is open to everyone; the rest come with Premium.');
   }
+  if(jScreen==='seasonintro')return renderSeasonIntro();
   if(jScreen==='compose')return renderJournalCompose();
   if(jScreen==='plessons')return renderPillarLessons();
   if(jScreen==='pillars')return renderLifeOS();
@@ -7593,8 +7623,9 @@ async function renderJournalHome(){
   $('#talkbtn').onclick=renderChat;
   {const pb=$('#planband');if(pb)pb.onclick=()=>{jScreen='plan';renderJournal();};}
   {const le=$('#loedit');if(le)le.onclick=(e)=>{e.stopPropagation();jScreen='pillars';renderJournal();};}
-  const openMode=(k)=>{journalMode=k;journalPillar=null;if(k==='season')jSeason='';
+  const openMode=(k)=>{journalMode=k;journalPillar=null;
     if(k==='deep'){const pil=nextDeepPillar();if(pil){journalPillar=pil;jScreen='compose';}else{jScreen='pillars';}}
+    else if(k==='season'){jSeason='';jScreen='seasonintro';}   // explainer first, then compose
     else{jScreen='compose';}
     renderJournal();};
   document.querySelectorAll('.jmodecard').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
@@ -10432,7 +10463,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v109';
+const CACHE = 'lumen-v110';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
