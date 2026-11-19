@@ -7576,7 +7576,7 @@ async function renderJournalHome(){
   const JMODE_EYE={deep:'Guided inner work',daily:"Today's letter",season:'This chapter of life'};
   const door=([k,lbl,icn])=>{const isRec=recMode===k;
     return `<button class="comm-letter jmodecard${isRec?' jmodecard-rec':''}" data-m="${k}">`
-      +`<span class="comm-let-ic" style="background-image:url('/art/${JMODE_IMG[k]}.jpg?v=63')"></span>`
+      +`<span class="comm-let-ic" style="background-image:url('/art/${JMODE_IMG[k]}.jpg?v=111')"></span>`
       +`<span class="comm-let-body"><span class="comm-let-eye">${JMODE_EYE[k]||''}${isRec?' \u00b7 Today':''}</span>`
       +`<span class="comm-let-t">${lbl}</span><span class="comm-let-teaser">${J_MODE_BLURB[k]||''}</span></span>`
       +`<span class="comm-let-go jmode-chev">›</span></button>`;};
@@ -10463,7 +10463,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v110';
+const CACHE = 'lumen-v111';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
