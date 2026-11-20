@@ -20,6 +20,8 @@ import * as ai from "./ai.ts";
 import * as voiceagent from "./voiceagent.ts";
 import * as audio from "./audio.ts";
 import * as spotify from "./spotify.ts";
+import * as recipes from "./recipes.ts";
+import * as cooking from "./cooking.ts";
 import * as curator from "./curator.ts";
 import * as speakerService from "./speakerService.ts";
 import * as localAudio from "./localAudio.ts";
@@ -53,6 +55,7 @@ const SPEAKERS = new URL("../../../apps/app/speakers.html", import.meta.url);
 const LIGHTS = new URL("../../../apps/app/lights.html", import.meta.url);
 const SETUP = new URL("../../../apps/app/setup.html", import.meta.url);
 const CLIMATE = new URL("../../../apps/app/climate.html", import.meta.url);
+const COOKING = new URL("../../../apps/app/cooking.html", import.meta.url);
 const TV = new URL("../../../apps/app/tv.html", import.meta.url);
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
@@ -67,6 +70,11 @@ function readBody(req: import("node:http").IncomingMessage): Promise<string> {
 const bus = new EventBus();
 const agent = new Agent(bus);
 void spotify.load(); // restore Spotify sign-in from disk if present
+
+// Cooking timers announce themselves on the bus when they finish.
+cooking.onTimerDone((t, s) => {
+  bus.publish({ type: "cooking.timer.done", ts: Date.now(), payload: { label: t.label, recipe: s.recipeTitle } });
+});
 
 // Heartbeat so the event feed isn't empty on first run.
 setInterval(() => {
@@ -580,6 +588,77 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   if (url === "/events/recent") {
     json(res, { events: bus.recent() });
     return;
+  }
+
+  // ---- Recipe toolkit (discovery & planning) ----
+  if (url === "/cooking" || url === "/cooking.html") {
+    try {
+      const html = await readFile(COOKING, "utf8");
+      res.statusCode = 200; res.setHeader("Content-Type", "text/html; charset=utf-8"); res.setHeader("Cache-Control", "no-store");
+      res.end(html);
+    } catch { json(res, { error: "cooking_not_found" }, 500); }
+    return;
+  }
+  if (url === "/recipes") {
+    json(res, { recipes: recipes.listRecipes().map((r) => recipes.summary(r)) });
+    return;
+  }
+  if (url === "/recipes/suggest") {
+    const sp = new URL(req.url ?? "/", "http://x").searchParams;
+    const people = sp.get("people") ? Number(sp.get("people")) : undefined;
+    const diet = (sp.get("diet") ?? "").split(",").map((d) => d.trim()).filter(Boolean);
+    const maxMinutes = sp.get("max") ? Number(sp.get("max")) : undefined;
+    const query = sp.get("q") ?? undefined;
+    const hits = recipes.suggest({ people, diet, maxMinutes, query, limit: 8 });
+    json(res, { recipes: hits.map((r) => recipes.summary(r, people)) });
+    return;
+  }
+  if (url.startsWith("/recipes/")) {
+    const sp = new URL(req.url ?? "/", "http://x").searchParams;
+    const servings = sp.get("servings") ? Number(sp.get("servings")) : undefined;
+    const idPart = decodeURIComponent(url.slice("/recipes/".length));
+    const r = recipes.getRecipe(idPart);
+    if (!r) { json(res, { error: "recipe_not_found", id: idPart }, 404); return; }
+    json(res, { recipe: recipes.detail(r, servings) });
+    return;
+  }
+
+  // ---- Cooking mode (guided session) ----
+  if (url === "/cooking/state") { json(res, { session: cooking.view() }); return; }
+  if (url === "/cooking/history") { json(res, { history: cooking.getHistory() }); return; }
+  if (url === "/cooking/stats") {
+    const rid = new URL(req.url ?? "/", "http://x").searchParams.get("recipeId") || undefined;
+    json(res, { stats: cooking.stats(rid) });
+    return;
+  }
+  if (url === "/cooking/start" && req.method === "POST") {
+    const body = await readBody(req);
+    let recipe = "", servings: number | undefined;
+    try { const p = JSON.parse(body || "{}"); recipe = String(p.recipeId ?? p.recipe ?? ""); if (p.servings) servings = Number(p.servings); } catch {}
+    const r = cooking.start(recipe, servings);
+    if (!r.ok) { json(res, { error: r.error }, 400); return; }
+    bus.publish({ type: "cooking.start", ts: Date.now(), payload: { recipe } });
+    json(res, r); return;
+  }
+  if ((url === "/cooking/next" || url === "/cooking/prev") && req.method === "POST") {
+    const r = url.endsWith("next") ? cooking.next() : cooking.prev();
+    json(res, r, r.ok ? 200 : 409); return;
+  }
+  if (url === "/cooking/goto" && req.method === "POST") {
+    const body = await readBody(req); let step = 1;
+    try { step = Number(JSON.parse(body || "{}").step ?? 1); } catch {}
+    json(res, cooking.goto(step)); return;
+  }
+  if (url === "/cooking/timer" && req.method === "POST") {
+    const body = await readBody(req); let label: string | undefined, seconds: number | undefined;
+    try { const p = JSON.parse(body || "{}"); label = p.label; if (p.seconds) seconds = Number(p.seconds); } catch {}
+    json(res, cooking.addTimer(label, seconds)); return;
+  }
+  if ((url === "/cooking/complete" || url === "/cooking/abandon") && req.method === "POST") {
+    const r = url.endsWith("complete") ? cooking.complete() : cooking.abandon();
+    if (!r.ok) { json(res, { error: "no_session" }, 409); return; }
+    bus.publish({ type: url.endsWith("complete") ? "cooking.complete" : "cooking.abandon", ts: Date.now() });
+    json(res, r); return;
   }
 
   // ---- Speaker service / music ----

@@ -15,6 +15,8 @@ import * as home from "./home.ts";
 import * as lights from "./lights.ts";
 import * as spotify from "./spotify.ts";
 import * as sceneConfig from "./sceneConfig.ts";
+import * as recipes from "./recipes.ts";
+import * as cooking from "./cooking.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -100,6 +102,18 @@ Actions you can take (include any that apply):
   Default source is spotify; use soundcloud only if the user says SoundCloud.
   Examples: "next song"→next, "go back"→previous, "turn it up"→volume "up", "shuffle"→shuffle_on,
   "what's playing"→now_playing, "like this song"→like, "play my discover weekly"→play query "discover weekly".
+- COOKING — the kitchen assistant:
+  - {"type":"recipe_find","query":"<what they want, e.g. 'something with chicken'>"}
+  - {"type":"recipe_suggest","people":<int?>,"diet":["vegan"|"vegetarian"|"gluten-free"|"dairy-free"|"nut-free"|"pescatarian"|"keto"],"max":<minutes?>,"query":"<optional>"}
+  - {"type":"recipe_info","id":"<recipe name or id>"}  (time, ingredients, difficulty)
+  - {"type":"cook_start","recipe":"<name or id>","servings":<int?>}  (begin step-by-step cooking)
+  - {"type":"cook_next"} / {"type":"cook_prev"} / {"type":"cook_repeat"}  (move through steps)
+  - {"type":"cook_timer","seconds":<int>,"label":"<optional>"}  (omit seconds to use the current step's timer)
+  - {"type":"cook_status"}  (where am I, active timers)
+  - {"type":"cook_finish"} (done/completed) / {"type":"cook_abandon"} (stop cooking)
+  Examples: "what can I make for 4 people that's vegan"→recipe_suggest; "let's cook the chickpea curry"→cook_start;
+  "next step"→cook_next; "set a timer for 10 minutes"→cook_timer seconds 600; "how's it going"→cook_status; "I'm done"→cook_finish.
+  For cooking actions, leave "say" empty — the home speaks the step/result for you.
 
 Rules:
 - For anything needing current/live info (weather, news, sports, prices, "today", facts you're unsure of), set "web_search" to a focused query and set "say" to "" — the home will search and ask you again with results.
@@ -360,6 +374,19 @@ async function runSceneReal(id: string): Promise<string | null> {
   return parts.length ? parts.join(", ") : null;
 }
 
+function fmtRecipeList(rs: Array<{ title: string }>): string {
+  if (!rs.length) return "I couldn't find a matching recipe.";
+  const names = rs.slice(0, 3).map((r) => r.title);
+  if (names.length === 1) return `You could make ${names[0]}.`;
+  return `You could make ${names.slice(0, -1).join(", ")}, or ${names[names.length - 1]}.`;
+}
+function fmtDur(sec: number): string {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  if (m && s) return `${m} minute${m > 1 ? "s" : ""} and ${s} seconds`;
+  if (m) return `${m} minute${m > 1 ? "s" : ""}`;
+  return `${s} second${s !== 1 ? "s" : ""}`;
+}
+
 async function execActions(actions: any[]): Promise<string[]> {
   const done: string[] = [];
   for (const a of actions || []) {
@@ -396,6 +423,51 @@ async function execActions(actions: any[]): Promise<string[]> {
         case "lock": home.setByType("lock", { locked: !!a.locked }); done.push(a.locked ? "locked" : "unlocked"); break;
         case "thermostat": home.setDevice("thermostat_main", { target: Number(a.target) }); done.push(`thermostat ${a.target}`); break;
         case "music": done.push(await doMusic(a)); break;
+        case "recipe_find": { const rs = recipes.search(String(a.query || "")); done.push("SPEAK::" + fmtRecipeList(rs)); break; }
+        case "recipe_suggest": {
+          const rs = recipes.suggest({ people: a.people ? Number(a.people) : undefined, diet: Array.isArray(a.diet) ? a.diet : (a.diet ? [String(a.diet)] : []), maxMinutes: a.max ? Number(a.max) : undefined, query: a.query ? String(a.query) : undefined });
+          done.push("SPEAK::" + fmtRecipeList(rs)); break;
+        }
+        case "recipe_info": {
+          const r = recipes.getRecipe(String(a.id || a.recipe || a.query || ""));
+          done.push("SPEAK::" + (r ? recipes.sayLine(r) : "I don't have that recipe yet.")); break;
+        }
+        case "cook_start": {
+          const r = cooking.start(String(a.recipe || a.id || ""), a.servings ? Number(a.servings) : undefined);
+          if (!r.ok || !r.session) { done.push("SPEAK::I couldn't find that recipe to cook."); break; }
+          const v = r.session; done.push(`SPEAK::Starting ${v.recipeTitle}. Step 1: ${v.step?.text ?? ""}`); break;
+        }
+        case "cook_next": {
+          const r = cooking.next();
+          if (!r.ok) done.push("SPEAK::You're not cooking anything right now.");
+          else if (r.done) done.push("SPEAK::That was the last step. Enjoy your meal!");
+          else done.push(`SPEAK::Step ${r.session?.currentStep}: ${r.session?.step?.text ?? ""}`);
+          break;
+        }
+        case "cook_prev": {
+          const r = cooking.prev();
+          done.push("SPEAK::" + (r.ok ? `Step ${r.session?.currentStep}: ${r.session?.step?.text ?? ""}` : "You're not cooking anything right now."));
+          break;
+        }
+        case "cook_repeat": {
+          const v = cooking.view();
+          done.push("SPEAK::" + (v ? `Step ${v.currentStep}: ${v.step?.text ?? ""}` : "No recipe in progress."));
+          break;
+        }
+        case "cook_timer": {
+          const r = cooking.addTimer(a.label ? String(a.label) : undefined, a.seconds ? Number(a.seconds) : undefined);
+          done.push("SPEAK::" + (r.ok && r.timer ? `Timer set for ${fmtDur(r.timer.remainingSec)}${r.timer.label && r.timer.label !== "timer" ? ` for the ${r.timer.label}` : ""}.` : "Tell me how long to set the timer for."));
+          break;
+        }
+        case "cook_status": {
+          const v = cooking.view();
+          if (!v) { done.push("SPEAK::No recipe in progress."); break; }
+          const tl = v.timers.filter((t) => !t.done).map((t) => `${t.label} ${fmtDur(t.remainingSec)}`);
+          done.push(`SPEAK::You're on step ${v.currentStep} of ${v.totalSteps} of ${v.recipeTitle}${tl.length ? `. Timers: ${tl.join(", ")}` : ""}.`);
+          break;
+        }
+        case "cook_finish": { const r = cooking.complete(); done.push("SPEAK::" + (r.ok ? "Nice work — recipe complete. I've logged it." : "No recipe in progress.")); break; }
+        case "cook_abandon": { const r = cooking.abandon(); done.push("SPEAK::" + (r.ok ? "Okay, I've stopped the recipe." : "No recipe in progress.")); break; }
       }
     } catch (e) {
       console.log("[agent] action failed:", JSON.stringify(a), "->", (e as Error)?.message);
@@ -451,11 +523,14 @@ async function runAgentWithinBudget(text: string): Promise<{ reply: string; acti
   // Music plays tag their result as "NOWPLAYING::<name>" so we can announce the
   // real thing that started, not the model's generic "sure, playing that".
   const np = done.map((d) => /^NOWPLAYING::(.+)/.exec(d)?.[1]).find(Boolean);
-  const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
+  // Cooking/recipe actions carry their own spoken line (the step text, a suggestion…).
+  const speak = done.map((d) => /^SPEAK::([\s\S]+)/.exec(d)?.[1]).find(Boolean);
+  const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing ").replace(/^SPEAK::/, ""));
   let reply = String(out.say || "").trim();
   const failure = cleanDone.find((result) => /^I couldn't/i.test(result));
   if (failure) reply = failure;
   if (np && !failure) reply = `Now playing ${np}.`;
+  if (speak && !failure) reply = speak;
   if (!reply) reply = cleanDone.length ? "Done." : "Okay.";
   return { reply, actions: cleanDone, understood: cleanDone.length > 0 || !!out.say };
 }
