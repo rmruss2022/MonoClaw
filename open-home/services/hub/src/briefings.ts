@@ -17,7 +17,7 @@ import * as profile from "./profile.ts";
 
 const DATA_DIR = new URL("../.data/", import.meta.url);
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
-const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
+const CLAUDE_MODEL = process.env.OPEN_HOME_BRIEFING_MODEL || process.env.CLAUDE_MODEL || "claude-haiku-4-5-20251001";
 
 export type TimeOfDay = "morning" | "afternoon" | "evening" | "night" | "any";
 export type SectionType = "greeting" | "weather" | "headlines" | "calendar" | "agenda" | "quote" | "reminders" | "custom";
