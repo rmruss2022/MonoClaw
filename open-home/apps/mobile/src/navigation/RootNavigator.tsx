@@ -2,6 +2,7 @@ import React from "react";
 import { Text, View, StyleSheet } from "react-native";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/context/AuthContext";
 import { colors, font } from "@/theme";
 import { PrimaryButton } from "@/components/ui";
@@ -29,20 +30,25 @@ const navTheme = {
   },
 };
 
-const ICONS: Record<string, string> = {
-  Home: "⌂",
-  Lights: "☀",
-  Climate: "❄",
-  Speakers: "♪",
-  TV: "▶",
-  Account: "◉",
-  Settings: "⚙",
+// Real vector icons, not Unicode glyphs. iOS renders ☀ ❄ ▶ with emoji
+// presentation by default, so the old tab bar came out as colour emoji that
+// ignored the active/inactive tint entirely.
+const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
+  Home: { on: "home", off: "home-outline" },
+  Lights: { on: "bulb", off: "bulb-outline" },
+  Climate: { on: "thermometer", off: "thermometer-outline" },
+  Speakers: { on: "musical-notes", off: "musical-notes-outline" },
+  TV: { on: "tv", off: "tv-outline" },
+  Account: { on: "person-circle", off: "person-circle-outline" },
+  Settings: { on: "settings", off: "settings-outline" },
 };
 
 function tabIcon(name: string) {
-  return ({ color }: { color: string }) => (
-    <Text style={{ fontSize: 20, color }}>{ICONS[name]}</Text>
-  );
+  return ({ color, focused }: { color: string; focused: boolean }) => {
+    const set = ICONS[name];
+    if (!set) return null;
+    return <Ionicons name={focused ? set.on : set.off} size={23} color={color} />;
+  };
 }
 
 function NoHome() {

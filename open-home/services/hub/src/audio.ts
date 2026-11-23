@@ -117,11 +117,16 @@ export function state() {
   });
   const calRooms = calibration.calibratedRooms();
   // Rooms are the first-class playback targets in the Music tab: any room that has
-  // at least one speaker. Spotify audio is routed (server-side, via librespot) to
+  // at least one speaker. Spotify audio is routed (server-side, via Soloist) to
   // the room's speaker — the user picks a *room*, never a phone/Mac/tab.
   const roomMap: Record<string, { id: string; name: string; speakerIds: string[]; speakers: string[]; online: boolean }> = {};
   for (const sp of allSpeakers as any[]) {
-    const name = sp.room || "Unassigned";
+    // A speaker with no room is a personal device (phone, laptop) that merely
+    // turned up on Spotify Connect. It stays in `speakers` so the app can still
+    // offer it as a cast target, but it must not conjure a room that the user
+    // does not actually have.
+    const name = String(sp.room || "").trim();
+    if (!name || name === "—") continue;
     (roomMap[name] ||= { id: "room_" + name.toLowerCase().replace(/[^a-z0-9]+/g, "_"), name, speakerIds: [], speakers: [], online: false });
     roomMap[name].speakerIds.push(sp.id);
     roomMap[name].speakers.push(sp.name);

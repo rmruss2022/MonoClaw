@@ -41,7 +41,9 @@ export default function TvScreen() {
   const cast = useCallback(async (t: TvTitle) => {
     if (!active) { flash("Pair a stick first"); return; }
     const r = await tv.cast(t.id, active);
-    flash(r.ok ? `▶ ${t.name} → ${r.castTo}` : r.reason || "Couldn't cast");
+    // Plain words, not "▶" — U+25B6 picks up emoji presentation on iOS and
+    // turns a status toast into a stray coloured glyph.
+    flash(r.ok ? `Playing ${t.name} on ${r.castTo}` : r.reason || "Couldn't cast");
   }, [active]);
 
   const claim = useCallback(async () => {

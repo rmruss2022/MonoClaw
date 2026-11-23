@@ -19,13 +19,27 @@ type RoomMap = Record<string, RoomEntry>;
 function loadRooms(): RoomMap { try { return JSON.parse(readFileSync(ROOMS_FILE, "utf8")); } catch { return {}; } }
 function saveRooms(m: RoomMap) { try { mkdirSync(DATA_DIR, { recursive: true }); writeFileSync(ROOMS_FILE, JSON.stringify(m)); } catch (e) { console.log("[speakers] save:", (e as Error).message); } }
 
-/** First-seen default room — keeps the Mac and the phone in separate rooms. */
+/**
+ * First-seen default room.
+ *
+ * Only *fixed* playback endpoints get one. A phone or a laptop is wherever its
+ * owner happens to be standing, so inventing a room for it fabricates rooms the
+ * user does not have — a MacBook became "Office" and an iPhone became "Bedroom"
+ * in a home with exactly one speaker. Personal devices return "" and are kept
+ * out of the room list entirely; the user can still assign one explicitly via
+ * setRoom() if they really do leave a laptop wired to a stereo.
+ */
 function defaultRoom(type = "", name = ""): string {
   const t = type.toLowerCase(), n = name.toLowerCase();
-  if (t === "smartphone" || n.includes("iphone") || n.includes("phone")) return "Bedroom";
-  if (t === "computer" || n.includes("mac") || n.includes("book") || n.includes("web player")) return "Office";
-  if (t === "speaker" || t === "avr" || t === "tv") return "Living Room";
-  return "Living Room";
+  if (t === "smartphone" || t === "computer" || t === "tablet") return "";
+  if (n.includes("iphone") || n.includes("ipad") || n.includes("phone")) return "";
+  if (n.includes("macbook") || n.includes("web player")) return "";
+  // The hub's own Soloist receiver is named for the room it serves
+  // ("openhome Living Room"), so trust the name over any guess.
+  const m = /openhome\s+(.+)$/i.exec(name.trim());
+  if (m) return m[1].trim();
+  if (t === "speaker" || t === "avr" || t === "tv" || t === "cast_video" || t === "cast_audio") return "Living Room";
+  return "";
 }
 
 function kindOf(type = ""): string {

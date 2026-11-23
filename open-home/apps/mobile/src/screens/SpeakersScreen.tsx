@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { usePoll, useCommand } from "@/api/hooks";
 import { Card, SectionTitle, StatusDot, Loading, Empty } from "@/components/ui";
 import { colors, radius, font, space } from "@/theme";
@@ -56,7 +57,7 @@ export default function SpeakersScreen() {
         <Card active={playing} style={styles.np}>
           <View style={styles.npTop}>
             <View style={[styles.art, playing && styles.artOn]}>
-              <Text style={[styles.artGlyph, playing && { color: colors.accent }]}>♪</Text>
+              <Ionicons name="musical-notes" size={28} color={playing ? colors.accent : colors.muted} />
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.statusRow}>
@@ -86,7 +87,7 @@ export default function SpeakersScreen() {
               accessibilityLabel="Previous track"
               style={({ pressed }) => [styles.tbtn, pressed && styles.tbtnPressed]}
             >
-              <Text style={styles.tico}>⏮</Text>
+              <Ionicons name="play-skip-back" size={24} color={colors.text} />
             </Pressable>
             <Pressable
               onPress={() => transport(playing ? "pause" : "play")}
@@ -94,7 +95,7 @@ export default function SpeakersScreen() {
               accessibilityLabel={playing ? "Pause" : "Play"}
               style={({ pressed }) => [styles.tbtn, styles.tmain, pressed && { opacity: 0.85 }]}
             >
-              <Text style={styles.ticoMain}>{playing ? "⏸" : "▶"}</Text>
+              <Ionicons name={playing ? "pause" : "play"} size={24} color={colors.onAccent} />
             </Pressable>
             <Pressable
               onPress={() => transport("next")}
@@ -102,7 +103,7 @@ export default function SpeakersScreen() {
               accessibilityLabel="Next track"
               style={({ pressed }) => [styles.tbtn, pressed && styles.tbtnPressed]}
             >
-              <Text style={styles.tico}>⏭</Text>
+              <Ionicons name="play-skip-forward" size={24} color={colors.text} />
             </Pressable>
           </View>
         </Card>
