@@ -306,6 +306,23 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     return;
   }
 
+  // Say something on the room speaker. Any surface can make the house talk —
+  // useful on its own, and the only way to check speech levels without firing
+  // a whole scene.
+  if (url === "/speak" && req.method === "POST") {
+    if (!speech.enabled()) { json(res, { ok: false, error: "no_tts", provider: speech.provider() }, 503); return; }
+    const body = await readBody(req);
+    let text = "";
+    try { text = String(JSON.parse(body || "{}").text ?? ""); } catch {}
+    if (!text.trim()) { json(res, { ok: false, error: "empty_text" }, 400); return; }
+    // Not awaited: a long passage would otherwise hold the request open for
+    // the whole duration of the audio.
+    speech.speak(text).catch(() => {});
+    json(res, { ok: true, provider: speech.provider(), chars: text.length });
+    return;
+  }
+  if (url === "/speak/stop" && req.method === "POST") { speech.stop(); json(res, { ok: true }); return; }
+
   // Voice agent — real speech: browser sends captured audio, Gemini transcribes + acts.
   if (url === "/agent/audio" && req.method === "POST") {
     // Two separate capabilities: something must transcribe the speech, and

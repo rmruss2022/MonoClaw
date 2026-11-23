@@ -66,6 +66,31 @@ function speakable(text: string): string {
     .trim();
 }
 
+// Music level while we speak, as a percentage. The voice has to win against a
+// playlist at 100% on a Bluetooth speaker across the room; 25 keeps the jazz
+// present underneath instead of cutting it to silence.
+const DUCK = Number(process.env.OPEN_HOME_SPEAK_DUCK ?? 25);
+// mpv's software gain for the voice itself. TTS output is mastered much
+// quieter than streamed music, so matching levels is not enough.
+const VOICE_GAIN = String(process.env.OPEN_HOME_SPEAK_GAIN ?? 130);
+
+function sh(cmd: string, args: string[]): Promise<void> {
+  return new Promise((resolve) => {
+    const p = spawn(cmd, args, {
+      env: { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000" },
+    });
+    p.on("exit", () => resolve());
+    p.on("error", () => resolve());
+  });
+}
+
+/** Drop the music under our voice, then put it back. Best effort throughout. */
+async function duck(on: boolean): Promise<void> {
+  const level = on ? DUCK : 100;
+  await sh("soloist", ["ctl", "volume", String(level)]);
+  await sh("sc-ctl", ["vol", String(level)]);
+}
+
 let current: ReturnType<typeof spawn> | null = null;
 
 /** Stop whatever is being spoken right now. */
@@ -105,16 +130,24 @@ async function run(text: string): Promise<void> {
   const file = join(tmpdir(), `oh-speak-${Date.now()}.mp3`);
   await writeFile(file, audio);
   stop();
-  await new Promise<void>((resolve) => {
-    // mpv to the PipeWire default sink, which is the Bluetooth speaker. No
-    // video, no terminal UI, and it exits on its own when the clip ends.
-    const p = spawn("mpv", ["--no-video", "--really-quiet", "--no-terminal", file], {
-      env: { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000" },
+  await duck(true);
+  try {
+    await new Promise<void>((resolve) => {
+      // mpv to the PipeWire default sink, which is the Bluetooth speaker. No
+      // video, no terminal UI, and it exits on its own when the clip ends.
+      // --volume above 100 is software gain, which TTS needs to sit over music.
+      const p = spawn("mpv", ["--no-video", "--really-quiet", "--no-terminal", `--volume=${VOICE_GAIN}`, file], {
+        env: { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000" },
+      });
+      current = p;
+      p.on("exit", () => { if (current === p) current = null; resolve(); });
+      p.on("error", (err) => { console.log("[speech] mpv:", err.message); if (current === p) current = null; resolve(); });
     });
-    current = p;
-    p.on("exit", () => { if (current === p) current = null; resolve(); });
-    p.on("error", (err) => { console.log("[speech] mpv:", err.message); if (current === p) current = null; resolve(); });
-  });
+  } finally {
+    // Always restore, even if playback threw or was killed by a newer
+    // utterance — otherwise the music stays quiet for the rest of the day.
+    await duck(false);
+  }
   unlink(file).catch(() => {});
-  console.log(`[speech] spoke ${text.length} chars via ${provider()}`);
+  console.log(`[speech] spoke ${text.length} chars via ${provider()} (music ducked to ${DUCK}%)`);
 }
