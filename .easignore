@@ -70,6 +70,11 @@
 
 # ---- inside open-home ----
 # EAS runs its own install from package-lock.json.
+# Anchored forms alone did not work: build 29 still uploaded 439 MB, almost all
+# of it node_modules. .easignore REPLACES .gitignore, so anything gitignored is
+# otherwise pulled back in. The bare form matches at any depth and is the one
+# EAS's walker honours.
+node_modules/
 /open-home/node_modules/
 /open-home/**/node_modules/
 # Enclosure CAD, renders and product mockups; never bundled in the app.
