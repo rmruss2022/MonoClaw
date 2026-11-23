@@ -49,9 +49,15 @@ WAKE_THRESHOLD = float(os.environ.get("WAKE_THRESHOLD", "0.5"))
 MAX_UTTERANCE_S = float(os.environ.get("MAX_UTTERANCE_S", "12"))
 ONSET_GRACE_S = float(os.environ.get("ONSET_GRACE_S", "5.0"))
 SILENCE_END_S = float(os.environ.get("SILENCE_END_S", "1.0"))
-# Frames quieter than this count as silence. Measured room noise sits near
-# -29 dBFS, so this is comfortably below speech and above the noise floor.
-SILENCE_RMS = float(os.environ.get("SILENCE_RMS", "180"))
+# Speech must stand this many times above the measured room noise to count.
+# A fixed number cannot work — the floor moves with the music, the fridge and
+# the time of day — and setting it below ambient means end-of-speech never
+# fires and every utterance runs to the cap.
+SPEECH_OVER_NOISE = float(os.environ.get("SPEECH_OVER_NOISE", "2.2"))
+# Floor and ceiling for the derived threshold, so a freak-quiet or very loud
+# moment cannot make it useless.
+SILENCE_RMS_MIN = float(os.environ.get("SILENCE_RMS_MIN", "300"))
+SILENCE_RMS_MAX = float(os.environ.get("SILENCE_RMS_MAX", "4000"))
 # After the hub answers, ignore the mic: the reply is playing on the speaker
 # in this room and we would otherwise transcribe ourselves.
 COOLDOWN_S = float(os.environ.get("COOLDOWN_S", "1.5"))
@@ -151,7 +157,10 @@ def beep(freq: int = 880, ms: int = 120, vol: float = 0.25) -> None:
     tone = (np.sin(2 * np.pi * freq * t) * env * vol * 32767).astype(np.int16)
     try:
         subprocess.run(
-            ["aplay", "-q", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw", "-"],
+            # -D pipewire, NOT the ALSA default: `aplay -L` on this Pi reports
+            # the default as "null — Discard all samples", so a bare aplay
+            # played the cue into a black hole and the wake word looked dead.
+            ["aplay", "-q", "-D", "pipewire", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw", "-"],
             input=tone.tobytes(), timeout=3,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
@@ -173,12 +182,35 @@ def read_frame(mic: subprocess.Popen) -> np.ndarray | None:
     return np.frombuffer(raw, dtype=np.int16)
 
 
+class NoiseFloor:
+    """Rolling estimate of the room while nobody is talking.
+
+    Only fed from idle frames (before a wake word), which are not speech by
+    definition. The median ignores the occasional door slam that would drag a
+    mean upwards for minutes."""
+
+    def __init__(self, seconds: float = 4.0) -> None:
+        self.buf: deque[float] = deque(maxlen=int(seconds * RATE / FRAME))
+
+    def add(self, v: float) -> None:
+        self.buf.append(v)
+
+    @property
+    def level(self) -> float:
+        return float(np.median(self.buf)) if self.buf else 0.0
+
+    @property
+    def threshold(self) -> float:
+        t = self.level * SPEECH_OVER_NOISE
+        return float(min(max(t, SILENCE_RMS_MIN), SILENCE_RMS_MAX))
+
+
 def rms(frame: np.ndarray) -> float:
     # float64 first: int16 squared overflows and reports silence for loud audio.
     return float(np.sqrt(np.mean(frame.astype(np.float64) ** 2)))
 
 
-def capture(mic: subprocess.Popen, grace_s: float,
+def capture(mic: subprocess.Popen, grace_s: float, thresh: float,
             seed: "np.ndarray | None" = None) -> "list[np.ndarray] | None":
     """Record until the speaker stops, or until `grace_s` passes with no speech.
 
@@ -194,7 +226,7 @@ def capture(mic: subprocess.Popen, grace_s: float,
             return frames or None
         frames.append(f)
         now = time.time()
-        if rms(f) > SILENCE_RMS:
+        if rms(f) > thresh:
             heard = True
             last_voice = now
         if now - started > MAX_UTTERANCE_S:
@@ -228,6 +260,7 @@ def main() -> int:
 
     hub = Hub()
     hub.login()
+    floor = NoiseFloor()
 
     mic = open_mic()
     log("listening")
@@ -241,11 +274,15 @@ def main() -> int:
                 mic = open_mic()
                 continue
 
+            # Idle frame: this is the room, not speech. Use it to learn the floor.
+            floor.add(rms(frame))
+
             scores = oww.predict(frame)
             if scores.get(key, 0.0) < WAKE_THRESHOLD:
                 continue
 
-            log(f"wake ({scores[key]:.2f})")
+            thresh = floor.threshold
+            log(f"wake ({scores[key]:.2f})  noise floor {floor.level:.0f} -> speech threshold {thresh:.0f}")
             reset(oww)
             beep()
 
@@ -255,14 +292,14 @@ def main() -> int:
             first = True
             for turn in range(MAX_TURNS):
                 grace = ONSET_GRACE_S if first else FOLLOWUP_GRACE_S
-                frames = capture(mic, grace, seed=frame if first else None)
+                frames = capture(mic, grace, thresh, seed=frame if first else None)
                 first = False
                 if frames is None:
                     break
 
                 peak = max((rms(f) for f in frames), default=0.0)
-                if peak <= SILENCE_RMS:
-                    log(f"nothing said (peak RMS {peak:.0f}, threshold {SILENCE_RMS:.0f})")
+                if peak <= thresh:
+                    log(f"nothing said (peak RMS {peak:.0f}, threshold {thresh:.0f})")
                     break
 
                 wav = to_wav(frames)
