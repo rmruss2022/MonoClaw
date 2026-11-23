@@ -18,6 +18,7 @@ import { docsIndexHtml, docPageHtml } from "./docs.ts";
 import * as home from "./home.ts";
 import * as ai from "./ai.ts";
 import * as voiceagent from "./voiceagent.ts";
+import * as speech from "./speech.ts";
 import * as audio from "./audio.ts";
 import * as spotify from "./spotify.ts";
 import * as curator from "./curator.ts";
@@ -330,7 +331,11 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
           const r = await voiceagent.runAgent(transcript);
           console.log(`[agent/audio] transcript=${JSON.stringify(transcript)} agent actions=${JSON.stringify(r.actions)}`);
           r.actions?.forEach?.((a: any) => bus.publish({ type: `agent.${a?.label ?? a}`, ts: Date.now(), payload: { via: "audio" } }));
-          json(res, { ok: true, transcript, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent-audio", summary: home.summary() });
+          // Answer out loud on the room's speaker. Deliberately not awaited:
+          // the morning report is a couple of minutes of audio, and the phone
+          // should get its response immediately rather than after the speech.
+          if (r.reply) speech.speak(r.reply).catch(() => {});
+          json(res, { ok: true, transcript, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent-audio", summary: home.summary(), spoken: speech.enabled() });
           return;
         } catch (e) { console.log("[agent/audio] voiceagent error:", (e as Error)?.message); }
       }
@@ -372,6 +377,9 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       // Keep the mock model in step either way: the UI reads its summary, and
       // keys with no hardware (cameras, doorbell) have nowhere else to go.
       const mock = home.control(action);
+      // Say it out loud, not awaited — the morning report is minutes of audio
+      // and the dial needs its snackbar back immediately.
+      if (result?.say) { speech.speak(result.say).catch(() => {}); delete result.say; }
       result = result ? { ...mock, ...result } : mock;
       bus.publish({ type: `control.${action}`, ts: Date.now(), payload: { via: "radial", angle, ...result } });
       json(res, { ok: true, action, ...result, summary: home.summary() });

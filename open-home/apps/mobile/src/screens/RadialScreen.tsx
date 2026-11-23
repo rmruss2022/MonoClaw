@@ -14,10 +14,11 @@
  */
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
-  View, Text, StyleSheet, PanResponder, Vibration, Dimensions, Pressable, ActivityIndicator, ScrollView,
+  View, Text, StyleSheet, PanResponder, Vibration, Dimensions, Pressable, ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path, Polyline, Circle } from "react-native-svg";
+import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   useAudioRecorder, RecordingPresets,
@@ -92,6 +93,32 @@ interface Summary {
   anyPlaying: boolean; temp: number | null; target: number | null;
 }
 
+/**
+ * The openhome mark: a house outline around a keyhole — you hold the key to
+ * your home and your data. Traced from apps/app/assets/brand/mark.svg so the
+ * dial's centre reads the same here as on the web surface.
+ */
+function Mark({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64">
+      <Path
+        d="M32 6 L56.5 25.5 L56.5 55 L7.5 55 L7.5 25.5 Z"
+        fill="none" stroke={colors.accent} strokeWidth={5}
+        strokeLinejoin="round" strokeLinecap="round"
+      />
+      <Circle cx={32} cy={33} r={6.2} fill={colors.accent} />
+      <Path d="M28.8 37 L26.2 49.5 L37.8 49.5 L35.2 37 Z" fill={colors.accent} />
+    </Svg>
+  );
+}
+
+/** First sentence only — the snackbar is a confirmation, not a transcript. */
+function firstSentence(s: string): string {
+  const t = s.replace(/\s+/g, " ").trim();
+  const m = t.match(/^(.{0,90}?[.!?])(\s|$)/);
+  return (m ? m[1] : t.slice(0, 90)).trim();
+}
+
 export default function RadialScreen() {
   const { data: state, refresh } = usePoll<{ summary?: Summary }>("/devices", 8000);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -100,8 +127,6 @@ export default function RadialScreen() {
   const [hot, setHot] = useState(-1);
   const [path, setPath] = useState<number[]>([]);
   const [burst, setBurst] = useState<{ label: string; sub: string; icon: Icon } | null>(null);
-  const [heard, setHeard] = useState<string | null>(null);
-  const [reply, setReply] = useState<string | null>(null);
   const [voice, setVoice] = useState<"idle" | "recording" | "thinking">("idle");
 
   // Refs mirror state for the gesture callbacks: PanResponder closes over the
@@ -136,20 +161,21 @@ export default function RadialScreen() {
 
   // ---- voice (double-tap the centre) ----
   const startVoice = useCallback(async () => {
-    setHeard(null); setReply(null);
     try {
       const perm = await requestRecordingPermissionsAsync();
-      if (!perm.granted) { setReply("Microphone access is off for openhome."); return; }
+      if (!perm.granted) { showBurst("Microphone is off", "Enable it for openhome in iOS Settings", "mic-off"); return; }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
       recorder.record();
       voiceRef.current = "recording";
       setVoice("recording");
-      Vibration.vibrate(8);
+      // Starting to listen is a state change worth feeling, unlike sweeping
+      // past a wedge you did not choose.
+      Vibration.vibrate(12);
     } catch (e) {
-      setReply((e as Error).message || "Couldn't start listening");
+      showBurst("Couldn't listen", (e as Error).message || "", "mic-off");
     }
-  }, [recorder]);
+  }, [recorder, showBurst]);
 
   const stopVoice = useCallback(async () => {
     if (voiceRef.current !== "recording") return;
@@ -169,11 +195,16 @@ export default function RadialScreen() {
       const r: any = await api("/agent/audio", {
         method: "POST", body: { audio: b64, mime: "audio/m4a" }, timeoutMs: 60000,
       });
-      setHeard(r?.transcript || "");
-      setReply(r?.reply || (r?.ok === false ? "The hub couldn't process that." : ""));
+      // The house answers out loud. The snackbar only confirms it was heard and
+      // what changed — a wall of text to read defeats the point of talking.
+      const acts: string[] = (r?.actions ?? []).filter(Boolean);
+      const sub = acts.length ? acts.join(" · ")
+        : r?.ok === false ? "Couldn't process that"
+        : firstSentence(r?.reply ?? "");
+      showBurst(r?.transcript ? `“${r.transcript}”` : "Heard you", sub, "mic");
       refresh();
     } catch (e) {
-      setReply((e as Error).message || "Voice request failed");
+      showBurst("Voice failed", (e as Error).message || "", "alert-circle");
     } finally {
       voiceRef.current = "idle";
       setVoice("idle");
@@ -191,7 +222,9 @@ export default function RadialScreen() {
       pathRef.current = [];
       hotRef.current = -1;
       setPath([]); setHot(-1); setArmed(true);
-      Vibration.vibrate(8);
+      // No haptic here, and none per wedge: buzzing on every direction you
+      // sweep past turns a deliberate confirmation into noise. The phone only
+      // taps back once something is actually chosen.
     },
 
     onPanResponderMove: (_e, g) => {
@@ -209,7 +242,6 @@ export default function RadialScreen() {
         if (pathRef.current[pathRef.current.length - 1] !== i) {
           pathRef.current = [...pathRef.current, i];
           setPath(pathRef.current);
-          Vibration.vibrate(6);
         }
       }
     },
@@ -323,15 +355,21 @@ export default function RadialScreen() {
           );
         })}
 
-        {/* Core */}
-        <View pointerEvents="none" style={[styles.core, { left: size / 2 - 42, top: size / 2 - 42 }]}>
+        {/* Core — the openhome mark, as on the web dial. */}
+        <View
+          pointerEvents="none"
+          style={[
+            styles.core,
+            { left: size / 2 - 52, top: size / 2 - 52 },
+            armed && { borderColor: colors.accent },
+          ]}
+        >
+          <LinearGradient colors={["#1b1730", "#15111f"]} style={styles.coreFill} />
           {voice === "thinking"
             ? <ActivityIndicator color={colors.accent} />
-            : <Ionicons
-                name={voice === "recording" ? "radio-button-on" : "mic-outline"}
-                size={voice === "recording" ? 30 : 24}
-                color={voice === "recording" ? colors.accent : colors.muted}
-              />}
+            : voice === "recording"
+              ? <Ionicons name="radio-button-on" size={34} color={colors.accent} />
+              : <Mark size={46} />}
         </View>
       </View>
 
@@ -352,19 +390,6 @@ export default function RadialScreen() {
         </View>
       )}
 
-      {/* Voice result. The morning report runs to a couple of thousand
-          characters, so this has to scroll rather than clip. */}
-      {(heard || reply) && (
-        <View style={styles.voiceCard}>
-          <ScrollView contentContainerStyle={{ paddingBottom: space(2) }}>
-            {!!heard && <Text style={styles.heard}>“{heard}”</Text>}
-            {!!reply && <Text style={styles.reply}>{reply}</Text>}
-          </ScrollView>
-          <Pressable onPress={() => { setHeard(null); setReply(null); }} hitSlop={10}>
-            <Text style={styles.dismiss}>tap to dismiss</Text>
-          </Pressable>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -392,10 +417,15 @@ const styles = StyleSheet.create({
   },
   labelText: { color: colors.muted, fontSize: font.tiny, fontWeight: "700" },
   core: {
-    position: "absolute", width: 84, height: 84, borderRadius: 42,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line,
+    position: "absolute", width: 104, height: 104, borderRadius: 52,
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
+    borderWidth: 1, borderColor: colors.line,
+    // Matches the web dial's drop shadow, which is what makes the core read as
+    // sitting above the wedges rather than punched out of them.
+    shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 }, elevation: 8,
   },
+  coreFill: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
 
   hint: { color: colors.muted, fontSize: font.small, marginTop: space(4), fontWeight: "600" },
 
@@ -409,13 +439,4 @@ const styles = StyleSheet.create({
   burstName: { color: colors.text, fontSize: font.body, fontWeight: "700" },
   burstSub: { color: colors.muted, fontSize: font.tiny, marginTop: 2 },
 
-  voiceCard: {
-    marginTop: space(3), marginHorizontal: space(5), alignSelf: "stretch",
-    padding: space(4), borderRadius: radius.lg,
-    backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line,
-    maxHeight: 240,
-  },
-  heard: { color: colors.muted, fontSize: font.small, fontStyle: "italic", marginBottom: space(2) },
-  reply: { color: colors.text, fontSize: font.small, lineHeight: 20 },
-  dismiss: { color: colors.muted, fontSize: font.tiny, marginTop: space(2), textAlign: "right" },
 });

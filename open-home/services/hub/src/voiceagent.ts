@@ -425,12 +425,20 @@ const CONTROL_SCENES: Record<string, string> = {
   party: "party", reading: "reading", dinner: "dinner", evening: "evening",
 };
 
-export async function runControl(action: string): Promise<{ label: string; scene?: string; actions: string[] } | null> {
+export async function runControl(action: string): Promise<{ label: string; scene?: string; actions: string[]; say?: string } | null> {
   const scene = CONTROL_SCENES[action];
   if (scene) {
     const done = await execActions([{ type: "scene", id: scene }]);
     const clean = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
-    return { label: clean.join(", ") || scene.replace(/_/g, " "), scene, actions: clean };
+    // The morning gesture should sound exactly like saying "good morning" out
+    // loud — same scene, same report. Reaching it by a different route should
+    // not get you a quieter version of it.
+    let say: string | undefined;
+    if (scene === "good_morning") {
+      const report = await dailyReport();
+      say = report ? `Good morning! Starting your morning scene.\n\n${report}` : "Good morning! Starting your morning scene.";
+    }
+    return { label: clean.join(", ") || scene.replace(/_/g, " "), scene, actions: clean, say };
   }
   if (action === "lights") {
     // Toggle on the real bulbs' current state, not the mock's, or the dial and
