@@ -168,26 +168,52 @@ def reset(oww) -> None:
             buf.clear()
 
 
-def beep(freq: int = 880, ms: int = 120, vol: float = 0.25) -> None:
-    """A short tone so you KNOW it woke. The first attempt at this client had
-    no cue at all: it fired correctly, Matthew heard nothing, and reasonably
-    concluded the wake word was broken."""
-    n = int(RATE * ms / 1000)
-    t = np.arange(n) / RATE
-    # Fade the edges or it clicks, which sounds like a fault rather than a cue.
-    env = np.minimum(1.0, np.minimum(np.arange(n), n - np.arange(n)) / (RATE * 0.01))
-    tone = (np.sin(2 * np.pi * freq * t) * env * vol * 32767).astype(np.int16)
+# A real recorded cue if one is installed, else a synthesised tone. Matthew
+# downloaded a blip; it is nicer than a sine wave and, more usefully, it is
+# instantly recognisable as "I am listening" rather than "something beeped".
+BLIP = os.environ.get("BLIP_FILE", "/opt/openhome-voice/blip.raw")
+
+
+def play_raw(data: bytes) -> None:
+    """Play 16 kHz mono PCM through PipeWire.
+
+    -D pipewire is not optional: `aplay -L` on this Pi reports the default
+    device as "null — Discard all samples", so a bare aplay sends the cue
+    nowhere and the wake word looks dead.
+    """
     try:
         subprocess.run(
-            # -D pipewire, NOT the ALSA default: `aplay -L` on this Pi reports
-            # the default as "null — Discard all samples", so a bare aplay
-            # played the cue into a black hole and the wake word looked dead.
             ["aplay", "-q", "-D", "pipewire", "-f", "S16_LE", "-r", str(RATE), "-c", "1", "-t", "raw", "-"],
-            input=tone.tobytes(), timeout=3,
+            input=data, timeout=3,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
     except Exception:
         pass
+
+
+def tone(freq: int = 880, ms: int = 120, vol: float = 0.25) -> bytes:
+    n = int(RATE * ms / 1000)
+    t = np.arange(n) / RATE
+    # Fade the edges or it clicks, which sounds like a fault rather than a cue.
+    env = np.minimum(1.0, np.minimum(np.arange(n), n - np.arange(n)) / (RATE * 0.01))
+    return (np.sin(2 * np.pi * freq * t) * env * vol * 32767).astype(np.int16).tobytes()
+
+
+_blip_cache: "bytes | None" = None
+
+
+def beep(freq: int = 880, ms: int = 120, vol: float = 0.25) -> None:
+    """The cue that says the house is listening."""
+    global _blip_cache
+    if _blip_cache is None:
+        try:
+            with open(BLIP, "rb") as fh:
+                _blip_cache = fh.read()
+            log(f"wake cue: {BLIP} ({len(_blip_cache) / 32000:.2f}s)")
+        except OSError:
+            _blip_cache = b""
+            log("wake cue: no blip file, using a tone")
+    play_raw(_blip_cache or tone(freq, ms, vol))
 
 
 def open_mic() -> subprocess.Popen:
