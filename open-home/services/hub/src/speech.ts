@@ -281,7 +281,12 @@ async function run(text: string): Promise<void> {
         env: {
           ...process.env,
           XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000",
-          PIPEWIRE_PROPS: `{ application.name = ${VOICE_APP} node.name = ${VOICE_APP} }`,
+          // state.restore-props = false tells WirePlumber's restore-stream
+          // module to leave this stream's volume alone. Without it the voice
+          // was being created at the DUCK level (measured: starts at 0.60,
+          // jumps to 1.0 a third of a second later) — audible as the first
+          // word or two coming in quiet and then swelling.
+          PIPEWIRE_PROPS: `{ application.name = ${VOICE_APP} node.name = ${VOICE_APP} state.restore-props = false state.restore-target = false }`,
         },
         stdio: ["pipe", "ignore", "ignore"],
       });
