@@ -13,6 +13,7 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
 const GEMINI_TOKEN = process.env.GOOGLE_GENAI_TOKEN || "";
 const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY || "";
 const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
+const STT_LANG = process.env.OPEN_HOME_STT_LANG || "en";
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const GEMINI_MODEL = "gemini-3-flash-preview";
 
@@ -157,6 +158,14 @@ async function whisperTranscribe(base64: string, mime: string): Promise<string> 
   const form = new FormData();
   form.append("file", new Blob([Buffer.from(base64, "base64")], { type: mime || "audio/m4a" }), `speech.${audioExt(mime)}`);
   form.append("model", "whisper-1");
+  // Pin the language. Left to auto-detect, Whisper transcribed a clear English
+  // "Good morning" as the Korean "굿모닝" — which then missed the deterministic
+  // /\bgood morning\b/ trigger, so the full morning routine never ran. Short
+  // commands give it too little signal to detect from; guessing is worse than
+  // being told. Override with OPEN_HOME_STT_LANG if the house isn't English.
+  form.append("language", STT_LANG);
+  // A nudge toward this home's vocabulary, which also anchors the language.
+  form.append("prompt", "Smart home voice command. Examples: good morning, good night, turn on the living room lights, play jazz in the kitchen, set the thermostat to 70.");
   const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_KEY}` },
@@ -172,6 +181,7 @@ async function elevenLabsTranscribe(base64: string, mime: string): Promise<strin
   // Blob's mime type is what it actually reads.
   form.append("file", new Blob([Buffer.from(base64, "base64")], { type: mime || "audio/webm" }), `speech.${audioExt(mime)}`);
   form.append("model_id", "scribe_v1");
+  form.append("language_code", STT_LANG); // same reason as Whisper: don't let it guess
   const r = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
     method: "POST",
     headers: { "xi-api-key": ELEVENLABS_KEY },

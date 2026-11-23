@@ -11,7 +11,11 @@ export interface RGB { r: number; g: number; b: number }
 export interface SceneLight { room?: string; id?: string; on: boolean; brightness?: number; rgb?: RGB }
 // contextUri is any Spotify context: a playlist (spotify:playlist:…) or an artist
 // (spotify:artist:…). shuffle plays it in a random order.
-export interface SceneMusic { contextUri?: string; name?: string; shuffle?: boolean }
+// `query` is the alternative to a pinned contextUri: the scene searches Spotify for
+// it at run time. The stored config on the Pi used {source, query} while the runner
+// only understood contextUri, so "good morning" silently played nothing for weeks.
+// Both shapes are supported now; whichever is present wins, contextUri first.
+export interface SceneMusic { contextUri?: string; query?: string; source?: string; name?: string; shuffle?: boolean }
 export interface SceneActions { lights?: SceneLight[]; music?: SceneMusic | null }
 
 // Time-of-day scenes. Morning also turns on the warm-orange Living Room light + reads

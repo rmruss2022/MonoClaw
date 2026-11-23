@@ -308,7 +308,16 @@ async function runSceneReal(id: string): Promise<string | null> {
       if (hit) parts.push(`${la.room || "lights"} on`);
     } catch { /* ignore light group errors */ }
   }
-  if (cfg.music && cfg.music.contextUri) {
+  // A scene can pin a context (playlist/artist URI) OR give a search query. The
+  // config stored on the Pi used {source:"spotify", query:"2026 jazz"} while this
+  // only ever read contextUri, so "good morning" turned on a light and then played
+  // silence — with no error, because the branch simply never ran.
+  if (cfg.music && !cfg.music.contextUri && cfg.music.query) {
+    try {
+      const picked = await doMusic({ op: "play", source: cfg.music.source || "spotify", query: cfg.music.query });
+      if (picked) parts.push(picked.replace(/^NOWPLAYING::/, "playing "));
+    } catch (e) { console.log("[scene] music query failed:", (e as Error)?.message); }
+  } else if (cfg.music && cfg.music.contextUri) {
     try {
       const dev = await spotify.deviceForRoom("Living Room");
       // Spotify throws transient 502/503/429s (esp. when another stream is already
@@ -375,6 +384,31 @@ async function execActions(actions: any[]): Promise<string[]> {
   return done;
 }
 
+const DASH_REPORT_URL = process.env.DASH_REPORT_URL || "https://dash.bedrock.casa/api/report-latest";
+
+/**
+ * The NYC daily digest that the morning scene reads out.
+ *
+ * Best effort on purpose: a slow or down dashboard must not hold up the lights
+ * and the music, which are the part of "good morning" you actually notice.
+ */
+async function dailyReport(): Promise<string | null> {
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const r = await fetch(DASH_REPORT_URL, { signal: ctrl.signal });
+      if (!r.ok) return null;
+      const j: any = await r.json();
+      const text = String(j?.report?.text ?? "").trim();
+      return text || null;
+    } finally { clearTimeout(timer); }
+  } catch (e) {
+    console.log("[scene] daily report failed:", (e as Error)?.message);
+    return null;
+  }
+}
+
 // ---- main entry ------------------------------------------------------------
 export async function runAgent(text: string): Promise<{ reply: string; actions: string[]; understood: boolean }> {
   // Deterministic scene trigger: the core "good morning" scene must not depend on the
@@ -382,7 +416,15 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   if (/\bgood morning\b|\bwake up\b/i.test(text)) {
     const done = await execActions([{ type: "scene", id: "good_morning" }]);
     const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
-    return { reply: "Good morning! Starting your morning scene.", actions: cleanDone, understood: true };
+    // The NYC daily digest used to reach Matthew only through the Pi's own voice
+    // client, which speaks it over the jazz. Any other surface — the phone, the
+    // web app — got the scene without the report. Fetching it here means every
+    // client gets it, and it no longer depends on that one process being alive.
+    const report = await dailyReport();
+    const reply = report
+      ? `Good morning! Starting your morning scene.\n\n${report}`
+      : "Good morning! Starting your morning scene.";
+    return { reply, actions: cleanDone, understood: true };
   }
   if (/\bgood afternoon\b|\bafternoon\b/i.test(text)) {
     const done = await execActions([{ type: "scene", id: "afternoon" }]);
