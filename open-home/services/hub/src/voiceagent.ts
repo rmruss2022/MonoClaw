@@ -15,6 +15,7 @@ import * as lights from "./lights.ts";
 import * as spotify from "./spotify.ts";
 import * as sceneConfig from "./sceneConfig.ts";
 import * as personal from "./personal.ts";
+import * as presence from "./presence.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -510,7 +511,18 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   const state = JSON.stringify(home.summary());
   // Who he is and what he has on, fetched in the background and cached so it
   // costs nothing on a "turn off the lights".
-  const about = await personal.brief().catch(() => "");
+  let about = await personal.brief().catch(() => "");
+  // Whether he is actually home, and for how long — context a person would
+  // have. Cheap: presence polls on its own schedule, this just reads it.
+  try {
+    const me = presence.list().find((x) => x.id === "matthew");
+    if (me) {
+      const mins = me.since ? Math.round((Date.now() - me.since) / 60000) : 0;
+      about += me.home
+        ? `\nMatthew is home (${mins} min).`
+        : `\nMatthew is out (left ${mins} min ago).`;
+    }
+  } catch { /* presence is optional context */ }
   // Pre-search obvious live-info questions so they're a single LLM round-trip (faster).
   const needsLive = /weather|forecast|temperatur|rain|snow|news|headline|today|tonight|latest|score|who won|standings|game|price|stock|how much|right now|currently|open now|hours|what time|near me/i.test(text);
   let pre = "";

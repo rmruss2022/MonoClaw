@@ -36,6 +36,7 @@ import * as localClimate from "./localClimate.ts";
 import * as devEmulator from "./devEmulator.ts";
 import * as auth from "./auth.ts";
 import * as proximity from "./proximity.ts";
+import * as presence from "./presence.ts";
 import * as connectivity from "./connectivity.ts";
 import { execFile as _execFile } from "node:child_process";
 
@@ -102,6 +103,10 @@ setInterval(() => { localAudio.maintain().catch(() => {}); }, 15_000);
 
 // Maintain onboarded local lights (ESPHome/Matter) — reconnect on drop.
 setInterval(() => { localLights.maintain().catch(() => {}); }, 15_000);
+
+// Who is home, over Wi-Fi. Not room detection — one hub cannot do rooms — but
+// present/away with no extra hardware.
+presence.start();
 
 // Maintain onboarded thermostats (ESPHome/Matter) — reconnect on drop.
 setInterval(() => { localClimate.maintain().catch(() => {}); }, 15_000);
@@ -721,6 +726,18 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
 
   // ---- room presence -------------------------------------------------------
+  if (url === "/presence") {
+    if (req.method === "POST") {
+      const body = await readBody(req);
+      try {
+        const p = JSON.parse(body || "{}");
+        if (p.remove) presence.remove(String(p.remove));
+        else presence.add({ id: String(p.id || p.name || "").toLowerCase().replace(/\s+/g, "_"), name: String(p.name || p.id || ""), host: p.host, ip: p.ip, mac: p.mac, ports: p.ports });
+      } catch {}
+    }
+    json(res, { people: presence.list(), anyoneHome: presence.anyoneHome() });
+    return;
+  }
   if (url === "/rooms") {
     json(res, {
       rooms: proximity.rooms(),
