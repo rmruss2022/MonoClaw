@@ -6,3 +6,6 @@ web-build/
 .DS_Store
 credentials/
 credentials.json
+creds/
+*.mobileprovision
+*.p12
