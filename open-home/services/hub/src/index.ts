@@ -350,6 +350,16 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   // The voice client polls this between turns: reopening the mic while the
   // reply is still playing means transcribing ourselves.
   if (url === "/speak/status") { json(res, { speaking: speech.speaking() }); return; }
+  // The voice client calls this the instant the wake word fires, so the music
+  // drops while Matthew is talking rather than only once the reply starts.
+  if (url === "/speak/listening" && req.method === "POST") {
+    const body = await readBody(req);
+    let on = true;
+    try { on = JSON.parse(body || "{}").on !== false; } catch {}
+    await speech.duckForListening(on);
+    json(res, { ok: true, listening: on });
+    return;
+  }
 
   // Voice agent — real speech: browser sends captured audio, Gemini transcribes + acts.
   if (url === "/agent/audio" && req.method === "POST") {

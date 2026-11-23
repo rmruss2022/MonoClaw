@@ -95,6 +95,10 @@ const DUCK = Number(process.env.OPEN_HOME_SPEAK_DUCK ?? 25);
 // mpv's software gain for the voice itself. TTS output is mastered much
 // quieter than streamed music, so matching levels is not enough.
 const VOICE_GAIN = String(process.env.OPEN_HOME_SPEAK_GAIN ?? 130);
+// Music level while the house is LISTENING. Lower than the speaking duck: the
+// microphone has to pick a voice out of whatever is playing, and it is across
+// the room from the speaker.
+const LISTEN_DUCK = Number(process.env.OPEN_HOME_LISTEN_DUCK ?? 25);
 
 function sh(cmd: string, args: string[]): Promise<void> {
   return new Promise((resolve) => {
@@ -196,6 +200,34 @@ function run_(cmd: string, args: string[]): Promise<string> {
   });
 }
 
+// Streams ducked because the house is LISTENING, not because it is speaking.
+// Held across the whole turn so the music stays down from the wake cue until
+// the exchange ends, instead of popping back up in every gap.
+let listenDuck: number[] | null = null;
+
+/**
+ * Duck for listening — called the moment the wake word fires.
+ *
+ * Music at full volume while you are talking hurts twice: the mic has to pick
+ * your voice out of it, and you have to talk over it. Dropping it at the cue
+ * rather than when the reply begins means the room goes quiet as soon as the
+ * house is paying attention.
+ */
+export async function duckForListening(on: boolean): Promise<void> {
+  if (on) {
+    if (listenDuck) return;
+    listenDuck = (await snapshot()).map((n) => n.id);
+    await setStreamVolumes(listenDuck, LISTEN_DUCK / 100);
+    vlog(`listening: ducked [${listenDuck.join(",")}] -> ${LISTEN_DUCK}%`);
+    return;
+  }
+  if (!listenDuck) return;
+  const ids = listenDuck;
+  listenDuck = null;
+  await setStreamVolumes(ids, 1.0);
+  vlog(`listening: restored [${ids.join(",")}]`);
+}
+
 let current: ReturnType<typeof spawn> | null = null;
 
 /** True while audio is actually playing — the client waits on this before it
@@ -242,8 +274,10 @@ async function run(text: string): Promise<void> {
       return null;
     })(),
   ]);
-  const music = graph.map((n) => n.id);
-  vlog(`levels before: ${describe(graph)}`);
+  // If the turn already ducked for listening, leave that in place and do not
+  // restore it here — the client lifts it when the conversation ends.
+  const music = listenDuck ? [] : graph.map((n) => n.id);
+  vlog(`levels before: ${describe(graph)}${listenDuck ? " (already ducked for listening)" : ""}`);
   if (!stream) { log("no provider could synthesize"); return; }
 
   stop();

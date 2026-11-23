@@ -98,6 +98,13 @@ class Hub:
             log("login failed:", e)
             return False
 
+    def listening(self, on: bool) -> None:
+        """Tell the hub to duck (or restore) the music while we listen."""
+        try:
+            self.s.post(f"{HUB}/speak/listening", json={"on": on}, timeout=4)
+        except Exception as e:
+            log("duck call failed:", e)
+
     def _speaking(self) -> bool:
         try:
             return bool(self.s.get(f"{HUB}/speak/status", timeout=4).json().get("speaking"))
@@ -333,9 +340,12 @@ def main() -> int:
             thresh = floor.threshold
             log(f"wake ({scores[key]:.2f})  floor {floor.level:.0f} -> threshold {thresh:.0f}")
             reset(oww)
-            t_beep = time.time()
             beep()
-            log(f"  +{(time.time()-t_wake)*1000:.0f}ms beep")
+            # Drop the music NOW, not when the reply starts: the mic has to
+            # pick a voice out of whatever is playing, and it is across the
+            # room from the speaker.
+            hub.listening(True)
+            log(f"  +{(time.time()-t_wake)*1000:.0f}ms cue + music ducked")
 
             # A conversation, not a command. The house decides when to keep the
             # mic open — it knows whether it just asked a question or simply
@@ -377,11 +387,15 @@ def main() -> int:
                     log("end of turn")
                     break
                 log("expecting a reply — listening again")
-                # Fresh mic: whatever queued up during the answer is ours, not his.
+                # Cue FIRST, then a fresh mic. Doing it the other way round
+                # meant the open mic recorded our own blip, and the hub duly
+                # transcribed "[beeping]" as Matthew's answer.
+                beep(freq=660, ms=90)
                 mic.kill()
                 mic = open_mic()
-                beep(freq=660, ms=90)
 
+            # Conversation over — give the room its music back.
+            hub.listening(False)
             time.sleep(COOLDOWN_S)
             mic.kill()
             mic = open_mic()

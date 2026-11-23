@@ -164,8 +164,14 @@ async function whisperTranscribe(base64: string, mime: string): Promise<string> 
   // commands give it too little signal to detect from; guessing is worse than
   // being told. Override with OPEN_HOME_STT_LANG if the house isn't English.
   form.append("language", STT_LANG);
-  // A nudge toward this home's vocabulary, which also anchors the language.
-  form.append("prompt", "Smart home voice command. Examples: good morning, good night, turn on the living room lights, play jazz in the kitchen, set the thermostat to 70.");
+  // NO prompt. A prompt listing example commands looked like a free accuracy
+  // win, but Whisper falls back to echoing its prompt verbatim when the audio
+  // is short or noisy — and on 23 Nov it returned
+  //   "Good morning, good night, turn on the living room lights, play jazz in
+  //    the kitchen, set the thermostat to 70."
+  // for a 1.3s utterance. "Good morning" hit the scene trigger and the house
+  // started the morning routine unasked. `language` is what actually fixed the
+  // original mis-detection; the prompt was never needed.
   const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_KEY}` },
