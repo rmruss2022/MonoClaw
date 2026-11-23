@@ -489,6 +489,63 @@ export async function runControl(action: string): Promise<{ label: string; scene
   return null; // no real hardware for this key — caller uses the mock
 }
 
+/**
+ * Fast path — answer without the LLM.
+ *
+ * Measured on this Pi: speech-to-text 1563 ms, the agent 1426 ms, first TTS
+ * byte 914 ms. Nearly four seconds for "turn on the lights", of which the
+ * model contributed nothing a regex could not. The previous client did the
+ * same thing and the droplet's notes clock it at ~42 ms.
+ *
+ * Deliberately narrow. It only fires on an unambiguous command — a verb cue
+ * plus a target — so "is the kitchen light on?" and anything conversational
+ * still goes to the model, where it belongs. A fast path that guesses is worse
+ * than no fast path.
+ */
+const ROOMS = ["living room", "living", "kitchen", "bedroom", "office", "bathroom", "hallway", "dining"];
+
+function detectRoom(t: string): string {
+  for (const r of ROOMS) if (t.includes(r)) return r.replace(" room", "");
+  return "all";
+}
+
+export async function fastPath(text: string): Promise<{ reply: string; actions: string[]; listen: boolean } | null> {
+  const t = text.toLowerCase().trim().replace(/[.!?]+$/, "");
+
+  // Lights. Require a command cue, so questions fall through to the model.
+  const lightCue = /\b(turn|switch|put|shut|kill|cut)\b/.test(t) || /^lights? (on|off)\b/.test(t);
+  if (lightCue && /\blights?\b/.test(t)) {
+    const on = /\bon\b/.test(t) && !/\boff\b/.test(t);
+    const room = detectRoom(t);
+    const done = await execActions([{ type: "lights", on, room }]);
+    const hit = done.join(", ");
+    return { reply: on ? "Lights on." : "Lights off.", actions: [hit || `lights ${on ? "on" : "off"}`], listen: false };
+  }
+
+  // Music transport. "next"/"skip"/"pause" need no reasoning.
+  const music: Record<string, string> = {
+    "next": "next", "skip": "next", "next song": "next", "skip this": "next",
+    "pause": "pause", "pause the music": "pause", "stop the music": "pause",
+    "resume": "resume", "play": "resume", "unpause": "resume", "keep playing": "resume",
+  };
+  if (music[t]) {
+    const done = await execActions([{ type: "music", op: music[t] }]);
+    return { reply: done[0] ? String(done[0]) : music[t], actions: done, listen: false };
+  }
+
+  // Time and date: a clock read is not a job for a language model.
+  if (/^(what('s| is)? the )?time( is it)?$/.test(t) || t === "what time is it") {
+    const now = new Date();
+    return { reply: `It's ${now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}.`, actions: [], listen: false };
+  }
+  if (/^what('s| is)? (the )?(date|day)( is it)?$/.test(t) || t === "what day is it") {
+    const now = new Date();
+    return { reply: `It's ${now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}.`, actions: [], listen: false };
+  }
+
+  return null;
+}
+
 // ---- main entry ------------------------------------------------------------
 export async function runAgent(text: string): Promise<{ reply: string; actions: string[]; understood: boolean; listen?: boolean }> {
   // Deterministic scene trigger: the core "good morning" scene must not depend on the
@@ -516,6 +573,15 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
     return { reply: "Good evening! Starting your evening playlist.", actions: cleanDone, understood: true, listen: false };
   }
+  // Try to answer without the model first — see fastPath().
+  try {
+    const fast = await fastPath(text);
+    if (fast) {
+      console.log(`[agent] fast path: ${JSON.stringify(text)} -> ${JSON.stringify(fast.actions)}`);
+      return { ...fast, understood: true };
+    }
+  } catch (e) { console.log("[agent] fast path failed, using the model:", (e as Error)?.message); }
+
   const state = JSON.stringify(home.summary());
   // Who he is and what he has on, fetched in the background and cached so it
   // costs nothing on a "turn off the lights".

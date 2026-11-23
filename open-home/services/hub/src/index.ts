@@ -368,13 +368,16 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       // voiceagent drives the real onboarded lights, music and scenes; ai.execute
       // only touches the mock house, so audio commands used to report success
       // while nothing in the room changed.
+      const tSTT = Date.now();
       const transcript = await ai.transcribe(audio, mime);
+      console.log(`[agent/audio] stt ${Date.now() - tSTT}ms -> ${JSON.stringify(transcript).slice(0, 80)}`);
       if (!transcript) { json(res, { ok: true, transcript: "", reply: "I didn't catch that.", actions: [], source: "stt", summary: home.summary() }); return; }
 
       if (voiceagent.enabled()) {
         try {
+          const tAgent = Date.now();
           const r = await voiceagent.runAgent(transcript);
-          console.log(`[agent/audio] transcript=${JSON.stringify(transcript)} agent actions=${JSON.stringify(r.actions)}`);
+          console.log(`[agent/audio] agent ${Date.now() - tAgent}ms actions=${JSON.stringify(r.actions)} listen=${!!r.listen}`);
           r.actions?.forEach?.((a: any) => bus.publish({ type: `agent.${a?.label ?? a}`, ts: Date.now(), payload: { via: "audio" } }));
           // Answer out loud on the room's speaker. Deliberately not awaited:
           // the morning report is a couple of minutes of audio, and the phone

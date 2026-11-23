@@ -48,7 +48,7 @@ WAKE_THRESHOLD = float(os.environ.get("WAKE_THRESHOLD", "0.5"))
 # stopped talking. The grace is generous because people pause before speaking.
 MAX_UTTERANCE_S = float(os.environ.get("MAX_UTTERANCE_S", "12"))
 ONSET_GRACE_S = float(os.environ.get("ONSET_GRACE_S", "5.0"))
-SILENCE_END_S = float(os.environ.get("SILENCE_END_S", "1.0"))
+SILENCE_END_S = float(os.environ.get("SILENCE_END_S", "0.6"))
 # Speech must stand this many times above the measured room noise to count.
 # A fixed number cannot work — the floor moves with the music, the fridge and
 # the time of day — and setting it below ambient means end-of-speech never
@@ -66,6 +66,11 @@ MAX_TURNS = int(os.environ.get("MAX_TURNS", "6"))
 # After the house asks you something it waits this long for an answer before
 # giving up and going back to the wake word.
 FOLLOWUP_GRACE_S = float(os.environ.get("FOLLOWUP_GRACE_S", "6.0"))
+# How long to wait for playback to BEGIN before assuming there is none. Must
+# exceed synthesis time (~1s) or the client races the reply it just asked for.
+SPEECH_START_WAIT_S = float(os.environ.get("SPEECH_START_WAIT_S", "6.0"))
+# Bluetooth lag: the speaker is still emitting after the player process exits.
+SPEECH_TAIL_S = float(os.environ.get("SPEECH_TAIL_S", "0.6"))
 
 
 def log(*a: object) -> None:
@@ -93,23 +98,40 @@ class Hub:
             log("login failed:", e)
             return False
 
-    def wait_until_quiet(self, timeout_s: float = 180.0) -> None:
-        """Block until the house has finished speaking.
+    def _speaking(self) -> bool:
+        try:
+            return bool(self.s.get(f"{HUB}/speak/status", timeout=4).json().get("speaking"))
+        except Exception:
+            return False
 
-        The hub does not wait for playback before replying — a two minute
-        report would hold the request open — so the client has to. Reopening
-        the mic early means transcribing our own voice off the speaker."""
+    def wait_until_quiet(self, timeout_s: float = 180.0) -> float:
+        """Block until the house has actually finished speaking.
+
+        Two phases, and the first one is the whole point. The hub answers the
+        HTTP request BEFORE it starts playing — synthesis takes about a second
+        — so polling "are you speaking?" straight away sees False, returns
+        immediately, and the client reopens the mic into the reply. That is not
+        a theoretical race: it put the house in a feedback loop, transcribing
+        its own voice as the next question for six turns running.
+
+        So: wait for speech to START, then wait for it to STOP, then let the
+        Bluetooth tail drain before trusting the mic again."""
+        t0 = time.time()
+        start_deadline = t0 + SPEECH_START_WAIT_S
+        while time.time() < start_deadline:
+            if self._speaking():
+                break
+            time.sleep(0.15)
+
         deadline = time.time() + timeout_s
-        # Give playback a moment to start, or we would see "not speaking" in
-        # the gap between the HTTP reply and the first audio frame.
-        time.sleep(0.6)
         while time.time() < deadline:
-            try:
-                if not self.s.get(f"{HUB}/speak/status", timeout=4).json().get("speaking"):
-                    return
-            except Exception:
-                return
-            time.sleep(0.3)
+            if not self._speaking():
+                break
+            time.sleep(0.2)
+
+        # The speaker is several hundred ms behind the process exiting.
+        time.sleep(SPEECH_TAIL_S)
+        return time.time() - t0
 
     def send_audio(self, wav: bytes) -> dict | None:
         body = {"audio": base64.b64encode(wav).decode(), "mime": "audio/wav"}
@@ -281,10 +303,13 @@ def main() -> int:
             if scores.get(key, 0.0) < WAKE_THRESHOLD:
                 continue
 
+            t_wake = time.time()
             thresh = floor.threshold
-            log(f"wake ({scores[key]:.2f})  noise floor {floor.level:.0f} -> speech threshold {thresh:.0f}")
+            log(f"wake ({scores[key]:.2f})  floor {floor.level:.0f} -> threshold {thresh:.0f}")
             reset(oww)
+            t_beep = time.time()
             beep()
+            log(f"  +{(time.time()-t_wake)*1000:.0f}ms beep")
 
             # A conversation, not a command. The house decides when to keep the
             # mic open — it knows whether it just asked a question or simply
@@ -302,17 +327,26 @@ def main() -> int:
                     log(f"nothing said (peak RMS {peak:.0f}, threshold {thresh:.0f})")
                     break
 
+                t_captured = time.time()
                 wav = to_wav(frames)
-                log(f"turn {turn + 1}: {len(frames) * FRAME / RATE:.1f}s, peak RMS {peak:.0f}")
+                log(f"turn {turn + 1}: spoke {len(frames) * FRAME / RATE:.1f}s, "
+                    f"peak RMS {peak:.0f}, +{(t_captured - t_wake):.1f}s from wake")
+
                 r = hub.send_audio(wav)
+                t_replied = time.time()
                 if not r:
                     break
-                log("heard:", json.dumps(r.get("transcript", ""))[:120])
-                log("reply:", (r.get("reply") or "")[:120].replace("\n", " "))
+                # The number that matters: how long from YOU stopping talking
+                # to the house having an answer ready.
+                log(f"  +{(t_replied - t_captured):.1f}s hub round-trip "
+                    f"(stt + agent + first audio)")
+                log("  heard:", json.dumps(r.get("transcript", ""))[:120])
+                log("  reply:", (r.get("reply") or "")[:120].replace("\n", " "))
 
                 # Wait out the reply either way: even on the last turn we must
                 # not leave the mic hot while the speaker is still talking.
-                hub.wait_until_quiet()
+                spoke_for = hub.wait_until_quiet()
+                log(f"  +{spoke_for:.1f}s speaking   |   total {time.time()-t_wake:.1f}s since wake")
                 if not r.get("listen"):
                     log("end of turn")
                     break
