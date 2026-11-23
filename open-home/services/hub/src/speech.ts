@@ -84,11 +84,77 @@ function sh(cmd: string, args: string[]): Promise<void> {
   });
 }
 
-/** Drop the music under our voice, then put it back. Best effort throughout. */
-async function duck(on: boolean): Promise<void> {
-  const level = on ? DUCK : 100;
-  await sh("soloist", ["ctl", "volume", String(level)]);
-  await sh("sc-ctl", ["vol", String(level)]);
+/**
+ * Duck the music WITHOUT ducking ourselves.
+ *
+ * `soloist ctl volume 25` looked like the obvious way to do this — it is what
+ * the old voice client used — but measurement shows it attenuates *every*
+ * stream on the sink, not just Spotify's. The voice came up at 25% too and the
+ * report was inaudible under the very music it was meant to talk over.
+ *
+ * So instead: snapshot the playback streams that exist before we speak, lower
+ * exactly those through PipeWire, and restore them afterwards. Our own stream
+ * is created after the snapshot, so it is never in the set and plays at full
+ * volume. Identifying the music by "what was already playing" also avoids
+ * matching on application name, which is useless here — SoundCloud playback is
+ * mpv too, and PipeWire does not report a process id for any of them.
+ */
+async function musicStreams(): Promise<number[]> {
+  const dump = await run_("pw-dump", []);
+  try {
+    return (JSON.parse(dump) as any[])
+      .filter((n) =>
+        n?.type === "PipeWire:Interface:Node" &&
+        String(n?.info?.props?.["media.class"] ?? "").startsWith("Stream/Output/Audio"))
+      .map((n) => n.id as number);
+  } catch {
+    return [];
+  }
+}
+
+async function setStreamVolumes(ids: number[], level: number): Promise<void> {
+  for (const id of ids) await sh("wpctl", ["set-volume", String(id), String(level)]);
+}
+
+/**
+ * Our voice announces itself as `openhome-voice`, not `mpv`.
+ *
+ * WirePlumber's restore-stream remembers a volume per application name and
+ * re-applies it to every new stream from that app. An earlier version of this
+ * code ducked by app-wide volume, which taught it "mpv = 25%" — so every
+ * subsequent utterance came back at 25% no matter what we did to the music,
+ * and the fix looked like it was failing. A dedicated name gives the voice its
+ * own slot, which nothing else writes to.
+ *
+ * SoundCloud playback is also mpv, so sharing a slot with it would be wrong
+ * even without that history.
+ */
+const VOICE_APP = "openhome-voice";
+
+async function unduckVoice(): Promise<void> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const dump = await run_("pw-dump", []);
+    try {
+      const hit = (JSON.parse(dump) as any[]).find((n) =>
+        n?.type === "PipeWire:Interface:Node" &&
+        n?.info?.props?.["application.name"] === VOICE_APP);
+      if (hit?.id != null) { await sh("wpctl", ["set-volume", String(hit.id), "1.0"]); return; }
+    } catch { /* pw-dump raced a graph change */ }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  console.log("[speech] voice stream never appeared — level not corrected");
+}
+
+function run_(cmd: string, args: string[]): Promise<string> {
+  return new Promise((resolve) => {
+    const p = spawn(cmd, args, {
+      env: { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000" },
+    });
+    let out = "";
+    p.stdout?.on("data", (d) => { out += d; });
+    p.on("exit", () => resolve(out));
+    p.on("error", () => resolve(""));
+  });
 }
 
 let current: ReturnType<typeof spawn> | null = null;
@@ -130,23 +196,30 @@ async function run(text: string): Promise<void> {
   const file = join(tmpdir(), `oh-speak-${Date.now()}.mp3`);
   await writeFile(file, audio);
   stop();
-  await duck(true);
+  // Snapshot before we make any noise of our own.
+  const music = await musicStreams();
+  await setStreamVolumes(music, DUCK / 100);
   try {
     await new Promise<void>((resolve) => {
       // mpv to the PipeWire default sink, which is the Bluetooth speaker. No
       // video, no terminal UI, and it exits on its own when the clip ends.
       // --volume above 100 is software gain, which TTS needs to sit over music.
       const p = spawn("mpv", ["--no-video", "--really-quiet", "--no-terminal", `--volume=${VOICE_GAIN}`, file], {
-        env: { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000" },
+        env: {
+          ...process.env,
+          XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000",
+          PIPEWIRE_PROPS: `{ application.name = ${VOICE_APP} node.name = ${VOICE_APP} }`,
+        },
       });
       current = p;
+      unduckVoice().catch(() => {});
       p.on("exit", () => { if (current === p) current = null; resolve(); });
       p.on("error", (err) => { console.log("[speech] mpv:", err.message); if (current === p) current = null; resolve(); });
     });
   } finally {
     // Always restore, even if playback threw or was killed by a newer
     // utterance — otherwise the music stays quiet for the rest of the day.
-    await duck(false);
+    await setStreamVolumes(music, 1.0);
   }
   unlink(file).catch(() => {});
   console.log(`[speech] spoke ${text.length} chars via ${provider()} (music ducked to ${DUCK}%)`);
