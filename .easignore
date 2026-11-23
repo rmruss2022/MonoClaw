@@ -13,6 +13,19 @@
 # .easignore is only read at the archive root, i.e. this directory. A copy in
 # apps/mobile/ is silently ignored.
 
+# ---- the git history ----
+# This is what kept the archive at 439 MB even after every sibling project was
+# excluded. eas-cli does `git clone --depth 1` of the repo root, THEN deletes
+# the worktree files that .easignore matches — but the clone's own .git still
+# holds a pack of every tracked file in MonoClaw (~700 MB of travelog, projects,
+# highfi). eas-cli removes that .git only when .easignore names it explicitly,
+# which it deliberately does not do by default. The build does not need history.
+#
+# (node_modules needs no rule here: eas-cli always ignores it when copying the
+# working directory. The earlier "node_modules/" lines below are harmless but
+# were not what was inflating the upload.)
+.git
+
 # ---- sibling projects in this monorepo (not part of the iOS app) ----
 /ActivityClaw/
 /ContextClaw/
