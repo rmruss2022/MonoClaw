@@ -252,12 +252,31 @@ async function run(text: string): Promise<void> {
     await new Promise<void>((resolve) => {
       // Read the mp3 from stdin so playback begins on the first frames rather
       // than after the whole passage is rendered.
-      const p = spawn("mpv", [
+      // Run the player OUTSIDE the hub's cgroup.
+      //
+      // open-home-hub carries CPUQuota=30% — 0.3 of one core for the service
+      // AND everything it spawns — because a TS recompile at restart used to
+      // brown out this Pi's power rail. mpv inherited that budget and had to
+      // fight node for it, which is why the voice came out chopped and why a
+      // pw-dump that takes 58ms on this box appeared to take seconds. A
+      // transient user scope gives playback its own slice: it needs very
+      // little CPU, but it needs it reliably.
+      const mpvArgs = [
         "--no-video", "--really-quiet", "--no-terminal",
         `--volume=${VOICE_GAIN}`,
-        "--cache=yes", "--cache-secs=2",
+        // Generous buffer: a network stream feeding a Bluetooth sink, where an
+        // underrun is audible as a gap in the middle of a sentence.
+        "--cache=yes", "--cache-secs=30", "--demuxer-readahead-secs=20",
+        // Ride a thin cache rather than pausing to refill mid-sentence.
+        "--cache-pause=no",
+        "--audio-buffer=0.4",
         "--demuxer-lavf-format=mp3",
         "-",
+      ];
+      const p = spawn("systemd-run", [
+        "--user", "--scope", "--quiet",
+        `--unit=openhome-voice-${Date.now()}`,
+        "--", "mpv", ...mpvArgs,
       ], {
         env: {
           ...process.env,
