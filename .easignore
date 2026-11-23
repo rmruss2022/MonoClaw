@@ -1,33 +1,88 @@
 # What EAS uploads for the openhome iOS build.
 #
-# EAS archives the whole GIT REPOSITORY, not the npm workspace. MonoClaw's root
-# holds a dozen unrelated projects (travelog 332 MB, projects 198 MB, highfi
-# 108 MB, lumen 40 MB, ...), so the archive was 1.2 GB when the build needs
-# about 25 MB of it. An earlier attempt put this file in apps/mobile/, which
-# EAS never reads — it is only honoured at the archive root, i.e. here.
+# EAS archives the whole GIT REPOSITORY, not the npm workspace, and MonoClaw's
+# root holds ~50 unrelated projects (travelog 332 MB, projects 198 MB, highfi
+# 108 MB, ...). Unfiltered that is a 1.2 GB upload for a build that needs ~25 MB.
 #
-# Strategy: ignore everything, re-admit open-home/, then drop the parts of
-# open-home/ the build does not need.
+# This list is deliberately explicit. The obvious version -- "/*" followed by
+# "!/open-home/" -- is valid gitignore and git honours it, but it broke builds
+# 27 and 28: EAS's walker prunes an excluded directory before it ever tests the
+# re-include, so open-home/ never reached the archive. Do not reintroduce
+# negation here; add new sibling projects to the list below instead.
+#
+# .easignore is only read at the archive root, i.e. this directory. A copy in
+# apps/mobile/ is silently ignored.
 
-/*
-!/open-home/
+# ---- sibling projects in this monorepo (not part of the iOS app) ----
+/ActivityClaw/
+/ContextClaw/
+/MonoClaw/
+/PayMe/
+/activity-hub/
+/activity-hub-test/
+/admin-hub/
+/agent-swarm-projects/
+/agents/
+/appcatalog/
+/blog/
+/cannon/
+/ccut-gateway/
+/chase/
+/clawmap/
+/config/
+/core/
+/croppa/
+/dash-app/
+/docker-agent-system/
+/foreman/
+/highfi/
+/inkling/
+/jobs/
+/lumen/
+/matts-claw-blog/
+/media/
+/meditation-app/
+/memory/
+/missions/
+/monoclaw-dashboard/
+/nightsweep/
+/nyc-events/
+/ora-health/
+/ora-room-inspection/
+/ora-swarm/
+/portal/
+/portfolio/
+/portfolio-site/
+/projects/
+/raves/
+/recilia-api/
+/rolodex/
+/rolodex-deploy/
+/skill-builder/
+/skills/
+/test-files/
+/tokens/
+/travelog/
+/twitter-plugin/
+/vm-agent-system/
+/waypoint/
+/weather-app/
 
-# Dependencies — EAS runs its own install from package-lock.json (415 MB).
+# ---- inside open-home ----
+# EAS runs its own install from package-lock.json.
 /open-home/node_modules/
 /open-home/**/node_modules/
-
-# Enclosure CAD, renders and product mockups (54 MB); never bundled in the app.
+# Enclosure CAD, renders and product mockups; never bundled in the app.
 /open-home/hardware/
-
-# The TV/display surface and the legacy web app (20 MB) — separate from mobile.
+# The legacy web control surface and TV display: separate from the mobile app.
 /open-home/apps/app/
 /open-home/tv/
+#
+# services/cloud and services/hub stay: they are npm workspaces named in
+# package-lock.json and `npm ci` fails on a lockfile mismatch without them.
+# Together they are about 1 MB, so there is nothing to gain by cutting them.
 
-# Keep services/cloud and services/hub: they are npm workspaces named in
-# package-lock.json, and removing them makes `npm ci` fail on a lockfile
-# mismatch. They are only ~1 MB together, so there is nothing to gain anyway.
-
-# Local build artefacts and secrets that must never leave this machine.
+# ---- never leaves this machine ----
 /open-home/apps/mobile/creds/
 /open-home/apps/mobile/credentials.json
 **/*.p12
