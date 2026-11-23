@@ -41,6 +41,20 @@ export ASC_KEY_PATH="${ASC_KEY_PATH:-$STORE/asc-api-key.p8}"
 
 python3 "$MAKER" "$BUNDLE" "$NAME" "$(pwd)"
 
+# eas.json cannot carry an absolute path to the ASC key: /root/... is correct on
+# the droplet and wrong on a Mac. The failure mode is expensive — the build runs
+# to completion and only then does the submit fail on a missing file. So the
+# tracked eas.json omits it and we set it for whichever machine this is.
+python3 - "$ASC_KEY_PATH" <<'INNER'
+import json, pathlib, sys
+key = sys.argv[1]
+p = pathlib.Path("eas.json")
+d = json.loads(p.read_text())
+d.setdefault("submit", {}).setdefault("production", {}).setdefault("ios", {})["ascApiKeyPath"] = key
+p.write_text(json.dumps(d, indent=2) + "\n")
+print(f"eas.json submit.ascApiKeyPath -> {key}")
+INNER
+
 # Fail loudly rather than letting the build discover it later.
 for f in credentials.json creds/profile.mobileprovision; do
   [ -s "$f" ] || { echo "expected $f to exist and be non-empty" >&2; exit 1; }
