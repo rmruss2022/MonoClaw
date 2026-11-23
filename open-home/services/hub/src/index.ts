@@ -58,6 +58,7 @@ const CLIMATE = new URL("../../../apps/app/climate.html", import.meta.url);
 const COOKING = new URL("../../../apps/app/cooking.html", import.meta.url);
 const TV = new URL("../../../apps/app/tv.html", import.meta.url);
 
+function numParam(v: string | null, min: number, max: number): number | undefined { if (v == null || v === "") return undefined; const n = Number(v); if (!Number.isFinite(n)) return undefined; return Math.min(max, Math.max(min, Math.round(n))); }
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
     let data = "";
@@ -605,9 +606,9 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
   if (url === "/recipes/suggest") {
     const sp = new URL(req.url ?? "/", "http://x").searchParams;
-    const people = sp.get("people") ? Number(sp.get("people")) : undefined;
+    const people = numParam(sp.get("people"), 1, 50);
     const diet = (sp.get("diet") ?? "").split(",").map((d) => d.trim()).filter(Boolean);
-    const maxMinutes = sp.get("max") ? Number(sp.get("max")) : undefined;
+    const maxMinutes = numParam(sp.get("max"), 1, 1440);
     const query = sp.get("q") ?? undefined;
     const hits = recipes.suggest({ people, diet, maxMinutes, query, limit: 8 });
     json(res, { recipes: hits.map((r) => recipes.summary(r, people)) });
@@ -615,7 +616,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
   if (url.startsWith("/recipes/")) {
     const sp = new URL(req.url ?? "/", "http://x").searchParams;
-    const servings = sp.get("servings") ? Number(sp.get("servings")) : undefined;
+    const servings = numParam(sp.get("servings"), 1, 50);
     const idPart = decodeURIComponent(url.slice("/recipes/".length));
     const r = recipes.getRecipe(idPart);
     if (!r) { json(res, { error: "recipe_not_found", id: idPart }, 404); return; }
@@ -646,13 +647,13 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
   if (url === "/cooking/goto" && req.method === "POST") {
     const body = await readBody(req); let step = 1;
-    try { step = Number(JSON.parse(body || "{}").step ?? 1); } catch {}
-    json(res, cooking.goto(step)); return;
+    try { step = Math.trunc(Number(JSON.parse(body || "{}").step ?? 1)) || 1; } catch {}
+    { const r = cooking.goto(step); json(res, r, r.ok ? 200 : 409); return; }
   }
   if (url === "/cooking/timer" && req.method === "POST") {
     const body = await readBody(req); let label: string | undefined, seconds: number | undefined;
     try { const p = JSON.parse(body || "{}"); label = p.label; if (p.seconds) seconds = Number(p.seconds); } catch {}
-    json(res, cooking.addTimer(label, seconds)); return;
+    { const r = cooking.addTimer(label, seconds); json(res, r, r.ok ? 200 : (r.error === "no_session" ? 409 : 400)); return; }
   }
   if ((url === "/cooking/complete" || url === "/cooking/abandon") && req.method === "POST") {
     const r = url.endsWith("complete") ? cooking.complete() : cooking.abandon();
