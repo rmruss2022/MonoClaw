@@ -600,7 +600,18 @@ PAGE = r'''<!DOCTYPE html>
   .rpw-body{font-size:14px;line-height:1.5;color:var(--ink);white-space:pre-wrap;max-height:200px;overflow:hidden;
             position:relative;-webkit-mask-image:linear-gradient(#000 76%,transparent);mask-image:linear-gradient(#000 76%,transparent)}
   .rpw-foot{display:flex;align-items:center;gap:12px;margin-top:12px}
-  .rpw-audio{height:34px;flex:1;min-width:0}
+  .rpw-play{display:inline-flex;align-items:center;gap:11px;border:1px solid var(--line);background:#faf9fc;
+            border-radius:14px;padding:8px 14px 8px 8px;cursor:pointer;min-width:0;flex:1;
+            transition:background .12s,border-color .12s,transform .08s}
+  .rpw-play:hover{background:#f3eefe;border-color:#c9b8f5}
+  .rpw-play:active{transform:scale(.985)}
+  .rpw-play-ic{width:36px;height:36px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;
+               color:#fff;font-size:14px;line-height:1;background:linear-gradient(135deg,#a855f7,#6366f1);
+               box-shadow:0 6px 16px -6px rgba(124,58,237,.6)}
+  .rpw-play-txt{display:flex;flex-direction:column;min-width:0;text-align:left;flex:1}
+  .rpw-play-lbl{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.15}
+  .rpw-play-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rpw-play-time{margin-left:2px;font-size:12px;font-weight:600;color:#8b5cf6;font-variant-numeric:tabular-nums;white-space:nowrap}
   .rpw-all{margin-left:auto;font-size:13px;font-weight:700;color:#6d28d9;text-decoration:none;white-space:nowrap}
   .rpw-all:hover{text-decoration:underline}
   /* Report Studio modal */
@@ -867,7 +878,12 @@ PAGE = r'''<!DOCTYPE html>
     <div class="rpw-date" id="rpDate"></div>
     <div class="rpw-body" id="rpBody"></div>
     <div class="rpw-foot">
-      <audio class="rpw-audio" id="rpAudio" controls preload="none" hidden></audio>
+      <button type="button" class="rpw-play" id="rpPlay" hidden aria-label="Play the daily report">
+        <span class="rpw-play-ic" id="rpPlayIc">▶</span>
+        <span class="rpw-play-txt"><span class="rpw-play-lbl" id="rpPlayLbl">Play the report</span><span class="rpw-play-sub" id="rpPlaySub">Daily report</span></span>
+        <span class="rpw-play-time" id="rpPlayTime"></span>
+      </button>
+      <audio id="rpAudio" preload="none" hidden></audio>
       <a class="rpw-all" href="https://reports.bedrock.casa/" target="_blank" rel="noopener">Open reports →</a>
     </div>
   </div>
@@ -1020,7 +1036,21 @@ PAGE = r'''<!DOCTYPE html>
     document.getElementById('rpTitle').textContent=rp.title||'Daily report';
     document.getElementById('rpDate').textContent=rp.date||'';
     document.getElementById('rpBody').textContent=rp.text||'';
-    if(rp.audio){var a=document.getElementById('rpAudio');a.src='report-audio/'+rp.audio;a.hidden=false;}
+    if(rp.audio){
+      var a=document.getElementById('rpAudio');a.src='report-audio/'+rp.audio;
+      var play=document.getElementById('rpPlay'),ic=document.getElementById('rpPlayIc'),
+          lbl=document.getElementById('rpPlayLbl'),sub=document.getElementById('rpPlaySub'),
+          tm=document.getElementById('rpPlayTime');
+      sub.textContent=rp.title||'Daily report';
+      play.hidden=false;
+      function fmt(s){s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);}
+      play.addEventListener('click',function(){ if(a.paused){a.play();} else {a.pause();} });
+      a.addEventListener('play',function(){ic.textContent='❚❚';lbl.textContent='Pause';});
+      a.addEventListener('pause',function(){ic.textContent='▶';lbl.textContent='Play the report';});
+      a.addEventListener('ended',function(){ic.textContent='▶';lbl.textContent='Play the report';if(a.duration)tm.textContent=fmt(a.duration);});
+      a.addEventListener('loadedmetadata',function(){tm.textContent=fmt(a.duration);});
+      a.addEventListener('timeupdate',function(){ if(a.duration)tm.textContent=fmt(a.currentTime)+' / '+fmt(a.duration); });
+    }
     wrap.hidden=false;
   }).catch(function(){});
 
