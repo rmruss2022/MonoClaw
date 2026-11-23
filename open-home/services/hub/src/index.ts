@@ -362,7 +362,17 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       const body = await readBody(req);
       let action = "unknown", angle: number | undefined;
       try { const p = JSON.parse(body || "{}"); action = String(p.action ?? "unknown"); angle = p.angle; } catch {}
-      const result = home.control(action);
+      // Real devices first. home.control() only moves the mock house, so the
+      // radial dial used to report success while the room stayed dark.
+      let result: any = null;
+      if (voiceagent.enabled()) {
+        try { result = await voiceagent.runControl(action); }
+        catch (e) { console.log("[control] real action failed:", (e as Error)?.message); }
+      }
+      // Keep the mock model in step either way: the UI reads its summary, and
+      // keys with no hardware (cameras, doorbell) have nowhere else to go.
+      const mock = home.control(action);
+      result = result ? { ...mock, ...result } : mock;
       bus.publish({ type: `control.${action}`, ts: Date.now(), payload: { via: "radial", angle, ...result } });
       json(res, { ok: true, action, ...result, summary: home.summary() });
       return;

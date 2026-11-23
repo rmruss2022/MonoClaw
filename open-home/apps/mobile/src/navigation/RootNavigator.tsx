@@ -7,11 +7,11 @@ import { useAuth } from "@/context/AuthContext";
 import { colors, font } from "@/theme";
 import { PrimaryButton } from "@/components/ui";
 import LoginScreen from "@/screens/LoginScreen";
+import RadialScreen from "@/screens/RadialScreen";
 import HomeScreen from "@/screens/HomeScreen";
 import LightsScreen from "@/screens/LightsScreen";
 import ClimateScreen from "@/screens/ClimateScreen";
 import MusicScreen from "@/screens/MusicScreen";
-import RemoteScreen from "@/screens/RemoteScreen";
 import TvScreen from "@/screens/TvScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
 import AccountScreen from "@/screens/AccountScreen";
@@ -35,11 +35,11 @@ const navTheme = {
 // presentation by default, so the old tab bar came out as colour emoji that
 // ignored the active/inactive tint entirely.
 const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typeof Ionicons.glyphMap }> = {
-  Home: { on: "home", off: "home-outline" },
+  Home: { on: "radio-button-on", off: "ellipse-outline" },
   Lights: { on: "bulb", off: "bulb-outline" },
   Climate: { on: "thermometer", off: "thermometer-outline" },
   Music: { on: "disc", off: "disc-outline" },
-  Remote: { on: "mic", off: "mic-outline" },
+  House: { on: "grid", off: "grid-outline" },
   TV: { on: "tv", off: "tv-outline" },
   Account: { on: "person-circle", off: "person-circle-outline" },
   Settings: { on: "settings", off: "settings-outline" },
@@ -93,9 +93,13 @@ export default function RootNavigator() {
             tabBarIcon: tabIcon(route.name),
           })}
         >
-          <Tab.Screen name="Home" component={HomeScreen} />
+          {/* The radial dial is the home screen: it is the product's primary
+              interaction, and voice lives in its centre, so the old separate
+              Remote tab was a second door to the same room. The former Home
+              overview moved to the "House" tab. */}
+          <Tab.Screen name="Home" component={RadialScreen} />
           <Tab.Screen name="Music" component={MusicScreen} />
-          <Tab.Screen name="Remote" component={RemoteScreen} />
+          <Tab.Screen name="House" component={HomeScreen} />
           <Tab.Screen name="Lights" component={LightsScreen} />
           <Tab.Screen name="Climate" component={ClimateScreen} />
           <Tab.Screen name="TV" component={TvScreen} />

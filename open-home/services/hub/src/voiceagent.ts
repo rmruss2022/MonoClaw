@@ -409,6 +409,48 @@ async function dailyReport(): Promise<string | null> {
   }
 }
 
+/**
+ * The radial remote's action keys, run against REAL devices.
+ *
+ * `/control` previously went straight to home.control(), which only moves the
+ * mock house — so the dial animated, reported success, and changed nothing in
+ * the room. Scene keys now go through the same execActions path as voice, and
+ * the caller falls back to the mock for the keys with no hardware behind them
+ * (cameras, doorbell).
+ */
+const CONTROL_SCENES: Record<string, string> = {
+  morning: "good_morning", good_morning: "good_morning",
+  goodnight: "good_night", nighttime: "good_night", good_night: "good_night",
+  movie: "movie", away: "away", home: "home",
+  party: "party", reading: "reading", dinner: "dinner", evening: "evening",
+};
+
+export async function runControl(action: string): Promise<{ label: string; scene?: string; actions: string[] } | null> {
+  const scene = CONTROL_SCENES[action];
+  if (scene) {
+    const done = await execActions([{ type: "scene", id: scene }]);
+    const clean = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
+    return { label: clean.join(", ") || scene.replace(/_/g, " "), scene, actions: clean };
+  }
+  if (action === "lights") {
+    // Toggle on the real bulbs' current state, not the mock's, or the dial and
+    // the room disagree about what "on" means.
+    const real = lights.listLights().filter((x: any) => x.real);
+    const anyOn = real.some((l: any) => l.on);
+    const done = await execActions([{ type: "lights", on: !anyOn, room: "all" }]);
+    return { label: done.join(", ") || (anyOn ? "lights off" : "lights on"), actions: done };
+  }
+  if (action === "music") {
+    const done = await execActions([{ type: "music", op: "play" }]);
+    return { label: done.join(", ") || "music", actions: done };
+  }
+  if (action === "matthews_room") {
+    const done = await execActions([{ type: "lights", on: true, room: "bedroom" }]);
+    return { label: done.join(", ") || "Matthew's room", actions: done };
+  }
+  return null; // no real hardware for this key — caller uses the mock
+}
+
 // ---- main entry ------------------------------------------------------------
 export async function runAgent(text: string): Promise<{ reply: string; actions: string[]; understood: boolean }> {
   // Deterministic scene trigger: the core "good morning" scene must not depend on the
