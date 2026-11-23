@@ -12,6 +12,8 @@ import ClimateScreen from "@/screens/ClimateScreen";
 import SpeakersScreen from "@/screens/SpeakersScreen";
 import TvScreen from "@/screens/TvScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
+import AccountScreen from "@/screens/AccountScreen";
+import ConnectHubScreen from "@/screens/ConnectHubScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -33,6 +35,7 @@ const ICONS: Record<string, string> = {
   Climate: "❄",
   Speakers: "♪",
   TV: "▶",
+  Account: "◉",
   Settings: "⚙",
 };
 
@@ -43,18 +46,10 @@ function tabIcon(name: string) {
 }
 
 function NoHome() {
-  const { email, signOut } = useAuth();
-  return (
-    <View style={noHomeStyles.wrap}>
-      <Text style={noHomeStyles.title}>No home paired yet</Text>
-      <Text style={noHomeStyles.body}>
-        {email ? `${email} is signed in, ` : ""}but no hub is linked to this account.
-        Pair your openhome hub, then reopen the app.
-      </Text>
-      <View style={{ height: 20 }} />
-      <PrimaryButton label="Sign out" onPress={signOut} />
-    </View>
-  );
+  // The old version told the user to pair a hub and reopen the app — a dead
+  // end with Sign out as its only button. ConnectHubScreen searches, offers a
+  // pairing code, and accepts a manual address, so every branch has a way on.
+  return <ConnectHubScreen />;
 }
 
 const noHomeStyles = StyleSheet.create({
@@ -91,6 +86,7 @@ export default function RootNavigator() {
           <Tab.Screen name="Climate" component={ClimateScreen} />
           <Tab.Screen name="Speakers" component={SpeakersScreen} />
           <Tab.Screen name="TV" component={TvScreen} />
+          <Tab.Screen name="Account" component={AccountScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />
         </Tab.Navigator>
       ) : (

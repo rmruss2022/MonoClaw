@@ -17,13 +17,49 @@ import * as sceneConfig from "./sceneConfig.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
+// Direct Anthropic is the primary path; the ccut gateway stays as a fallback
+// for deployments that have it. Either one satisfies enabled().
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
+const VOICE_MODEL_ID = process.env.VOICE_MODEL_ID || "claude-haiku-4-5-20251001";
 const FIRECRAWL_KEY = process.env.FIRECRAWL_API_KEY || "";
 const UID = process.getuid ? process.getuid() : 1000;
 const EXEC_ENV = { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || `/run/user/${UID}` };
 
-export function enabled(): boolean { return !!(CCUT_URL && CCUT_TOKEN); }
+export function enabled(): boolean { return !!ANTHROPIC_KEY || !!(CCUT_URL && CCUT_TOKEN); }
 
-async function ccut(prompt: string, timeoutMs = 45000): Promise<string> {
+// Same contract as ccut(): prompt in, model's text out. Keeping the signature
+// identical means the two call sites and all the JSON parsing stay untouched.
+async function anthropic(prompt: string, timeoutMs = 45000): Promise<string> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: VOICE_MODEL_ID,
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      }),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) throw new Error(`anthropic HTTP ${r.status}`);
+    const j: any = await r.json();
+    const out = String(j?.content?.[0]?.text || "").trim();
+    if (!out) throw new Error("anthropic: empty result");
+    return out;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function ccut(
+prompt: string, timeoutMs = 45000): Promise<string> {
+  if (ANTHROPIC_KEY) return anthropic(prompt, timeoutMs);
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {

@@ -34,6 +34,9 @@ import * as climate from "./climate.ts";
 import * as localClimate from "./localClimate.ts";
 import * as devEmulator from "./devEmulator.ts";
 import * as auth from "./auth.ts";
+import * as proximity from "./proximity.ts";
+import * as connectivity from "./connectivity.ts";
+import { execFile as _execFile } from "node:child_process";
 
 const PORT = Number(process.env.OPEN_HOME_PORT ?? 4700);
 // The account/identity service. The hub proxies email+password sign-in to it so
@@ -220,7 +223,16 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       res.end();
       return;
     }
-    if (url !== "/health" && !auth.cookieAuthed(req)) {
+    // Reachable without credentials, by design. A brand-new app has no login
+    // yet, so discovery has to work before auth does — the same bargain every
+    // Chromecast and Sonos makes with its LAN.
+    //
+    // What these can leak: the hub's name, its addresses, and a 6-character
+    // code that expires in 10 minutes and is single-use. What they cannot do:
+    // read or change anything in the house. Claiming a code links an app to a
+    // home; it does not grant device control, which still needs the home token.
+    const PUBLIC_PATHS = ["/health", "/hub/pair", "/hub/pair/claim", "/hub/connectivity"];
+    if (!PUBLIC_PATHS.includes(url.split("?")[0]) && !auth.cookieAuthed(req)) {
       const accept = req.headers.accept ?? "";
       if (accept.includes("text/html")) {
         res.statusCode = 302;
@@ -553,6 +565,183 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     json(res, home.snapshot());
     return;
   }
+  // ---- account dashboard ---------------------------------------------------
+  if (url === "/account/overview") {
+    // Integrations are reported by PRESENCE ONLY. Never echo a credential.
+    const keyed = (v?: string) => !!(v && v.trim());
+    const spotifyConnected = (() => {
+      try { return !!spotify.currentProfile?.(); } catch { return false; }
+    })();
+
+    const conn = connectivity.status();
+    const cfg = hub.config();
+
+    json(res, {
+      hub: {
+        name: cfg.hubName || "openhome",
+        homeName: cfg.homeName || null,
+        hubId: conn.hubId,
+        paired: conn.paired,
+        uptimeSec: Math.round(process.uptime()),
+        node: process.version,
+      },
+      network: {
+        addresses: conn.addresses,
+        customUrl: conn.customUrl,
+        publishing: conn.publishing,
+        cloudUrl: conn.cloudUrl,
+        lastRegister: conn.lastRegister,
+      },
+      clients: proximity.presence().map(p => ({
+        client: p.client,
+        room: p.room,
+        confidence: Math.round(p.confidence * 100) / 100,
+        lastSeen: p.at,
+        since: p.since,
+      })),
+      rooms: proximity.rooms(),
+      beacons: proximity.beacons(),
+      integrations: [
+        { id: "spotify",    name: "Spotify",        connected: spotifyConnected,
+          detail: spotifyConnected ? "account linked" : "not linked" },
+        { id: "anthropic",  name: "Anthropic Claude", connected: keyed(process.env.ANTHROPIC_API_KEY),
+          detail: "agent brain" },
+        { id: "gemini",     name: "Google Gemini",  connected: keyed(process.env.GOOGLE_GENAI_TOKEN),
+          detail: "voice transcription" },
+        { id: "elevenlabs", name: "ElevenLabs",     connected: keyed(process.env.ELEVENLABS_API_KEY),
+          detail: "speech output" },
+        { id: "snapcast",   name: "Snapcast",       connected: keyed(process.env.SNAPCAST_HOST),
+          detail: "multi-room audio" },
+      ],
+      // Names only, deliberately. There is no endpoint that returns a value.
+      credentials: [
+        "ANTHROPIC_API_KEY", "GOOGLE_GENAI_TOKEN", "ELEVENLABS_API_KEY",
+        "SPOTIFY_CLIENT_ID", "SPOTIFY_CLIENT_SECRET", "HOME_TOKEN_SECRET",
+        "OPEN_HOME_PASSWORD",
+      ].map(k => ({ name: k, configured: keyed(process.env[k]) })),
+      privacy: {
+        publishAddresses: conn.publishing,
+        note: conn.publishing
+          ? "Hub addresses are cached in the cloud so a new phone connects instantly."
+          : "Addresses are not stored in the cloud. New devices must discover on the LAN or pair with a code.",
+      },
+    });
+    return;
+  }
+
+  // ---- reachability + pairing (see CONNECTIVITY.md) -----------------------
+  if (url === "/hub/connectivity") { json(res, connectivity.status()); return; }
+
+  // Unauthenticated ON PURPOSE: this is how a brand-new app on the same LAN
+  // discovers a hub before it has any credentials. It returns addresses and a
+  // short-lived code — never device data and never a token.
+  if (url === "/hub/pair") {
+    const { code, expiresIn } = connectivity.pairingCode();
+    json(res, {
+      hubId: connectivity.hubId(),
+      hubName: hub.config().hubName || "openhome",
+      code, expiresIn,
+      addresses: connectivity.addresses(),
+    });
+    return;
+  }
+
+  if (url === "/hub/pair/claim" && req.method === "POST") {
+    const body = await readBody(req);
+    let code = "";
+    try { code = String(JSON.parse(body || "{}").code ?? ""); } catch {}
+    if (!connectivity.consumePairingCode(code)) { json(res, { error: "bad_or_expired_code" }, 401); return; }
+    json(res, {
+      ok: true,
+      hubId: connectivity.hubId(),
+      addresses: connectivity.addresses(),
+      home: hub.config(),
+    });
+    return;
+  }
+
+  // ---- room presence -------------------------------------------------------
+  if (url === "/rooms") {
+    json(res, {
+      rooms: proximity.rooms(),
+      beacons: proximity.beacons(),
+      presence: proximity.presence(),
+    });
+    return;
+  }
+
+  if (url === "/rooms/proximity" && req.method === "POST") {
+    const body = await readBody(req);
+    let client = "", readings: any[] = [];
+    try {
+      const b = JSON.parse(body || "{}");
+      client = String(b.client ?? b.deviceId ?? "phone");
+      readings = Array.isArray(b.readings) ? b.readings : [];
+    } catch {}
+    if (!readings.length) { json(res, { error: "no_readings" }, 400); return; }
+    json(res, { ok: true, presence: proximity.report(client, readings) });
+    return;
+  }
+
+  if (url.startsWith("/rooms/here")) {
+    const q = new URL(url, "http://x").searchParams.get("client") || undefined;
+    json(res, proximity.hereRoom(q));
+    return;
+  }
+
+  if (url === "/rooms/beacons" && req.method === "POST") {
+    const body = await readBody(req);
+    try {
+      const b = JSON.parse(body || "{}");
+      if (!b.id) { json(res, { error: "id_required" }, 400); return; }
+      const list = b.remove
+        ? proximity.removeBeacon(String(b.id))
+        : proximity.setBeacon({
+            id: String(b.id),
+            room: String(b.room ?? ""),
+            name: b.name ? String(b.name) : undefined,
+            speakerId: b.speakerId ? String(b.speakerId) : undefined,
+          });
+      json(res, { ok: true, beacons: list });
+    } catch { json(res, { error: "bad_json" }, 400); }
+    return;
+  }
+
+  // Read-only discovery. Finding a device and committing it to a room are
+  // separate actions on purpose — a sweep must never rearrange a home by itself.
+  if (url.startsWith("/rooms/sweep")) {
+    const sh = (cmd: string, args: string[], ms = 20000) =>
+      new Promise<string>((resolve) => {
+        const c = _execFile(cmd, args, { timeout: ms }, (_e, so) => resolve(String(so || "")));
+        c.on("error", () => resolve(""));
+      });
+    const secs = Math.min(30, Math.max(5, Number(new URL(url, "http://x").searchParams.get("seconds") || 12)));
+    await sh("bluetoothctl", ["--timeout", String(secs), "scan", "on"], (secs + 5) * 1000);
+    const devs = await sh("bluetoothctl", ["devices"], 8000);
+    const bluetooth = devs.split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+      const m = l.match(/^Device\s+([0-9A-Fa-f:]{17})\s+(.*)$/);
+      return m ? { id: m[1], name: m[2] } : null;
+    }).filter(Boolean);
+
+    let sinks: any[] = [];
+    try {
+      const out = await sh("pactl", ["-f", "json", "list", "sinks"], 8000);
+      sinks = JSON.parse(out || "[]").map((s: any) => ({
+        id: s.index, nodeName: s.name, name: s.description,
+        kind: String(s.name).startsWith("bluez") ? "bluetooth" : "local",
+      }));
+    } catch {}
+
+    const mapped = new Set(proximity.beacons().map(b => b.id.toLowerCase()));
+    json(res, {
+      scannedSeconds: secs,
+      bluetooth: bluetooth.map((b: any) => ({ ...b, mapped: mapped.has(b.id.toLowerCase()) })),
+      sinks,
+      rooms: proximity.rooms(),
+    });
+    return;
+  }
+
   if (url === "/scenes") {
     if (req.method === "POST") {
       const body = await readBody(req);
@@ -871,6 +1060,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
 };
 
 createServer(handler).listen(PORT, () => {
+  connectivity.startHeartbeat();
   console.log(`🏠 open-home hub listening on http://localhost:${PORT}`);
   console.log(`   agent     → ${ai.aiEnabled() ? ai.provider() + " (cloud opt-in)" : agent.modelLabel}`);
 });
