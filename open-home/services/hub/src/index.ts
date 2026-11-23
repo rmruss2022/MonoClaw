@@ -106,7 +106,27 @@ setInterval(() => { localLights.maintain().catch(() => {}); }, 15_000);
 
 // Who is home, over Wi-Fi. Not room detection — one hub cannot do rooms — but
 // present/away with no extra hardware.
+presence.onArrival(async (p) => {
+  // Greet an arrival out loud. Deliberately brief and not a status report:
+  // walking through the door is not the moment for a list of devices.
+  try {
+    const hour = new Date().getHours();
+    const part = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+    const open = (await personalTodos()).slice(0, 2);
+    const tail = open.length ? ` You've still got ${open.join(" and ")}.` : "";
+    await speech.speak(`Welcome home, ${p.name}. Hope the ${part} went well.${tail}`);
+  } catch (e) { console.log("[presence] greeting failed:", (e as Error)?.message); }
+});
 presence.start();
+
+/** Open todo titles for the welcome-home line. Best effort. */
+async function personalTodos(): Promise<string[]> {
+  try {
+    const r = await fetch("https://dash.bedrock.casa/api/todo", { signal: AbortSignal.timeout(4000) });
+    const j: any = await r.json();
+    return (j?.todos ?? []).filter((t: any) => !t.done).map((t: any) => String(t.text)).filter(Boolean);
+  } catch { return []; }
+}
 
 // Maintain onboarded thermostats (ESPHome/Matter) — reconnect on drop.
 setInterval(() => { localClimate.maintain().catch(() => {}); }, 15_000);
@@ -291,7 +311,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
       try {
         const r = await voiceagent.runAgent(text);
         console.log(`[agent] (ccut) in=${JSON.stringify(text)} actions=${JSON.stringify(r.actions)} reply=${JSON.stringify(r.reply)}`);
-        json(res, { ok: true, heard: text, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent", summary: home.summary() });
+        json(res, { ok: true, heard: text, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent", summary: home.summary(), listen: !!r.listen });
         return;
       } catch (e) { console.log("[agent] ccut error:", (e as Error)?.message); }
     }
@@ -327,6 +347,9 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     return;
   }
   if (url === "/speak/stop" && req.method === "POST") { speech.stop(); json(res, { ok: true }); return; }
+  // The voice client polls this between turns: reopening the mic while the
+  // reply is still playing means transcribing ourselves.
+  if (url === "/speak/status") { json(res, { speaking: speech.speaking() }); return; }
 
   // Voice agent — real speech: browser sends captured audio, Gemini transcribes + acts.
   if (url === "/agent/audio" && req.method === "POST") {
@@ -357,7 +380,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
           // the morning report is a couple of minutes of audio, and the phone
           // should get its response immediately rather than after the speech.
           if (r.reply) speech.speak(r.reply).catch(() => {});
-          json(res, { ok: true, transcript, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent-audio", summary: home.summary(), spoken: speech.enabled() });
+          json(res, { ok: true, transcript, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent-audio", summary: home.summary(), spoken: speech.enabled(), listen: !!r.listen });
           return;
         } catch (e) { console.log("[agent/audio] voiceagent error:", (e as Error)?.message); }
       }
@@ -726,6 +749,10 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
   }
 
   // ---- room presence -------------------------------------------------------
+  if (url === "/presence/log") {
+    json(res, { events: presence.log(Number(new URL(req.url ?? "/", "http://x").searchParams.get("limit") ?? 50)) });
+    return;
+  }
   if (url === "/presence") {
     if (req.method === "POST") {
       const body = await readBody(req);

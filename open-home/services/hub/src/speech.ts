@@ -198,6 +198,10 @@ function run_(cmd: string, args: string[]): Promise<string> {
 
 let current: ReturnType<typeof spawn> | null = null;
 
+/** True while audio is actually playing — the client waits on this before it
+ *  listens again, or it records the house talking to itself. */
+export function speaking(): boolean { return current !== null; }
+
 /** Stop whatever is being spoken right now. */
 export function stop(): void {
   if (current) { try { current.kill("SIGTERM"); } catch { /* already gone */ } current = null; }

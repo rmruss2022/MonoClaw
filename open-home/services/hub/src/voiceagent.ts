@@ -98,7 +98,8 @@ Who you are talking to: Matthew. Use his name sparingly, the way a person would.
 Respond with ONLY a JSON object, nothing else:
 {"say": "<spoken reply, or empty string if you need a web search first>",
  "actions": [ <zero or more actions> ],
- "web_search": "<optional: a query if you need live/current info you don't know>"}
+ "web_search": "<optional: a query if you need live/current info you don't know>",
+ "listen": <true if you asked him something and expect an answer, false otherwise>}
 
 Actions you can take (include any that apply):
 - {"type":"scene","id":"good_morning|good_night|movie|away|home|dinner"}
@@ -118,6 +119,13 @@ Rules:
 - For anything needing current/live info (weather, news, sports, prices, "today", facts you're unsure of), set "web_search" to a focused query and set "say" to "" — the home will search and ask you again with results.
 - Otherwise put your spoken answer in "say" and any device actions in "actions".
 - Be decisive: if he says "turn on the lights", do it. If he just chats, chat back briefly.
+
+When to keep listening:
+- Set "listen": true ONLY when you have asked a question you actually want
+  answered, so the house keeps the mic open and he can just reply.
+- Set it false for anything you have simply done ("lights off"), or for a
+  remark that does not invite a reply. Leaving the mic open after an action is
+  how an assistant ends up transcribing the room.
 
 How to talk to him:
 - "What's going on?", "what's up?", "how's it going?" are questions about HIS day,
@@ -482,7 +490,7 @@ export async function runControl(action: string): Promise<{ label: string; scene
 }
 
 // ---- main entry ------------------------------------------------------------
-export async function runAgent(text: string): Promise<{ reply: string; actions: string[]; understood: boolean }> {
+export async function runAgent(text: string): Promise<{ reply: string; actions: string[]; understood: boolean; listen?: boolean }> {
   // Deterministic scene trigger: the core "good morning" scene must not depend on the
   // (occasionally empty/slow) LLM. Match the phrase and run the configured scene directly.
   if (/\bgood morning\b|\bwake up\b/i.test(text)) {
@@ -496,17 +504,17 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     const reply = report
       ? `Good morning! Starting your morning scene.\n\n${report}`
       : "Good morning! Starting your morning scene.";
-    return { reply, actions: cleanDone, understood: true };
+    return { reply, actions: cleanDone, understood: true, listen: false };
   }
   if (/\bgood afternoon\b|\bafternoon\b/i.test(text)) {
     const done = await execActions([{ type: "scene", id: "afternoon" }]);
     const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
-    return { reply: "Good afternoon! Putting on Palm Monkey.", actions: cleanDone, understood: true };
+    return { reply: "Good afternoon! Putting on Palm Monkey.", actions: cleanDone, understood: true, listen: false };
   }
   if (/\bgood evening\b|\bevening\b/i.test(text)) {
     const done = await execActions([{ type: "scene", id: "evening" }]);
     const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
-    return { reply: "Good evening! Starting your evening playlist.", actions: cleanDone, understood: true };
+    return { reply: "Good evening! Starting your evening playlist.", actions: cleanDone, understood: true, listen: false };
   }
   const state = JSON.stringify(home.summary());
   // Who he is and what he has on, fetched in the background and cached so it
@@ -547,5 +555,16 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   let reply = String(out.say || "").trim();
   if (np) reply = `Now playing ${np}.`;
   if (!reply) reply = cleanDone.length ? "Done." : "Okay.";
-  return { reply, actions: cleanDone, understood: cleanDone.length > 0 || !!out.say };
+  // Should the house keep the mic open? Trust the model when it says so, but
+  // only when it did NOT also do something: "lights off. Anything else?" is a
+  // completed action, and holding the mic after an action is how an assistant
+  // ends up transcribing the room. Falling back to a question mark covers the
+  // model forgetting the flag, which it will.
+  // A question ANYWHERE in the reply counts. "My day's been quiet — how was
+  // yours? I see you've got a few things on your list." ends in a full stop
+  // but is plainly waiting for an answer; only matching a trailing "?" missed
+  // exactly that case.
+  const asked = reply.includes("?");
+  const listen = cleanDone.length === 0 && (out.listen === true || asked);
+  return { reply, actions: cleanDone, understood: cleanDone.length > 0 || !!out.say, listen };
 }

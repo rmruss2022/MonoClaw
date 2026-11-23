@@ -74,6 +74,20 @@ export function remove(id: string): void {
 }
 
 /** True if anyone is home. */
+export interface Arrival { at: number; id: string; name: string; event: "home" | "left" }
+const HISTORY_MAX = 200;
+const historyStore = durableStore<Arrival[]>(DATA_DIR, "presence-log.json", "presence");
+let history: Arrival[] = historyStore.load([]);
+
+/** Arrivals and departures, newest last. Survives restarts. */
+export function log(limit = 50): Arrival[] { return history.slice(-limit); }
+
+function record(p: Person, event: "home" | "left"): void {
+  history.push({ at: Date.now(), id: p.id, name: p.name, event });
+  if (history.length > HISTORY_MAX) history = history.slice(-HISTORY_MAX);
+  historyStore.save(history);
+}
+
 export function anyoneHome(): boolean {
   return [...state.values()].some((s) => s.home);
 }
@@ -111,7 +125,11 @@ function tcpOpen(ip: string, port: number, timeoutMs = 1500): Promise<boolean> {
 
 async function inArpTable(ip: string): Promise<boolean> {
   const out = await sh("ip", ["neigh", "show", ip], 2500);
-  return /REACHABLE|STALE|DELAY/.test(out);
+  // ONLY REACHABLE. A STALE entry just means the kernel has not re-verified
+  // the address recently — it lingers long after a device has left, so
+  // accepting it reported Matthew home continuously from 13:59 to 17:49 while
+  // he was actually out. STALE is "unknown", not "present".
+  return /REACHABLE/.test(out);
 }
 
 async function probe(p: Person): Promise<boolean> {
@@ -129,19 +147,20 @@ async function probe(p: Person): Promise<boolean> {
     if (await tcpOpen(ip, port)) return true;
   }
   // Nudge the ARP cache, then read it. A sleeping phone answers ARP even when
-  // it ignores everything else.
-  await sh("ping", ["-c", "1", "-W", "1", ip], 2000);
+  // it ignores everything else — but only a REACHABLE entry proves that just
+  // happened. The ping is what forces the re-verification.
+  await sh("ping", ["-c", "2", "-W", "1", ip], 3000);
   return inArpTable(ip);
 }
 
-async function tick(): Promise<void> {
+async function tick(opts: { silent?: boolean } = {}): Promise<void> {
   for (const p of people) {
     const now = Date.now();
     const prev = state.get(p.id) ?? { home: false, since: now, lastSeen: 0, misses: 0 };
     const seen = await probe(p).catch(() => false);
 
     if (seen) {
-      if (!prev.home) console.log(`[presence] ${p.name} is home`);
+      if (!prev.home && !opts.silent) { console.log(`[presence] ${p.name} is home`); record(p, "home"); onArrive.forEach((f) => { try { f(p); } catch {} }); }
       state.set(p.id, { home: true, since: prev.home ? prev.since : now, lastSeen: now, misses: 0 });
       continue;
     }
@@ -149,6 +168,7 @@ async function tick(): Promise<void> {
     const stillHome = prev.home && misses < MISSES_BEFORE_AWAY;
     if (prev.home && !stillHome) {
       console.log(`[presence] ${p.name} left (${misses} misses over ${Math.round(misses * INTERVAL_MS / 60000)} min)`);
+      record(p, "left");
     }
     state.set(p.id, {
       home: stillHome,
@@ -159,6 +179,11 @@ async function tick(): Promise<void> {
   }
 }
 
+type Hook = (p: Person) => void;
+const onArrive: Hook[] = [];
+/** Called when someone arrives — used for the welcome-home greeting. */
+export function onArrival(fn: Hook): void { onArrive.push(fn); }
+
 let timer: ReturnType<typeof setInterval> | null = null;
 export function start(): void {
   if (timer) return;
@@ -167,6 +192,8 @@ export function start(): void {
   if (!people.length) {
     add({ id: "matthew", name: "Matthew", host: "Matthews-iPhone-2.local", ports: [62078, 49152] });
   }
-  tick().catch(() => {});
+  // Seed state silently first: the first poll after a hub restart is not an
+  // arrival, and announcing "welcome home" on every deploy would be absurd.
+  tick({ silent: true }).catch(() => {});
   timer = setInterval(() => { tick().catch(() => {}); }, INTERVAL_MS);
 }
