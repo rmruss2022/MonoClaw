@@ -50,7 +50,8 @@
           "backgroundColor": "#0e1014",
           "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-audio"
     ]
   }
 }

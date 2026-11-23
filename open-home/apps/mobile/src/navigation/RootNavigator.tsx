@@ -10,7 +10,8 @@ import LoginScreen from "@/screens/LoginScreen";
 import HomeScreen from "@/screens/HomeScreen";
 import LightsScreen from "@/screens/LightsScreen";
 import ClimateScreen from "@/screens/ClimateScreen";
-import SpeakersScreen from "@/screens/SpeakersScreen";
+import MusicScreen from "@/screens/MusicScreen";
+import RemoteScreen from "@/screens/RemoteScreen";
 import TvScreen from "@/screens/TvScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
 import AccountScreen from "@/screens/AccountScreen";
@@ -37,7 +38,8 @@ const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typ
   Home: { on: "home", off: "home-outline" },
   Lights: { on: "bulb", off: "bulb-outline" },
   Climate: { on: "thermometer", off: "thermometer-outline" },
-  Speakers: { on: "musical-notes", off: "musical-notes-outline" },
+  Music: { on: "disc", off: "disc-outline" },
+  Remote: { on: "mic", off: "mic-outline" },
   TV: { on: "tv", off: "tv-outline" },
   Account: { on: "person-circle", off: "person-circle-outline" },
   Settings: { on: "settings", off: "settings-outline" },
@@ -83,14 +85,19 @@ export default function RootNavigator() {
             },
             tabBarActiveTintColor: colors.accent,
             tabBarInactiveTintColor: colors.muted,
-            tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
+            // Eight tabs is one or two more than a bottom bar comfortably
+            // holds, hence the smaller label and the tighter item padding.
+            // A "More" tab is the real answer if this grows again.
+            tabBarLabelStyle: { fontSize: 9.5, fontWeight: "700" },
+            tabBarItemStyle: { paddingHorizontal: 0 },
             tabBarIcon: tabIcon(route.name),
           })}
         >
           <Tab.Screen name="Home" component={HomeScreen} />
+          <Tab.Screen name="Music" component={MusicScreen} />
+          <Tab.Screen name="Remote" component={RemoteScreen} />
           <Tab.Screen name="Lights" component={LightsScreen} />
           <Tab.Screen name="Climate" component={ClimateScreen} />
-          <Tab.Screen name="Speakers" component={SpeakersScreen} />
           <Tab.Screen name="TV" component={TvScreen} />
           <Tab.Screen name="Account" component={AccountScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />

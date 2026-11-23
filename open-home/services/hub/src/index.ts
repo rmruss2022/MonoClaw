@@ -307,6 +307,10 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
 
   // Voice agent — real speech: browser sends captured audio, Gemini transcribes + acts.
   if (url === "/agent/audio" && req.method === "POST") {
+    // Two separate capabilities: something must transcribe the speech, and
+    // something must understand it. Claude does the second but cannot do the
+    // first, so say which half is missing instead of a blanket "ai_disabled".
+    if (!ai.sttEnabled()) { console.log("[agent/audio] rejected: no_speech_to_text"); json(res, { ok: false, error: "no_speech_to_text", reply: "No speech-to-text provider is configured on this hub." }, 503); return; }
     if (!ai.aiEnabled()) { console.log("[agent/audio] rejected: ai_disabled"); json(res, { ok: false, error: "ai_disabled" }, 503); return; }
     const body = await readBody(req);
     let audio = "", mime = "audio/webm";
@@ -314,12 +318,33 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     console.log(`[agent/audio] received b64bytes=${audio.length} mime=${mime}`);
     if (!audio) { json(res, { ok: false, error: "empty_audio", reply: "I didn't catch any audio — hold a moment longer." }, 200); return; }
     try {
-      const r = await ai.aiAudio(audio, mime);
+      // Transcribe, then hand the words to the SAME brain /agent uses.
+      // voiceagent drives the real onboarded lights, music and scenes; ai.execute
+      // only touches the mock house, so audio commands used to report success
+      // while nothing in the room changed.
+      const transcript = await ai.transcribe(audio, mime);
+      if (!transcript) { json(res, { ok: true, transcript: "", reply: "I didn't catch that.", actions: [], source: "stt", summary: home.summary() }); return; }
+
+      if (voiceagent.enabled()) {
+        try {
+          const r = await voiceagent.runAgent(transcript);
+          console.log(`[agent/audio] transcript=${JSON.stringify(transcript)} agent actions=${JSON.stringify(r.actions)}`);
+          r.actions?.forEach?.((a: any) => bus.publish({ type: `agent.${a?.label ?? a}`, ts: Date.now(), payload: { via: "audio" } }));
+          json(res, { ok: true, transcript, reply: r.reply, understood: r.understood, actions: r.actions, source: "agent-audio", summary: home.summary() });
+          return;
+        } catch (e) { console.log("[agent/audio] voiceagent error:", (e as Error)?.message); }
+      }
+
+      const r = await ai.aiText(transcript);
       const done = await ai.execute(r.actions);
-      console.log(`[agent/audio] transcript=${JSON.stringify(r.transcript)} model=${JSON.stringify(r.actions)} executed=${JSON.stringify(done)}`);
+      console.log(`[agent/audio] transcript=${JSON.stringify(transcript)} model=${JSON.stringify(r.actions)} executed=${JSON.stringify(done)}`);
       done.forEach((a) => bus.publish({ type: `agent.${a.label}`, ts: Date.now(), payload: { via: "audio" } }));
-      json(res, { ok: true, transcript: r.transcript ?? "", reply: r.reply, actions: done, source: "ai-audio", summary: home.summary() });
-    } catch (e) { console.log("[agent/audio] AI error:", (e as Error)?.message); json(res, { ok: false, error: "ai_error" }, 502); }
+      json(res, { ok: true, transcript, reply: r.reply, actions: done, source: "ai-audio", summary: home.summary() });
+    } catch (e) {
+      const m = (e as Error)?.message || "";
+      console.log("[agent/audio] error:", m);
+      json(res, { ok: false, error: "ai_error", reply: `Speech failed: ${m.slice(0, 120)}` }, 502);
+    }
     return;
   }
 

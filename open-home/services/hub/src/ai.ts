@@ -11,6 +11,8 @@ import { tmpdir } from "node:os";
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
 const GEMINI_TOKEN = process.env.GOOGLE_GENAI_TOKEN || "";
+const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY || "";
+const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const GEMINI_MODEL = "gemini-3-flash-preview";
 
@@ -134,9 +136,102 @@ export async function aiText(text: string): Promise<AiResult> {
   return parseJson(await gemini([{ text: `User command: ${text}` }]));
 }
 
+/**
+ * Speech to text.
+ *
+ * Claude cannot transcribe audio, so speech needs its own provider even though
+ * the brain is Anthropic. Three are supported and tried in order, because each
+ * one has failed in a different way here: the Gemini tokens are dead, and the
+ * ElevenLabs account ran out of credits mid-session (a 401 `quota_exceeded`,
+ * which looks nothing like an auth problem but is reported as one).
+ *
+ * Falling through on failure rather than on mere absence is deliberate — a
+ * provider that is configured but broke is exactly the case that left voice
+ * dead with a misleading error.
+ */
+function audioExt(mime: string): string {
+  return /mp4|m4a|aac/.test(mime) ? "m4a" : /wav/.test(mime) ? "wav" : /ogg|opus/.test(mime) ? "ogg" : /mpeg|mp3/.test(mime) ? "mp3" : "webm";
+}
+
+async function whisperTranscribe(base64: string, mime: string): Promise<string> {
+  const form = new FormData();
+  form.append("file", new Blob([Buffer.from(base64, "base64")], { type: mime || "audio/m4a" }), `speech.${audioExt(mime)}`);
+  form.append("model", "whisper-1");
+  const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_KEY}` },
+    body: form,
+  });
+  if (!r.ok) throw new Error(`whisper_${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return String(((await r.json()) as any).text ?? "").trim();
+}
+
+async function elevenLabsTranscribe(base64: string, mime: string): Promise<string> {
+  const form = new FormData();
+  // Scribe sniffs the container; the extension only has to be plausible, the
+  // Blob's mime type is what it actually reads.
+  form.append("file", new Blob([Buffer.from(base64, "base64")], { type: mime || "audio/webm" }), `speech.${audioExt(mime)}`);
+  form.append("model_id", "scribe_v1");
+  const r = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+    method: "POST",
+    headers: { "xi-api-key": ELEVENLABS_KEY },
+    body: form,
+  });
+  if (!r.ok) throw new Error(`elevenlabs_stt_${r.status}: ${(await r.text()).slice(0, 200)}`);
+  return String(((await r.json()) as any).text ?? "").trim();
+}
+
+/** What will actually transcribe speech right now, for /health and the app. */
+export function sttProvider(): string {
+  if (OPENAI_KEY) return "OpenAI Whisper";
+  if (ELEVENLABS_KEY) return "ElevenLabs Scribe";
+  if (GEMINI_TOKEN) return "Gemini";
+  return "none";
+}
+export function sttEnabled(): boolean { return !!(OPENAI_KEY || ELEVENLABS_KEY || GEMINI_TOKEN); }
+
+/**
+ * Speech to text only — no interpretation.
+ *
+ * Exported separately so callers can hand the words to whichever brain they
+ * prefer. /agent/audio needs this because the good agent (voiceagent.ts, which
+ * drives the REAL onboarded lights) is text-in; routing audio through aiAudio
+ * instead sent commands to the mock house, where they "succeeded" and changed
+ * nothing in the room.
+ */
+export async function transcribe(base64: string, mime: string): Promise<string> {
+  const chain: Array<[string, () => Promise<string>]> = [];
+  if (OPENAI_KEY) chain.push(["whisper", () => whisperTranscribe(base64, mime)]);
+  if (ELEVENLABS_KEY) chain.push(["elevenlabs", () => elevenLabsTranscribe(base64, mime)]);
+  if (GEMINI_TOKEN) chain.push(["gemini", () => geminiTranscribe(base64, mime)]);
+  if (!chain.length) throw new Error("no_speech_to_text");
+
+  let text = "", lastErr: Error | null = null;
+  for (const [name, run] of chain) {
+    try { text = await run(); if (text) break; }
+    catch (e) { lastErr = e as Error; console.log(`[stt] ${name} failed: ${lastErr.message}`); }
+  }
+  if (!text && lastErr) throw lastErr;
+  return text;
+}
+
 export async function aiAudio(base64: string, mime: string): Promise<AiResult> {
-  if (!GEMINI_TOKEN) throw new Error("no_speech_to_text"); // Claude can't transcribe; needs Gemini STT
-  const transcript = await geminiTranscribe(base64, mime);
+  const chain: Array<[string, () => Promise<string>]> = [];
+  if (OPENAI_KEY) chain.push(["whisper", () => whisperTranscribe(base64, mime)]);
+  if (ELEVENLABS_KEY) chain.push(["elevenlabs", () => elevenLabsTranscribe(base64, mime)]);
+  if (GEMINI_TOKEN) chain.push(["gemini", () => geminiTranscribe(base64, mime)]);
+  if (!chain.length) throw new Error("no_speech_to_text");
+
+  let transcript = "", lastErr: Error | null = null;
+  for (const [name, run] of chain) {
+    try { transcript = await run(); if (transcript) break; }
+    catch (e) { lastErr = e as Error; console.log(`[stt] ${name} failed: ${lastErr.message}`); }
+  }
+  if (!transcript && lastErr) throw lastErr;
+  // Silence or an unintelligible clip: say so rather than sending "" to the
+  // model, which happily invents an answer to a question nobody asked.
+  if (!transcript) return { reply: "I didn't catch that.", actions: [], transcript: "" };
+
   const r = await aiText(transcript);
   return { ...r, transcript };
 }
