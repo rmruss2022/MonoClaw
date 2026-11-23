@@ -1,0 +1,36 @@
+# What EAS uploads for the openhome iOS build.
+#
+# EAS archives the whole GIT REPOSITORY, not the npm workspace. MonoClaw's root
+# holds a dozen unrelated projects (travelog 332 MB, projects 198 MB, highfi
+# 108 MB, lumen 40 MB, ...), so the archive was 1.2 GB when the build needs
+# about 25 MB of it. An earlier attempt put this file in apps/mobile/, which
+# EAS never reads — it is only honoured at the archive root, i.e. here.
+#
+# Strategy: ignore everything, re-admit open-home/, then drop the parts of
+# open-home/ the build does not need.
+
+/*
+!/open-home/
+
+# Dependencies — EAS runs its own install from package-lock.json (415 MB).
+/open-home/node_modules/
+/open-home/**/node_modules/
+
+# Enclosure CAD, renders and product mockups (54 MB); never bundled in the app.
+/open-home/hardware/
+
+# The TV/display surface and the legacy web app (20 MB) — separate from mobile.
+/open-home/apps/app/
+/open-home/tv/
+
+# Keep services/cloud and services/hub: they are npm workspaces named in
+# package-lock.json, and removing them makes `npm ci` fail on a lockfile
+# mismatch. They are only ~1 MB together, so there is nothing to gain anyway.
+
+# Local build artefacts and secrets that must never leave this machine.
+/open-home/apps/mobile/creds/
+/open-home/apps/mobile/credentials.json
+**/*.p12
+**/*.mobileprovision
+**/.env
+**/.env.*
