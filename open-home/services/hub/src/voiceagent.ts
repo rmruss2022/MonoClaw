@@ -400,8 +400,12 @@ async function dailyReport(): Promise<string | null> {
       const r = await fetch(DASH_REPORT_URL, { signal: ctrl.signal });
       if (!r.ok) return null;
       const j: any = await r.json();
+      // Prefer the SPOKEN version. The generator writes both: a long written
+      // briefing with bulleted sections, and a ~30s spoken summary. Reading
+      // the written one aloud meant grinding through every transit bullet.
+      const spoken = String(j?.report?.spoken ?? "").trim();
       const text = String(j?.report?.text ?? "").trim();
-      return text || null;
+      return spoken || text || null;
     } finally { clearTimeout(timer); }
   } catch (e) {
     console.log("[scene] daily report failed:", (e as Error)?.message);

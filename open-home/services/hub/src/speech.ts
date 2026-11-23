@@ -12,9 +12,7 @@
  * a 401, which reads like bad auth rather than no credit.
  */
 import { spawn } from "node:child_process";
-import { writeFile, unlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { Readable } from "node:stream";
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY || "";
@@ -39,31 +37,42 @@ export function provider(): string {
   return "none";
 }
 
-async function synthOpenAI(text: string): Promise<Buffer> {
+/**
+ * Open a STREAMING synthesis response.
+ *
+ * Both providers can start sending mp3 frames before the whole passage is
+ * rendered, and we hand that straight to mpv's stdin. Waiting for the complete
+ * file meant the morning report — over two minutes of audio — sat in silence
+ * for fifteen seconds with the music already ducked. Streaming turns that into
+ * about a second.
+ */
+async function openStream(text: string, which: "elevenlabs" | "openai"): Promise<{ body: ReadableStream<Uint8Array>; t0: number }> {
   const t0 = Date.now();
+  if (which === "elevenlabs") {
+    const voice = ELEVENLABS_VOICE || "21m00Tcm4TlvDq8ikWAM";
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}/stream?output_format=mp3_44100_64`, {
+      method: "POST",
+      headers: { "xi-api-key": ELEVENLABS_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        model_id: process.env.ELEVENLABS_MODEL || "eleven_turbo_v2_5",
+        // Render the opening as soon as possible rather than optimising the
+        // whole passage first — the first chunk is what you are waiting on.
+        optimize_streaming_latency: Number(process.env.ELEVENLABS_LATENCY ?? 3),
+      }),
+    });
+    if (!r.ok || !r.body) throw new Error(`elevenlabs_tts_${r.status}: ${(await r.text()).slice(0, 160)}`);
+    vlog(`stream elevenlabs voice=${voice} chars=${text.length} headers in ${Date.now() - t0}ms`);
+    return { body: r.body, t0 };
+  }
   const r = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: OPENAI_VOICE, input: text, response_format: "mp3" }),
   });
-  if (!r.ok) throw new Error(`openai_tts_${r.status}: ${(await r.text()).slice(0, 160)}`);
-  const buf = Buffer.from(await r.arrayBuffer());
-  vlog(`synth openai voice=${OPENAI_VOICE} chars=${text.length} bytes=${buf.length} in ${Date.now() - t0}ms`);
-  return buf;
-}
-
-async function synthElevenLabs(text: string): Promise<Buffer> {
-  const t0 = Date.now();
-  const voice = ELEVENLABS_VOICE || "21m00Tcm4TlvDq8ikWAM";
-  const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_64`, {
-    method: "POST",
-    headers: { "xi-api-key": ELEVENLABS_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ text, model_id: process.env.ELEVENLABS_MODEL || "eleven_turbo_v2_5" }),
-  });
-  if (!r.ok) throw new Error(`elevenlabs_tts_${r.status}: ${(await r.text()).slice(0, 160)}`);
-  const buf = Buffer.from(await r.arrayBuffer());
-  vlog(`synth elevenlabs voice=${voice} chars=${text.length} bytes=${buf.length} in ${Date.now() - t0}ms`);
-  return buf;
+  if (!r.ok || !r.body) throw new Error(`openai_tts_${r.status}: ${(await r.text()).slice(0, 160)}`);
+  vlog(`stream openai voice=${OPENAI_VOICE} chars=${text.length} headers in ${Date.now() - t0}ms`);
+  return { body: r.body, t0 };
 }
 
 /** Strip things that sound wrong read aloud: emoji, markdown, bare URLs. */
@@ -112,18 +121,28 @@ function sh(cmd: string, args: string[]): Promise<void> {
  * matching on application name, which is useless here — SoundCloud playback is
  * mpv too, and PipeWire does not report a process id for any of them.
  */
-async function musicStreams(): Promise<number[]> {
+interface StreamNode { id: number; name: string; level: number }
+
+/** One pw-dump, parsed once: every playback stream with its linear level. */
+async function snapshot(): Promise<StreamNode[]> {
   const dump = await run_("pw-dump", []);
   try {
     return (JSON.parse(dump) as any[])
-      .filter((n) =>
-        n?.type === "PipeWire:Interface:Node" &&
+      .filter((n) => n?.type === "PipeWire:Interface:Node" &&
         String(n?.info?.props?.["media.class"] ?? "").startsWith("Stream/Output/Audio"))
-      .map((n) => n.id as number);
+      .map((n) => ({
+        id: n.id as number,
+        name: String(n.info.props["application.name"] ?? n.info.props["node.name"] ?? "?"),
+        // PipeWire stores a cubic value; the cube root is the linear level.
+        level: Math.cbrt(n.info?.params?.Props?.[0]?.channelVolumes?.[0] ?? 0),
+      }));
   } catch {
     return [];
   }
 }
+
+const describe = (ns: StreamNode[]) =>
+  ns.map((n) => `${n.name}=${n.level.toFixed(2)}`).join(" ") || "(no streams)";
 
 async function setStreamVolumes(ids: number[], level: number): Promise<void> {
   for (const id of ids) await sh("wpctl", ["set-volume", String(id), String(level)]);
@@ -133,19 +152,7 @@ async function setStreamVolumes(ids: number[], level: number): Promise<void> {
 /** Dump every playback stream's level — the thing worth seeing when audio is wrong. */
 async function levels(when: string): Promise<void> {
   if (!VERBOSE) return;
-  const dump = await run_("pw-dump", []);
-  try {
-    const rows = (JSON.parse(dump) as any[])
-      .filter((n) => n?.type === "PipeWire:Interface:Node" &&
-        String(n?.info?.props?.["media.class"] ?? "").startsWith("Stream/Output/Audio"))
-      .map((n) => {
-        const name = n.info.props["application.name"] ?? n.info.props["node.name"];
-        const cv = n.info?.params?.Props?.[0]?.channelVolumes?.[0] ?? 0;
-        // PipeWire stores a cubic value; the cube root is the linear level.
-        return `${name}=${Math.cbrt(cv).toFixed(2)}`;
-      });
-    vlog(`levels ${when}: ${rows.join(" ") || "(no streams)"}`);
-  } catch { /* graph changed mid-dump */ }
+  vlog(`levels ${when}: ${describe(await snapshot())}`);
 }
 
 /**
@@ -172,7 +179,7 @@ async function unduckVoice(): Promise<void> {
         n?.info?.props?.["application.name"] === VOICE_APP);
       if (hit?.id != null) { await sh("wpctl", ["set-volume", String(hit.id), "1.0"]); vlog(`voice node ${hit.id} -> 1.0 (after ${attempt + 1} tries)`); return; }
     } catch { /* pw-dump raced a graph change */ }
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 80));
   }
   log("voice stream never appeared — level not corrected");
 }
@@ -211,43 +218,70 @@ export function speak(text: string): Promise<void> {
 async function run(text: string): Promise<void> {
   const started = Date.now();
   vlog(`say ${text.length} chars, prefer=${PREFER}`);
-  let audio: Buffer;
-  try {
-    audio = PREFER === "elevenlabs" && ELEVENLABS_KEY
-      ? await synthElevenLabs(text)
-      : OPENAI_KEY ? await synthOpenAI(text) : await synthElevenLabs(text);
-  } catch (e) {
-    log("synth failed:", (e as Error).message);
-    // One fallback to the other provider before giving up silently.
-    try {
-      audio = OPENAI_KEY && PREFER === "elevenlabs" ? await synthOpenAI(text) : await synthElevenLabs(text);
-    } catch (e2) {
-      log("fallback failed:", (e2 as Error).message);
-      return;
-    }
-  }
 
-  const file = join(tmpdir(), `oh-speak-${Date.now()}.mp3`);
-  await writeFile(file, audio);
+  const order: Array<"elevenlabs" | "openai"> =
+    PREFER === "elevenlabs" && ELEVENLABS_KEY
+      ? (OPENAI_KEY ? ["elevenlabs", "openai"] : ["elevenlabs"])
+      : OPENAI_KEY ? (ELEVENLABS_KEY ? ["openai", "elevenlabs"] : ["openai"]) : ["elevenlabs"];
+
+  // Ask for the audio and inspect the audio graph at the SAME time. A pw-dump
+  // takes well over a second on this Pi, and doing it first simply added that
+  // to the delay before anything was heard — the two have nothing to do with
+  // each other.
+  const [graph, stream] = await Promise.all([
+    snapshot(),
+    (async () => {
+      for (const which of order) {
+        try { return await openStream(text, which); }
+        catch (e) { log(`${which} failed:`, (e as Error).message); }
+      }
+      return null;
+    })(),
+  ]);
+  const music = graph.map((n) => n.id);
+  vlog(`levels before: ${describe(graph)}`);
+  if (!stream) { log("no provider could synthesize"); return; }
+
   stop();
-  // Snapshot before we make any noise of our own.
-  const music = await musicStreams();
-  await levels("before");
+  // Duck and start playback together. Ducking first left the room quiet for
+  // however long synthesis took, which is exactly the pause that made this
+  // feel broken.
   await setStreamVolumes(music, DUCK / 100);
+
   try {
     await new Promise<void>((resolve) => {
-      // mpv to the PipeWire default sink, which is the Bluetooth speaker. No
-      // video, no terminal UI, and it exits on its own when the clip ends.
-      // --volume above 100 is software gain, which TTS needs to sit over music.
-      const p = spawn("mpv", ["--no-video", "--really-quiet", "--no-terminal", `--volume=${VOICE_GAIN}`, file], {
+      // Read the mp3 from stdin so playback begins on the first frames rather
+      // than after the whole passage is rendered.
+      const p = spawn("mpv", [
+        "--no-video", "--really-quiet", "--no-terminal",
+        `--volume=${VOICE_GAIN}`,
+        "--cache=yes", "--cache-secs=2",
+        "--demuxer-lavf-format=mp3",
+        "-",
+      ], {
         env: {
           ...process.env,
           XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || "/run/user/1000",
           PIPEWIRE_PROPS: `{ application.name = ${VOICE_APP} node.name = ${VOICE_APP} }`,
         },
+        stdio: ["pipe", "ignore", "ignore"],
       });
       current = p;
-      vlog(`mpv pid=${p.pid} gain=${VOICE_GAIN} file=${file}`);
+      vlog(`mpv pid=${p.pid} gain=${VOICE_GAIN} (streaming)`);
+
+      let firstByte = 0;
+      Readable.fromWeb(stream!.body as any)
+        .on("data", () => {
+          if (!firstByte) {
+            firstByte = Date.now();
+            vlog(`first audio byte ${firstByte - stream!.t0}ms after request`);
+          }
+        })
+        .on("error", (err) => { log("stream error:", err.message); try { p.stdin?.end(); } catch {} })
+        .pipe(p.stdin!)
+        // mpv exiting early (a newer utterance killed it) closes stdin under us.
+        .on("error", () => {});
+
       unduckVoice().then(() => levels("speaking")).catch(() => {});
       p.on("exit", () => { if (current === p) current = null; resolve(); });
       p.on("error", (err) => { log("mpv:", err.message); if (current === p) current = null; resolve(); });
@@ -258,6 +292,5 @@ async function run(text: string): Promise<void> {
     await setStreamVolumes(music, 1.0);
     await levels("after");
   }
-  unlink(file).catch(() => {});
   log(`spoke ${text.length} chars via ${provider()} in ${Date.now() - started}ms (duck=${DUCK}% gain=${VOICE_GAIN})`);
 }
