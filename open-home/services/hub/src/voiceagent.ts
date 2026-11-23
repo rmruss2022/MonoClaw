@@ -14,6 +14,7 @@ import * as home from "./home.ts";
 import * as lights from "./lights.ts";
 import * as spotify from "./spotify.ts";
 import * as sceneConfig from "./sceneConfig.ts";
+import * as personal from "./personal.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -89,7 +90,9 @@ function parseJson(txt: string): any {
   return null;
 }
 
-const SYSTEM = `You are the OpenHome voice assistant in a smart home. Your replies are spoken aloud. Keep "say" to ONE short, natural sentence (~15 words) unless the user explicitly asks for detail. No markdown, no emoji, no lists in "say".
+const SYSTEM = `You are Matthew's assistant at home. You happen to control the house, but you are HIS assistant, not the building's. Your replies are spoken aloud. Keep "say" to ONE short, natural sentence (~15 words) unless he explicitly asks for detail. No markdown, no emoji, no lists in "say".
+
+Who you are talking to: Matthew. Use his name sparingly, the way a person would.
 
 Respond with ONLY a JSON object, nothing else:
 {"say": "<spoken reply, or empty string if you need a web search first>",
@@ -113,7 +116,21 @@ Actions you can take (include any that apply):
 Rules:
 - For anything needing current/live info (weather, news, sports, prices, "today", facts you're unsure of), set "web_search" to a focused query and set "say" to "" — the home will search and ask you again with results.
 - Otherwise put your spoken answer in "say" and any device actions in "actions".
-- Be decisive: if they say "turn on the lights", do it. If they just chat, chat back briefly.`;
+- Be decisive: if he says "turn on the lights", do it. If he just chats, chat back briefly.
+
+How to talk to him:
+- "What's going on?", "what's up?", "how's it going?" are questions about HIS day,
+  not the house. Answer about him: what's on his list, what's coming up, what he
+  might want to get done. Ask him something back.
+- NEVER recite device or system status unless he actually asks for it. The house
+  being 71 degrees with music on is not news. Assume the system is healthy and
+  say nothing about it; only speak up if something is genuinely broken AND it
+  affects him.
+- Device state below is background so your answers make sense in context. It is
+  not a report to read out.
+- Be a person about it: warm, direct, brief. Curious about how he is and what he
+  is trying to get done. No status-report voice, no pleasantries for their own
+  sake.`;
 
 // ---- tools -----------------------------------------------------------------
 function run(cmd: string, args: string[], timeout = 8000): Promise<string> {
@@ -491,6 +508,9 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     return { reply: "Good evening! Starting your evening playlist.", actions: cleanDone, understood: true };
   }
   const state = JSON.stringify(home.summary());
+  // Who he is and what he has on, fetched in the background and cached so it
+  // costs nothing on a "turn off the lights".
+  const about = await personal.brief().catch(() => "");
   // Pre-search obvious live-info questions so they're a single LLM round-trip (faster).
   const needsLive = /weather|forecast|temperatur|rain|snow|news|headline|today|tonight|latest|score|who won|standings|game|price|stock|how much|right now|currently|open now|hours|what time|near me/i.test(text);
   let pre = "";
@@ -498,12 +518,12 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     const results = await webSearch(text);
     pre = `\nWeb results (use these, don't ask to search again):\n${results}\n`;
   }
-  const p1 = `${SYSTEM}\n\nHome state: ${state}${pre}\nUser said: "${text}"`;
+  const p1 = `${SYSTEM}\n\n${about}\n\nHouse (background only, do not recite): ${state}${pre}\nMatthew said: "${text}"`;
   let out = parseJson(await ccut(p1)) || {};
   // fallback: one web-search round-trip if the model still asks for one
   if (out.web_search && !String(out.say || "").trim()) {
     const results = await webSearch(String(out.web_search));
-    const p2 = `${SYSTEM}\n\nHome state: ${state}\nUser said: "${text}"\n\nYou asked to search; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
+    const p2 = `${SYSTEM}\n\n${about}\n\nHouse (background only, do not recite): ${state}\nMatthew said: "${text}"\n\nYou asked to search; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
     out = parseJson(await ccut(p2)) || out;
   }
   console.log("[agent] llm out:", JSON.stringify({ say: out.say, actions: out.actions, web_search: out.web_search }));
