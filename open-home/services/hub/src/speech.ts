@@ -6,9 +6,10 @@
  * and anything triggered from the phone or the web app was silent by design.
  * This puts speech in the hub, where every surface can reach it.
  *
- * OpenAI TTS is the default because the key is already here for Whisper;
- * ElevenLabs is kept as an override for when its credits come back, since its
- * voices are better.
+ * ElevenLabs is the default voice — it is the one this house is used to.
+ * OpenAI TTS is the automatic fallback, which matters because the failure has
+ * already happened: the ElevenLabs account emptied mid-day and reported it as
+ * a 401, which reads like bad auth rather than no credit.
  */
 import { spawn } from "node:child_process";
 import { writeFile, unlink } from "node:fs/promises";
@@ -19,10 +20,16 @@ const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY || "";
 const ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID || "";
 const OPENAI_VOICE = process.env.OPEN_HOME_TTS_VOICE || "onyx";
-// Prefer ElevenLabs only when explicitly asked for: it is the nicer voice but
-// the account has been empty, and a failed first attempt costs several seconds
-// of silence before the fallback is even tried.
-const PREFER = (process.env.OPEN_HOME_TTS || (OPENAI_KEY ? "openai" : "elevenlabs")).toLowerCase();
+// ElevenLabs is the voice this house is used to, so it wins when a key is
+// present. OpenAI remains the automatic fallback for the failure that has
+// already happened once: the account running out of credits mid-day, which
+// surfaces as a 401 that reads like bad auth.
+const PREFER = (process.env.OPEN_HOME_TTS || (ELEVENLABS_KEY ? "elevenlabs" : "openai")).toLowerCase();
+
+// Set OPEN_HOME_SPEAK_VERBOSE=0 to quieten this down once it is boring again.
+const VERBOSE = process.env.OPEN_HOME_SPEAK_VERBOSE !== "0";
+const log = (...a: unknown[]) => console.log("[speech]", ...a);
+const vlog = (...a: unknown[]) => { if (VERBOSE) console.log("[speech]", ...a); };
 
 export function enabled(): boolean { return !!(OPENAI_KEY || ELEVENLABS_KEY); }
 export function provider(): string {
@@ -33,16 +40,20 @@ export function provider(): string {
 }
 
 async function synthOpenAI(text: string): Promise<Buffer> {
+  const t0 = Date.now();
   const r = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: OPENAI_VOICE, input: text, response_format: "mp3" }),
   });
   if (!r.ok) throw new Error(`openai_tts_${r.status}: ${(await r.text()).slice(0, 160)}`);
-  return Buffer.from(await r.arrayBuffer());
+  const buf = Buffer.from(await r.arrayBuffer());
+  vlog(`synth openai voice=${OPENAI_VOICE} chars=${text.length} bytes=${buf.length} in ${Date.now() - t0}ms`);
+  return buf;
 }
 
 async function synthElevenLabs(text: string): Promise<Buffer> {
+  const t0 = Date.now();
   const voice = ELEVENLABS_VOICE || "21m00Tcm4TlvDq8ikWAM";
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_64`, {
     method: "POST",
@@ -50,7 +61,9 @@ async function synthElevenLabs(text: string): Promise<Buffer> {
     body: JSON.stringify({ text, model_id: process.env.ELEVENLABS_MODEL || "eleven_turbo_v2_5" }),
   });
   if (!r.ok) throw new Error(`elevenlabs_tts_${r.status}: ${(await r.text()).slice(0, 160)}`);
-  return Buffer.from(await r.arrayBuffer());
+  const buf = Buffer.from(await r.arrayBuffer());
+  vlog(`synth elevenlabs voice=${voice} chars=${text.length} bytes=${buf.length} in ${Date.now() - t0}ms`);
+  return buf;
 }
 
 /** Strip things that sound wrong read aloud: emoji, markdown, bare URLs. */
@@ -114,6 +127,25 @@ async function musicStreams(): Promise<number[]> {
 
 async function setStreamVolumes(ids: number[], level: number): Promise<void> {
   for (const id of ids) await sh("wpctl", ["set-volume", String(id), String(level)]);
+  if (ids.length) vlog(`set streams [${ids.join(",")}] -> ${level}`);
+}
+
+/** Dump every playback stream's level — the thing worth seeing when audio is wrong. */
+async function levels(when: string): Promise<void> {
+  if (!VERBOSE) return;
+  const dump = await run_("pw-dump", []);
+  try {
+    const rows = (JSON.parse(dump) as any[])
+      .filter((n) => n?.type === "PipeWire:Interface:Node" &&
+        String(n?.info?.props?.["media.class"] ?? "").startsWith("Stream/Output/Audio"))
+      .map((n) => {
+        const name = n.info.props["application.name"] ?? n.info.props["node.name"];
+        const cv = n.info?.params?.Props?.[0]?.channelVolumes?.[0] ?? 0;
+        // PipeWire stores a cubic value; the cube root is the linear level.
+        return `${name}=${Math.cbrt(cv).toFixed(2)}`;
+      });
+    vlog(`levels ${when}: ${rows.join(" ") || "(no streams)"}`);
+  } catch { /* graph changed mid-dump */ }
 }
 
 /**
@@ -138,11 +170,11 @@ async function unduckVoice(): Promise<void> {
       const hit = (JSON.parse(dump) as any[]).find((n) =>
         n?.type === "PipeWire:Interface:Node" &&
         n?.info?.props?.["application.name"] === VOICE_APP);
-      if (hit?.id != null) { await sh("wpctl", ["set-volume", String(hit.id), "1.0"]); return; }
+      if (hit?.id != null) { await sh("wpctl", ["set-volume", String(hit.id), "1.0"]); vlog(`voice node ${hit.id} -> 1.0 (after ${attempt + 1} tries)`); return; }
     } catch { /* pw-dump raced a graph change */ }
     await new Promise((r) => setTimeout(r, 200));
   }
-  console.log("[speech] voice stream never appeared — level not corrected");
+  log("voice stream never appeared — level not corrected");
 }
 
 function run_(cmd: string, args: string[]): Promise<string> {
@@ -177,18 +209,20 @@ export function speak(text: string): Promise<void> {
 }
 
 async function run(text: string): Promise<void> {
+  const started = Date.now();
+  vlog(`say ${text.length} chars, prefer=${PREFER}`);
   let audio: Buffer;
   try {
     audio = PREFER === "elevenlabs" && ELEVENLABS_KEY
       ? await synthElevenLabs(text)
       : OPENAI_KEY ? await synthOpenAI(text) : await synthElevenLabs(text);
   } catch (e) {
-    console.log("[speech] synth failed:", (e as Error).message);
+    log("synth failed:", (e as Error).message);
     // One fallback to the other provider before giving up silently.
     try {
       audio = OPENAI_KEY && PREFER === "elevenlabs" ? await synthOpenAI(text) : await synthElevenLabs(text);
     } catch (e2) {
-      console.log("[speech] fallback failed:", (e2 as Error).message);
+      log("fallback failed:", (e2 as Error).message);
       return;
     }
   }
@@ -198,6 +232,7 @@ async function run(text: string): Promise<void> {
   stop();
   // Snapshot before we make any noise of our own.
   const music = await musicStreams();
+  await levels("before");
   await setStreamVolumes(music, DUCK / 100);
   try {
     await new Promise<void>((resolve) => {
@@ -212,15 +247,17 @@ async function run(text: string): Promise<void> {
         },
       });
       current = p;
-      unduckVoice().catch(() => {});
+      vlog(`mpv pid=${p.pid} gain=${VOICE_GAIN} file=${file}`);
+      unduckVoice().then(() => levels("speaking")).catch(() => {});
       p.on("exit", () => { if (current === p) current = null; resolve(); });
-      p.on("error", (err) => { console.log("[speech] mpv:", err.message); if (current === p) current = null; resolve(); });
+      p.on("error", (err) => { log("mpv:", err.message); if (current === p) current = null; resolve(); });
     });
   } finally {
     // Always restore, even if playback threw or was killed by a newer
     // utterance — otherwise the music stays quiet for the rest of the day.
     await setStreamVolumes(music, 1.0);
+    await levels("after");
   }
   unlink(file).catch(() => {});
-  console.log(`[speech] spoke ${text.length} chars via ${provider()} (music ducked to ${DUCK}%)`);
+  log(`spoke ${text.length} chars via ${provider()} in ${Date.now() - started}ms (duck=${DUCK}% gain=${VOICE_GAIN})`);
 }
