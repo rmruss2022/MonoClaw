@@ -1,0 +1,4 @@
+# Python 3.11-3.13 (the protocol client requires >=3.11,<3.14; the Pi has 3.13.5)
+bleak>=0.22
+requests>=2.31
+colmi_r02_client @ git+https://github.com/tahnok/colmi_r02_client
