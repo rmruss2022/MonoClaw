@@ -150,6 +150,7 @@ Rules:
 - You CAN search the live web. Never say you are unable to look something up: if you do not know it, set "web_search" instead. If results come back empty, say what you do know and that the search found nothing — not that you have no access.
 - NEVER state that something is unavailable, not playing, closed or sold out unless the search results actually SAY so. "The page I read had no showtimes on it" is not the same as "it is not showing" — in that case say you could not pull the times up. Absence of evidence is not evidence, and a confident wrong "no" is the worst answer you can give.
 - Never invent a specific time, address, price or runtime. If it is not in the results, say you do not have it.
+- You have NO location tracking, NO travel times and NO calendar. Never give an ETA, an arrival time, a distance or "you're N minutes away" — you cannot know any of those. The only thing you know about his whereabouts is the PRESENCE line below: home or not, and how long that has already been true. If he asks when he will get somewhere, say you cannot see that.
 - Do not reinterpret what a page says. "No longer on sale" next to a showtime means that screening has already started or ticketing has closed — it does NOT mean sold out. Report the status in the page's own terms, or just give him the showings that are still available.
 - You are told the current date and time below. Use it: a 2 PM showing is not an option at 8 PM. Prefer the next showings that have not happened yet, and say which ones are later tonight versus tomorrow.
 - For anything local ("near me", "around here"), search with the actual place name, not "near me".
@@ -1326,13 +1327,31 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   let about = await personal.brief().catch(() => "");
   // Whether he is actually home, and for how long — context a person would
   // have. Cheap: presence polls on its own schedule, this just reads it.
+  // Whether he is actually home, and for how long — context a person would
+  // have. Cheap: presence polls on its own schedule, this just reads it.
+  //
+  // Phrased at length on purpose. This used to read "Matthew is home (5 min)",
+  // which MEANS "has been home for five minutes" and READS as "home in five
+  // minutes" — and the house duly told him he was five minutes out. There is
+  // no location, no travel time and no calendar anywhere in this system, so
+  // every ETA it has ever given has been invented from this one line. Same
+  // shape as `temp: 71` becoming the outdoor weather and `weather_code 3`
+  // becoming "no rain expected": an unlabelled number in a prompt gets a
+  // plausible label attached to it.
   try {
     const me = presence.list().find((x) => x.id === "matthew");
     if (me) {
       const mins = me.since ? Math.round((Date.now() - me.since) / 60000) : 0;
+      const span = mins < 1 ? "less than a minute"
+        : mins < 60 ? `${mins} minute${mins === 1 ? "" : "s"}`
+        : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+      const at = me.since
+        ? new Date(me.since).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+        : "";
       about += me.home
-        ? `\nMatthew is home (${mins} min).`
-        : `\nMatthew is out (left ${mins} min ago).`;
+        ? `\nPRESENCE: Matthew is AT HOME right now, and has been for ${span}${at ? ` (arrived about ${at})` : ""}.`
+        : `\nPRESENCE: Matthew is NOT at home right now. He has been out for ${span}${at ? ` (left about ${at})` : ""}.`;
+      about += `\nThat duration is time ALREADY ELAPSED, not an estimate of anything. The house cannot see where he is, how far away he is, or when he will be back.`;
     }
   } catch { /* presence is optional context */ }
   // Pre-search obvious live-info questions so they're a single LLM round-trip (faster).
