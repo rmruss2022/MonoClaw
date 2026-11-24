@@ -676,6 +676,22 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
     return { reply: on ? "Lights on." : "Lights off.", actions: [hit || `lights ${on ? "on" : "off"}`], listen: false };
   }
 
+  // Volume. Measured failing live: "Lower the volume." went to the model,
+  // which came back with an empty say and no actions, so the house answered
+  // "Okay." and did nothing — which is worse than refusing. There is nothing
+  // here to reason about.
+  const vol = /\b(volume|turn it|turn the (music|sound)|make it)\b/.test(t) || /^(louder|quieter|softer)$/.test(t);
+  if (vol) {
+    const down = /\b(down|lower|quiet|quieter|softer|soft|less|reduce)\b/.test(t);
+    const up = /\b(up|louder|higher|raise|more|increase)\b/.test(t);
+    const num = t.match(/\b(\d{1,3})\s*(percent|%)?\b/);
+    if (down || up || num) {
+      const q = num ? num[1] : down ? "down" : "up";
+      const done = await execActions([{ type: "music", op: "volume", query: q }]);
+      return { reply: "", actions: done, listen: false };
+    }
+  }
+
   // Music transport. "next"/"skip"/"pause" need no reasoning.
   const music: Record<string, string> = {
     "next": "next", "skip": "next", "next song": "next", "skip this": "next",
@@ -793,7 +809,9 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
   let reply = String(out.say || "").trim();
   if (np) reply = `Now playing ${np}.`;
-  if (!reply) reply = cleanDone.length ? "Done." : "Okay.";
+  // "Okay." for a model that returned nothing and did nothing is a lie, and it
+  // happened live on "Lower the volume." Say so instead.
+  if (!reply) reply = cleanDone.length ? "Done." : "Sorry, I didn't get that.";
   // Should the house keep the mic open? Trust the model when it says so, but
   // only when it did NOT also do something: "lights off. Anything else?" is a
   // completed action, and holding the mic after an action is how an assistant
