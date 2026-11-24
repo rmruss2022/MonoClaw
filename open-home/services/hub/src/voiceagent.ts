@@ -523,7 +523,7 @@ async function execActions(actions: any[]): Promise<string[]> {
         case "scene": {
           // Every scene except the party itself ends the party: a scene sets
           // its own light colours and would be overwritten on the next flash.
-          if (party.isOn() && String(a.id) !== "party") party.stop(false);
+          if (party.isOn() && String(a.id) !== "party") party.stop(false, `scene "${a.id}"`);
           const real = await runSceneReal(String(a.id));   // real devices (lights + playlist)
           home.activateScene(String(a.id));                // keep mock/UI model in sync
           done.push(real || `scene ${a.id}`);
@@ -542,7 +542,7 @@ async function execActions(actions: any[]): Promise<string[]> {
           const room = String(a.room || "all").toLowerCase();
           // A direct light command takes over from the party, or the two fight
           // over the same bulb every half second.
-          if (party.isOn()) party.stop(false);
+          if (party.isOn()) party.stop(false, `lights ${on ? "on" : "off"} command`);
           // Control REAL onboarded lights (ESPHome/Matter).
           let hit = 0;
           try {

@@ -53,7 +53,7 @@ async function step() {
 
 /** Start the party. Tries to beat-match the current track's tempo, else ~130 BPM feel. */
 export async function start(inRoom?: string): Promise<{ ok: boolean; lights: number; intervalMs: number; bpm: number | null }> {
-  stop(false);
+  stop(false, "restarting");
   tick = 0;
   room = inRoom ? inRoom.toLowerCase().replace(" room", "") : null;
   let intervalMs = 460;   // ~130 BPM default
@@ -79,8 +79,18 @@ export async function start(inRoom?: string): Promise<{ ok: boolean; lights: num
 
 /** Stop the party. By default settles the lights to warm white; pass restore=false when
  * another light command is about to set its own color (so we don't fight it). */
-export function stop(restore = true): void {
-  if (timer) { clearInterval(timer); timer = null; }
+/**
+ * Stop the party. `why` is not decoration.
+ *
+ * The party gets stopped as a SIDE EFFECT from several places — any direct
+ * light command, any other scene — and none of them said so. When a running
+ * party went dark unexpectedly the only evidence left was the bulb's final
+ * colour, which had to be matched against PARTY_COLORS by hand to work out
+ * that an unrelated light command had killed it. One log line would have
+ * answered it instantly.
+ */
+export function stop(restore = true, why = "asked"): void {
+  if (timer) { clearInterval(timer); timer = null; console.log(`[party] stopped (${why})`); }
   if (!restore) { room = null; return; }
   try {
     for (const l of colorLights()) {

@@ -1026,7 +1026,10 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     let hint: string | undefined;
     // Any real light change ends the party first (so "set the lights green" takes over),
     // except brightness (which can ride along) and the party command itself.
-    if (party.isOn() && cmd !== "party" && cmd !== "brightness") party.stop(false);
+    if (party.isOn() && cmd !== "party" && cmd !== "brightness") party.stop(false, `light command "${cmd}"`);
+    // Log every light command. There was no record of these at all, so a
+    // running party being killed by one left nothing in the journal to find.
+    console.log(`[lights] command ${cmd}${p.id ? ` id=${p.id}` : ""}${p.on != null ? ` on=${p.on}` : ""}${p.rgb ? ` rgb=${p.rgb.r},${p.rgb.g},${p.rgb.b}` : ""}`);
     switch (cmd) {
       case "toggle": { const r = await lights.control(String(p.id), { on: !!p.on }); if (!r.ok) hint = r.reason; break; }
       case "brightness": { const r = await lights.control(String(p.id), { brightness: Number(p.brightness) }); if (!r.ok) hint = r.reason; break; }
