@@ -4415,6 +4415,15 @@ html,body{background:#08080a!important;color:var(--text)!important}
 .onb-ic .i{color:#ece9e2!important;filter:none!important}
 .comm-let-ic{filter:grayscale(1) contrast(1.04)!important}
 .jmode-chev,.comm-let-go{color:var(--muted)!important}
+/* comprehensive desaturation — every bespoke illustration / art / SVG scene across all screens */
+#app img,#app svg,.onb-hero svg,[class*="-med"],[class*="-art"],[class*="-ic"],[class*="-photo"],.nh-hero{filter:grayscale(1) contrast(1.03)!important}
+/* keep the brand mark bone but preserve its aperture form (desaturate + brighten, not solid-fill) */
+.nh-mark svg *,.lmark *,.nh-lotussvg *{stroke:#f2efe6!important}
+.nh-mark svg,.lmark,.nh-lotussvg{filter:grayscale(1) brightness(1.9)!important}
+/* onboarding scene card → flat dark, hairline, no gold glow */
+.onb-anim{background:#0b0b0e!important;box-shadow:none!important;border:1px solid var(--line)!important;border-radius:6px!important}
+/* onboarding gold star/mote glows → neutral */
+.os-tw,.os-rise{fill:#d7d3c8!important;filter:none!important}
 </style>
 <!-- Sentry error monitoring (project loader auto-injects the DSN; buffers errors
      from first paint so onboarding/auth are covered). Release = deploy version. -->
@@ -10890,7 +10899,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v119';
+const CACHE = 'lumen-v121';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
