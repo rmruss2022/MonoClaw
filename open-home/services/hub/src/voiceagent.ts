@@ -29,7 +29,16 @@ const FIRECRAWL_KEY = process.env.FIRECRAWL_API_KEY || "";
 const BRAVE_KEY = process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY || "";
 // Where the house is. Used for "near me" searches and for the default weather
 // lookup, both of which are nonsense without it.
+//
+// Two settings, not one, because they are read by different things. The PLACE
+// string goes into search queries, where a neighbourhood name is what makes a
+// result local ("in New York, NY" centres on Midtown, four miles away). The
+// coordinates go to the weather API, which cannot geocode a neighbourhood --
+// open-meteo returns nothing for "Bushwick, Brooklyn, NY" and the right answer
+// for bare "Bushwick".
 const HOME_PLACE = process.env.OPEN_HOME_PLACE || "New York, NY";
+const HOME_LAT = Number(process.env.OPEN_HOME_LAT ?? 40.7128);
+const HOME_LON = Number(process.env.OPEN_HOME_LON ?? -74.006);
 const UID = process.getuid ? process.getuid() : 1000;
 const EXEC_ENV = { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || `/run/user/${UID}` };
 
@@ -243,19 +252,98 @@ async function readPage(url: string | undefined, query: string): Promise<string>
   }
 }
 
+/** WMO weather code -> plain English, so the model never has to guess. */
+function sky(code: number): string {
+  const m: Record<number, string> = {
+    0: "clear", 1: "mainly clear", 2: "partly cloudy", 3: "overcast",
+    45: "foggy", 48: "freezing fog",
+    51: "light drizzle", 53: "drizzle", 55: "heavy drizzle",
+    56: "freezing drizzle", 57: "heavy freezing drizzle",
+    61: "light rain", 63: "rain", 65: "heavy rain",
+    66: "freezing rain", 67: "heavy freezing rain",
+    71: "light snow", 73: "snow", 75: "heavy snow", 77: "snow grains",
+    80: "light rain showers", 81: "rain showers", 82: "violent rain showers",
+    85: "snow showers", 86: "heavy snow showers",
+    95: "thunderstorms", 96: "thunderstorms with hail", 99: "severe thunderstorms with hail",
+  };
+  return m[code] ?? "unclear";
+}
+
 async function webSearch(query: string): Promise<string> {
   const q = query.toLowerCase();
   // Weather: geocode (open-meteo, no key) + current conditions.
   if (/weather|temperature|forecast|rain|snow|cold|hot|degrees/.test(q)) {
-    const place = query.replace(/.*weather (in|for|at)\s*/i, "").replace(/weather|what('s| is)|the|like|right now|today|\?/gi, "").trim() || HOME_PLACE;
+    // A place counts as named ONLY if he said "in/for/at <somewhere>".
+    //
+    // This used to strip known words and treat whatever survived as a place
+    // name, which is fragile in a way that fails silently: "whats the weather
+    // right now" left the word "whats" behind, because the pattern matched
+    // "what's" and "what is" but not "whats". We then geocoded "whats", got
+    // nothing, skipped the weather lookup entirely, and fell through to a
+    // general web search — and the model answered from the only temperature in
+    // its prompt, which was the THERMOSTAT. It reported 70°F indoors as the
+    // weather outside on a 54°F evening.
+    // "in/for/at <Place>" anywhere, or a capitalised word that is not the
+    // first one. The model forms its own follow-up queries and writes them
+    // however it likes — "Chicago weather tomorrow" puts the place FIRST, and
+    // a pattern anchored to "weather in" silently fell back to home
+    // coordinates and answered about Brooklyn.
+    const m = query.match(/\b(?:in|for|at)\s+([A-Z][A-Za-z.'-]*(?:[\s,]+[A-Z][A-Za-z.'-]*)*)/)
+      || query.slice(1).match(/\b([A-Z][A-Za-z.'-]{2,}(?:\s+[A-Z][A-Za-z.'-]+)*)\b/);
+    const named = (m ? m[1] : "").replace(/\s*,\s*$/, "").trim();
     try {
-      const g: any = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1`)).json();
-      const loc = g?.results?.[0];
+      // No place named: use the house's own coordinates. Geocoding the home
+      // place by name does not work for a neighbourhood -- open-meteo returns
+      // nothing at all for "Bushwick, Brooklyn, NY", which is the string that
+      // makes Brave searches local. Coordinates sidestep that, and skip a
+      // network round trip on the single most common question asked here.
+      const home = { latitude: HOME_LAT, longitude: HOME_LON, name: HOME_PLACE, admin1: "" };
+      const geocode = async (name: string) =>
+        (await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`)).json())?.results?.[0];
+      let loc = named ? await geocode(named) : home;
+      if (named && !loc) {
+        // Multi-word neighbourhoods do not geocode: open-meteo has nothing for
+        // "Bushwick Brooklyn NY" and the right answer for bare "Bushwick". The
+        // model writes queries like that about our own home place, so without
+        // this retry the most ordinary follow-up — "how about tomorrow" — fell
+        // through to a general web search.
+        const first = named.split(/[\s,]+/)[0];
+        loc = await geocode(first);
+        // Still nothing, and it was our own place echoed back: use what we know.
+        if (!loc && HOME_PLACE.toLowerCase().includes(first.toLowerCase())) loc = home;
+        if (loc) console.log(`[search] weather: "${named}" did not geocode, used "${first}"`);
+      }
       if (loc) {
-        const w: any = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=1&daily=temperature_2m_max,temperature_2m_min`)).json();
+        // Three days, not one. "How about tomorrow?" is the most obvious
+        // follow-up there is and the data stopped at midnight tonight, so the
+        // only way to answer it was from the model's own head.
+        const w: any = await (await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto&forecast_days=3&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max`)).json();
         const c = w?.current || {};
         const d = w?.daily || {};
-        return `Weather for ${loc.name}, ${loc.admin1 || loc.country || ""}: now ${Math.round(c.temperature_2m)}°F (feels ${Math.round(c.apparent_temperature)}°F), wind ${Math.round(c.wind_speed_10m)} mph, weather_code ${c.weather_code}. Today high ${Math.round(d.temperature_2m_max?.[0])}°F / low ${Math.round(d.temperature_2m_min?.[0])}°F.`;
+        // The weather path returns data without going near Brave, so without
+        // this there was no way to tell a real lookup from a confabulation.
+        console.log(`[search] weather ${loc.name ?? "home"} (${loc.latitude},${loc.longitude}) -> now ${Math.round(c.temperature_2m)}F, ${sky(c.weather_code)}`);
+        // Spell it out. The old format put "now 54°F" and "Today high 70°F" in
+        // one sentence and the model answered "It's 70 degrees and
+        // surprisingly warm" — reading the day's high as the temperature
+        // outside, on the question this house gets asked more than any other.
+        // Also translate the WMO code: left as "weather_code 3" the model
+        // guessed at it, and guessing is how "overcast" became "almost no rain
+        // expected tonight".
+        return [
+          `Weather at ${loc.name}${loc.admin1 ? `, ${loc.admin1}` : ""}.`,
+          `RIGHT NOW, THIS IS THE TEMPERATURE OUTSIDE: ${Math.round(c.temperature_2m)}°F.`,
+          `It feels like ${Math.round(c.apparent_temperature)}°F with ${Math.round(c.wind_speed_10m)} mph wind.`,
+          `Sky right now: ${sky(c.weather_code)}.`,
+          `For reference only, do NOT report these as the current temperature:`,
+          `today's high was ${Math.round(d.temperature_2m_max?.[0])}°F and tonight's low will be ${Math.round(d.temperature_2m_min?.[0])}°F.`,
+          d.temperature_2m_max?.[1] != null
+            ? `TOMORROW: high ${Math.round(d.temperature_2m_max[1])}°F, low ${Math.round(d.temperature_2m_min[1])}°F, ${sky(d.weather_code?.[1])}, ${d.precipitation_probability_max?.[1] ?? "?"}% chance of precipitation.`
+            : "",
+          d.temperature_2m_max?.[2] != null
+            ? `THE DAY AFTER: high ${Math.round(d.temperature_2m_max[2])}°F, low ${Math.round(d.temperature_2m_min[2])}°F, ${sky(d.weather_code?.[2])}.`
+            : "",
+        ].filter(Boolean).join(" ");
       }
     } catch {}
   }
@@ -877,10 +965,17 @@ function transcript(hist: Turn[]): string {
  */
 function isFollowUp(text: string): boolean {
   if (!turns.length) return false;
+  // Names its own subject, so it stands alone no matter how short it is.
+  // "whats the weather in Chicago" is five words and was being treated as a
+  // follow-up, which skipped the weather lookup and sent it to a general web
+  // search instead — a worse answer than the one it had asked for.
+  if (/\b(?:in|at|for|to)\s+[A-Z][a-z]/.test(text)) return false;
   const t = text.toLowerCase();
   const refers = /\b(it|its|it's|that|those|them|they|there|the one|this)\b/.test(t)
     || /\bthe (theater|theatre|place|movie|film|show|game|restaurant|store|team|song|artist|album)\b/.test(t);
-  return refers || t.split(/\s+/).length <= 6;
+  // Three words or fewer genuinely cannot carry a question on their own
+  // ("how about tomorrow", "and the low"). Six was too greedy.
+  return refers || t.split(/\s+/).length <= 3;
 }
 
 // ---- main entry ------------------------------------------------------------
@@ -935,7 +1030,10 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     }
   } catch (e) { console.log("[agent] fast path failed, using the model:", (e as Error)?.message); }
 
-  const state = JSON.stringify(home.summary());
+  // Label it. Handed the raw summary, the model answered "what's the weather?"
+  // with the thermostat reading — which is a perfectly reasonable mistake when
+  // the only number in the prompt called "temp" is 71.
+  const state = `${JSON.stringify(home.summary())} — note: "temp" and "target" are the INDOOR thermostat in Fahrenheit, never the weather outside.`;
   // Who he is and what he has on, fetched in the background and cached so it
   // costs nothing on a "turn off the lights".
   let about = await personal.brief().catch(() => "");
@@ -958,9 +1056,12 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   const needsLive = /weather|forecast|temperatur|rain|snow|news|headline|today|tonight|tomorrow|latest|score|who won|standings|game|price|stock|how much|right now|currently|open now|hours|what time|near me|movie|showtime|show time|times for|playing at|theater|theatre|restaurant|reservation|menu|address|directions|traffic|subway|train|flight|when does|when is|who is|what is the|concert|tickets|is .* open/i.test(text);
   // "Movie times near me" is unanswerable without a "me". The house knows
   // where it is; the search engine does not.
+  // "to me" and "closest" were missing, so "where is the closest movie theater
+  // to me" went to Brave verbatim and came back about theatres in general.
+  const LOCAL = /near(est)? me|near by|nearby|around here|near here|close by|closest|nearest|around me|by me|in my area|walking distance|local/i;
   const localise = (q: string) =>
-    /near me|nearby|around here|near here|close by|local/i.test(q)
-      ? q.replace(/near me|nearby|around here|near here|close by/gi, `in ${HOME_PLACE}`)
+    LOCAL.test(q)
+      ? `${q.replace(/near(est)? me|nearby|near by|around here|near here|close by|around me|by me|to me|in my area/gi, "").replace(/\s{2,}/g, " ").trim()} in ${HOME_PLACE}`
       : q;
   const hist = recent();
   const past = transcript(hist);
