@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Lumen — light up the world, one breath at a time.
+Realized — light up the world, one breath at a time.
 
 A gamified meditation app. Every session you complete adds a point of light to a
 living world map, earns you Light (XP), builds your streak, and moves you up the
@@ -162,7 +162,7 @@ def init_db():
     c.execute("""CREATE TABLE IF NOT EXISTS horoscopes(
       sign TEXT, day TEXT, text TEXT, theme TEXT, soundscape TEXT, created TEXT,
       PRIMARY KEY(sign, day))""")
-    # pre-launch waitlist for the physical Lumen Journal (the anchor product)
+    # pre-launch waitlist for the physical Realized Journal (the anchor product)
     c.execute("""CREATE TABLE IF NOT EXISTS journal_waitlist(
       email TEXT PRIMARY KEY, created TEXT)""")
     # lifecycle email log — one row per (user, dedupe_key); mirrors notif_log so the
@@ -348,8 +348,8 @@ def email_typo_fix(email):
 #   RESEND_API_KEY + MAIL_FROM            -> Resend (https, Railway-friendly)
 #   SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS + MAIL_FROM -> any SMTP provider
 # MAIL_FROM must be an address on a domain you've verified with the provider
-# (e.g. "Lumen <noreply@yourdomain>"). Returns True only if actually accepted.
-MAIL_FROM = os.environ.get("MAIL_FROM", "Lumen <onboarding@resend.dev>")
+# (e.g. "Realized <noreply@yourdomain>"). Returns True only if actually accepted.
+MAIL_FROM = os.environ.get("MAIL_FROM", "Realized <onboarding@resend.dev>")
 
 _PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")  # E.164
 
@@ -951,7 +951,7 @@ def personal_horoscope(c, u, day):
                    "lord quietly colour the reading.") % (
                    natal["janma"], natal["janma_deity"], natal["janma_shakti"], natal["maha"], natal["antar"])
     prompt = (
-        "You are a gentle, learned voice of Vedic astrology (Jyotish) inside Lumen, a meditation app. "
+        "You are a gentle, learned voice of Vedic astrology (Jyotish) inside Realized, a meditation app. "
         "Write today's short reading for someone whose rashi (Moon/sidereal sign) is %s (%s), ruled by "
         "the graha %s, of a %s, %s nature. Ground it in REAL Jyotish for today: the Moon transits the "
         "nakshatra %s (pada %d), whose presiding deity is %s, whose symbol is %s, and whose shakti "
@@ -1247,7 +1247,7 @@ def prompt_for_today():
 
 # ---- Life OS: pillars, focuses, and AI-generated daily prompts -------------
 
-# The eight life pillars of Lumen's deep journaling. The first six grew out of
+# The eight life pillars of Realized's deep journaling. The first six grew out of
 # Ora Health's taxonomy; Finances and Purpose round it into a full wheel of life.
 PILLARS = ["Family", "Relationships", "Career", "Finances",
            "Health", "Hobbies", "Inner Growth", "Purpose"]
@@ -1864,7 +1864,7 @@ def journal_reflect(prompt, text, kind="daily", pillar=None, place=None):
                "are in the arc without rushing them past it." % named)
     else:
         ctx = "This is a daily journal letter — a check-in with themselves."
-    p = ("You are the Keeper — a warm, grounded meditation companion inside Lumen. "
+    p = ("You are the Keeper — a warm, grounded meditation companion inside Realized. "
          "Someone just wrote this private journal entry"
          + (f' responding to the prompt “{prompt}”.' if prompt else ".") + " " + ctx +
          " Reflect back in 1-2 short sentences: name the feeling you hear, mirror one true "
@@ -1903,7 +1903,7 @@ def deep_exercise(c, u, pillar, chapter=None):
                          "AND pillar=? ORDER BY id DESC LIMIT 3", (u["id"], pillar)).fetchall()
         hist = "\n\n".join(f"[{(r['created'] or '')[:10]}] {(r['text'] or '')[:300]}" for r in prev)
         name = (u["name"] or "").split()[0] if u["name"] else ""
-        p = ("You are the Keeper inside Lumen, opening a deep journaling sitting on the "
+        p = ("You are the Keeper inside Realized, opening a deep journaling sitting on the "
              f"person's '{pillar}' pillar. Today's chapter is '{title}' ({invitation}). "
              "Write ONE warm, grounding opening line (max 22 words, second person, no emoji) "
              "that invites them into this chapter. "
@@ -1997,7 +1997,7 @@ def season_exercise(c, u):
         named = next((r["place"] for r in prev if r["place"]), "")
         hist = "\n\n".join(f"[{(r['created'] or '')[:10]}] {(r['text'] or '')[:300]}" for r in prev)
         name = (u["name"] or "").split()[0] if u["name"] else ""
-        p = ("You are the Keeper inside Lumen, opening a 'season of life' sitting — part of a "
+        p = ("You are the Keeper inside Realized, opening a 'season of life' sitting — part of a "
              f"guided arc. Today's chapter is '{title}' ({invitation}). Write ONE warm, grounding "
              "opening line (max 22 words, second person, no emoji) that invites them in. "
              + (f"Their name is {name}. " if name else "")
@@ -2018,7 +2018,7 @@ def journal_insights(rows):
     joined = "\n\n".join(
         f"[{(r['created'] or '')[:10]} · felt {r['mood'] or '—'}] {(r['text'] or '')[:400]}"
         for r in rows)
-    p = ("You are the Keeper inside Lumen. Below are a person's recent private journal letters, "
+    p = ("You are the Keeper inside Realized. Below are a person's recent private journal letters, "
          "newest first. Find the gentle throughline — do not advise or diagnose, just notice with "
          "warmth. Return ONLY JSON: {\"themes\":[\"..\",\"..\",\"..\"] (2-4 short noun phrases), "
          "\"arc\":\"one sentence on their emotional arc lately\", \"observation\":\"one warm, "
@@ -2061,7 +2061,7 @@ def gemini_transcribe(img_b64, mime, timeout=40):
 # ---- the Keeper: conversational agent with tools --------------------------
 
 CHAT_SYSTEM = (
-    "You are the Keeper — a warm, grounded meditation and journaling companion inside Lumen, "
+    "You are the Keeper — a warm, grounded meditation and journaling companion inside Realized, "
     "an app where people meditate, light up a world map, build a mandala of achievements, "
     "and write reflective journal 'letters'. Speak gently, briefly, and human — your replies are "
     "often read aloud, so keep them short (1-3 sentences) and plain, no markdown, no emojis. "
@@ -2072,7 +2072,7 @@ CHAT_SYSTEM = (
     "tool and then confirm warmly what you did. Never invent stats — call get_stats. Life OS pillars "
     "are exactly: Family, Hobbies, Career, Health, Relationships, Inner Growth. Directions are N, E, S, W. "
     "If the user is just venting or reflecting, listen and reflect back; offer to write it down. "
-    "About Lumen, if asked: Meditate runs timed sessions with live soundscapes; the Map glows with "
+    "About Realized, if asked: Meditate runs timed sessions with live soundscapes; the Map glows with "
     "everyone who meditated and can replay your journey around the world; the Mandala is a single sacred object "
     "whose colored facets light up as you earn achievements (sitting, streaks, visiting places, journaling); "
     "Artifacts are real, meaningful objects you can acquire; the Journal holds your reflective letters; "
@@ -2478,22 +2478,23 @@ PAGE = r"""<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#0b0a12">
-<meta name="description" content="Lumen — a gamified meditation app. Light up a living world map with every sit, earn Light, build streaks, and walk guided voice journeys.">
+<meta name="description" content="Realized — a gamified meditation app. Light up a living world map with every sit, earn Light, build streaks, and walk guided voice journeys.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Lumen">
+<meta name="apple-mobile-web-app-title" content="Realized">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Lumen — light up the world, one breath at a time</title>
+<title>Realized — become who you're meant to be</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..500&family=Space+Grotesk:wght@400;500;600;700&display=swap">
 <style>
 :root{
   --bg:#0b0a12; --bg2:#13111d; --panel:#181527cc; --line:#2a2540;
   --text:#ece9f5; --muted:#9a93b8; --gold:#f5c977; --purple:#a855f7;
   --purple2:#7c3aed; --pink:#ec4899; --good:#6ee7b7;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
 }
 /* ===== New home — mockup redesign ===== */
@@ -2502,7 +2503,7 @@ PAGE = r"""<!doctype html>
 .nh-brand{display:flex;align-items:center;gap:10px}
 .nh-mark{width:37px;height:33px;display:flex;color:var(--gold)}
 .nh-mark svg{width:37px;height:33px;filter:drop-shadow(0 0 8px rgba(245,201,119,.7))}
-.nh-name{font-size:25px;font-weight:800;letter-spacing:-.02em;color:#fff}
+.nh-name{font-family:var(--display);font-size:25px;font-weight:600;letter-spacing:-.01em;color:#fff}
 .nh-bell{position:relative;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#19152b;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .nh-bell svg{width:21px;height:21px}
 .nh-dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px var(--purple)}
@@ -2511,7 +2512,7 @@ PAGE = r"""<!doctype html>
 .nh-hero-inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;gap:14px;padding:calc(env(safe-area-inset-top) + 14px) 18px 22px 18px}
 .nh-hero-txt{margin-top:auto}
 .nh-greet{text-shadow:0 2px 18px rgba(0,0,0,.6)}
-.nh-greet{margin:0;font-size:28px;line-height:1.16;font-weight:600;color:#efeafe}
+.nh-greet{margin:0;font-family:var(--display);font-size:30px;line-height:1.1;font-weight:540;letter-spacing:-.01em;color:#efeafe}
 .nh-greet b{font-weight:800;color:#fff}
 .nh-sparkle{width:21px;height:21px;color:var(--gold);vertical-align:-3px}
 .nh-sub{margin:9px 0 0;color:#c2b9e0;font-size:15px}
@@ -2666,7 +2667,7 @@ body{
 h1,h2,h3{font-weight:700;letter-spacing:-.02em}
 .brand{display:flex;align-items:center;gap:10px;padding:18px 2px 8px}
 .brand .mark{font-size:26px;filter:drop-shadow(0 0 10px var(--gold))}
-.brand b{font-size:20px}
+.brand b{font-family:var(--display);font-weight:600;font-size:21px}
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 2px 12px}
 .hdr-l{display:flex;align-items:center;gap:11px;min-width:0}
 .hdr-mark{width:40px;height:40px;flex:none;filter:drop-shadow(0 0 9px rgba(245,201,119,.5));animation:markpulse 4.5s ease-in-out infinite}
@@ -4580,7 +4581,7 @@ const ACH_RARITY={first_light:0,centurion:0,marathoner:1,moon_child:1,dawn_patro
 function rarityOf(code){return ACH_RARITY[code]!=null?ACH_RARITY[code]:0;}
 const CARD_CODES={first_light:1,marathoner:1,week_warrior:1,constellation:1,moon_child:1,dawn_patrol:1,globetrotter:1,centurion:1,deep_diver:1,luminary:1,scribe:1,chronicler:1,pilgrim:1};
 function ic(name,cls){return `<svg class="i ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SVGP[name]||''}</svg>`;}
-// The Lumen brand mark: a dimensional ringed light-orb (mini of the home hero orb).
+// The Realized brand mark: a dimensional ringed light-orb (mini of the home hero orb).
 // This is the app logo everywhere — the old line-art sun (SVGP.lumen) is kept as the
 // legacy "light motif" glyph for inline, in-text uses (Keeper notes, map points, etc.).
 let __lmN=0;
@@ -4863,7 +4864,7 @@ function go(tab){try{_jnyClearFocus();}catch(e){}TAB=tab;try{window.__screen&&wi
 function renderAuth(){
   $('#nav').classList.add('hidden');
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Realized</b></div>
   <div class="center" style="margin:26px 0 10px">
     <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${lumenMark('lg')}</div>
     <h1 style="margin:14px 0 4px">Light up the world</h1>
@@ -4904,7 +4905,7 @@ function renderReset(prefill){
   let stage='request';
   const draw=()=>{
     $('#app').innerHTML=`
-    <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>
+    <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Realized</b></div>
     <div class="center" style="margin:26px 0 10px">
       <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${ic('lock','lg grad-gold')}</div>
       <h1 style="margin:14px 0 4px">Reset your password</h1>
@@ -4955,7 +4956,7 @@ const ONB_SLIDES=[
   {scene:'mandala',h:"Watch your mandala bloom",cta:"Beautiful",p:"A single sacred mandala grows with you — each milestone revealing one more facet, until it becomes a beautiful record of the journey only you have walked."},
   {scene:'badges',h:"Earn badges for the inner path",cta:"I’m ready",p:"Every new level awards a unique emblem — merit badges for the soul — a growing collection of honors that mark how far your practice has carried you."},
   {scene:'research',h:"Grounded in real science",cta:"Makes sense",p:"The self-authoring and reflection exercises draw on published research from leading institutions — translated into a daily practice you can actually keep.",cite:['Harvard','Stanford','MIT']},
-  {scene:'price',h:"Built by one person, for people who sit",cta:"I’m in",p:"Lumen has no investors and no advertising. Members fund the narration, the new journeys and the lights on the map — and keep the practice itself free for everyone who needs it."},
+  {scene:'price',h:"Built by one person, for people who sit",cta:"I’m in",p:"Realized has no investors and no advertising. Members fund the narration, the new journeys and the lights on the map — and keep the practice itself free for everyone who needs it."},
 ];
 const ONB_INTENTS=[['calm','Calm my mind','lotus'],['sleep','Sleep better','glow'],['focus','Focus & clarity','compass'],['stress','Ease stress & anxiety','ocean'],['habit','Build a habit','flame'],['spirit','Spiritual growth','nova'],['self','Understand myself','crystal'],['grief','Sit with something hard','moon']];
 const ONB_FREQS=[['daily','Every day','flame'],['most','Most days','sunrise'],['few','A few times a week','glow'],['open','Just exploring','compass']];
@@ -5180,7 +5181,7 @@ async function renderOnboarding(){
         <div class="plan-row"><span class="plan-first">${ic('play','g')}</span><div><div class="plan-k">First lesson</div><div class="plan-v">Breath · I · Arrive &amp; Notice</div></div></div>
       </div>`;
   }else if(s===Q_INTENT){
-    body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_INTENT],'g')}</div><h1 class="onb-h sm onb-enter">What brings you to Lumen?</h1><p class="onb-p sm onb-enter d1">Pick any that feel true — we'll shape your practice around them.</p>
+    body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_INTENT],'g')}</div><h1 class="onb-h sm onb-enter">What brings you to Realized?</h1><p class="onb-p sm onb-enter d1">Pick any that feel true — we'll shape your practice around them.</p>
       <div class="onb-grid onb-enter d1">${ONB_INTENTS.map(([k,label,icn])=>`<button class="onb-chip ${onb.intents.includes(k)?'sel':''}" data-k="${k}"><span>${ic(icn,'g')}</span>${label}</button>`).join('')}</div>`;
   }else if(s===Q_FREQ){
     body=`<div class="onb-qic onb-enter">${ic(ONB_QIC[Q_FREQ],'g')}</div><h1 class="onb-h sm onb-enter">What rhythm are you hoping for?</h1><p class="onb-p sm onb-enter d1">We'll shape your streak goal around it — nothing's locked in.</p>
@@ -5199,7 +5200,7 @@ async function renderOnboarding(){
     body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-anim onb-enter" style="max-width:210px">${onbScene('collect')}</div>
       <h1 class="onb-h onb-enter d1">You're all set${ME.name?', '+esc(ME.name):''}</h1>
       <p class="onb-p">Your preferences are saved. Your light is waiting — let's begin.</p></div>
-      <div class="card" style="margin-top:4px"><button class="btn gold" id="onbFinish">Enter Lumen</button></div>`;
+      <div class="card" style="margin-top:4px"><button class="btn gold" id="onbFinish">Enter Realized</button></div>`;
   }else{
     let live=0;try{live=(await api('presence')).now;}catch(e){}
     body=`<div class="onb-hero" style="padding-bottom:6px"><div class="onb-anim onb-enter" style="max-width:210px">${onbScene('collect')}</div>
@@ -5218,7 +5219,7 @@ async function renderOnboarding(){
       </div>`;
   }
   $('#app').innerHTML=`
-    <div class="onb-top"><span class="onb-brand">${lumenMark('mark')} Lumen</span>
+    <div class="onb-top"><span class="onb-brand">${lumenMark('mark')} Realized</span>
       ${(s<NSL&&!ME)?'<a class="onb-signin" id="toSignin">Sign in</a>':''}</div>
     <div class="onb-body">${body}</div>
     <div class="onb-foot">
@@ -5246,7 +5247,7 @@ async function renderOnboarding(){
   const fin=$('#onbFinish');if(fin)fin.onclick=onbFinishAuthed;
 }
 // Where onboarding hands over to the app. Ahead and Headspace both put their
-// trial offer exactly here, and Lumen's own price slide two screens back has
+// trial offer exactly here, and Realized's own price slide two screens back has
 // already done the selling — this is the ask it was setting up.
 //
 // It must never be able to strand anyone outside the app: every branch below,
@@ -5482,7 +5483,7 @@ function renderMeditatePledge(){
   if(ME&&ME.goal_days&&!mediGoal_touched)mediGoal=ME.goal_days;
   const dayword=mediGoal===1?'day':'days';
   const chips=[1,2,3,4,5,6,7].map(n=>`<button class="mgc${n===mediGoal?' on':''}" data-d="${n}">${n}</button>`).join('');
-  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>`
+  $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Realized</b></div>`
   +`<div class="jwelc">`
     +`<div class="jwelc-hero"><div class="jwelc-halo">${ic('lotus','g')}</div>`
       +`<h2 class="jwelc-h">A promise to your practice</h2>`
@@ -5628,7 +5629,7 @@ async function renderMeditate(){
   <section class="nh-hero" id="nhHero"><div class="nh-hero-scrim"></div>
     <div class="nh-hero-inner">
       <header class="nh-hdr">
-        <div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div>
+        <div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div>
         <button class="nh-bell" id="nhBell" aria-label="Notifications">${ic('bell')}<i class="nh-dot"></i></button>
       </header>
       <div class="nh-hero-txt">
@@ -5728,7 +5729,7 @@ async function renderLessons(){
     </button>`;
   };
   $('#app').innerHTML=`
-  <section class="nh-hero jny-hero" id="jnyHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Journeys</h1><p class="nh-sub">Drawn from real spiritual traditions — time-tested techniques and philosophy worth studying.</p></div></div></section>
+  <section class="nh-hero jny-hero" id="jnyHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Journeys</h1><p class="nh-sub">Drawn from real spiritual traditions — time-tested techniques and philosophy worth studying.</p></div></div></section>
   <p class="muted" style="font-size:13px;margin:10px 2px 16px">Tend your practice and watch it deepen. Open one to pick up your next lesson.</p>
   <div class="jrny-grid">${tracks.map(card).join('')}</div>
   <p class="muted center" style="font-size:12px;margin:20px 0 4px">More journeys are added over time. Have one you'd love? Ask the Keeper.</p>`;
@@ -5933,12 +5934,12 @@ function buildShareCard(d){
 }
 async function shareMeditation(d){
   const url='https://apps.apple.com/app/id6822133425';
-  const text=`I sat for ${d.minutes} ${d.minutes===1?'minute':'minutes'} with Lumen${d.streak>1?` — ${d.streak}-day streak`:''}. Light, one breath at a time.`;
+  const text=`I sat for ${d.minutes} ${d.minutes===1?'minute':'minutes'} with Realized${d.streak>1?` — ${d.streak}-day streak`:''}. Light, one breath at a time.`;
   let file=null;
   try{const cv=buildShareCard(d);const blob=await new Promise(r=>cv.toBlob(r,'image/png',0.92));if(blob)file=new File([blob],'lumen-meditation.png',{type:'image/png'});}catch(e){}
   try{
     if(file&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:text+'\n'+url});return;}
-    if(navigator.share){await navigator.share({title:'Lumen',text,url});return;}
+    if(navigator.share){await navigator.share({title:'Realized',text,url});return;}
   }catch(e){if(e&&e.name==='AbortError')return;}
   try{await navigator.clipboard.writeText(text+' '+url);toast(ic('check','g')+' Link copied — share it anywhere');return;}catch(e){}
   toast('Sharing isn’t available on this device.');
@@ -5950,7 +5951,7 @@ function showRewards(res,minutes){
   try{ if(res&&((res.new_achievements&&res.new_achievements.length)||res.leveled_up)){Sound.unlock();try{Haptics.success();}catch(_){}} else {Sound.chime();} }catch(e){}
   const ach=(res.new_achievements||[]).map(a=>`<div class="pill" style="border-color:var(--gold);color:var(--gold)">${ic(ACH_ICON[a.code]||'star')} ${a.title}</div>`).join(' ');
   $('#app').innerHTML=`
-  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Lumen</b></div>
+  <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Realized</b></div>
   <div class="card center">
     <div style="color:var(--gold);filter:drop-shadow(0 0 20px var(--gold))">${ic('spark','lg grad-aur')}</div>
     <div style="font-size:34px;font-weight:800;color:var(--gold)">+${res.light_earned} Light</div>
@@ -6495,7 +6496,7 @@ const ROADMAP={
 };
 const lessonMins=(l)=>Math.max(1,Math.round(l.segments.reduce((s,x)=>s+x.secs,0)/60));
 let lsSpeak=true;let lessonReflect=null;
-/* The Lumen Method — every guided journey is delivered the same way:
+/* The Realized Method — every guided journey is delivered the same way:
    a calm lead-in, then for each segment the teaching is spoken one line at a time
    with reflective silences between lines and a longer guided stillness to close the
    segment, a soft bell at each threshold, and a signature return. Pacing adapts to
@@ -6509,7 +6510,7 @@ async function lessonPlay(lesson, startSi){
   // --- build the paced timeline ---
   const steps=[];
   steps.push({kind:'seg', si:0, open:true});
-  steps.push({kind:'say', si:0, lead:true, text:"Welcome. This is Lumen. Find a comfortable seat, let the body grow still, and when you're ready, let your eyes gently close."});
+  steps.push({kind:'say', si:0, lead:true, text:"Welcome. This is Realized. Find a comfortable seat, let the body grow still, and when you're ready, let your eyes gently close."});
   steps.push({kind:'silence', si:0, dur:6, label:'Settling in', rest:true});
   steps.push({kind:'say', si:0, lead:true, text:"I'll stay beside you — speaking when it helps, and falling quiet so you can simply be. There is nowhere to be, and nothing to do, but here."});
   steps.push({kind:'silence', si:0, dur:5, label:'…', rest:true});
@@ -6538,7 +6539,7 @@ async function lessonPlay(lesson, startSi){
     const at=steps.findIndex(st=>st.kind==='seg'&&st.si===startSi&&!st.open&&!st.close);
     if(at>0){
       elapsed=Math.round(steps.slice(0,at).reduce((a,st)=>a+stEst(st),0));
-      steps.splice(at,0,{kind:'say',si:startSi,lead:true,text:"Welcome back. This is Lumen — let's take up the thread just where you left it."},
+      steps.splice(at,0,{kind:'say',si:startSi,lead:true,text:"Welcome back. This is Realized — let's take up the thread just where you left it."},
                         {kind:'silence',si:startSi,dur:3,label:'Settling back in',rest:true});
       idx=at;
     }
@@ -6826,7 +6827,7 @@ async function renderGlobalView(){
 let journalView='mine';
 const SEASON_PROMPTS=["What season of your life are you in right now — and what would you name it?","What is this chapter asking of you, and what is it quietly giving back?","What are you growing toward in this season? What are you ready to let fall away?","If you looked back on this time in five years, what would you want to remember about who you were?","What feels like it’s ending, and what feels like it’s just beginning?","Where are you being asked to be patient with yourself right now?"];
 let speakOn=(typeof localStorage!=='undefined'&&localStorage.getItem('lumen_speak')==='0')?false:true;
-// --- Lumen's voice: ElevenLabs ONLY, played through the shared Web Audio context.
+// --- Realized's voice: ElevenLabs ONLY, played through the shared Web Audio context.
 // There is NO browser-speech fallback: if ElevenLabs is unavailable we stay silent
 // (pacing by reading time) rather than use the robotic device voice. ---
 let _ttsOn=true;               // flips off for the session only if the service is unreachable
@@ -7118,7 +7119,7 @@ async function toggleRecord(){
   }catch(e){ toast('Couldn’t start recording.'); _jRecUI(false); }
 }
 
-// Speak a journal prompt through Lumen's ElevenLabs voice (narrate), not the
+// Speak a journal prompt through Realized's ElevenLabs voice (narrate), not the
 // on-device Web Speech voice, so the journal matches the rest of the app.
 function sayPrompt(t){try{stopNarration();}catch(e){}if(t)narrate(t);}
 // Full-page narration for a guided sitting — reads the Keeper's opening, the
@@ -7545,7 +7546,7 @@ function renderPremiumGate(title,why){
     }catch(e){toast(e);b.disabled=false;b.innerHTML=ic('spark')+' Get founding-member access';}
   };
 }
-const COMM_LOTUS='<svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg>';
+const COMM_LOTUS='<svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linecap="round"><circle cx="24" cy="21" r="6.3" fill="#f5c977" stroke="none"/><circle cx="24" cy="21" r="11.4" opacity=".7"/><circle cx="24" cy="21" r="16.4" opacity=".38"/><g stroke-width="2.4"><line x1="24" y1="2" x2="24" y2="6.4"/><line x1="24" y1="35.6" x2="24" y2="40"/><line x1="4" y1="21" x2="8.4" y2="21"/><line x1="39.6" y1="21" x2="44" y2="21"/></g></svg>';
 const COMM_LETTERS=[
  {ic:'comm-quill',t:'On Beginning Again',by:'A letter from the Keeper',teaser:'You have not fallen behind. The cushion keeps no grudge.',
   body:['If it has been a day or a year, the breath is still here, patient as ever. Practice is not a streak you broke; it is a room you can walk back into at any hour.',
@@ -7588,7 +7589,7 @@ async function renderCommunity(){
     : `<div class="letter mini"><div class="letter-head"><span>${esc(f.name)}</span><span class="letter-tag">${niceDate(f.created)}</span></div><div class="mini-body">${esc(f.text)}</div>${f.mood?`<div class="mini-mood">— felt ${esc(f.mood)}</div>`:''}${mod(f)}</div>`;
   const letterCard=(l,i)=>`<button class="comm-letter" data-i="${i}"><span class="comm-let-ic" style="background-image:url('/art/${l.ic}.jpg?v=62')"></span><span class="comm-let-body"><span class="comm-let-eye">${esc(l.by)}${l.meta?' · '+esc(l.meta):''}</span><span class="comm-let-t">${esc(l.t)}</span><span class="comm-let-teaser">${esc(l.teaser)}</span></span><span class="comm-let-go">${ic('book')}</span></button>`;
   const introTxt=usingUser?'Letters shared by other meditators. Open one to unlock the community below.':'Three letters to read slowly. Open one to unlock the community below.';
-  $('#app').innerHTML=`<section class="nh-hero comm-hero" id="commHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Community</h1><p class="nh-sub">Read a letter, then sit with everyone.</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero comm-hero" id="commHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">Community</h1><p class="nh-sub">Read a letter, then sit with everyone.</p></div></div></section>`
     +`<div class="nh-sec-h" style="margin:2px 2px 0"><h2>Letters</h2></div>`
     +`<p class="comm-intro">${introTxt}</p>`
     +`<button class="btn gold comm-share-btn" id="commShare">${ic('book','seal-ic')} Share a letter</button>`
@@ -7662,7 +7663,7 @@ function renderSeasonIntro(){
     ['book','Walk it, sitting by sitting','Season isn’t one entry. You return over several sittings, and each prompt widens the lens — what’s ending, what’s beginning, what this time is quietly asking of you.'],
     ['lumen','Read it back','The Keeper gathers your sittings and reflects the throughline, so the shape of the chapter you’re living becomes something you can actually see.'],
   ];
-  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="siHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="siBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('season')} Season journaling</div><h1 class="nh-greet">The chapter you’re in</h1><p class="nh-sub">Most journaling is about today. Season is about the arc — the whole stretch of life you’re moving through right now.</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="siHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div><button class="lo-btn" id="siBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('season')} Season journaling</div><h1 class="nh-greet">The chapter you’re in</h1><p class="nh-sub">Most journaling is about today. Season is about the arc — the whole stretch of life you’re moving through right now.</p></div></div></section>`
     +`<div class="si-stages">`+stages.map((s,i)=>`<div class="si-stage"><span class="si-num">${i+1}</span><span class="si-ic">${ic(s[0])}</span><div class="si-body"><div class="si-t">${s[1]}</div><div class="si-d">${s[2]}</div></div></div>`).join('')+`</div>`
     +`<div class="card si-benefit"><div class="si-ben-h">${ic('spark')} Why it helps</div><p>Stepping back to write about your life’s larger arc and goals is one of the most striking findings in the research: it <b>lifted mood for months</b> afterward and even <b>cut illness-related doctor visits</b> later on.<span class="si-cite">King, 2001 · “The Health Benefits of Writing about Life Goals”</span></p><p class="muted" style="margin-top:9px">Naming a season gives you perspective, turns a blur of days into a story with meaning, and makes the hard stretches feel navigable instead of endless.</p></div>`
     +`<button class="btn gold si-begin" id="siBegin">${ic('seal','seal-ic')} Begin your season</button>`;
@@ -7724,7 +7725,7 @@ async function renderSeasonMap(){
       +`<span class="sm-card-t">${esc(s.title)}</span>`
       +`<span class="sm-card-b">${s.blurb}</span>`
       +`<span class="sm-card-chk ${d?'d':'n'}">${d?'✓ Done':'Begin'}</span></button>`;};
-  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="smHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="smBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('season')} Season</div><h1 class="nh-greet">${seasonDoc.name?esc(seasonDoc.name):'This season'}</h1><p class="nh-sub">Fill it out stage by stage — it becomes the map you live by.</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="smHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div><button class="lo-btn" id="smBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('season')} Season</div><h1 class="nh-greet">${seasonDoc.name?esc(seasonDoc.name):'This season'}</h1><p class="nh-sub">Fill it out stage by stage — it becomes the map you live by.</p></div></div></section>`
     +nextCard
     +`<div class="sm-prog"><span class="sm-prog-n">${done}/${tot}</span><div class="sm-prog-bar"><i style="width:${pct}%"></i></div></div>`
     +(viz?`<div class="sm-viz"><img src="${viz}" alt="your focus areas"></div>`:'')
@@ -7795,7 +7796,7 @@ function renderSeasonJourney(){
     +`<div class="sj-sw-col sj-str"><div class="sj-sw-h">Strengths</div>`+(strengths.length?`<ul class="sj-list">`+strengths.map(x=>`<li>${esc(x)}</li>`).join('')+`</ul>`:`<div class="sr-empty">Surfaces from your weekly look-backs and the end-of-season retrospective.</div>`)+`</div>`
     +`<div class="sj-sw-col sj-edge"><div class="sj-sw-h">Growth edges</div>`+(edges.length?`<ul class="sj-list">`+edges.map(x=>`<li>${esc(x)}</li>`).join('')+`</ul>`:`<div class="sr-empty">Your constraints and biggest opportunity gather here.</div>`)+`</div>`
     +`</div></div>`;
-  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="srHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="srBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('compass')} Season · Your journey</div><h1 class="nh-greet">${S.name?esc(S.name):'This season'}</h1><p class="nh-sub">The shape of this chapter — at a glance.</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="srHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div><button class="lo-btn" id="srBack">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('compass')} Season · Your journey</div><h1 class="nh-greet">${S.name?esc(S.name):'This season'}</h1><p class="nh-sub">The shape of this chapter — at a glance.</p></div></div></section>`
     +`<div class="sr-wrap">`
     +(viz?`<div class="sr-viz"><img src="${viz}" alt="your focus areas"></div>`:'')
     +sumHtml+doingHtml+weekHtml+swHtml
@@ -7815,7 +7816,7 @@ function renderSeasonEntry(){
   const viz=(key==='areas')?seasonVizURL():'';const img=st.image||'';
   const i=sts.indexOf(s);const num=key==='retro'?'★':(seasonPrior?i:i+1);
   const gen=(viz||img)?`<div class="sj-gen">${ic('spark')} Generated from your work</div>`:'';
-  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="seHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="seClose">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('book')} Season · Entry ${num}</div><h1 class="nh-greet">${esc(s.title)}</h1><p class="nh-sub">${s.blurb||''}</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="seHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div><button class="lo-btn" id="seClose">${ic('close')} Close</button></header><div class="nh-hero-txt"><div class="jhero-eyebrow">${ic('book')} Season · Entry ${num}</div><h1 class="nh-greet">${esc(s.title)}</h1><p class="nh-sub">${s.blurb||''}</p></div></div></section>`
     +`<div class="sr-wrap">`
     +(gen?gen:'')
     +(img?`<div class="sr-viz"><img src="${esc(img)}" alt="your visualization"></div>`:'')
@@ -7935,7 +7936,7 @@ async function renderJournalHome(){
     +`<span class="pil-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${p.chapters||0}" aria-valuenow="${Math.min(p.sittings||0,p.chapters||0)}" aria-label="${esc(p.name)}: ${Math.min(p.sittings||0,p.chapters||0)} of ${p.chapters||0} chapters"><i style="width:${p.chapters?Math.min(100,Math.round(100*(p.sittings||0)/p.chapters)):0}%"></i></span></button>`;
   const jung=[['The Shadow','Meet what you suppress','jg_shadow'],['The Persona','The mask you wear','jg_persona'],['Anima &amp; Animus','Your inner opposite','jg_anima'],['The Self','Wholeness &amp; integration','jg_self']];
   const jcard=(j,i)=>`<div class="jcard"><span class="jcard-top"><span class="jcard-med">${ic(j[2])}</span><span class="jcard-n">${i+1}</span></span><span class="jcard-t">${j[0]}</span><span class="jcard-d">${j[1]}</span><span class="jcard-lk">${ic('lock')}</span></div>`;
-  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="jnlHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark"><svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><g transform="translate(24 35)"><path d="M0 0 C -5 -14 -5 -24 0 -30 C 5 -24 5 -14 0 0 Z"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(-34)"/><path d="M0 0 C -5 -13 -5 -22 0 -27 C 5 -22 5 -13 0 0 Z" transform="rotate(34)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(-66)"/><path d="M0 0 C -6 -11 -6 -18 0 -22 C 6 -18 6 -11 0 0 Z" transform="rotate(66)"/></g></svg></span><span class="nh-name">Lumen</span></div><button class="lo-btn" id="talkbtn">${ic('chat')} Talk</button></header><div class="nh-hero-txt"><h1 class="nh-greet">${(ME&&ME.name)?esc(ME.name.split(' ')[0])+'’s Journal':'The Journal'}</h1><p class="nh-sub">A letter to yourself \u2014 one honest line at a time.</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero jnl-hero" id="jnlHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div><button class="lo-btn" id="talkbtn">${ic('chat')} Talk</button></header><div class="nh-hero-txt"><h1 class="nh-greet">${(ME&&ME.name)?esc(ME.name.split(' ')[0])+'’s Journal':'The Journal'}</h1><p class="nh-sub">A letter to yourself \u2014 one honest line at a time.</p></div></div></section>`
     +`<div class="jbigs">`+DOORS.map(door).join('')+`</div>`
     +(()=>{const pd=(plan&&plan.done)||0,pt=(plan&&plan.total)||8,ppct=pt?Math.round(100*pd/pt):0;
        return `<button class="planband" id="planband"><span class="planband-glow"></span>`
@@ -8202,7 +8203,7 @@ const DIRS=[['N','North'],['E','East'],['S','South'],['W','West']];
 const PILLAR_ICON={Family:'p_home',Relationships:'p_rel',Career:'p_career',Finances:'p_coin',Health:'p_health',Hobbies:'p_music','Inner Growth':'p_growth',Purpose:'p_purpose'};
 const picon=(p)=>PILLAR_ICON[p]||'spark';
 const PILLAR_IMG={Family:'pil-family',Relationships:'pil-relationships',Career:'pil-career',Finances:'pil-finances',Health:'pil-health',Hobbies:'pil-hobbies','Inner Growth':'pil-innergrowth',Purpose:'pil-purpose'};
-// the eight life pillars of Lumen's deep journaling
+// the eight life pillars of Realized's deep journaling
 const PILLAR_META={
   Family:['#e0953a','Where you came from — and how you carry it.'],
   Relationships:['#f472b6','The people you choose and how you show up for them.'],
@@ -8463,7 +8464,7 @@ async function renderProfile(){
   const starLine = (horo&&!horo.need_sign)
     ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6"><span class="zsym">${horo.glyph}︎</span> <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
     : `<p class="muted" style="font-size:13px;margin:0 0 12px">Add your birthday to receive your daily Vedic reading.</p>`;
-  $('#app').innerHTML=`<section class="nh-hero you-hero" id="youHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Lumen</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">${esc(p.name)}</h1><p class="nh-sub">${esc(p.league.name)} league · Level ${p.level}</p></div></div></section>`
+  $('#app').innerHTML=`<section class="nh-hero you-hero" id="youHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">${esc(p.name)}</h1><p class="nh-sub">${esc(p.league.name)} league · Level ${p.level}</p></div></div></section>`
   +`<div class="nh-level you-nhlevel"><span class="nh-lorb" style="background-image:url('/art/home-levelorb.jpg?v=45')"></span>`
     +`<div class="nh-lbody"><div class="nh-ltop">Level ${p.level} · ${fmt(p.level_into)} / ${fmt(p.level_into+p.level_need)} XP</div>`
       +`<div class="nh-lbar"><i style="width:${prog}%"></i></div>`
@@ -8485,7 +8486,7 @@ async function renderProfile(){
   +`<div class="nh-sec-h" style="margin-top:18px"><h2>Settings</h2></div>`
   +`<details class="acc"><summary>${ic('book')} Notifications</summary><div class="acc-body">`
     +(np?`<div class="nrow" style="border-top:0;padding-top:0"><div><b>Push notifications</b><div class="muted" style="font-size:12px">Gentle nudges to sit, streak saves &amp; celebrations.</div></div><label class="switch"><input type="checkbox" id="nen" ${np.enabled?'checked':''}><span class="sl"></span></label></div>
-      <p class="muted" id="nstat" style="font-size:12px;margin:4px 0 0">${np.registered?(ic('spark','g')+' This device is set up for push.'):'To get them on your phone: open Lumen on iOS and tap <b>Allow</b> when asked (needs the latest build).'}</p>
+      <p class="muted" id="nstat" style="font-size:12px;margin:4px 0 0">${np.registered?(ic('spark','g')+' This device is set up for push.'):'To get them on your phone: open Realized on iOS and tap <b>Allow</b> when asked (needs the latest build).'}</p>
       <div id="ncatwrap" style="margin-top:12px;${np.enabled?'':'opacity:.45;pointer-events:none'}"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">What to send</div>${NCATS.map(cc=>`<div class="nrow"><span class="nl">${esc(cc[1])}</span><label class="switch"><input type="checkbox" id="nc_${cc[0]}" ${(np.cats&&np.cats[cc[0]]===0)?'':'checked'}><span class="sl"></span></label></div>`).join('')}<div class="nrow"><span class="nl">Quiet hours <span class="muted" style="font-size:11px">(your local time)</span></span><span style="display:flex;align-items:center;gap:6px"><select id="nqs" class="nsel">${hoursOpts(np.quiet_start)}</select><span class="muted">to</span><select id="nqe" class="nsel">${hoursOpts(np.quiet_end)}</select></span></div></div>`:'')
     +`<div class="nrow"><div><b>Text reminders</b><div class="muted" style="font-size:12px">Opt-in SMS for streak saves &amp; gentle nudges. Standard rates apply.</div></div><label class="switch"><input type="checkbox" id="smsen" ${(p.sms_consent&&!p.sms_optout)?'checked':''}><span class="sl"></span></label></div>
       <label style="margin-top:10px">Mobile number</label><input id="smsph" type="tel" autocomplete="tel" placeholder="+1 555 123 4567" value="${esc(p.phone||'')}">${p.sms_optout?`<p class="muted" style="font-size:12px;margin:6px 0 0;color:#ff9aa6">You texted STOP, so we won't send texts. Toggle on above to opt back in.</p>`:''}<button class="btn ghost" id="smssave" style="margin-top:10px">Save text settings</button>`
@@ -8498,7 +8499,7 @@ async function renderProfile(){
     +`<p class="muted" style="font-size:13px;margin:0 0 10px" id="locstate">${p.city?(ic('pin')+' '+esc(p.city)):'Not set — your sessions aren’t shown on the map until you set this.'}</p><button class="btn ghost" id="loc">${ic('pin')} Use my current location</button><p class="muted" id="lochelp" style="font-size:12px;margin:10px 0 0;display:none"></p>`
   +`</div></details>`
   +`<details class="acc"><summary>${ic('spark')} Account</summary><div class="acc-body">`
-    +`<a class="btn ghost" href="survey" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;border-color:rgba(245,201,119,.4);color:var(--gold)">${ic('spark','g')} Share feedback — help shape Lumen</a><button class="btn ghost" id="out" style="margin-top:10px">Sign out</button><button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button><p class="muted" style="font-size:11px;text-align:center;margin:8px 10px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can’t be undone.</p><p class="muted" style="font-size:11px;text-align:center;margin:12px 10px 0;opacity:.7">Interface sounds: dev_tones by <a href="https://rcptones.com" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none">RCP Tones</a>.</p>`
+    +`<a class="btn ghost" href="survey" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;border-color:rgba(245,201,119,.4);color:var(--gold)">${ic('spark','g')} Share feedback — help shape Realized</a><button class="btn ghost" id="out" style="margin-top:10px">Sign out</button><button class="btn ghost" id="del" style="margin-top:10px;border-color:#5a2230;color:#ff9aa6">Delete account</button><p class="muted" style="font-size:11px;text-align:center;margin:8px 10px 0">Deleting your account permanently removes your profile, sessions, journal, and progress. This can’t be undone.</p><p class="muted" style="font-size:11px;text-align:center;margin:12px 10px 0;opacity:.7">Interface sounds: dev_tones by <a href="https://rcptones.com" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:none">RCP Tones</a>.</p>`
   +`</div></details>`;
   $('#loc').onclick=async()=>{
     const btn=$('#loc'),help=$('#lochelp');help.style.display='none';
@@ -9008,10 +9009,10 @@ class H(BaseHTTPRequestHandler):
                     finally:
                         cc.close()
             msg = ("You're unsubscribed." if done else "This link is no longer valid.")
-            sub = ("You won't receive lifecycle emails from Lumen anymore. You can still change this in the app."
-                   if done else "If you meant to unsubscribe, open Lumen and adjust your email preferences.")
+            sub = ("You won't receive lifecycle emails from Realized anymore. You can still change this in the app."
+                   if done else "If you meant to unsubscribe, open Realized and adjust your email preferences.")
             page = (f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-                    f"<title>Lumen</title></head><body style='margin:0;background:#0b0a12;color:#f6f1ea;"
+                    f"<title>Realized</title></head><body style='margin:0;background:#0b0a12;color:#f6f1ea;"
                     f"font-family:-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center'>"
                     f"<div style='max-width:420px;padding:28px'>"
                     f"<div style='font-family:Georgia,serif;font-size:30px;font-weight:700;color:#f5c977'>lumen</div>"
@@ -9035,17 +9036,17 @@ class H(BaseHTTPRequestHandler):
                     finally:
                         cc.close()
             msg = ("You're on the list ✦" if ok else "Hmm — that link expired.")
-            sub = ("You'll get first access to Lumen Premium and a founding-member price when it opens. Keep practicing in the meantime."
-                   if ok else "Open Lumen and tap “Go Premium” to raise your hand.")
+            sub = ("You'll get first access to Realized Premium and a founding-member price when it opens. Keep practicing in the meantime."
+                   if ok else "Open Realized and tap “Go Premium” to raise your hand.")
             page = (f"<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-                    f"<title>Lumen Premium</title></head><body style='margin:0;background:#0b0a12;color:#f6f1ea;"
+                    f"<title>Realized Premium</title></head><body style='margin:0;background:#0b0a12;color:#f6f1ea;"
                     f"font-family:-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;text-align:center'>"
                     f"<div style='max-width:420px;padding:28px'>"
                     f"<div style='font-family:Georgia,serif;font-size:30px;font-weight:700;color:#f5c977'>lumen</div>"
                     f"<h1 style='font-size:22px;margin:22px 0 8px'>{msg}</h1>"
                     f"<p style='color:#b4acd0;line-height:1.6'>{sub}</p>"
                     f"<a href='{APP_STORE_URL}' style='display:inline-block;margin-top:22px;background:linear-gradient(135deg,#f5c977,#e0953a);"
-                    f"color:#2a1a05;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:13px'>Open Lumen</a>"
+                    f"color:#2a1a05;text-decoration:none;font-weight:700;padding:13px 26px;border-radius:13px'>Open Realized</a>"
                     f"</div></body></html>")
             self._send(200, page, "text/html; charset=utf-8"); return
         rel = p.lstrip("/")
@@ -9174,7 +9175,7 @@ class H(BaseHTTPRequestHandler):
                         c.execute("SELECT * FROM users WHERE is_bot=0 LIMIT 1").fetchone()
                     ctx = {"sessions": 5, "light": 640} if prev == "weekly_recap" else (
                           {"subject": "Guided journeys", "headline": "Let a tradition guide you.",
-                           "paras": ["Lumen has narrated Journeys from real traditions.", "Start the one that calls to you."],
+                           "paras": ["Realized has narrated Journeys from real traditions.", "Start the one that calls to you."],
                            "cta": "Explore Journeys"} if prev == "tip" else {})
                     t = _email_tpl(prev, c, u, ctx)
                     if not t:
@@ -9756,7 +9757,7 @@ class H(BaseHTTPRequestHandler):
             to = normalize_phone(d.get("to")) or (u["phone"] if "phone" in u.keys() else None)
             if not to:
                 self._send(400, {"error": "No phone to text. Pass {\"to\":\"+1...\"} or save a phone on your account."}); return
-            ok = send_sms(to, "Lumen — your SMS notification engine is wired up and working. Reply STOP to opt out.")
+            ok = send_sms(to, "Realized — your SMS notification engine is wired up and working. Reply STOP to opt out.")
             self._send(200, {"ok": ok, "to": to, "mode": SMS_MODE}); return
 
         if p == "/api/ev":
@@ -10041,7 +10042,7 @@ class H(BaseHTTPRequestHandler):
             toks = _tokens_for(c, u["id"])
             if not toks:
                 self._send(400, {"error": "No push token registered for your account yet. Open the app (build with push) first."}); return
-            ok = expo_push_send(c, toks, "Lumen — test ✨", "Your notification service is wired up.", {"category": "test"})
+            ok = expo_push_send(c, toks, "Realized — test ✨", "Your notification service is wired up.", {"category": "test"})
             self._send(200, {"ok": ok, "tokens": len(toks)}); return
 
         if p == "/api/admin/notify/broadcast":
@@ -10190,11 +10191,11 @@ class H(BaseHTTPRequestHandler):
                                   "ON CONFLICT(email) DO UPDATE SET code_hash=excluded.code_hash,expires=excluded.expires,tries=0,sent=excluded.sent",
                                   (email, ch, time.time() + 900, time.time()))
                         c.commit()
-                        send_email(email, "Your Lumen reset code",
-                                   "Your Lumen password reset code is %s\n\nIt expires in 15 minutes. "
+                        send_email(email, "Your Realized reset code",
+                                   "Your Realized password reset code is %s\n\nIt expires in 15 minutes. "
                                    "If you didn't ask to reset your password, you can ignore this email." % code,
                                    "<div style=\"font:16px/1.6 -apple-system,system-ui,sans-serif;color:#1a1326\">"
-                                   "<p>Your Lumen password reset code is:</p>"
+                                   "<p>Your Realized password reset code is:</p>"
                                    "<p style=\"font-size:30px;font-weight:800;letter-spacing:4px;color:#b8860b\">%s</p>"
                                    "<p style=\"color:#666\">It expires in 15 minutes. If you didn't ask to reset your "
                                    "password, you can safely ignore this email.</p></div>" % code)
@@ -10802,8 +10803,8 @@ def _cookie_hdr(tok):
 from urllib.parse import parse_qsl as urllib_parse_qsl
 
 MANIFEST = json.dumps({
-    "name": "Lumen — light up the world", "short_name": "Lumen",
-    "description": "A gamified meditation app. Light up a living world map with every sit, earn Light, build streaks, and walk guided voice journeys.",
+    "name": "Realized — become who you’re meant to be", "short_name": "Realized",
+    "description": "Become who you’re meant to be. Meditate, plan your life, and feel your highest self — raising your state and acting from it, day by day.",
     "start_url": ".", "scope": ".", "display": "standalone", "orientation": "portrait",
     "background_color": "#0b0a12", "theme_color": "#0b0a12",
     "categories": ["health", "lifestyle", "education"],
@@ -10812,23 +10813,23 @@ MANIFEST = json.dumps({
               {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}]
 })
 
-# Service worker: makes Lumen an installable, offline-capable PWA. Strategy is
+# Service worker: makes Realized an installable, offline-capable PWA. Strategy is
 # network-first for navigations (so a new build always wins when online — this is
 # what fixes the stale-page-on-iPhone problem) and cache-first for static assets.
 # API requests are never intercepted. skipWaiting + clients.claim so updates apply
 # immediately. Bump CACHE on any change you want to force-evict.
 PRIVACY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lumen — Privacy Policy</title>
+<title>Realized — Privacy Policy</title>
 <style>
 body{margin:0;background:#0b0a12;color:#ece9f5;font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;line-height:1.65}
 .wrap{max-width:720px;margin:0 auto;padding:40px 22px 80px}
 h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;margin:28px 0 6px}
 .muted{color:#9a93b8;font-size:13px}a{color:#f5c977}ul{padding-left:20px}li{margin:4px 0}
 </style></head><body><div class="wrap">
-<h1>Lumen — Privacy Policy</h1>
+<h1>Realized — Privacy Policy</h1>
 <p class="muted">Last updated: 12 October 2026</p>
-<p>Lumen is a meditation app. This policy explains what it collects, why, and the control you have. We keep data collection to the minimum needed to run the app.</p>
+<p>Realized is a meditation app. This policy explains what it collects, why, and the control you have. We keep data collection to the minimum needed to run the app.</p>
 <h2>What we collect</h2>
 <ul>
 <li><b>Account</b>: your email and a securely hashed password (we never store your password in plain text), and a display name you choose.</li>
@@ -10847,15 +10848,15 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 <li>We do <b>not</b> sell your data or use third-party advertising trackers.</li>
 </ul>
 <h2>Data retention &amp; deletion</h2>
-<p>Your data is stored on Lumen's own server. You can <b>delete your account and all associated data at any time</b> from the app: open the <b>You</b> (profile) tab and tap <b>Delete account</b>. This permanently removes your profile, sessions, journal, and progress and cannot be undone.</p>
+<p>Your data is stored on Realized's own server. You can <b>delete your account and all associated data at any time</b> from the app: open the <b>You</b> (profile) tab and tap <b>Delete account</b>. This permanently removes your profile, sessions, journal, and progress and cannot be undone.</p>
 <h2>Children</h2>
-<p>Lumen is not directed to children under 13 and we do not knowingly collect their data.</p>
+<p>Realized is not directed to children under 13 and we do not knowingly collect their data.</p>
 <h2>Contact</h2>
 <p>Questions or requests: <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v115';
+const CACHE = 'lumen-v116';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -10905,7 +10906,7 @@ APP_STORE_URL = "https://apps.apple.com/app/id6822133425"
 
 SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lumen — tell us what you think</title>
+<title>Realized — tell us what you think</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{--gold:#f5c977;--bg:#0b0a12;--panel:#15111f;--line:#2a2440;--muted:#b4acd0;--text:#f6f1ea}
@@ -11015,7 +11016,7 @@ const F=[
 ];
 const FEEL=['Love it','It’s okay','Not for me','Didn’t try it'];
 const WANT=['More of this','Just right','Less of this','Do it differently'];
-const OVER=[['like_most','What did you like most about Lumen?','The thing that made you want to keep going…'],
+const OVER=[['like_most','What did you like most about Realized?','The thing that made you want to keep going…'],
  ['disliked','What frustrated you, confused you, or felt off?','Be honest — this is the most useful part for us.'],
  ['more_less','What do you want more of? What would you cut?',''],
  ['wishlist','Anything missing you’d love to see — or you’d do differently?','A feature, a change, a whole different direction…']];
@@ -11042,7 +11043,7 @@ function render(){
   document.getElementById('err').textContent='';
   let h='';
   if(s.t==='intro'){
-    h=`<div class="hero-ic">🌟</div><h1 style="text-align:center">Help shape <em>Lumen</em></h1>
+    h=`<div class="hero-ic">🌟</div><h1 style="text-align:center">Help shape <em>Realized</em></h1>
       <p class="sub" style="text-align:center">You’re one of the first to try it. We’ll go module by module — rate what you tried, skip what you didn’t, and tell us what you’d change. About 3–4 minutes, and you can finish early anytime.</p>`;
   } else if(s.t==='take'){
     const f=s.f;
@@ -11063,7 +11064,7 @@ function render(){
     h=`<div class="eyebrow">Overall</div><h1>${esc(s.q)}</h1>
       <textarea data-text="${s.k}" placeholder="${esc(s.ph||'')}">${esc(state[s.k]||'')}</textarea>`;
   } else if(s.t==='nps'){
-    h=`<div class="eyebrow">Overall</div><h1>How likely are you to recommend <em>Lumen</em> to a friend?</h1>
+    h=`<div class="eyebrow">Overall</div><h1>How likely are you to recommend <em>Realized</em> to a friend?</h1>
       <div class="nps" data-nps="1">${[0,1,2,3,4,5,6,7,8,9,10].map(n=>`<span class="np${state.nps===n?' on':''}" data-np="${n}">${n}</span>`).join('')}</div>
       <div class="npends"><span>Not likely</span><span>Very likely</span></div>`;
   } else if(s.t==='email'){
@@ -11105,8 +11106,8 @@ async function submit(){
     if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Could not send');}
     document.querySelector('.top').style.display='none';document.querySelector('.nav').style.display='none';
     document.getElementById('screen').innerHTML='<div class="ok"><div class="big">🌟</div><h2>Thank you</h2>'+
-      '<p class="sub">Your feedback goes straight to the people building Lumen. It genuinely shapes what comes next.</p>'+
-      '<a class="btn" href="https://apps.apple.com/app/id6822133425" style="display:inline-block;text-decoration:none;max-width:300px;margin:18px auto 0">Back to Lumen</a></div>';
+      '<p class="sub">Your feedback goes straight to the people building Realized. It genuinely shapes what comes next.</p>'+
+      '<a class="btn" href="https://apps.apple.com/app/id6822133425" style="display:inline-block;text-decoration:none;max-width:300px;margin:18px auto 0">Back to Realized</a></div>';
     window.scrollTo(0,0);
   }catch(e){sending=false;document.getElementById('next').disabled=false;
     document.getElementById('next').textContent=i===LAST?'Send feedback':'Continue';err.textContent=e.message||'Something went wrong — try again.';}
@@ -11127,8 +11128,8 @@ PIPELINE_RAW = [
      "impact": 5, "effort": 1,
      "why": "Free, compounding App Store search traffic. Pure copy-paste from the Materials tab.",
      "steps": [
-         "Open App Store Connect → Lumen → App Information",
-         "Paste the Title: “Lumen: Meditate & Glow”",
+         "Open App Store Connect → Realized → App Information",
+         "Paste the Title: “Realized: Meditate & Glow”",
          "Paste the Subtitle: “Stoic journeys, journal & streaks”",
          "Paste the 100-char keyword field (Materials tab)",
          "Make screenshot #1 carry the hook text, not just a UI shot",
@@ -11147,7 +11148,7 @@ PIPELINE_RAW = [
      "impact": 5, "effort": 2,
      "why": "Editorial features are the single biggest free spike you can get.",
      "steps": [
-         "App Store Connect → Lumen → Featuring → start a nomination",
+         "App Store Connect → Realized → Featuring → start a nomination",
          "Write the STORY, not a feature list: “talk to Marcus Aurelius about your bad week”",
          "Note your next update/launch date (nominate 2–3 weeks ahead)",
          "Submit",
@@ -11157,7 +11158,7 @@ PIPELINE_RAW = [
      "why": "Evergreen home for Reels and a link-in-bio funnel to the App Store.",
      "steps": [
          "Create the @lumen.meditation account",
-         "Set the bio + profile photo (use the Lumen icon)",
+         "Set the bio + profile photo (use the Realized icon)",
          "Add the App Store link in bio",
          "Post your first 6 posts (generated for you)",
          "Follow ~20 stoicism / meditation / Jungian accounts to seed reach",
@@ -11238,7 +11239,7 @@ for _i, _t in enumerate(PIPELINE):
     _t["quick_win"] = _t["effort"] <= 2 and _t["impact"] >= 4
 
 # ---------------------------------------------------------------------------
-# DISTRIBUTION MATRIX — every outlet we can push Lumen through, as rows; the
+# DISTRIBUTION MATRIX — every outlet we can push Realized through, as rows; the
 # four phases we run each one through, as columns (Prep → Set up → Launch →
 # Follow-up). Each cell is a checkable step persisted per owner (keys o_*#idx,
 # sharing the mkt_state store with the pipeline checklist).
@@ -11382,13 +11383,13 @@ def subtasks_by_parent(c):
 
 MATERIALS = {
     "aso": {
-        "title": "Lumen: Meditate & Glow",
+        "title": "Realized: Meditate & Glow",
         "subtitle": "Stoic journeys, journal & streaks",
         "keywords": "stoic,meditation,vedic,astrology,horoscope,nakshatra,journal,mindfulness,calm,sleep,streak,habit",
         "note": "30-char title, 30-char subtitle, 100-char keyword field (no spaces, comma-separated, no plurals you can avoid). This set adds the Vedic-astrology terms we now rank for; rotate low performers out as App Store Connect shows what converts."
     },
     "app_store_description_v2": (
-        "Lumen is the meditation app that finally feels worth opening every day — part calm, "
+        "Realized is the meditation app that finally feels worth opening every day — part calm, "
         "part practice, part living world you light up with everyone else who sits.\n\n"
         "Every morning opens with a real Vedic reading: your rāśi and the Moon's nakshatra of the "
         "day, grounded in classical Jyotish — not vague horoscope filler. Then sit for a few minutes "
@@ -11405,13 +11406,13 @@ MATERIALS = {
     "custom_pages": [
         {"angle": "Stoic / Philosophy",
          "headline": "Talk to Marcus Aurelius about your bad week.",
-         "body": "Lumen turns ancient Stoic practice into a daily ritual. Walk guided voice journeys with the Stoics, journal with prompts that actually land, and watch your light grow on a living world map. Build the one streak that matters."},
+         "body": "Realized turns ancient Stoic practice into a daily ritual. Walk guided voice journeys with the Stoics, journal with prompts that actually land, and watch your light grow on a living world map. Build the one streak that matters."},
         {"angle": "Jungian / Self-work",
          "headline": "Meet the parts of yourself you've been avoiding.",
-         "body": "Lumen is a guided path through shadow work and inner archetypes. Sit with a voice guide, journal what surfaces, and track the quiet work over weeks — not as a chore, but as a world you light up one session at a time."},
+         "body": "Realized is a guided path through shadow work and inner archetypes. Sit with a voice guide, journal what surfaces, and track the quiet work over weeks — not as a chore, but as a world you light up one session at a time."},
     ],
     "app_store_description": (
-        "Lumen is a meditation app that finally feels worth opening every day.\n\n"
+        "Realized is a meditation app that finally feels worth opening every day.\n\n"
         "Sit for a few minutes with a guided voice journey — the Stoics, inner archetypes, "
         "gratitude, sleep — and every session lights up your spot on a living world map shared "
         "with everyone meditating right now. Earn Light, build a streak, climb weekly leagues, "
@@ -11439,11 +11440,11 @@ MATERIALS = {
             "Light up a dot. Climb a league. Actually meditate. In that order.",
             "The app that gamified the one habit you keep abandoning.",
             "Guided journey → journal prompt → map glows. The loop that got me to day 40.",
-            "Building Lumen in public: here's why every session lights up a world map. 🧵",
+            "Building Realized in public: here's why every session lights up a world map. 🧵",
         ],
         "calendar": [
             "Mon — Reel: Marcus Aurelius advice clip (captioned screen-rec)",
-            "Tue — Carousel: Stoic quote → how Lumen turns it into practice",
+            "Tue — Carousel: Stoic quote → how Realized turns it into practice",
             "Wed — Reel: The Forge roast clip (the shareable one)",
             "Thu — Story: world map screen-rec + 'add your dot' CTA → link",
             "Fri — Reel: '40-day streak changed X' testimonial/POV",
@@ -11453,7 +11454,7 @@ MATERIALS = {
     },
     "video_scripts": [
         {"title": "The Forge roast", "hook": "I let an AI Stoic roast my excuses for 60 seconds.",
-         "beats": ["Open on the chat: type a real excuse ('I'll meditate tomorrow').", "Play The Forge's blunt voice reply (captioned).", "Cut to the world map lighting up as you actually sit.", "End card: 'Lumen — free on iOS. Link in bio.'"]},
+         "beats": ["Open on the chat: type a real excuse ('I'll meditate tomorrow').", "Play The Forge's blunt voice reply (captioned).", "Cut to the world map lighting up as you actually sit.", "End card: 'Realized — free on iOS. Link in bio.'"]},
         {"title": "Marcus about your bad week", "hook": "Told Marcus Aurelius about my worst week. His reply hit different.",
          "beats": ["Type the bad-week rant.", "Marcus's measured voice reply, captioned line-by-line.", "Screen-rec the 5-min journey that follows.", "End: streak counter ticks up."]},
         {"title": "The map", "hook": "Every glowing dot is a stranger meditating with you right now.",
@@ -11473,11 +11474,11 @@ MATERIALS = {
     },
     "product_hunt": {
         "tagline": "Meditate, glow, and grow — Stoic journeys on a living world map",
-        "description": ("Lumen turns meditation into a daily ritual you won't abandon. Walk short guided voice "
+        "description": ("Realized turns meditation into a daily ritual you won't abandon. Walk short guided voice "
                         "journeys with the Stoics and inner archetypes, journal what surfaces, and light up your "
                         "spot on a world map shared with everyone meditating right now. Light, streaks, and weekly "
                         "leagues make the habit actually stick."),
-        "first_comment": ("Hey PH 👋 I'm Matthew. I built Lumen because I kept quitting every meditation app I tried. "
+        "first_comment": ("Hey PH 👋 I'm Matthew. I built Realized because I kept quitting every meditation app I tried. "
                           "Two things fixed it for me: (1) short guided voice journeys where you can genuinely talk to a "
                           "Stoic about your week, and (2) a world map where every session lights up a dot — so you're never "
                           "sitting alone, and the streak becomes something you're scared to break. Would love your honest take, "
@@ -11486,7 +11487,7 @@ MATERIALS = {
     },
     "website_copy": {
         "hero_h": "Light up the world, one breath at a time.",
-        "hero_sub": "Lumen turns meditation into a daily ritual you'll actually keep — a real Vedic reading each morning, guided voice journeys with the Stoics, and a world map you light up with a photo of every place you sit.",
+        "hero_sub": "Realized turns meditation into a daily ritual you'll actually keep — a real Vedic reading each morning, guided voice journeys with the Stoics, and a world map you light up with a photo of every place you sit.",
         "cta": "Download on iOS",
         "features": [
             {"t": "A reading written in the sky", "d": "Each day opens with a real Vedic reading — your rāśi and the Moon's nakshatra, grounded in classical Jyotish. Not vague horoscope filler."},
@@ -11625,7 +11626,7 @@ def admin_overview(c):
 
 ADMIN_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lumen · Admin</title>
+<title>Realized · Admin</title>
 <style>
 :root{--bg:#0b0a12;--card:#161326;--ink:#ece9f5;--mut:#9a93b8;--gold:#f5c977;--purp:#a855f7;--line:#2a2540;--ok:#34d399;--go:#60a5fa}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif}
@@ -11709,7 +11710,7 @@ const $=s=>document.querySelector(s), app=document.getElementById('app');
 const esc=t=>(t||'').replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
 let DATA=null, TAB='dashboard';
 async function j(u,o){const r=await fetch(u,o||{});return r.json();}
-function gate(msg){app.innerHTML=`<div class="gate"><h1>Lumen Admin</h1><p class="sub">Owner sign-in required</p>
+function gate(msg){app.innerHTML=`<div class="gate"><h1>Realized Admin</h1><p class="sub">Owner sign-in required</p>
 <input id="ge" type="email" placeholder="email" autocomplete="username"><input id="gp" type="password" placeholder="password" autocomplete="current-password">
 <button onclick="login()">Sign in</button><p class="err">${msg||''}</p></div>`;}
 async function login(){const email=$('#ge').value.trim(), password=$('#gp').value;
@@ -11718,7 +11719,7 @@ async function login(){const email=$('#ge').value.trim(), password=$('#gp').valu
 async function boot(){const r=await j('/api/admin/overview'); if(r.error){gate(r.error==='forbidden'?'That account is not an owner.':'');return;}
  DATA=r; render();}
 function render(){
- app.innerHTML=`<h1>🌕 Lumen Admin</h1><p class="sub">Live metrics + launch pipeline · <a href="/site" target="_blank">marketing site ↗</a></p>
+ app.innerHTML=`<h1>🌕 Realized Admin</h1><p class="sub">Live metrics + launch pipeline · <a href="/site" target="_blank">marketing site ↗</a></p>
  <div class="tabs">${['dashboard','analytics','pipeline','distribution','materials','notifications'].map(t=>`<button class="tab ${t==TAB?'on':''}" onclick="go('${t}')">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div>
  <div id="body"></div>`;
  ({dashboard:dash,analytics:analytics,pipeline:pipe,distribution:dist,materials:mats,notifications:notif}[TAB])();
@@ -11886,7 +11887,7 @@ def site_page():
     faqs = "".join(
         f'<details class="faq"><summary>{q}</summary><p>{a}</p></details>'
         for q, a in [
-            ("Is Lumen free?", "Yes — free to start. You can meditate, journal, build streaks, get your daily reading, and light up the map without paying."),
+            ("Is Realized free?", "Yes — free to start. You can meditate, journal, build streaks, get your daily reading, and light up the map without paying."),
             ("Is the Vedic reading real astrology?", "Yes. Your sign is your sidereal rāśi (Lahiri ayanāṁśa) and each day centers on the Moon's nakshatra, drawn from classical Jyotish — add your birth time for your birth star and Vimśottarī daśā."),
             ("Do I have to share my location or photos?", "No. Location is optional and deliberately coarsened, and the photos of your meditation spots are yours — they only appear to others if you choose to share them."),
             ("Is my journal private?", "Completely. Entries stay yours unless you explicitly choose to share one to the community feed."),
@@ -11895,9 +11896,9 @@ def site_page():
     ig_url = "https://instagram.com/" + IG_HANDLE.lstrip("@")
     return (r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lumen — meditate, glow, and grow</title>
+<title>Realized — become who you’re meant to be</title>
 <meta name="description" content="__SUB__">
-<meta property="og:title" content="Lumen — light up the world, one breath at a time">
+<meta property="og:title" content="Realized — become who you’re meant to be">
 <meta property="og:description" content="__SUB__"><meta property="og:type" content="website">
 <meta name="theme-color" content="#0b0a12"><link rel="icon" href="/icon.svg">
 <style>
@@ -11973,21 +11974,21 @@ footer a{color:var(--gold);text-decoration:none}
 @media(max-width:720px){.anchor-wrap{grid-template-columns:1fr;gap:20px;padding:20px}}
 </style></head><body>
 <header class="wraphd"><div class="wrap" style="display:flex;justify-content:space-between;align-items:center;padding:0">
-<div class="logo"><img src="/icon.svg" alt="Lumen"> Lumen</div>
+<div class="logo"><img src="/icon.svg" alt="Realized"> Realized</div>
 <nav class="nav"><a class="navlink" href="#journal">The Journal</a><a class="navlink" href="#how">How it works</a><a class="navlink" href="#features">Features</a><a class="navlink" href="#faq">FAQ</a><a class="btn" href="__APP__">__CTA__</a></nav>
 </div></header>
 <div class="wrap">
-<section class="hero"><img class="orbit" src="/icon.svg" alt="Lumen">
+<section class="hero"><img class="orbit" src="/icon.svg" alt="Realized">
 <div class="badge">Now on the App Store</div>
 <h1>__H__</h1><p>__SUB__</p><a class="btn lg" href="__APP__">__CTA__</a>
 <div class="sub2">Free to start · Your journal stays private</div></section>
 
 <section id="journal" class="anchor">
 <div class="anchor-wrap">
-  <div class="anchor-art"><img src="/art/lumen-journal.png" alt="The Lumen Journal" loading="lazy" onerror="this.closest('.anchor-art').style.display='none'"></div>
+  <div class="anchor-art"><img src="/art/lumen-journal.png" alt="The Realized Journal" loading="lazy" onerror="this.closest('.anchor-art').style.display='none'"></div>
   <div class="anchor-copy">
     <div class="abadge">★ The anchor · a companion you can hold</div>
-    <h2>The Lumen Journal</h2>
+    <h2>The Realized Journal</h2>
     <p>The guided practice of the app, in your hands. The eight life pillars, the season you're in, and a year of evening prompts — printed on cream dot-grid paper, bound in a linen hardcover with a gold ribbon and gilded edges.</p>
     <ul class="alist">
       <li>The 8 pillar lesson plans — the same guided chapters as in-app</li>
@@ -12007,7 +12008,7 @@ footer a{color:var(--gold);text-decoration:none}
 <section id="how"><h2 class="sec">Three minutes a day</h2><p class="lead">A loop simple enough to keep, gratifying enough to miss.</p>
 <div class="steps">__STEPS__</div></section>
 
-<section id="features"><h2 class="sec">Why it sticks</h2><p class="lead">Everything in Lumen is built around one idea: make the practice something you look forward to.</p>
+<section id="features"><h2 class="sec">Why it sticks</h2><p class="lead">Everything in Realized is built around one idea: make the practice something you look forward to.</p>
 <div class="feats">__FEATS__</div></section>
 
 <div class="quote">"Talk to <span>Marcus Aurelius</span> about your bad week — then watch your light spread across the map."
@@ -12017,7 +12018,7 @@ footer a{color:var(--gold);text-decoration:none}
 
 <section class="cta2"><h2>Start your streak tonight.</h2><a class="btn lg" href="__APP__">__CTA__</a></section>
 </div>
-<footer>Lumen · <a href="/privacy">Privacy</a> · <a href="__IG__">Instagram</a> · <a href="__APP__">App Store</a><br>© 2026 Lumen. Light up the world.</footer>
+<footer>Realized · <a href="/privacy">Privacy</a> · <a href="__IG__">Instagram</a> · <a href="__APP__">App Store</a><br>© 2026 Realized. Light up the world.</footer>
 <script>
 (function(){var f=document.getElementById('wl');if(!f)return;
  f.addEventListener('submit',function(e){e.preventDefault();
@@ -12110,7 +12111,7 @@ def _modal_hour(c, user_id, off):
 def _notif_personalize(kind, user):
     name = (user["name"] or "there").split()[0]
     streak = user["streak"] or 0
-    prompt = (f'Write ONE short push notification for a calm meditation app "Lumen". '
+    prompt = (f'Write ONE short push notification for a calm meditation app "Realized". '
               f'User first name: {name}. Current streak: {streak} days. Intent: {kind}. '
               f'Tone: warm, calm, direct, NEVER guilt-tripping or anxious. Body under 12 words. '
               f'Return strict JSON {{"title":"...","body":"..."}} with title <= 5 words.')
@@ -12139,9 +12140,9 @@ def notif_copy(kind, user, ctx=None, personalize=False):
                           ctx.get("body", "A few honest lines, whenever you're ready.")),
         "letter_invite": ("Write a letter",
                           f"{name}, a few honest lines to share with the community?"),
-        "broadcast": (ctx.get("title", "Lumen"), ctx.get("body", "")),
+        "broadcast": (ctx.get("title", "Realized"), ctx.get("body", "")),
     }
-    title, body = T.get(kind, ("Lumen", ""))
+    title, body = T.get(kind, ("Realized", ""))
     if personalize and kind in ("daily_reminder", "winback"):
         p = _notif_personalize(kind, user)
         if p:
@@ -12396,7 +12397,7 @@ def group_sit_push(c):
     dk = "groupsit:" + datetime.utcfromtimestamp(w["start"]).strftime("%Y-%m-%d")
     live_n = LIVE.count()
     title = "🧘 The Daily Global Sit"
-    body = ("It's 9 AM — sit with the Lumen community now." if live_n <= 3
+    body = ("It's 9 AM — sit with the Realized community now." if live_n <= 3
             else "It's 9 AM — %d people are gathering to sit together. Join them." % live_n)
     for r in c.execute("SELECT DISTINCT user_id FROM push_tokens").fetchall():
         uid = r["user_id"]
@@ -12545,7 +12546,7 @@ def _email_shell(headline, paras, cta_text, cta_url, unsub_url, preheader=""):
     </td></tr>
     <tr><td style="padding:0 32px 30px;text-align:center;border-top:1px solid #241f38">
       <p style="margin:18px 0 0;color:#6f6a82;font-size:12px;line-height:1.6">
-        You're getting this because you have a Lumen account.<br>
+        You're getting this because you have a Realized account.<br>
         <a href="{unsub_url}" style="color:#8f8a9d;text-decoration:underline">Unsubscribe</a> from these emails anytime.
       </p>
     </td></tr>
@@ -12566,12 +12567,12 @@ def _email_tpl(kind, c, u, ctx=None):
     def shell(hl, paras, cta, url=app, pre=""):
         return _email_shell(hl, paras, cta, url, unsub, pre)
     if kind == "welcome":
-        s = "Welcome to Lumen ✦"
+        s = "Welcome to Realized ✦"
         hl = f"Welcome, {name}."
         paras = [
             "You just joined a worldwide community lighting up the map — one quiet breath at a time.",
             "Your first sit is the best place to start. Even three minutes counts, and it lights your very first point on the living world map.",
-            "When you're ready: open Lumen, pick a soundscape, and simply sit."]
+            "When you're ready: open Realized, pick a soundscape, and simply sit."]
         return (s, *shell(hl, paras, "Take your first breath", pre="Your first sit lights the map."))
     if kind == "first_nudge":
         s = "Your first point of light is waiting"
@@ -12597,16 +12598,16 @@ def _email_tpl(kind, c, u, ctx=None):
             "A three-minute reset is a perfectly good way back in."]
         return (s, *shell(hl, paras, "Come back for a breath", pre="No pressure — a gentle way back."))
     if kind == "tip":
-        s = ctx.get("subject", "A little more from Lumen")
+        s = ctx.get("subject", "A little more from Realized")
         hl = ctx.get("headline", "Something you might have missed")
         paras = ctx.get("paras", [])
-        return (s, *shell(hl, paras, ctx.get("cta", "Open Lumen"), pre=ctx.get("pre", "")))
+        return (s, *shell(hl, paras, ctx.get("cta", "Open Realized"), pre=ctx.get("pre", "")))
     if kind == "upgrade":
-        s = "Go deeper with Lumen Premium"
+        s = "Go deeper with Realized Premium"
         hl = "You've built a real practice."
         paras = [
             f"{name}, your consistency is showing — and there's more waiting when you're ready to go deeper.",
-            "<b style=\"color:#f5c977\">Lumen Premium</b> (coming soon) will unlock the full library of journeys, deeper Vedic readings, and more ways to grow your mandala.",
+            "<b style=\"color:#f5c977\">Realized Premium</b> (coming soon) will unlock the full library of journeys, deeper Vedic readings, and more ways to grow your mandala.",
             "Want first access and a founding-member price? Tap below to raise your hand."]
         return (s, *shell(hl, paras, "I'm interested in Premium",
                           url=f"{PUBLIC_URL}/e/premium?u={_unsub_token(c, u)}",
@@ -12646,14 +12647,14 @@ def _email_candidate(c, u, lt):
     # onboarding tips — day ~3 and ~10, for active users
     if sessions >= 1:
         for day_at, key, ctx in (
-            (3, "tip:journeys", {"subject": "Guided journeys are the heart of Lumen",
+            (3, "tip:journeys", {"subject": "Guided journeys are the heart of Realized",
                  "headline": "Let a real tradition guide you.",
-                 "paras": ["Beyond the timer, Lumen has narrated <b style=\"color:#f5c977\">Journeys</b> — guided courses drawn from Stoic, Vedic and breathwork traditions.",
+                 "paras": ["Beyond the timer, Realized has narrated <b style=\"color:#f5c977\">Journeys</b> — guided courses drawn from Stoic, Vedic and breathwork traditions.",
                            "Open the Journeys tab and start the one that calls to you."],
                  "cta": "Explore Journeys", "pre": "There's more than the timer."}),
             (10, "tip:journal", {"subject": "Meet the Keeper — your journal companion",
                  "headline": "A few honest lines change everything.",
-                 "paras": ["Lumen's <b style=\"color:#f5c977\">Journal</b> gives you a warm companion, the Keeper, who reflects back the throughline in what you write.",
+                 "paras": ["Realized's <b style=\"color:#f5c977\">Journal</b> gives you a warm companion, the Keeper, who reflects back the throughline in what you write.",
                            "Try a single entry after your next sit."],
                  "cta": "Open your journal", "pre": "Reflection makes it stick."})):
             if ds_signup >= day_at and not _email_has(c, u["id"], key):
@@ -12791,14 +12792,14 @@ def _sms_candidate(c, u, lt):
     if h == SMS_SEND_HOUR_LOCAL and streak >= 1 and last == yesterday:
         dk = "streak_risk:" + today
         if not _sms_has(c, u["id"], dk):
-            body = ("%syour %d-day streak on Lumen is still lit — one short sit before midnight keeps it going. 🔥\nReply STOP to opt out."
+            body = ("%syour %d-day streak on Realized is still lit — one short sit before midnight keeps it going. 🔥\nReply STOP to opt out."
                     % (hey, streak))
             return ("streak_risk", body, dk)
     # win-back: dormant/churned, at most once a week, evening
     if h == SMS_SEND_HOUR_LOCAL and tier in ("dormant", "churned") and not _sms_recent(c, u["id"], 6):
         dk = "winback:" + week_str()
         if not _sms_has(c, u["id"], dk):
-            body = ("%syour light has been waiting on Lumen. Two quiet minutes is a real beginning — come sit with us again.\nReply STOP to opt out."
+            body = ("%syour light has been waiting on Realized. Two quiet minutes is a real beginning — come sit with us again.\nReply STOP to opt out."
                     % hey)
             return ("winback", body, dk)
     return None
@@ -12893,7 +12894,7 @@ def main():
     threading.Thread(target=email_loop, daemon=True).start()
     threading.Thread(target=community_loop, daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), H)
-    print(f"Lumen on http://{HOST}:{PORT}  (BASE={BASE or '/'})")
+    print(f"Realized on http://{HOST}:{PORT}  (BASE={BASE or '/'})")
     httpd.serve_forever()
 
 
