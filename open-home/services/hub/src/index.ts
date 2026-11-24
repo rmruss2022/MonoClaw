@@ -36,6 +36,7 @@ import * as localClimate from "./localClimate.ts";
 import * as devEmulator from "./devEmulator.ts";
 import * as auth from "./auth.ts";
 import * as proximity from "./proximity.ts";
+import * as ring from "./ring.ts";
 import * as presence from "./presence.ts";
 import * as connectivity from "./connectivity.ts";
 import { execFile as _execFile } from "node:child_process";
@@ -787,6 +788,47 @@ const handler = async (req: import("node:http").IncomingMessage, res: import("no
     return;
   }
 
+  // ---- The ring ----
+  // Telemetry in, from whichever client owns the BLE connection: the Pi today,
+  // the phone when it is away from the house. Both post the same shape.
+  if (url === "/ring" && req.method === "GET") { json(res, ring.get()); return; }
+  if (url === "/ring/state" && req.method === "POST") {
+    const body = await readBody(req);
+    let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
+    const patch: any = {};
+    for (const k of ["rssi", "battery", "charging", "worn", "steps", "heartRate", "firmware"]) {
+      if (p[k] !== undefined) patch[k] = p[k];
+    }
+    // battery arrives either flat or nested, depending on which client sent it
+    if (p.battery && typeof p.battery === "object") {
+      patch.battery = p.battery.level; patch.charging = p.battery.charging;
+    }
+    console.log(`[ring] state ${JSON.stringify(patch)}`);
+    json(res, ring.report(patch));
+    return;
+  }
+  // A gesture happened. The receiver does detection; the hub decides meaning.
+  if (url === "/ring/gesture" && req.method === "POST") {
+    const body = await readBody(req);
+    let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
+    const kind = String(p.kind || "");
+    if (!kind) { json(res, { ok: false, error: "no_kind" }, 400); return; }
+    const did = await ring.gesture(kind as any, p.value);
+    console.log(`[ring] gesture ${kind}${p.value != null ? ` (${p.value})` : ""} -> ${did}`);
+    json(res, { ok: true, kind, did, state: ring.get() });
+    return;
+  }
+  // Start a voice turn without the wake word. Used by the ring, and useful on
+  // its own from the app as a push-to-talk button.
+  if (url === "/agent/wake" && req.method === "POST") {
+    const body = await readBody(req);
+    let p: any = {}; try { p = JSON.parse(body || "{}"); } catch {}
+    const sent = ring.wakeVoice(String(p.source || "api"));
+    // `sent` is whether the datagram left, NOT whether anything received it.
+    // UDP cannot tell us the latter and this must not pretend otherwise.
+    json(res, { ok: sent, sent, note: sent ? "datagram sent to the voice client" : "could not send" });
+    return;
+  }
   if (url === "/rooms/proximity" && req.method === "POST") {
     const body = await readBody(req);
     let client = "", readings: any[] = [];

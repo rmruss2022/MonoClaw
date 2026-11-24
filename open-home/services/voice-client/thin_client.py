@@ -22,6 +22,7 @@ import base64
 import io
 import json
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -84,10 +85,55 @@ BARGE_WARMUP_FRAMES = int(os.environ.get("BARGE_WARMUP_FRAMES", "25"))
 # over a 300-500 threshold) each cost a model round-trip and got answered with
 # "Sorry, I didn't get that" out loud. Real words cover several frames.
 MIN_SPEECH_FRAMES = int(os.environ.get("MIN_SPEECH_FRAMES", "4"))
+# A second way in, for things that are not a wake word: the ring's double tap,
+# or a push-to-talk button in the app. The hub sends a UDP datagram here.
+#
+# UDP to localhost rather than polling an endpoint, because this loop already
+# reads a 80 ms frame every 80 ms — checking a non-blocking socket alongside it
+# costs one syscall and bounds the latency at one frame. Polling HTTP would cost
+# hundreds of pointless requests and bound it at the poll interval instead.
+WAKE_PORT = int(os.environ.get("OPEN_HOME_WAKE_PORT", "4799"))
 
 
 def log(*a: object) -> None:
     print(f"[voice {time.strftime('%H:%M:%S')}]", *a, flush=True)
+
+
+def open_wake_socket() -> "socket.socket | None":
+    """Non-blocking UDP listener for externally triggered wakes."""
+    try:
+        sk = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sk.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sk.bind(("127.0.0.1", WAKE_PORT))
+        sk.setblocking(False)
+        log(f"external wake listening on udp 127.0.0.1:{WAKE_PORT}")
+        return sk
+    except OSError as e:
+        # Not fatal: the wake word still works, we just cannot be poked.
+        log(f"could not bind wake socket: {e}")
+        return None
+
+
+def wake_requested(sk: "socket.socket | None") -> str | None:
+    """Drain the socket. Returns the reason if something asked for a wake.
+
+    Drains rather than reads once, so a burst of datagrams is one wake and not
+    a queue of them.
+    """
+    if sk is None:
+        return None
+    why = None
+    while True:
+        try:
+            data, _ = sk.recvfrom(512)
+        except (BlockingIOError, InterruptedError):
+            return why
+        except OSError:
+            return why
+        try:
+            why = (json.loads(data.decode("utf-8")) or {}).get("wake") or "external"
+        except Exception:
+            why = "external"
 
 
 class Hub:
@@ -430,6 +476,7 @@ def main() -> int:
     hub.login()
     floor = NoiseFloor()
     barge = BargeIn(oww, key, BARGE_THRESHOLD)
+    wake_sock = open_wake_socket()
 
     mic = open_mic()
     log("listening")
@@ -446,13 +493,24 @@ def main() -> int:
             # Idle frame: this is the room, not speech. Use it to learn the floor.
             floor.add(rms(frame))
 
+            # Poked from outside — the ring's double tap, or the app. Checked
+            # before inference because it is cheaper and because a deliberate
+            # gesture should not wait on a wake-word decision.
+            external = wake_requested(wake_sock)
+
             scores = oww.predict(frame)
-            if scores.get(key, 0.0) < WAKE_THRESHOLD:
+            if external is None and scores.get(key, 0.0) < WAKE_THRESHOLD:
                 continue
 
             t_wake = time.time()
             thresh = floor.threshold
-            log(f"wake ({scores[key]:.2f})  floor {floor.level:.0f} -> threshold {thresh:.0f}")
+            if external is not None:
+                # No wake word was said, so the room was quiet and the floor
+                # estimate is the honest one to use. Nothing else differs: the
+                # whole turn below runs identically, which is the point.
+                log(f"wake by {external}  floor {floor.level:.0f} -> threshold {thresh:.0f}")
+            else:
+                log(f"wake ({scores[key]:.2f})  floor {floor.level:.0f} -> threshold {thresh:.0f}")
             reset(oww)
             # Duck (and interrupt any reply still playing) IN PARALLEL with the
             # cue. aplay blocks for the length of the blip plus Bluetooth
@@ -468,7 +526,8 @@ def main() -> int:
             first = True
             for turn in range(MAX_TURNS):
                 grace = ONSET_GRACE_S if first else FOLLOWUP_GRACE_S
-                frames = capture(mic, grace, thresh, seed=frame if first else None)
+                seed = frame if (first and external is None) else None
+                frames = capture(mic, grace, thresh, seed=seed)
                 first = False
                 if frames is None:
                     break

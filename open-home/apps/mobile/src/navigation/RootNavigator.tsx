@@ -12,6 +12,7 @@ import HomeScreen from "@/screens/HomeScreen";
 import LightsScreen from "@/screens/LightsScreen";
 import ClimateScreen from "@/screens/ClimateScreen";
 import MusicScreen from "@/screens/MusicScreen";
+import RingScreen from "@/screens/RingScreen";
 import TvScreen from "@/screens/TvScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
 import AccountScreen from "@/screens/AccountScreen";
@@ -39,6 +40,7 @@ const ICONS: Record<string, { on: keyof typeof Ionicons.glyphMap; off: keyof typ
   Lights: { on: "bulb", off: "bulb-outline" },
   Climate: { on: "thermometer", off: "thermometer-outline" },
   Music: { on: "disc", off: "disc-outline" },
+  Ring: { on: "finger-print", off: "finger-print-outline" },
   House: { on: "grid", off: "grid-outline" },
   TV: { on: "tv", off: "tv-outline" },
   Account: { on: "person-circle", off: "person-circle-outline" },
@@ -102,6 +104,7 @@ export default function RootNavigator() {
           <Tab.Screen name="House" component={HomeScreen} />
           <Tab.Screen name="Lights" component={LightsScreen} />
           <Tab.Screen name="Climate" component={ClimateScreen} />
+          <Tab.Screen name="Ring" component={RingScreen} />
           <Tab.Screen name="TV" component={TvScreen} />
           <Tab.Screen name="Account" component={AccountScreen} />
           <Tab.Screen name="Settings" component={SettingsScreen} />
