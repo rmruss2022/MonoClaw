@@ -1,5 +1,20 @@
 # Realized — Brand Direction
 
+> **DIRECTION LOCKED (Nov 24, rev 2): Co-Star × OpenHome — austere monochrome, image-led.**
+> Supersedes the "Molten Dawn" gold-cosmic look below (that was a reskin; user wanted a whole new theme).
+> - **Palette:** true black `#08080a` + bone `#eceae6`; muted `#6f6d66`; hairlines `#ffffff1a`. Pure monochrome, no gold glow, no gradient candy. (Pure Co-Star "A" — zero accent color.)
+> - **Type:** `Fraunces` (light ~340 serif, big editorial statements, italic for emphasis) + `IBM Plex Mono` (uppercase, .2em tracked, 10–11px micro-labels/numbers: `TUE · NOV 24`, `DAY 019`, `6 MIN`) + Inter body.
+> - **Components:** flat rows + 1px hairline rules + framed image blocks (1px border) + lots of negative space. Kill glows, box-shadows, rounded gradient cards, pill-glow buttons.
+> - **Imagery = the soul of it:** surreal high-contrast **B&W celestial collage** (marble statuary + moons/planets/stars, lone figures dwarfed by the cosmos, eyes/hands). Generated via **OpenAI gpt-image-2**, grayscale. Framed, not full-bleed glossy. Staged in `/tmp/realized2/art-bw/`.
+> - **Voice in layout:** second-person oracle cadence — `TODAY YOU ARE →` "Becoming the person who already has it"; captions like `THE SELF, REALIZED`.
+> - Mocks: `/tmp/realized2/mock.png` (A/B), `/tmp/realized2/alive.png` (A with real imagery — the reference).
+> - Build: new global CSS token system → roll out shell + home + journeys first, deploy coherent (don't ship a half-converted theme on the live app), then remaining screens.
+
+---
+_Below: the earlier Molten Dawn reskin (v116–v117), now superseded by the above._
+
+# (superseded) Realized — Molten Dawn
+
 **Rename:** Lumen → **Realized**. (Internal ids/paths/bundle stay `lumen`/`ai.lumen.app` for now — display strings, logo, copy, palette change.)
 
 ## The idea

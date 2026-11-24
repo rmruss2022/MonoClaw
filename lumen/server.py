@@ -2488,7 +2488,7 @@ PAGE = r"""<!doctype html>
 <title>Realized — become who you're meant to be</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..500&family=Space+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 :root{
   --bg:#0b0a12; --bg2:#13111d; --panel:#181527cc; --line:#2a2540;
@@ -3269,7 +3269,7 @@ a{color:var(--purple)}
    z-index:-1 ::before (painting order), hiding the lotus hero. html is the gold floor. */
 body.jw-gold{background:transparent !important;overflow:hidden !important;overscroll-behavior:none !important}
 body.jw-gold::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=117') center center / cover no-repeat,linear-gradient(175deg,#fde7ad,#cd9531);background-color:#cd9531}
+  background:linear-gradient(175deg,rgba(253,231,173,.30) 0%,rgba(246,207,131,.22) 26%,rgba(234,186,96,.18) 50%,rgba(219,167,71,.34) 78%,rgba(205,149,49,.52) 100%),url('/art/journal-hero-gold.jpg?v=118') center center / cover no-repeat,linear-gradient(175deg,#fde7ad,#cd9531);background-color:#cd9531}
 /* gold the root too, so no dark base can ever show (keyboard, overscroll, etc.) */
 html.jw-gold-h{overflow:hidden !important;background:#cd9531 !important;overscroll-behavior:none !important}
 body.jw-writing .jx-close{display:none}
@@ -4381,6 +4381,40 @@ nav button.on .ic .i{color:#f5c977;filter:drop-shadow(0 0 9px rgba(245,201,119,.
 .ins-lbl .i{width:14px;height:14px}
 .ins-arc{font-family:var(--serif);font-size:15px;line-height:1.5}
 .ins-nudge{border-color:rgba(245,201,119,.3);background:rgba(245,201,119,.05)}
+/* ===================== REALIZED · Co-Star monochrome theme (override layer) ===================== */
+:root{
+  --bg:#08080a;--bg2:#0d0d11;--panel:#0c0c0fe6;--line:rgba(255,255,255,.12);
+  --text:#ece9e2;--muted:#7b7971;--gold:#e7e2d7;--purple:#9a978f;--purple2:#86837b;--pink:#d2cec3;--good:#c7c3b8;
+}
+html,body{background:#08080a!important;color:var(--text)!important}
+/* editorial serif headings */
+.nh-greet,.nh-name,.brand b,.onb-h,.sr-sum-h,.si-t,.comm-read-t,.comm-letter .comm-let-t{font-family:var(--display)!important;font-weight:360!important;letter-spacing:-.01em!important;color:#f2efe8!important}
+.nh-greet b{font-weight:480!important;color:#fff!important}
+/* mono micro-labels + numbers */
+.jhero-eyebrow,.comm-let-eye,.sm-prog-n,.onb-brand,.ins-lbl,.sr-sec-t,.si-ben-h,.sm-next-eye,.rpw-eyebrow,.sm-card-chk,.sm-card-no{font-family:'IBM Plex Mono',ui-monospace,monospace!important;text-transform:uppercase!important;letter-spacing:.18em!important;font-weight:500!important;color:var(--muted)!important}
+.nh-sub,.onb-p{color:#b4b1a8!important}
+/* flatten cards — hairline, no glow/gradient, square-ish */
+.card,.comm-letter,.sm-card,.pgrid-card,.jcard,.planband,.pcase,.jmodecard,.si-stage,.si-benefit,.sr-sec,.sr-sum,.sm-next,.sm-weekly{background:#0b0b0e!important;border:1px solid var(--line)!important;box-shadow:none!important;border-radius:5px!important}
+.sm-card-glow,.planband-glow,.pcolumn-glow,.pcase-frame{display:none!important}
+.pcase:before{display:none!important}.comm-let-ic{box-shadow:none!important;border-radius:4px!important}
+/* buttons → flat mono outline */
+.btn.gold,.ss-save,.si-begin,.sr-done,.comm-read-done{background:transparent!important;color:#f2efe8!important;border:1px solid #f2efe8!important;box-shadow:none!important;border-radius:999px!important;font-family:'IBM Plex Mono',monospace!important;text-transform:uppercase!important;letter-spacing:.14em!important;font-weight:500!important;font-size:12.5px!important}
+/* heroes: grayscale + darker scrim */
+.nh-hero{filter:grayscale(1) contrast(1.04)!important}
+.nh-hero-scrim{background:linear-gradient(180deg,rgba(8,8,10,.5),rgba(8,8,10,.18) 42%,rgba(8,8,10,.82))!important}
+/* brand mark → bone */
+.nh-mark svg *,.lmark *{stroke:#ece9e2!important}
+.nh-mark svg,.lmark{filter:brightness(2) grayscale(1)!important}
+/* progress + accent fills → bone */
+.sm-prog-bar i,.planband-bar i,.pil-bar i,.todo-bar i,.jbar i{background:#ece9e2!important;box-shadow:none!important}
+/* bottom nav tint */
+.nav{background:linear-gradient(rgba(8,8,10,0),rgba(8,8,10,.92) 40%)!important}
+/* onboarding + any inline imagery → monochrome, flat */
+.onb-photo{box-shadow:none!important;border:1px solid var(--line)!important;border-radius:6px!important}
+.onb-photo img{filter:grayscale(1) contrast(1.05)!important}
+.onb-ic .i{color:#ece9e2!important;filter:none!important}
+.comm-let-ic{filter:grayscale(1) contrast(1.04)!important}
+.jmode-chev,.comm-let-go{color:var(--muted)!important}
 </style>
 <!-- Sentry error monitoring (project loader auto-injects the DSN; buffers errors
      from first paint so onboarding/auth are covered). Release = deploy version. -->
@@ -5651,7 +5685,7 @@ async function renderMeditate(){
       <div class="nh-card nh-journey"><div class="nh-jthumb" style="background-image:url('/art/home-journey.jpg')"><span class="nh-jpin">${ic('pin')}</span></div>
       <div class="nh-jbody"><div class="nh-jtitle">Meditation Moment</div><div class="nh-jmeta">${esc(loc)} · ${ago}</div>${q?`<div class="nh-jquote">“${esc(q)}”</div>`:''}</div></div></div>`;
   })()}
-  <div class="nh-level" id="nhLevel"><span class="nh-lorb" style="background-image:url('/art/home-levelorb.jpg?v=117')"></span>
+  <div class="nh-level" id="nhLevel"><span class="nh-lorb" style="background-image:url('/art/home-levelorb.jpg?v=118')"></span>
     <div class="nh-lbody"><div class="nh-ltop">Level ${ME.level||1} · ${fmt(ME.level_into||0)} / ${fmt((ME.level_into||0)+(ME.level_need||0))} XP</div>
       <div class="nh-lbar"><i style="width:${Math.min(100,Math.round(100*(ME.level_into||0)/(((ME.level_into||0)+(ME.level_need||0))||1)))}%"></i></div>
       <div class="nh-lsub">Keep meditating to grow your light!</div></div>
@@ -5671,7 +5705,7 @@ async function renderMeditate(){
   {const b=$('#nhLevel');if(b)b.onclick=()=>go('profile');}
   {const b=$('#nhPickMore');if(b)b.onclick=()=>go('lessons');}
   {const pk=$('#nhPick');if(pk&&PICK)pk.onclick=()=>{lessonFrom='meditate';lessonDetail(PICK.code);};}
-  {const hero=$('#nhHero');if(hero){var im=new Image();im.onload=function(){hero.style.backgroundImage="url('/art/home-hero.jpg?v=117')";};im.src="/art/home-hero.jpg?v=117";}}
+  {const hero=$('#nhHero');if(hero){var im=new Image();im.onload=function(){hero.style.backgroundImage="url('/art/home-hero.jpg?v=118')";};im.src="/art/home-hero.jpg?v=118";}}
   wireGroupSit(gsit);
   document.querySelectorAll('.horo-sign').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('horoscope/sign','POST',{sign:b.dataset.sign});renderMeditate();}catch(e){b.disabled=false;toast(e);}});
   {const hs=document.querySelector('.horo-sit');if(hs)hs.onclick=()=>{pick.sound=hs.dataset.snd;pick.minutes=+hs.dataset.min||pick.minutes;startSession();};
@@ -5741,7 +5775,7 @@ async function renderLessons(){
      if(!best)best=cards[0];cards.forEach(c=>c.classList.toggle('infocus',c===best));};
      let raf=null;_jnyFocusH=()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=null;upd();});};
      addEventListener('scroll',_jnyFocusH,{passive:true});addEventListener('resize',_jnyFocusH,{passive:true});upd();}}
-  {const h=$('#jnyHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journeys-hero.jpg?v=117')";};im.src="/art/journeys-hero.jpg?v=117";}}
+  {const h=$('#jnyHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journeys-hero.jpg?v=118')";};im.src="/art/journeys-hero.jpg?v=118";}}
 }
 
 // A single journey — its lessons in order, your next lesson highlighted, tap to open.
@@ -7598,7 +7632,7 @@ async function renderCommunity(){
     +(unlocked
        ? `<div id="commFeed">`+(feedBelow.length?feedBelow.map(fcard).join(''):`<div class="card center muted">Nothing shared yet. Meditate, snap your spot, and be the first.</div>`)+`</div>`
        : `<div class="comm-lock"><span class="comm-lock-ic">${ic('lock')}</span><div class="comm-lock-t">The community is resting</div><div class="comm-lock-sub">Read one of the letters above to open everyone's posts.</div></div>`);
-  {const h=$('#commHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/comm-hero.jpg?v=117')";};im.src="/art/comm-hero.jpg?v=117";}}
+  {const h=$('#commHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/comm-hero.jpg?v=118')";};im.src="/art/comm-hero.jpg?v=118";}}
   document.querySelectorAll('.comm-letter').forEach(b=>b.onclick=()=>openCommLetter(+b.dataset.i));
   {const sb=$('#commShare');if(sb)sb.onclick=openShareLetter;}
   if(unlocked){
@@ -7669,7 +7703,7 @@ function renderSeasonIntro(){
     +`<button class="btn gold si-begin" id="siBegin">${ic('seal','seal-ic')} Begin your season</button>`;
   const back=$('#siBack');if(back)back.onclick=()=>{jScreen='home';journalMode='daily';renderJournal();};
   const begin=$('#siBegin');if(begin)begin.onclick=()=>{journalMode='season';jSeason='';jScreen='compose';renderJournal();};
-  {const h=$('#siHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=117')";};im.src="/art/season-hero.jpg?v=117";}}
+  {const h=$('#siHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=118')";};im.src="/art/season-hero.jpg?v=118";}}
   const bg=$('#siBegin');if(bg)bg.onclick=()=>seasonBegin();
 }
 // ===================== SEASON: a structured season-of-life you fill out =====================
@@ -7716,8 +7750,8 @@ async function renderSeasonMap(){
   const viz=seasonVizURL(),age=_seasonAge();
   const nextStage=stages.find(s=>!_stDone(s.key));  // the next entry they're supposed to do
   const nextCard=nextStage
-    ? `<button class="sm-next" id="smNext" data-k="${nextStage.key}"><span class="sm-next-bk" style="background-image:url('/art/season-book.jpg?v=117')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">${done?'Continue · next up':'Start here'}</span><span class="sm-next-t">${esc(nextStage.title)}</span><span class="sm-next-b">${nextStage.blurb}</span></span><span class="sm-next-go">›</span></button>`
-    : `<button class="sm-next" id="smNext" data-k="journey"><span class="sm-next-bk" style="background-image:url('/art/season-book-done.jpg?v=117')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">Season complete ✦</span><span class="sm-next-t">See your journey</span><span class="sm-next-b">Every stage is sealed — the shape of your whole chapter.</span></span><span class="sm-next-go">›</span></button>`;
+    ? `<button class="sm-next" id="smNext" data-k="${nextStage.key}"><span class="sm-next-bk" style="background-image:url('/art/season-book.jpg?v=118')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">${done?'Continue · next up':'Start here'}</span><span class="sm-next-t">${esc(nextStage.title)}</span><span class="sm-next-b">${nextStage.blurb}</span></span><span class="sm-next-go">›</span></button>`
+    : `<button class="sm-next" id="smNext" data-k="journey"><span class="sm-next-bk" style="background-image:url('/art/season-book-done.jpg?v=118')"></span><span style="flex:1;min-width:0"><span class="sm-next-eye">Season complete ✦</span><span class="sm-next-t">See your journey</span><span class="sm-next-b">Every stage is sealed — the shape of your whole chapter.</span></span><span class="sm-next-go">›</span></button>`;
   const row=(s,i)=>{const d=_stDone(s.key);const retro=s.key==='retro';const num=retro?'★':(seasonPrior?i:i+1);
     return `<button class="sm-card${d?' done':''}${retro?' sm-retro':''}" data-k="${s.key}"><span class="sm-card-glow"></span>`
       +`<span class="sm-card-no">${num}</span>`
@@ -7733,7 +7767,7 @@ async function renderSeasonMap(){
     +(done?`<button class="sm-weekly sm-readback" id="smJourney">${ic('compass')}<span style="flex:1"><span class="sm-rt">See your journey</span><span class="sm-rb">Your chapter at a glance — summary, your five, your week, strengths.</span></span><span class="sm-next-go">›</span></button>`:'')
     +`<button class="sm-weekly" id="smWeekly">${ic('sunrise')}<span style="flex:1"><span class="sm-rt">Weekly review &amp; plan</span><span class="sm-rb">Sunday night — review your season, then plan the week.</span></span></button>`
     +(age>=SEASON_DAYS?`<button class="btn gold sm-new" id="smNew">${ic('seal','seal-ic')} Start a new season</button>`:'');
-  {const h=$('#smHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=117')";};im.src="/art/season-hero.jpg?v=117";}}
+  {const h=$('#smHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=118')";};im.src="/art/season-hero.jpg?v=118";}}
   const bk=$('#smBack');if(bk)bk.onclick=()=>{jScreen='home';journalMode='daily';renderJournal();};
   {const nx=$('#smNext');if(nx)nx.onclick=()=>{if(nx.dataset.k==='journey'){jScreen='seasonjourney';}else{seasonReturn='map';seasonStageKey=nx.dataset.k;jScreen='seasonstage';}renderJournal();};}
   document.querySelectorAll('.sm-card').forEach(b=>b.onclick=()=>{const k=b.dataset.k;seasonStageKey=k;if(_stDone(k)){jScreen='seasonentry';}else{seasonReturn='map';jScreen='seasonstage';}renderJournal();});
@@ -7801,7 +7835,7 @@ function renderSeasonJourney(){
     +(viz?`<div class="sr-viz"><img src="${viz}" alt="your focus areas"></div>`:'')
     +sumHtml+doingHtml+weekHtml+swHtml
     +`<button class="btn gold sr-done" id="srDone">${ic('seal','seal-ic')} Back to your season</button></div>`;
-  {const h=$('#srHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=117')";};im.src="/art/season-hero.jpg?v=117";}}
+  {const h=$('#srHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=118')";};im.src="/art/season-hero.jpg?v=118";}}
   const back=()=>{jScreen='seasonmap';renderJournal();};
   const bk=$('#srBack');if(bk)bk.onclick=back;const dn=$('#srDone');if(dn)dn.onclick=back;
   const wkb=$('#sjWeek');if(wkb)wkb.onclick=()=>{seasonReturn='map';seasonStageKey='weekly';jScreen='seasonstage';renderJournal();};
@@ -7825,7 +7859,7 @@ function renderSeasonEntry(){
       :`<div class="sr-sec"><div class="sr-empty">You haven't written this entry yet.</div></div>`)
     +`<button class="btn gold sr-done" id="seEdit">${ic('seal','seal-ic')} ${body?'Add to or edit this entry':'Begin this entry'}</button>`
     +`<button class="jlink-btn" id="seBack">‹ Back to your season</button></div>`;
-  {const h=$('#seHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=117')";};im.src="/art/season-hero.jpg?v=117";}}
+  {const h=$('#seHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/season-hero.jpg?v=118')";};im.src="/art/season-hero.jpg?v=118";}}
   const back=()=>{jScreen='seasonmap';renderJournal();};
   const ed=$('#seEdit');if(ed)ed.onclick=()=>{seasonReturn='entry';jScreen='seasonstage';renderJournal();};
   const c=$('#seClose');if(c)c.onclick=back;const b2=$('#seBack');if(b2)b2.onclick=back;
@@ -7973,7 +8007,7 @@ async function renderJournalHome(){
     else{jScreen='compose';}
     renderJournal();};
   document.querySelectorAll('.jmodecard').forEach(b=>b.onclick=()=>openMode(b.dataset.m));
-  {const h=$('#jnlHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journal-hero.jpg?v=117')";};im.src="/art/journal-hero.jpg?v=117";}}
+  {const h=$('#jnlHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/journal-hero.jpg?v=118')";};im.src="/art/journal-hero.jpg?v=118";}}
   document.querySelectorAll('.pcolumn,.pgrid-card').forEach(b=>b.onclick=()=>{journalMode='deep';journalPillar=b.dataset.p;journalChapter=null;jScreen='plessons';renderJournal();});
   _mountCols();
 }
@@ -8465,7 +8499,7 @@ async function renderProfile(){
     ? `<p class="muted" style="font-size:13px;margin:0 0 12px;line-height:1.6"><span class="zsym">${horo.glyph}︎</span> <b style="color:var(--text)">${esc(horo.sanskrit||'')}</b> ${esc(horo.name||'')} · lord ${esc(horo.lord||'')}${horo.janma?`<br>${ic('nova','g')} Birth star <b style="color:var(--text)">${esc(horo.janma)}</b> · daśā ${esc(horo.maha)}–${esc(horo.antar)}`:`<br><span style="opacity:.8">Add your birth time below to unlock your birth star &amp; daśā.</span>`}</p>`
     : `<p class="muted" style="font-size:13px;margin:0 0 12px">Add your birthday to receive your daily Vedic reading.</p>`;
   $('#app').innerHTML=`<section class="nh-hero you-hero" id="youHero"><div class="nh-hero-scrim"></div><div class="nh-hero-inner"><header class="nh-hdr"><div class="nh-brand"><span class="nh-mark">${COMM_LOTUS}</span><span class="nh-name">Realized</span></div></header><div class="nh-hero-txt"><h1 class="nh-greet">${esc(p.name)}</h1><p class="nh-sub">${esc(p.league.name)} league · Level ${p.level}</p></div></div></section>`
-  +`<div class="nh-level you-nhlevel"><span class="nh-lorb" style="background-image:url('/art/home-levelorb.jpg?v=117')"></span>`
+  +`<div class="nh-level you-nhlevel"><span class="nh-lorb" style="background-image:url('/art/home-levelorb.jpg?v=118')"></span>`
     +`<div class="nh-lbody"><div class="nh-ltop">Level ${p.level} · ${fmt(p.level_into)} / ${fmt(p.level_into+p.level_need)} XP</div>`
       +`<div class="nh-lbar"><i style="width:${prog}%"></i></div>`
       +`<div class="nh-lsub"><span class="pill" style="border-color:${p.league.color};color:${p.league.color}">${esc(p.league.name)} league</span> · ${fmt(p.level_need)} XP to Level ${p.level+1}</div></div></div>`
@@ -8571,7 +8605,7 @@ async function renderProfile(){
     ME=null;toast('Your account has been deleted');renderAuth();};
   window._ACH=ach.achievements;
   document.querySelectorAll('.ach').forEach(x=>x.onclick=()=>openAchCard(x.dataset.ac));
-  {const h=$('#youHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/you-hero.jpg?v=117')";};im.src="/art/you-hero.jpg?v=117";}}
+  {const h=$('#youHero');if(h){var im=new Image();im.onload=function(){h.style.backgroundImage="url('/art/you-hero.jpg?v=118')";};im.src="/art/you-hero.jpg?v=118";}}
   try{window.removeEventListener('message',_onMandalaMsg);window.addEventListener('message',_onMandalaMsg);}catch(e){}
   _youCat=0;_renderYouCards();
   {const pb=$('#catPrev'),nb=$('#catNext');if(pb)pb.onclick=()=>{_youCat--;_renderYouCards();try{Haptics.select();}catch(e){}};if(nb)nb.onclick=()=>{_youCat++;_renderYouCards();try{Haptics.select();}catch(e){}};}
@@ -10856,7 +10890,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v117';
+const CACHE = 'lumen-v119';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
