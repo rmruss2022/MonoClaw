@@ -270,16 +270,82 @@ export async function transportRemote(action: "play" | "pause" | "next" | "previ
 
 /** What Spotify is actually playing right now (drives the Now Playing bar). */
 export async function currentlyPlaying() {
-  const j = await api("/me/player/currently-playing");
+  // additional_types is not optional once audiobooks are in play: this endpoint
+  // returns nothing at all for anything that is not a track by default, so
+  // "what's playing?" answers "nothing" in the middle of a chapter.
+  const j = await api("/me/player/currently-playing?additional_types=episode,track");
   if (!j || !j.item) return null;
   const t = j.item;
+  const isEpisode = t.type === "episode";
   return {
     source: "spotify" as const, id: t.id,
-    title: t.name, artist: (t.artists || []).map((a: any) => a.name).join(", "),
-    album: t.album?.name ?? "", art: t.album?.images?.[0]?.url ?? "",
+    title: t.name,
+    // A chapter has no artists; the author/publisher lives on the show.
+    artist: isEpisode
+      ? (t.show?.publisher || t.show?.name || "")
+      : (t.artists || []).map((a: any) => a.name).join(", "),
+    album: isEpisode ? (t.show?.name ?? "") : (t.album?.name ?? ""),
+    art: (isEpisode ? t.images?.[0]?.url : t.album?.images?.[0]?.url) ?? "",
+    kind: isEpisode ? "chapter" : "track",
     playing: !!j.is_playing, positionMs: j.progress_ms ?? 0, durationMs: t.duration_ms ?? 0,
     device: j.device?.name ?? "",
   };
+}
+
+/**
+ * Audiobooks.
+ *
+ * No new service, no new auth and no DRM to fight: Spotify's catalogue is
+ * reachable with the token this house already holds, and the account is
+ * entitled — verified against "Atomic Habits", which returns 29 chapters with
+ * is_playable: true and no restrictions.
+ *
+ * An audiobook's own URI is a `spotify:show:...` CONTEXT; its chapters come
+ * back as `spotify:episode:...`. Playing the show context resumes where he
+ * left off, which is exactly what "put my audiobook back on" should do.
+ */
+const MARKET = process.env.SPOTIFY_MARKET || "US";
+
+export interface Audiobook { id: string; name: string; authors: string; narrators: string; chapters: number; uri: string }
+
+const bookOf = (b: any): Audiobook => ({
+  id: b.id,
+  name: b.name,
+  authors: (b.authors || []).map((a: any) => a.name).join(", "),
+  narrators: (b.narrators || []).map((a: any) => a.name).join(", "),
+  chapters: b.total_chapters ?? 0,
+  uri: b.uri,
+});
+
+export async function searchAudiobooks(q: string, want = 5): Promise<Audiobook[]> {
+  const j = await api(`/search?type=audiobook&market=${MARKET}&limit=${want}&q=${encodeURIComponent(q)}`);
+  return (j.audiobooks?.items || []).filter(Boolean).map(bookOf);
+}
+
+/** The ones he has saved, so "continue my audiobook" needs no title. */
+export async function savedAudiobooks(want = 20): Promise<Audiobook[]> {
+  const j = await api(`/me/audiobooks?limit=${want}&market=${MARKET}`);
+  return (j.items || []).map((x: any) => x.audiobook ?? x).filter(Boolean).map(bookOf);
+}
+
+export async function saveAudiobook(id: string) {
+  await api(`/me/audiobooks?ids=${encodeURIComponent(id)}`, { method: "PUT" });
+  return { ok: true };
+}
+
+/**
+ * Jump relative to where we are — "skip back thirty seconds".
+ *
+ * The seek endpoint takes an absolute position, so a relative jump needs the
+ * current one first. Clamped to the item's length, because seeking past the
+ * end of a chapter silently does nothing on some devices.
+ */
+export async function skipBy(seconds: number) {
+  const np = await currentlyPlaying();
+  if (!np) return { ok: false, reason: "nothing is playing" };
+  const target = Math.max(0, Math.min(np.durationMs - 2000, np.positionMs + seconds * 1000));
+  await seek(target);
+  return { ok: true, positionMs: target, title: np.title };
 }
 
 /** Current track's tempo (BPM) for beat-matching party mode. null if unavailable

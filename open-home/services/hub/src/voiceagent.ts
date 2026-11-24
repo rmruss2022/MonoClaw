@@ -18,6 +18,7 @@ import * as personal from "./personal.ts";
 import * as presence from "./presence.ts";
 import * as speech from "./speech.ts";
 import * as party from "./party.ts";
+import * as climate from "./climate.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -130,10 +131,14 @@ Actions you can take (include any that apply):
   Use it for "party mode", "party time", "disco", "make the lights dance".
   NOT for "play a party playlist" — that is a music action.
 - {"type":"lock","locked":true|false}
-- {"type":"thermostat","target":<fahrenheit int>}
+- {"type":"thermostat","target":<fahrenheit int>,"mode":"heat|cool|auto|off"}
 - {"type":"music","op":"<see list>","source":"spotify|soundcloud","query":"<see below>"}
   music ops: play (needs query), pause, resume, next, previous, stop, shuffle_on, shuffle_off,
-  repeat_on, repeat_one, repeat_off, now_playing, like, volume.
+  repeat_on, repeat_one, repeat_off, now_playing, like, volume, audiobook, skip_back, skip_forward.
+  audiobook: query is a book title or author, or "continue"/"" to resume the last one.
+    Use it for "read me X", "play the audiobook X", "put my book back on".
+  skip_back / skip_forward: query is a number of SECONDS (default 30). For "go back a bit",
+    "skip ahead five minutes" (300), "repeat that last part" (30).
   query: for play → a song, artist, genre like "jazz", a playlist name, or "my liked songs";
          for volume → "up", "down", or a number 0-100; otherwise empty.
   Default source is spotify; use soundcloud only if the user says SoundCloud.
@@ -590,6 +595,44 @@ async function doMusic(a: any): Promise<string> {
     case "repeat_off": await safe(() => spotify.repeat("off")); return "repeat off";
     case "now_playing": case "whats_playing": { try { const c = await spotify.currentlyPlaying(); return c ? `${c.title} by ${c.artist}` : "nothing is playing"; } catch { return "I couldn't check what's playing"; } }
     case "like": case "save": { try { const c = await spotify.saveCurrent(); return c ? `saved ${c.title} to your liked songs` : "nothing is playing to save"; } catch { return "I couldn't save that"; } }
+    case "skip_back": case "skip_forward": {
+      const secs = Math.max(1, Math.min(3600, Number(query) || 30)) * (op === "skip_back" ? -1 : 1);
+      try {
+        const r = await spotify.skipBy(secs);
+        if (!r.ok) return "nothing is playing";
+        return `${op === "skip_back" ? "back" : "ahead"} ${Math.abs(secs)} seconds`;
+      } catch { return "I couldn't skip"; }
+    }
+    case "audiobook": case "book": {
+      try {
+        const dev = await spotify.deviceForRoom("Living Room");
+        // No title, or an explicit "continue": his saved shelf, most recent
+        // first. Playing the show context resumes where he left off.
+        if (!query || /^(continue|resume|keep going|my book|my audiobook|the book)$/i.test(query)) {
+          const saved = await spotify.savedAudiobooks(10);
+          if (!saved.length) return "you don't have any audiobooks saved yet — tell me a title and I'll find it";
+          await spotify.play({ contextUri: saved[0].uri, deviceId: dev?.id });
+          return `NOWPLAYING::${saved[0].name}`;
+        }
+        const found = await spotify.searchAudiobooks(query, 5);
+        if (!found.length) return `I couldn't find an audiobook for ${query}`;
+        // Prefer a title match over Spotify's own ranking, which likes
+        // workbooks and companion editions: searching "atomic habits" returns
+        // the book, then "The Atomic Habits Workbook".
+        const qw = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+        const best = found.reduce((a, b) => {
+          const sc = (x: any) => qw.filter((w) => x.name.toLowerCase().includes(w)).length - (/workbook|companion|summary|abridged/i.test(x.name) ? 2 : 0);
+          return sc(b) > sc(a) ? b : a;
+        }, found[0]);
+        await spotify.play({ contextUri: best.uri, deviceId: dev?.id });
+        // Save it so "continue my audiobook" works next time without a title.
+        spotify.saveAudiobook(best.id).catch(() => {});
+        return `NOWPLAYING::${best.name}${best.narrators ? `, read by ${best.narrators.split(",")[0]}` : ""}`;
+      } catch (e) {
+        console.log("[audiobook]", (e as Error)?.message);
+        return "I couldn't start that audiobook";
+      }
+    }
   }
   // op play/resume (optionally with a query to start something)
   if (!query) { await run("soloist", ["ctl", "play"]); return "playing"; }
@@ -758,7 +801,32 @@ async function execActions(actions: any[]): Promise<string[]> {
           break;
         }
         case "lock": home.setByType("lock", { locked: !!a.locked }); done.push(a.locked ? "locked" : "unlocked"); break;
-        case "thermostat": home.setDevice("thermostat_main", { target: Number(a.target) }); done.push(`thermostat ${a.target}`); break;
+        case "thermostat": {
+          // This used to write home.setDevice() directly — the MOCK house —
+          // exactly like the lights and the party did. There is no real
+          // thermostat onboarded today (climate/state reports real: false), so
+          // nothing was visibly broken, but the day one arrives "set it to 70"
+          // would have moved a number on a dashboard and nothing else. Going
+          // through climate.control() also gets range validation and mode for
+          // free, both of which this bypassed.
+          const target = a.target != null ? Number(a.target) : undefined;
+          const mode = a.mode ? String(a.mode).toLowerCase() : undefined;
+          // primary() is REAL thermostats only, and none are onboarded, so it
+          // returned null and this answered "no thermostat is set up" about a
+          // house that shows one. listThermostats() includes the mock, and
+          // climate.control() already handles both — so it works today and
+          // keeps working the day real hardware arrives.
+          const t = climate.primary() ?? climate.listThermostats()[0];
+          if (t) {
+            const r = await climate.control(t.id, { targetF: target, mode });
+            done.push(r.ok
+              ? `thermostat ${mode ? `${mode} ` : ""}${target != null ? `${target}°` : ""}`.trim()
+              : `thermostat: ${r.reason}`);
+          } else {
+            done.push("no thermostat is set up");
+          }
+          break;
+        }
         case "music": done.push(await doMusic(a)); break;
       }
     } catch (e) { console.log("[agent] action failed:", JSON.stringify(a), "->", (e as Error)?.message); }
@@ -1063,6 +1131,30 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
     }
   }
 
+  // Audiobooks and relative seeking. Both are things you say while listening,
+  // so a three-second model round trip is the wrong shape for them — "go back
+  // thirty seconds" needs to happen while you still remember what you missed.
+  const bookCue = /\b(audio ?book|book on tape)\b/.test(t)
+    || /^(read|play) me\b/.test(t)
+    || /\bread me\b/.test(t);
+  if (bookCue) {
+    const title = t
+      .replace(/^(ok(ay)?|hey|please)\b[,\s]*/g, "")
+      .replace(/\b(play|put on|put|start|resume|continue|read me|read|listen to|the|my|an?|audio ?book|book on tape|again|back on)\b/g, " ")
+      .replace(/\s{2,}/g, " ").trim();
+    const done = await execActions([{ type: "music", op: "audiobook", query: title }]);
+    const np = done.map((d) => /^NOWPLAYING::(.+)/.exec(d)?.[1]).find(Boolean);
+    return { reply: np ? `Playing ${np}.` : String(done[0] ?? "I couldn't start that"), actions: done, listen: false };
+  }
+  const seekBack = /\b(back|backward|backwards|rewind|repeat that|again)\b/.test(t);
+  const seekFwd = /\b(forward|ahead|skip ahead|fast forward)\b/.test(t);
+  if ((seekBack || seekFwd) && /\b(skip|jump|go|rewind|back up|move)\b/.test(t)) {
+    const m = t.match(/\b(\d{1,4})\s*(second|sec|minute|min)/);
+    const secs = m ? Number(m[1]) * (/min/.test(m[2]) ? 60 : 1) : 30;
+    const done = await execActions([{ type: "music", op: seekBack ? "skip_back" : "skip_forward", query: String(secs) }]);
+    return { reply: "", actions: done, listen: false };
+  }
+
   // Music transport. "next"/"skip"/"pause" need no reasoning.
   const music: Record<string, string> = {
     "next": "next", "skip": "next", "next song": "next", "skip this": "next",
@@ -1338,6 +1430,21 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   const cleanDone = done.map((d) => d.replace(/^NOWPLAYING::/, "now playing "));
   let reply = String(out.say || "").trim();
   if (np) reply = `Now playing ${np}.`;
+  // The model writes "say" BEFORE the actions run, so it cannot know whether
+  // they worked — and it assumes they did. Caught on "set the thermostat to
+  // 68": the action came back "no thermostat is set up" and the house
+  // cheerfully said "Got it, cooling down to 68." Agreeing to something that
+  // did not happen is the worst failure mode this thing has, so a failed
+  // action overrides the reply rather than hiding behind it.
+  const failed = done.filter((d) => /^(no |not |couldn't|can't|cannot)|: (not found|unsupported|offline|out of range)|didn't work/i.test(d));
+  if (failed.length && !np) {
+    console.log(`[agent] action failed, overriding the reply: ${JSON.stringify(failed)}`);
+    reply = failed[0].replace(/^thermostat: /, "The thermostat ")
+      .replace(/^no /, "There's no ")
+      .replace(/^/, (s) => s)
+      .replace(/^(.)/, (c) => c.toUpperCase())
+      .replace(/([^.?!])$/, "$1.");
+  }
   // "Okay." for a model that returned nothing and did nothing is a lie, and it
   // happened live on "Lower the volume." Say so instead.
   if (!reply) reply = cleanDone.length ? "Done." : "Sorry, I didn't get that.";
