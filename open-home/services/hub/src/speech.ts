@@ -88,17 +88,34 @@ function speakable(text: string): string {
     .trim();
 }
 
-// Music level while we speak, as a percentage. The voice has to win against a
-// playlist at 100% on a Bluetooth speaker across the room; 25 keeps the jazz
-// present underneath instead of cutting it to silence.
-const DUCK = Number(process.env.OPEN_HOME_SPEAK_DUCK ?? 25);
+// Music level while we speak, as a percentage OF AMPLITUDE — see sliderFor().
+// The voice has to win against a playlist at 100% on a Bluetooth speaker
+// across the room, but the jazz should still be there underneath.
+const DUCK = Number(process.env.OPEN_HOME_SPEAK_DUCK ?? 22);
 // mpv's software gain for the voice itself. TTS output is mastered much
 // quieter than streamed music, so matching levels is not enough.
 const VOICE_GAIN = String(process.env.OPEN_HOME_SPEAK_GAIN ?? 130);
 // Music level while the house is LISTENING. Lower than the speaking duck: the
 // microphone has to pick a voice out of whatever is playing, and it is across
-// the room from the speaker.
-const LISTEN_DUCK = Number(process.env.OPEN_HOME_LISTEN_DUCK ?? 25);
+// the room from the speaker. Low, not off — you should still hear it playing.
+const LISTEN_DUCK = Number(process.env.OPEN_HOME_LISTEN_DUCK ?? 15);
+
+/**
+ * Percent of amplitude -> the number `wpctl set-volume` wants.
+ *
+ * These are not the same scale, which is a trap worth spelling out because it
+ * cost us an inaudible duck. Measured on this Pi against a live Spotify stream:
+ *
+ *     wpctl set-volume 72 1.00   ->  channelVolumes [1.0,      1.0     ]
+ *     wpctl set-volume 72 0.63   ->  channelVolumes [0.250047, 0.250047]
+ *     wpctl set-volume 72 0.25   ->  channelVolumes [0.015625, 0.015625]
+ *
+ * wpctl's argument is a perceptual slider; PipeWire stores amplitude, and the
+ * slider is cubed on the way in. So "duck to 25%" set the music to 1.6% of
+ * amplitude — about -36 dB, which is silence, not background. Asking for 25%
+ * of amplitude means handing wpctl 0.63.
+ */
+const sliderFor = (pct: number) => Math.cbrt(Math.max(0, Math.min(100, pct)) / 100);
 
 function sh(cmd: string, args: string[]): Promise<void> {
   return new Promise((resolve) => {
@@ -127,30 +144,65 @@ function sh(cmd: string, args: string[]): Promise<void> {
  */
 interface StreamNode { id: number; name: string; level: number }
 
-/** One pw-dump, parsed once: every playback stream with its linear level. */
+// Stream ids from the most recent graph read.
+//
+// Reading the graph is not cheap here: open-home-hub carries CPUQuota=30%, and
+// a pw-dump plus a JSON.parse of the whole graph inside that budget measures
+// 600 ms — sometimes 1.4 s. That is the delay between the wake cue and the
+// music dropping, and no amount of running it earlier fixes it.
+//
+// So ducking fires at the ids we already know about FIRST, which is a single
+// wpctl, then reconciles against a fresh read. Stream ids are stable for the
+// life of a playback session, so the guess is right almost always and wrong
+// only harmlessly: wpctl says "Node N not found" for a dead id and we catch
+// any genuinely new stream a moment later.
+let knownStreams: number[] = [];
+
+/** One pw-dump, parsed once: every playback stream with its perceptual level. */
 async function snapshot(): Promise<StreamNode[]> {
   const dump = await run_("pw-dump", []);
   try {
-    return (JSON.parse(dump) as any[])
+    const out = (JSON.parse(dump) as any[])
       .filter((n) => n?.type === "PipeWire:Interface:Node" &&
-        String(n?.info?.props?.["media.class"] ?? "").startsWith("Stream/Output/Audio"))
+        String(n?.info?.props?.["media.class"] ?? "").startsWith("Stream/Output/Audio") &&
+        // Soloist exposes two nodes per playback and only one of them has a
+        // volume control; wpctl answers "Node N does not support volume" for
+        // the other. Keeping it in the set made every duck log a phantom
+        // stream it had not actually changed.
+        Array.isArray(n?.info?.params?.Props?.[0]?.channelVolumes) &&
+        // Never our own voice. run() avoids it by snapshotting before mpv
+        // starts, but anything that reads the graph DURING speech would
+        // otherwise remember the voice as something to duck next time.
+        n.info.props["application.name"] !== VOICE_APP)
       .map((n) => ({
         id: n.id as number,
         name: String(n.info.props["application.name"] ?? n.info.props["node.name"] ?? "?"),
-        // PipeWire stores a cubic value; the cube root is the linear level.
-        level: Math.cbrt(n.info?.params?.Props?.[0]?.channelVolumes?.[0] ?? 0),
+        // Stored as amplitude; report the perceptual level, which is what the
+        // numbers we set are in. See sliderFor().
+        level: Math.cbrt(n.info.params.Props[0].channelVolumes[0] ?? 0),
       }));
+    knownStreams = out.map((n) => n.id);
+    return out;
   } catch {
     return [];
   }
 }
 
+// Report amplitude, which is the same unit the DUCK numbers are in. Reporting
+// the perceptual value instead made "ducked to 22%" and "Spotify=0.60" look
+// like a contradiction when they are the same thing.
 const describe = (ns: StreamNode[]) =>
-  ns.map((n) => `${n.name}=${n.level.toFixed(2)}`).join(" ") || "(no streams)";
+  ns.map((n) => `${n.name}=${(n.level ** 3 * 100).toFixed(0)}%`).join(" ") || "(no streams)";
 
-async function setStreamVolumes(ids: number[], level: number): Promise<void> {
-  for (const id of ids) await sh("wpctl", ["set-volume", String(id), String(level)]);
-  if (ids.length) vlog(`set streams [${ids.join(",")}] -> ${level}`);
+/** Set every given stream to `pct` percent of amplitude. */
+async function setStreamVolumes(ids: number[], pct: number): Promise<void> {
+  if (!ids.length) return;
+  const slider = sliderFor(pct).toFixed(3);
+  // In parallel. Each wpctl is a process spawn on a Pi; doing them in sequence
+  // staggered the duck across the streams, which is audible as a lurch when
+  // Soloist has two.
+  await Promise.all(ids.map((id) => sh("wpctl", ["set-volume", String(id), slider])));
+  vlog(`set streams [${ids.join(",")}] -> ${pct}% amplitude (slider ${slider})`);
 }
 
 /** Dump every playback stream's level — the thing worth seeing when audio is wrong. */
@@ -216,15 +268,35 @@ let listenDuck: number[] | null = null;
 export async function duckForListening(on: boolean): Promise<void> {
   if (on) {
     if (listenDuck) return;
-    listenDuck = (await snapshot()).map((n) => n.id);
-    await setStreamVolumes(listenDuck, LISTEN_DUCK / 100);
-    vlog(`listening: ducked [${listenDuck.join(",")}] -> ${LISTEN_DUCK}%`);
+    const t0 = Date.now();
+    const guess = knownStreams.slice();
+    // The whole point: drop the music with one wpctl, before reading the graph.
+    if (guess.length) {
+      await setStreamVolumes(guess, LISTEN_DUCK);
+      vlog(`listening: ducked [${guess.join(",")}] -> ${LISTEN_DUCK}% in ${Date.now() - t0}ms (known streams)`);
+    }
+    listenDuck = guess;
+    // Now check we did not miss anything — a track started since the last read,
+    // or nothing had ever been read. Slow, but off the critical path.
+    const fresh = (await snapshot()).map((n) => n.id);
+    const missed = fresh.filter((id) => !guess.includes(id));
+    // The turn may have ended while we were reading the graph; do not duck
+    // into a room that has already been given its music back.
+    if (!listenDuck) { vlog("listening: ended before the graph read finished"); return; }
+    if (missed.length) {
+      await setStreamVolumes(missed, LISTEN_DUCK);
+      vlog(`listening: also ducked [${missed.join(",")}] (new since last read)`);
+    }
+    // Keep the dead ids too: restoring one is a no-op, and dropping one we did
+    // duck would leave the music quiet for the rest of the day.
+    if (listenDuck) listenDuck = [...new Set([...guess, ...fresh])];
+    vlog(`listening: ducked in ${Date.now() - t0}ms total`);
     return;
   }
   if (!listenDuck) return;
   const ids = listenDuck;
   listenDuck = null;
-  await setStreamVolumes(ids, 1.0);
+  await setStreamVolumes(ids, 100);
   vlog(`listening: restored [${ids.join(",")}]`);
 }
 
@@ -234,9 +306,29 @@ let current: ReturnType<typeof spawn> | null = null;
  *  listens again, or it records the house talking to itself. */
 export function speaking(): boolean { return current !== null; }
 
-/** Stop whatever is being spoken right now. */
-export function stop(): void {
+// Bumped by stop(). Anything already waiting in the queue was asked for before
+// the interruption, so it is no longer wanted: "Hey Jarvis — stop" during the
+// morning report has to kill the sentence that is playing AND the rest of the
+// briefing behind it, or the house goes quiet for a second and then carries
+// blithely on, which is worse than not stopping at all.
+let generation = 0;
+
+/** Kill the player, nothing more. "Newest utterance wins" uses this. */
+function kill(): void {
   if (current) { try { current.kill("SIGTERM"); } catch { /* already gone */ } current = null; }
+}
+
+/**
+ * Stop whatever is being spoken right now, and drop anything queued behind it.
+ *
+ * Distinct from kill() on purpose: run() kills the previous utterance every
+ * time it starts, and if that also bumped the generation then queuing two
+ * passages back to back would silently discard the second one.
+ */
+export function stop(): void {
+  generation++;
+  kill();
+  log(`stopped (generation ${generation})`);
 }
 
 // One utterance at a time, newest wins. Two overlapping replies are worse than
@@ -247,7 +339,11 @@ let queue: Promise<void> = Promise.resolve();
 export function speak(text: string): Promise<void> {
   const clean = speakable(text);
   if (!clean || !enabled()) return Promise.resolve();
-  queue = queue.catch(() => {}).then(() => run(clean));
+  const gen = generation;
+  queue = queue.catch(() => {}).then(() => {
+    if (gen !== generation) { vlog(`dropped ${clean.length} chars — interrupted before it played`); return; }
+    return run(clean);
+  });
   return queue;
 }
 
@@ -280,11 +376,11 @@ async function run(text: string): Promise<void> {
   vlog(`levels before: ${describe(graph)}${listenDuck ? " (already ducked for listening)" : ""}`);
   if (!stream) { log("no provider could synthesize"); return; }
 
-  stop();
+  kill();
   // Duck and start playback together. Ducking first left the room quiet for
   // however long synthesis took, which is exactly the pause that made this
   // feel broken.
-  await setStreamVolumes(music, DUCK / 100);
+  await setStreamVolumes(music, DUCK);
 
   try {
     await new Promise<void>((resolve) => {
@@ -351,7 +447,7 @@ async function run(text: string): Promise<void> {
   } finally {
     // Always restore, even if playback threw or was killed by a newer
     // utterance — otherwise the music stays quiet for the rest of the day.
-    await setStreamVolumes(music, 1.0);
+    await setStreamVolumes(music, 100);
     await levels("after");
   }
   log(`spoke ${text.length} chars via ${provider()} in ${Date.now() - started}ms (duck=${DUCK}% gain=${VOICE_GAIN})`);

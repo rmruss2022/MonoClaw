@@ -24,6 +24,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 import wave
 from collections import deque
@@ -71,6 +72,10 @@ FOLLOWUP_GRACE_S = float(os.environ.get("FOLLOWUP_GRACE_S", "6.0"))
 SPEECH_START_WAIT_S = float(os.environ.get("SPEECH_START_WAIT_S", "6.0"))
 # Bluetooth lag: the speaker is still emitting after the player process exits.
 SPEECH_TAIL_S = float(os.environ.get("SPEECH_TAIL_S", "0.6"))
+# Wake-word threshold while the house is SPEAKING, for interrupting it. Higher
+# than the idle one: the mic is hearing our own voice out of the same speaker,
+# and a false positive cuts a reply off mid-word.
+BARGE_THRESHOLD = float(os.environ.get("BARGE_THRESHOLD", "0.65"))
 
 
 def log(*a: object) -> None:
@@ -105,13 +110,38 @@ class Hub:
         except Exception as e:
             log("duck call failed:", e)
 
+    def stop_speaking(self) -> None:
+        """Cut the reply off mid-sentence — and drop anything queued behind it."""
+        try:
+            self.s.post(f"{HUB}/speak/stop", json={}, timeout=4)
+        except Exception as e:
+            log("stop call failed:", e)
+
+    def wake_actions(self) -> None:
+        """Everything the hub should do the instant the wake word fires.
+
+        Run on a thread, because `beep()` blocks for the length of the cue plus
+        the Bluetooth latency — call this after it and the music stays at full
+        volume for most of a second while you are already talking, which is
+        exactly the lag that felt broken. Overlapping the two means the duck
+        lands *during* the blip.
+
+        Stopping speech is unconditional and harmless when nothing is playing:
+        it is what makes "Hey Jarvis" an interrupt. Saying the wake word while
+        the morning report is grinding on should shut it up immediately, not
+        after the paragraph.
+        """
+        self.stop_speaking()
+        self.listening(True)
+
     def _speaking(self) -> bool:
         try:
             return bool(self.s.get(f"{HUB}/speak/status", timeout=4).json().get("speaking"))
         except Exception:
             return False
 
-    def wait_until_quiet(self, timeout_s: float = 180.0) -> float:
+    def wait_until_quiet(self, listener: "BargeIn | None" = None,
+                         timeout_s: float = 300.0) -> "tuple[float, bool]":
         """Block until the house has actually finished speaking.
 
         Two phases, and the first one is the whole point. The hub answers the
@@ -122,23 +152,39 @@ class Hub:
         its own voice as the next question for six turns running.
 
         So: wait for speech to START, then wait for it to STOP, then let the
-        Bluetooth tail drain before trusting the mic again."""
-        t0 = time.time()
-        start_deadline = t0 + SPEECH_START_WAIT_S
-        while time.time() < start_deadline:
-            if self._speaking():
-                break
-            time.sleep(0.15)
+        Bluetooth tail drain before trusting the mic again.
 
-        deadline = time.time() + timeout_s
-        while time.time() < deadline:
-            if not self._speaking():
-                break
-            time.sleep(0.2)
+        If a `listener` is given, the mic keeps running through all of it and
+        the wake word is still live — so you can talk over the reply instead of
+        waiting it out. Returns (seconds, interrupted).
+        """
+        t0 = time.time()
+
+        def hold(until: float, while_speaking: bool) -> bool:
+            """Wait, watching for the wake word. True if it fired."""
+            last_poll = 0.0
+            while time.time() < until:
+                if listener is not None:
+                    if listener.poll():
+                        return True
+                else:
+                    time.sleep(0.15)
+                # The status poll is cheap but not free, and the mic has to stay
+                # at real time or wake detection falls behind the room.
+                if time.time() - last_poll > 0.3:
+                    last_poll = time.time()
+                    if self._speaking() is not while_speaking:
+                        return False
+            return False
+
+        if hold(t0 + SPEECH_START_WAIT_S, while_speaking=False):
+            return time.time() - t0, True
+        if hold(time.time() + timeout_s, while_speaking=True):
+            return time.time() - t0, True
 
         # The speaker is several hundred ms behind the process exiting.
         time.sleep(SPEECH_TAIL_S)
-        return time.time() - t0
+        return time.time() - t0, False
 
     def send_audio(self, wav: bytes) -> dict | None:
         body = {"audio": base64.b64encode(wav).decode(), "mime": "audio/wav"}
@@ -260,6 +306,43 @@ class NoiseFloor:
         return float(min(max(t, SILENCE_RMS_MIN), SILENCE_RMS_MAX))
 
 
+class BargeIn:
+    """The wake word, still listening while the house is talking.
+
+    Being unable to interrupt is the difference between an assistant and a
+    recording. The morning report is a couple of minutes long; if the only way
+    out is to wait for it, you stop asking for it.
+
+    The catch is that the microphone and the speaker are in the same room, so
+    this model is now listening to our own voice. Hence a higher threshold than
+    the idle one: a false positive here truncates a reply mid-word, which is
+    more annoying than a missed interrupt.
+    """
+
+    def __init__(self, oww, key: str, threshold: float) -> None:
+        self.oww = oww
+        self.key = key
+        self.threshold = threshold
+        self.mic: "subprocess.Popen | None" = None
+        self.score = 0.0
+
+    def poll(self) -> bool:
+        """Consume one frame. True if the wake word fired."""
+        if self.mic is None:
+            time.sleep(0.08)
+            return False
+        f = read_frame(self.mic)
+        if f is None:
+            time.sleep(0.08)
+            return False
+        s = self.oww.predict(f).get(self.key, 0.0)
+        if s >= self.threshold:
+            self.score = s
+            reset(self.oww)
+            return True
+        return False
+
+
 def rms(frame: np.ndarray) -> float:
     # float64 first: int16 squared overflows and reports silence for loud audio.
     return float(np.sqrt(np.mean(frame.astype(np.float64) ** 2)))
@@ -316,6 +399,7 @@ def main() -> int:
     hub = Hub()
     hub.login()
     floor = NoiseFloor()
+    barge = BargeIn(oww, key, BARGE_THRESHOLD)
 
     mic = open_mic()
     log("listening")
@@ -340,12 +424,13 @@ def main() -> int:
             thresh = floor.threshold
             log(f"wake ({scores[key]:.2f})  floor {floor.level:.0f} -> threshold {thresh:.0f}")
             reset(oww)
+            # Duck (and interrupt any reply still playing) IN PARALLEL with the
+            # cue. aplay blocks for the length of the blip plus Bluetooth
+            # latency, so doing this afterwards left the music at full volume
+            # for most of a second after the beep — which is the lag you hear.
+            threading.Thread(target=hub.wake_actions, daemon=True).start()
             beep()
-            # Drop the music NOW, not when the reply starts: the mic has to
-            # pick a voice out of whatever is playing, and it is across the
-            # room from the speaker.
-            hub.listening(True)
-            log(f"  +{(time.time()-t_wake)*1000:.0f}ms cue + music ducked")
+            log(f"  +{(time.time()-t_wake)*1000:.0f}ms cue done (duck fired in parallel)")
 
             # A conversation, not a command. The house decides when to keep the
             # mic open — it knows whether it just asked a question or simply
@@ -381,8 +466,33 @@ def main() -> int:
 
                 # Wait out the reply either way: even on the last turn we must
                 # not leave the mic hot while the speaker is still talking.
-                spoke_for = hub.wait_until_quiet()
-                log(f"  +{spoke_for:.1f}s speaking   |   total {time.time()-t_wake:.1f}s since wake")
+                # The wake word stays live throughout, so a long answer can be
+                # cut short rather than sat through.
+                if (r.get("reply") or "").strip():
+                    barge.mic = mic
+                    spoke_for, cut_off = hub.wait_until_quiet(barge)
+                    barge.mic = None
+                    log(f"  +{spoke_for:.1f}s speaking   |   total {time.time()-t_wake:.1f}s since wake")
+                else:
+                    # Nothing is going to play, so do not sit through the
+                    # six-second "has playback started yet?" grace. "Stop"
+                    # answers with silence by design.
+                    spoke_for, cut_off = 0.0, False
+                    log("  no reply to play — not waiting")
+
+                if cut_off:
+                    log(f"interrupted ({barge.score:.2f}) — stopping and listening")
+                    hub.stop_speaking()
+                    beep(freq=660, ms=90)
+                    mic.kill()
+                    mic = open_mic()
+                    # Treat it as a fresh request, not a follow-up: you
+                    # interrupted to say something new, and you get the full
+                    # onset grace to say it.
+                    first = True
+                    frame = None
+                    continue
+
                 if not r.get("listen"):
                     log("end of turn")
                     break

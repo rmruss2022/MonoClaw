@@ -16,6 +16,7 @@ import * as spotify from "./spotify.ts";
 import * as sceneConfig from "./sceneConfig.ts";
 import * as personal from "./personal.ts";
 import * as presence from "./presence.ts";
+import * as speech from "./speech.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -24,6 +25,10 @@ const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || "";
 const VOICE_MODEL_ID = process.env.VOICE_MODEL_ID || "claude-haiku-4-5-20251001";
 const FIRECRAWL_KEY = process.env.FIRECRAWL_API_KEY || "";
+const BRAVE_KEY = process.env.BRAVE_API_KEY || process.env.BRAVE_SEARCH_API_KEY || "";
+// Where the house is. Used for "near me" searches and for the default weather
+// lookup, both of which are nonsense without it.
+const HOME_PLACE = process.env.OPEN_HOME_PLACE || "New York, NY";
 const UID = process.getuid ? process.getuid() : 1000;
 const EXEC_ENV = { ...process.env, XDG_RUNTIME_DIR: process.env.XDG_RUNTIME_DIR || `/run/user/${UID}` };
 
@@ -116,7 +121,9 @@ Actions you can take (include any that apply):
   "what's playing"→now_playing, "like this song"→like, "play my discover weekly"→play query "discover weekly".
 
 Rules:
-- For anything needing current/live info (weather, news, sports, prices, "today", facts you're unsure of), set "web_search" to a focused query and set "say" to "" — the home will search and ask you again with results.
+- For anything needing current/live info (weather, news, sports, prices, movie times, opening hours, "today", facts you're unsure of), set "web_search" to a focused query and set "say" to "" — the home will search and ask you again with results.
+- You CAN search the live web. Never say you are unable to look something up: if you do not know it, set "web_search" instead. If results come back empty, say what you do know and that the search found nothing — not that you have no access.
+- For anything local ("near me", "around here"), search with the actual place name, not "near me".
 - Otherwise put your spoken answer in "say" and any device actions in "actions".
 - Be decisive: if he says "turn on the lights", do it. If he just chats, chat back briefly.
 
@@ -148,11 +155,94 @@ function run(cmd: string, args: string[], timeout = 8000): Promise<string> {
   });
 }
 
+// Questions whose answer lives on the page, not in the snippet about the page.
+//
+// Deliberately narrow, and movie showtimes are deliberately NOT in it. They
+// look like the obvious case and they are the one that does not work: measured
+// against Fandango, Moviefone and CinemaClock, the listings are loaded by
+// JavaScript from an API after a location prompt, so a scrape returns the
+// filter sidebar and the promo fine print — CinemaClock literally renders
+// "0 cinemas, 0 movies". Reading one costs six seconds to learn nothing, so
+// showtimes need a real showtimes API, not a scraper.
+const NEEDS_PAGE = /open (today|now|until|till)|opening hours|what time does .* (open|close)|hours of operation|\bmenu\b|final score|standings|box score|times for/i;
+
+/**
+ * Read one page through Firecrawl.
+ *
+ * Only called for the queries that need it — it costs several seconds, which
+ * is a long time to stand in a room waiting for an answer.
+ */
+/**
+ * The part of a page that answers the question.
+ *
+ * Taking the first N characters is the obvious thing and it is wrong: on any
+ * real page those are the nav bar, the cookie notice and the filter sidebar.
+ * Measured on a cinema listings page, 3500 characters from the top got as far
+ * as the list of languages. So: strip the markdown chrome, then keep the
+ * window where the query's own words are densest.
+ */
+function relevantPart(md: string, query: string, budget = 3500): string {
+  const lines = md
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")       // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")    // links -> their text
+    .split("\n")
+    .map((l) => l.replace(/^[\s\-*|>]+/, "").trimEnd())
+    .filter((l) => l.length >= 3);
+  const joined = lines.join("\n");
+  if (joined.length <= budget) return joined;
+
+  const words = (query.toLowerCase().match(/[a-z]{4,}/g) || []).filter((w) => w !== "what");
+  const score = (l: string) => {
+    const s = l.toLowerCase();
+    // Times and prices are what these questions are usually after.
+    return (l.match(/\b\d{1,2}:\d{2}\s*[ap]?\.?m?\.?/gi) || []).length * 3
+      + words.filter((w) => s.includes(w)).length;
+  };
+  const scores = lines.map(score);
+  const win = 80;
+  let run = scores.slice(0, win).reduce((a, b) => a + b, 0);
+  let best = run, at = 0;
+  for (let i = 1; i + win <= scores.length; i++) {
+    run += scores[i + win - 1] - scores[i - 1];
+    if (run > best) { best = run; at = i; }
+  }
+  // Nothing scored: the answer is probably not on the page at all, and the top
+  // is at least where the page says what it is.
+  const slice = lines.slice(best > 0 ? at : 0, (best > 0 ? at : 0) + 400).join("\n");
+  return slice.slice(0, budget);
+}
+
+async function readPage(url: string | undefined, query: string): Promise<string> {
+  if (!url || !FIRECRAWL_KEY) return "";
+  try {
+    const ctrl = new AbortController();
+    // Shorter than it wants to be: this is on the critical path of someone
+    // standing in a room waiting for an answer.
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    const r = await fetch("https://api.firecrawl.dev/v2/scrape", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${FIRECRAWL_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    const j: any = await r.json();
+    const md = String(j?.data?.markdown || j?.markdown || "").trim();
+    if (!md) { console.log(`[search] firecrawl read ${url} -> empty`); return ""; }
+    const kept = relevantPart(md, query);
+    console.log(`[search] firecrawl read ${url} -> ${md.length} chars, kept ${kept.length}`);
+    return `\n\nContents of ${url} (read live, trust this over the snippets above):\n${kept}`;
+  } catch (e) {
+    console.log("[search] firecrawl read failed:", (e as Error)?.message);
+    return "";
+  }
+}
+
 async function webSearch(query: string): Promise<string> {
   const q = query.toLowerCase();
   // Weather: geocode (open-meteo, no key) + current conditions.
   if (/weather|temperature|forecast|rain|snow|cold|hot|degrees/.test(q)) {
-    const place = query.replace(/.*weather (in|for|at)\s*/i, "").replace(/weather|what('s| is)|the|like|right now|today|\?/gi, "").trim() || "New York";
+    const place = query.replace(/.*weather (in|for|at)\s*/i, "").replace(/weather|what('s| is)|the|like|right now|today|\?/gi, "").trim() || HOME_PLACE;
     try {
       const g: any = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1`)).json();
       const loc = g?.results?.[0];
@@ -164,7 +254,51 @@ async function webSearch(query: string): Promise<string> {
       }
     } catch {}
   }
-  // General: Firecrawl search (real web results).
+  // General: Brave first. It is an actual search index — it answers "movie
+  // times near me" and "is this place open" with the thing you asked for,
+  // which the DuckDuckGo instant-answer endpoint simply does not do. That was
+  // the whole of "I couldn't search the web for movie times": no key was
+  // installed on this Pi, so every general query fell through to DDG, which
+  // returns an empty abstract for anything local or time-sensitive.
+  if (BRAVE_KEY) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 9000);
+      const r = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=5&country=us`,
+        { headers: { Accept: "application/json", "X-Subscription-Token": BRAVE_KEY }, signal: ctrl.signal },
+      );
+      clearTimeout(t);
+      if (r.ok) {
+        const j: any = await r.json();
+        const bits: string[] = [];
+        const top: string[] = [];
+        // Brave's own extracted answer, when it has one, is usually the whole
+        // answer — put it first so the model does not have to infer it from
+        // five snippets.
+        const fx = j?.faq?.results?.[0];
+        if (fx?.answer) bits.push(String(fx.answer));
+        for (const w of (j?.web?.results || []).slice(0, 5)) {
+          const line = `${w.title || ""}: ${(w.description || "").replace(/<\/?[^>]+>/g, "")}`.trim();
+          if (line.length > 2) bits.push(line);
+          if (w.url) top.push(String(w.url));
+        }
+        if (bits.length) {
+          console.log(`[search] brave "${query}" -> ${bits.length} results`);
+          // Some questions cannot be answered from snippets. Movie times are
+          // the clear case: Brave's cached description for a listings page is
+          // days old, so the answer looked live and was not. For those, read
+          // the top page itself.
+          const page = NEEDS_PAGE.test(query) ? await readPage(top[0], query) : "";
+          return `Web results for "${query}":\n- ${bits.join("\n- ")}${page}`;
+        }
+      } else {
+        console.log(`[search] brave HTTP ${r.status}`);
+      }
+    } catch (e) { console.log("[search] brave failed:", (e as Error)?.message); }
+  }
+  // Firecrawl next: slower, but it reads pages rather than snippets, so it
+  // still wins on anything that needs the detail behind a link.
   if (FIRECRAWL_KEY) {
     try {
       const ctrl = new AbortController();
@@ -512,6 +646,26 @@ function detectRoom(t: string): string {
 export async function fastPath(text: string): Promise<{ reply: string; actions: string[]; listen: boolean } | null> {
   const t = text.toLowerCase().trim().replace(/[.!?]+$/, "");
 
+  // "Stop." — and it has to be instant, because the thing you are trying to
+  // stop is talking over you while you say it. Nothing goes to the model here.
+  //
+  // Bare "stop" is ambiguous on purpose and resolved by what is actually
+  // happening: if the house is mid-sentence you meant the house, otherwise you
+  // meant the music. "Stop the music" is unambiguous and handled below.
+  if (/^(stop|stop it|stop talking|shut up|be quiet|quiet|silence|enough|that'?s enough|never ?mind|cancel|forget it|skip it|no thanks|thank you)$/.test(t)) {
+    if (speech.speaking()) {
+      speech.stop();
+      // No reply. Answering "okay" to "shut up" is its own small insult, and
+      // it would also be the next thing playing out of the speaker.
+      return { reply: "", actions: ["stopped talking"], listen: false };
+    }
+    if (/^(stop|stop it|quiet|silence|enough|that'?s enough)$/.test(t)) {
+      const done = await execActions([{ type: "music", op: "pause" }]);
+      return { reply: "", actions: done, listen: false };
+    }
+    return { reply: "", actions: [], listen: false };
+  }
+
   // Lights. Require a command cue, so questions fall through to the model.
   const lightCue = /\b(turn|switch|put|shut|kill|cut)\b/.test(t) || /^lights? (on|off)\b/.test(t);
   if (lightCue && /\blights?\b/.test(t)) {
@@ -598,17 +752,36 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     }
   } catch { /* presence is optional context */ }
   // Pre-search obvious live-info questions so they're a single LLM round-trip (faster).
-  const needsLive = /weather|forecast|temperatur|rain|snow|news|headline|today|tonight|latest|score|who won|standings|game|price|stock|how much|right now|currently|open now|hours|what time|near me/i.test(text);
+  // Pre-searching costs a round trip, but asking the model first and THEN
+  // searching costs two — so anything that smells like it needs the live web
+  // gets searched up front. "Movie times" belongs here; it was missing, so the
+  // model answered from training data and then admitted it couldn't look it up.
+  const needsLive = /weather|forecast|temperatur|rain|snow|news|headline|today|tonight|tomorrow|latest|score|who won|standings|game|price|stock|how much|right now|currently|open now|hours|what time|near me|movie|showtime|show time|times for|playing at|theater|theatre|restaurant|reservation|menu|address|directions|traffic|subway|train|flight|when does|when is|who is|what is the|concert|tickets|is .* open/i.test(text);
+  // "Movie times near me" is unanswerable without a "me". The house knows
+  // where it is; the search engine does not.
+  const localise = (q: string) =>
+    /near me|nearby|around here|near here|close by|local/i.test(q)
+      ? q.replace(/near me|nearby|around here|near here|close by/gi, `in ${HOME_PLACE}`)
+      : q;
   let pre = "";
   if (needsLive) {
-    const results = await webSearch(text);
+    const results = await webSearch(localise(text));
     pre = `\nWeb results (use these, don't ask to search again):\n${results}\n`;
   }
-  const p1 = `${SYSTEM}\n\n${about}\n\nHouse (background only, do not recite): ${state}${pre}\nMatthew said: "${text}"`;
+  const p1 = `${SYSTEM}\n\nThe house is in ${HOME_PLACE}; "near me" means there.\n\n${about}\n\nHouse (background only, do not recite): ${state}${pre}\nMatthew said: "${text}"`;
   let out = parseJson(await ccut(p1)) || {};
   // fallback: one web-search round-trip if the model still asks for one
+  // One search per turn, hard. When we pre-searched and the model asks again
+  // anyway — which it does when the results are thin — a second round trip
+  // takes the answer from 5 seconds to 16 and comes back saying the same
+  // thing. Better a frank "I couldn't find it" quickly.
+  if (pre && out.web_search) {
+    console.log("[agent] ignoring a second search request; already pre-searched");
+    out.web_search = "";
+    if (!String(out.say || "").trim()) out.say = "I looked, but I couldn't find that. Want me to try it a different way?";
+  }
   if (out.web_search && !String(out.say || "").trim()) {
-    const results = await webSearch(String(out.web_search));
+    const results = await webSearch(localise(String(out.web_search)));
     const p2 = `${SYSTEM}\n\n${about}\n\nHouse (background only, do not recite): ${state}\nMatthew said: "${text}"\n\nYou asked to search; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
     out = parseJson(await ccut(p2)) || out;
   }
