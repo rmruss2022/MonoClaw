@@ -137,6 +137,10 @@ Actions you can take (include any that apply):
 Rules:
 - For anything needing current/live info (weather, news, sports, prices, movie times, opening hours, "today", facts you're unsure of), set "web_search" to a focused query and set "say" to "" — the home will search and ask you again with results.
 - You CAN search the live web. Never say you are unable to look something up: if you do not know it, set "web_search" instead. If results come back empty, say what you do know and that the search found nothing — not that you have no access.
+- NEVER state that something is unavailable, not playing, closed or sold out unless the search results actually SAY so. "The page I read had no showtimes on it" is not the same as "it is not showing" — in that case say you could not pull the times up. Absence of evidence is not evidence, and a confident wrong "no" is the worst answer you can give.
+- Never invent a specific time, address, price or runtime. If it is not in the results, say you do not have it.
+- Do not reinterpret what a page says. "No longer on sale" next to a showtime means that screening has already started or ticketing has closed — it does NOT mean sold out. Report the status in the page's own terms, or just give him the showings that are still available.
+- You are told the current date and time below. Use it: a 2 PM showing is not an option at 8 PM. Prefer the next showings that have not happened yet, and say which ones are later tonight versus tomorrow.
 - For anything local ("near me", "around here"), search with the actual place name, not "near me".
 - Otherwise put your spoken answer in "say" and any device actions in "actions".
 - Be decisive: if he says "turn on the lights", do it. If he just chats, chat back briefly.
@@ -179,6 +183,41 @@ function run(cmd: string, args: string[], timeout = 8000): Promise<string> {
 // "0 cinemas, 0 movies". Reading one costs six seconds to learn nothing, so
 // showtimes need a real showtimes API, not a scraper.
 const NEEDS_PAGE = /open (today|now|until|till)|opening hours|what time does .* (open|close)|hours of operation|\bmenu\b|final score|standings|box score|times for/i;
+
+/**
+ * Showtimes, which I wrote off earlier today and should not have.
+ *
+ * The conclusion then — "listings are JavaScript, this needs an API" — was
+ * right about the aggregators and wrong as a general claim. Matthew sent the
+ * page his local cinema actually publishes:
+ *
+ *   hk-cinemas.com/.../williamsburg-cinemas/movies/the-hunger-games-...
+ *   -> scrapes clean, 18 showtimes: 2:00 PM, 4:00 PM, 5:30 PM, 7:45 PM ...
+ *
+ * Cinema chains server-render their own sites. Brave even returns that page
+ * FIRST for a focused query. What failed was the query: the raw utterance
+ * "Okay, give me showtimes for the new Hungry Games movie." ranked Fandango's
+ * movie-overview page top instead, and that page has no times on it.
+ */
+const SHOWTIMES = /showtime|show time|movie times|what time.{0,20}(movie|playing)|times for .*(movie|film)|(movie|film).{0,20}times/i;
+
+/**
+ * Turn an utterance into something worth searching.
+ *
+ * "Okay, give me showtimes for the new Hungry Games movie." is a sentence
+ * spoken to a person, not a query. The politeness at the front and the trailing
+ * punctuation measurably changed which page Brave ranked first.
+ */
+function cleanQuery(q: string): string {
+  return q
+    .replace(/^\s*(ok(ay)?|alright|hey|so|um|uh|well|yeah|yes|no)\b[,.\s]*/gi, "")
+    .replace(/^\s*(can you|could you|would you|please|i want to know|i'?d like to know|tell me|give me|find me|look up|search for|show me|get me|what are|what is|whats)\b\s*/gi, "")
+    .replace(/\bfor me\b|\bplease\b/gi, "")
+    .replace(/\bthe new\b/gi, "")
+    .replace(/[?!.]+\s*$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 
 /**
  * Read one page through Firecrawl.
@@ -226,7 +265,48 @@ function relevantPart(md: string, query: string, budget = 3500): string {
   return slice.slice(0, budget);
 }
 
-async function readPage(url: string | undefined, query: string): Promise<string> {
+/**
+ * Try several results and keep the one that actually answers the question.
+ *
+ * Reading only Brave's top hit is how "give me showtimes for the Hunger Games"
+ * came back "I'm not seeing showtimes tonight" for a film with eighteen
+ * showings four minutes from the house. The top hit was Fandango's
+ * movie-OVERVIEW page, which has no showtimes on it at all, and a page with no
+ * showtimes is indistinguishable from a film that is not playing — so the house
+ * stated the second thing as fact.
+ *
+ * `want` is the test that the page is the right KIND of page. A showtimes
+ * question wants times on it; without that check there is no way to tell "read
+ * the wrong page" from "there is no answer", and those deserve opposite
+ * replies.
+ */
+const CLIENT_RENDERED = /fandango\.com|moviefone\.com|cinemaclock\.com|atomtickets\.com|google\.com|yelp\.com|tripadvisor\./i;
+
+async function readBest(urls: string[], query: string, want?: (md: string) => boolean): Promise<string> {
+  if (!FIRECRAWL_KEY) return "";
+  // Proven tonight: these load their listings by JavaScript after a location
+  // prompt, so a scrape returns the filter sidebar and the promo fine print.
+  // Skipping them outright puts the budget on pages that can actually be read.
+  const candidates = urls.filter((u) => !CLIENT_RENDERED.test(u)).slice(0, 3);
+  for (const url of candidates) {
+    const md = await readRaw(url);
+    if (!md) continue;
+    if (want && !want(md)) {
+      console.log(`[search] ${url} read but has no answer in it — trying the next result`);
+      continue;
+    }
+    const kept = relevantPart(md, query);
+    console.log(`[search] read ${url} -> ${md.length} chars, kept ${kept.length}`);
+    return `\n\nContents of ${url} (read live, trust this over the snippets above):\n${kept}`;
+  }
+  if (urls.length) console.log(`[search] no readable page answered ${JSON.stringify(query)}`);
+  return "";
+}
+
+/** At least three clock times — enough to be a listing, not a stray "7pm" in prose. */
+const hasTimes = (md: string) => (md.match(/\b\d{1,2}:\d{2}\s*[apAP]\.?[mM]\.?/g) || []).length >= 3;
+
+async function readRaw(url: string | undefined): Promise<string> {
   if (!url || !FIRECRAWL_KEY) return "";
   try {
     const ctrl = new AbortController();
@@ -242,12 +322,10 @@ async function readPage(url: string | undefined, query: string): Promise<string>
     clearTimeout(t);
     const j: any = await r.json();
     const md = String(j?.data?.markdown || j?.markdown || "").trim();
-    if (!md) { console.log(`[search] firecrawl read ${url} -> empty`); return ""; }
-    const kept = relevantPart(md, query);
-    console.log(`[search] firecrawl read ${url} -> ${md.length} chars, kept ${kept.length}`);
-    return `\n\nContents of ${url} (read live, trust this over the snippets above):\n${kept}`;
+    if (!md) console.log(`[search] firecrawl read ${url} -> empty`);
+    return md;
   } catch (e) {
-    console.log("[search] firecrawl read failed:", (e as Error)?.message);
+    console.log(`[search] firecrawl read ${url} failed:`, (e as Error)?.message);
     return "";
   }
 }
@@ -378,12 +456,22 @@ async function webSearch(query: string): Promise<string> {
         }
         if (bits.length) {
           console.log(`[search] brave "${query}" -> ${bits.length} results`);
-          // Some questions cannot be answered from snippets. Movie times are
-          // the clear case: Brave's cached description for a listings page is
-          // days old, so the answer looked live and was not. For those, read
-          // the top page itself.
-          const page = NEEDS_PAGE.test(query) ? await readPage(top[0], query) : "";
-          return `Web results for "${query}":\n- ${bits.join("\n- ")}${page}`;
+          // Some questions cannot be answered from snippets: Brave's cached
+          // description for a listings page is days old, so the answer looks
+          // live and is not.
+          const showtimes = SHOWTIMES.test(query);
+          const page = showtimes
+            ? await readBest(top, query, hasTimes)
+            : NEEDS_PAGE.test(query) ? await readBest(top, query) : "";
+          // When a showtimes question could not be answered from any readable
+          // page, SAY THAT. The previous behaviour handed the model a page with
+          // no times on it, and "this page has no showtimes" is
+          // indistinguishable from "the film is not playing" — so it told
+          // Matthew a film with eighteen showings nearby was not showing.
+          const caveat = showtimes && !page
+            ? `\n\nIMPORTANT: no readable showtimes page could be fetched. You do NOT know whether this is playing or not. Say you could not pull up the showtimes and offer the cinema's own site — do NOT say it is not showing, and do NOT invent times.`
+            : "";
+          return `Web results for "${query}":\n- ${bits.join("\n- ")}${page}${caveat}`;
         }
       } else {
         console.log(`[search] brave HTTP ${r.status}`);
@@ -969,8 +1057,12 @@ function isFollowUp(text: string): boolean {
   // "whats the weather in Chicago" is five words and was being treated as a
   // follow-up, which skipped the weather lookup and sent it to a general web
   // search instead — a worse answer than the one it had asked for.
-  if (/\b(?:in|at|for|to)\s+[A-Z][a-z]/.test(text)) return false;
   const t = text.toLowerCase();
+  // A correction is always about the previous turn. "No, the new Hunger Games
+  // movie." was searched verbatim — the word "No," went straight into Brave —
+  // because it was six words long and named no pronoun.
+  if (/^(no|nope|not that|yes|yeah|actually|i meant|i mean)\b[,\s]/.test(t)) return true;
+  if (/\b(?:in|at|for|to)\s+[A-Z][a-z]/.test(text)) return false;
   const refers = /\b(it|its|it's|that|those|them|they|there|the one|this)\b/.test(t)
     || /\bthe (theater|theatre|place|movie|film|show|game|restaurant|store|team|song|artist|album)\b/.test(t);
   // Three words or fewer genuinely cannot carry a question on their own
@@ -1059,10 +1151,22 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   // "to me" and "closest" were missing, so "where is the closest movie theater
   // to me" went to Brave verbatim and came back about theatres in general.
   const LOCAL = /near(est)? me|near by|nearby|around here|near here|close by|closest|nearest|around me|by me|in my area|walking distance|local/i;
-  const localise = (q: string) =>
-    LOCAL.test(q)
-      ? `${q.replace(/near(est)? me|nearby|near by|around here|near here|close by|around me|by me|to me|in my area/gi, "").replace(/\s{2,}/g, " ").trim()} in ${HOME_PLACE}`
-      : q;
+  const localise = (raw: string) => {
+    // Clean first. The raw utterance is a sentence spoken to a person, and the
+    // politeness at the front measurably changed which page Brave ranked top:
+    // "Okay, give me showtimes for the new Hungry Games movie." put Fandango's
+    // overview page first, while the cleaned query puts the cinema's own
+    // showtimes page first.
+    let q = cleanQuery(raw);
+    const local = LOCAL.test(q);
+    q = q.replace(/near(est)? me|nearby|near by|around here|near here|close by|around me|by me|to me|in my area/gi, "")
+      .replace(/\s*\?\s*$/, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    // Showtimes are always local whether or not he said so — "showtimes for X"
+    // without a city is how you get listings for the wrong coast.
+    return (local || SHOWTIMES.test(q)) ? `${q} in ${HOME_PLACE}` : q;
+  };
   const hist = recent();
   const past = transcript(hist);
   // A follow-up must NOT be pre-searched. Searching "Where is the theater
@@ -1089,7 +1193,14 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     ? `\nIMPORTANT: this is a follow-up to the conversation above and it refers to something already mentioned. You do NOT know the answer. Set "say" to "" and set "web_search" to a SELF-CONTAINED query that resolves the reference using the history — name the thing explicitly instead of saying "the theater" or "it". Addresses, times, runtimes and prices must come from a search, never from memory; those are exactly what you get wrong.\n`
     : "";
   if (past) console.log(`[agent] ${hist.length} turn(s) of context${followUp ? " (follow-up)" : ""}`);
-  const p1 = `${SYSTEM}\n\nThe house is in ${HOME_PLACE}; "near me" means there.\n\n${about}\n\nHouse (background only, do not recite): ${state}${past}${pre}${mustSearch}\nMatthew said: "${text}"`;
+  // What time it is. The model was never told, which is why it offered a 2 PM
+  // showing at half past eight at night and had no way to tell a screening
+  // that had already started from one that was sold out.
+  const now = new Date().toLocaleString("en-US", {
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit", timeZone: process.env.TZ || "America/New_York",
+  });
+  const p1 = `${SYSTEM}\n\nRight now it is ${now} (local time).\nThe house is in ${HOME_PLACE}; "near me" means there.\n\n${about}\n\nHouse (background only, do not recite): ${state}${past}${pre}${mustSearch}\nMatthew said: "${text}"`;
   let out = parseJson(await ccut(p1)) || {};
   // fallback: one web-search round-trip if the model still asks for one
   // One search per turn, hard. When we pre-searched and the model asks again
@@ -1113,7 +1224,7 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   if (out.web_search && !String(out.say || "").trim()) {
     searched = localise(String(out.web_search));
     results = await webSearch(searched);
-    const p2 = `${SYSTEM}\n\nThe house is in ${HOME_PLACE}.\n\n${about}\n\nHouse (background only, do not recite): ${state}${past}\nMatthew said: "${text}"\n\nYou asked to search for "${searched}"; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
+    const p2 = `${SYSTEM}\n\nRight now it is ${now} (local time).\nThe house is in ${HOME_PLACE}.\n\n${about}\n\nHouse (background only, do not recite): ${state}${past}\nMatthew said: "${text}"\n\nYou asked to search for "${searched}"; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
     out = parseJson(await ccut(p2)) || out;
   }
   console.log("[agent] llm out:", JSON.stringify({ say: out.say, actions: out.actions, web_search: out.web_search }));
