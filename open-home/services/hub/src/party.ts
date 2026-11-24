@@ -22,6 +22,9 @@ const PARTY_COLORS = [
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let tick = 0;
+// Which room the party is in, if it was asked for by room. Held for the life of
+// the party so every tick drives the same set of bulbs.
+let room: string | null = null;
 
 export function isOn(): boolean {
   return timer !== null;
@@ -29,7 +32,12 @@ export function isOn(): boolean {
 
 function colorLights() {
   // Real, color-capable, online lights only.
-  return lights.listLights().filter((l: any) => l.real && l.color && l.online !== false);
+  const all = lights.listLights().filter((l: any) => l.real && l.color && l.online !== false);
+  if (!room) return all;
+  const inRoom = all.filter((l: any) => String(l.room || "").toLowerCase().includes(room!));
+  // "Party mode in the living room" should not mean "no party" just because
+  // the room name did not match how the bulb is labelled.
+  return inRoom.length ? inRoom : all;
 }
 
 async function step() {
@@ -44,30 +52,40 @@ async function step() {
 }
 
 /** Start the party. Tries to beat-match the current track's tempo, else ~130 BPM feel. */
-export async function start(): Promise<{ ok: boolean; lights: number; intervalMs: number }> {
-  stop();
+export async function start(inRoom?: string): Promise<{ ok: boolean; lights: number; intervalMs: number; bpm: number | null }> {
+  stop(false);
   tick = 0;
+  room = inRoom ? inRoom.toLowerCase().replace(" room", "") : null;
   let intervalMs = 460;   // ~130 BPM default
+  let bpm: number | null = null;
   try {
-    const bpm = await spotify.trackTempo();
+    bpm = await spotify.trackTempo();
     if (bpm && bpm > 40 && bpm < 220) {
       // flash on the beat (halve very fast tempos so it isn't a seizure)
       intervalMs = Math.round(60000 / (bpm > 150 ? bpm / 2 : bpm));
     }
   } catch { /* no tempo — use default */ }
+  const n = colorLights().length;
+  // Say so rather than reporting a party that is flashing nothing. There is
+  // exactly one colour-capable bulb on this house right now, so "0" is a real
+  // outcome worth hearing about, not an edge case.
+  console.log(`[party] ${n} colour light${n === 1 ? "" : "s"}${room ? ` in ${room}` : ""}, ` +
+    (bpm ? `beat-matched to ${Math.round(bpm)} BPM` : "no tempo from Spotify — using a 130 BPM feel") +
+    ` (${intervalMs}ms)`);
   await step();
   timer = setInterval(step, intervalMs);
-  return { ok: true, lights: colorLights().length, intervalMs };
+  return { ok: true, lights: n, intervalMs, bpm };
 }
 
 /** Stop the party. By default settles the lights to warm white; pass restore=false when
  * another light command is about to set its own color (so we don't fight it). */
 export function stop(restore = true): void {
   if (timer) { clearInterval(timer); timer = null; }
-  if (!restore) return;
+  if (!restore) { room = null; return; }
   try {
     for (const l of colorLights()) {
       lights.control(l.id, { on: true, rgb: { r: 255, g: 180, b: 107 }, brightness: 100 }).catch(() => {});
     }
   } catch { /* ignore */ }
+  room = null;
 }

@@ -17,6 +17,7 @@ import * as sceneConfig from "./sceneConfig.ts";
 import * as personal from "./personal.ts";
 import * as presence from "./presence.ts";
 import * as speech from "./speech.ts";
+import * as party from "./party.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -109,6 +110,10 @@ Respond with ONLY a JSON object, nothing else:
 Actions you can take (include any that apply):
 - {"type":"scene","id":"good_morning|good_night|movie|away|home|dinner"}
 - {"type":"lights","room":"living|kitchen|bedroom|office|bathroom|all","on":true|false}
+- {"type":"party","on":true|false,"room":"<optional room>"}
+  Party mode: flashes the colour bulbs through vivid colours in time with the music.
+  Use it for "party mode", "party time", "disco", "make the lights dance".
+  NOT for "play a party playlist" — that is a music action.
 - {"type":"lock","locked":true|false}
 - {"type":"thermostat","target":<fahrenheit int>}
 - {"type":"music","op":"<see list>","source":"spotify|soundcloud","query":"<see below>"}
@@ -516,14 +521,28 @@ async function execActions(actions: any[]): Promise<string[]> {
     try {
       switch (a.type) {
         case "scene": {
+          // Every scene except the party itself ends the party: a scene sets
+          // its own light colours and would be overwritten on the next flash.
+          if (party.isOn() && String(a.id) !== "party") party.stop(false);
           const real = await runSceneReal(String(a.id));   // real devices (lights + playlist)
           home.activateScene(String(a.id));                // keep mock/UI model in sync
           done.push(real || `scene ${a.id}`);
           break;
         }
+        case "party": {
+          if (a.on === false) { party.stop(); done.push("party over"); break; }
+          const r = await party.start(a.room ? String(a.room) : undefined);
+          done.push(r.lights
+            ? `party on, ${r.lights} light${r.lights === 1 ? "" : "s"}${r.bpm ? ` at ${Math.round(r.bpm)} BPM` : ""}`
+            : "no colour lights are online to party with");
+          break;
+        }
         case "lights": {
           const on = !!a.on;
           const room = String(a.room || "all").toLowerCase();
+          // A direct light command takes over from the party, or the two fight
+          // over the same bulb every half second.
+          if (party.isOn()) party.stop(false);
           // Control REAL onboarded lights (ESPHome/Matter).
           let hit = 0;
           try {
@@ -586,10 +605,24 @@ const CONTROL_SCENES: Record<string, string> = {
   morning: "good_morning", good_morning: "good_morning",
   goodnight: "good_night", nighttime: "good_night", good_night: "good_night",
   movie: "movie", away: "away", home: "home",
-  party: "party", reading: "reading", dinner: "dinner", evening: "evening",
+  // NB: "party" is handled before this table in runControl — it is a running
+  // light show, not a one-shot scene.
+  reading: "reading", dinner: "dinner", evening: "evening",
 };
 
 export async function runControl(action: string): Promise<{ label: string; scene?: string; actions: string[]; say?: string } | null> {
+  // The dial's party key was in CONTROL_SCENES, so it looked wired — but it
+  // went to runSceneReal, there is no "party" entry in the scene config, and
+  // the fallback only moved the mock house. The dial animated and the room did
+  // nothing. It is a toggle, not a scene.
+  if (action === "party") {
+    if (party.isOn()) { party.stop(); return { label: "party over", actions: ["party over"] }; }
+    const r = await party.start();
+    return {
+      label: r.lights ? `party on · ${r.lights} light${r.lights === 1 ? "" : "s"}` : "no colour lights online",
+      actions: [r.lights ? `party on (${r.lights})` : "no colour lights online"],
+    };
+  }
   const scene = CONTROL_SCENES[action];
   if (scene) {
     const done = await execActions([{ type: "scene", id: scene }]);
@@ -694,6 +727,29 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
       return { reply: "", actions: done, listen: false };
     }
     return { reply: "", actions: [], listen: false };
+  }
+
+  // Party mode. It lived in party.ts behind POST /lights/command and nothing
+  // voice-facing could reach it, so asking out loud got "I don't have a party
+  // mode set up yet" from a model that had never been told it exists.
+  //
+  // Guarded against the music sense of the word: "play a party playlist" is a
+  // Spotify search, not a light show.
+  if (/\bparty\b|\bdisco\b/.test(t) && !/\b(play|playlist|song|album|spotify|soundcloud)\b/.test(t)) {
+    const off = /\b(off|stop|end|over|kill|quit|enough|no more)\b/.test(t);
+    if (off) {
+      party.stop();
+      return { reply: "Party over.", actions: ["party over"], listen: false };
+    }
+    const r = await party.start(detectRoom(t) === "all" ? undefined : detectRoom(t));
+    if (!r.lights) {
+      return { reply: "No colour lights are online, so there's nothing to flash.", actions: [], listen: false };
+    }
+    return {
+      reply: r.bpm ? `Party mode, on the beat.` : `Party mode on.`,
+      actions: [`party on (${r.lights} light${r.lights === 1 ? "" : "s"})`],
+      listen: false,
+    };
   }
 
   // Lights. Require a command cue, so questions fall through to the model.
