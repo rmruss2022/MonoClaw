@@ -118,7 +118,13 @@ Respond with ONLY a JSON object, nothing else:
 
 Actions you can take (include any that apply):
 - {"type":"scene","id":"good_morning|good_night|movie|away|home|dinner"}
-- {"type":"lights","room":"living|kitchen|bedroom|office|bathroom|all","on":true|false}
+- {"type":"lights","room":"living|kitchen|bedroom|office|bathroom|all","on":true|false,"color":"<optional colour name>","brightness":<optional 1-100>,"warmth":"warm|neutral|cool|daylight"}
+  The colour bulbs CAN do colour — say so and do it. Colour names you can use: red, orange, amber,
+  yellow, lime, green, mint, teal, cyan, sky, blue, indigo, violet, purple, magenta, pink, rose,
+  peach, warm white, white, cool white, daylight. Setting a colour or a brightness turns the light on.
+  Examples: "make the lights green" -> {"type":"lights","room":"all","on":true,"color":"green"};
+  "dim the living room" -> {"type":"lights","room":"living","brightness":25};
+  "warmer light" -> {"type":"lights","room":"all","warmth":"warm"}.
 - {"type":"party","on":true|false,"room":"<optional room>"}
   Party mode: flashes the colour bulbs through vivid colours in time with the music.
   Use it for "party mode", "party time", "disco", "make the lights dance".
@@ -714,21 +720,42 @@ async function execActions(actions: any[]): Promise<string[]> {
           break;
         }
         case "lights": {
-          const on = !!a.on;
           const room = String(a.room || "all").toLowerCase();
+          const color = a.color ? COLORS[String(a.color).toLowerCase().trim()] : undefined;
+          const warmth = a.warmth ? WARMTH[String(a.warmth).toLowerCase().trim()] : undefined;
+          const brightness = a.brightness != null ? Math.max(1, Math.min(100, Number(a.brightness))) : undefined;
+          // A colour or a brightness means "on" whether or not he said so —
+          // "make the lights green" on a dark bulb should light the room.
+          const on = color || warmth || brightness != null ? true : !!a.on;
           // A direct light command takes over from the party, or the two fight
           // over the same bulb every half second.
-          if (party.isOn()) party.stop(false, `lights ${on ? "on" : "off"} command`);
+          if (party.isOn()) party.stop(false, "a lights command");
+          const patch: any = { on };
+          if (color) patch.rgb = color;
+          else if (warmth) patch.colorTempK = warmth;
+          if (brightness != null) patch.brightness = brightness;
           // Control REAL onboarded lights (ESPHome/Matter).
-          let hit = 0;
+          let hit = 0, refused = 0;
           try {
             const all = lights.listLights().filter((x: any) => x.real);
             const targets = room === "all" ? all : all.filter((x: any) => String(x.room || "").toLowerCase().includes(room));
-            for (const l of targets) { try { const r = await lights.control(l.id, { on }); if (r.ok) hit++; } catch {} }
+            for (const l of targets) {
+              // Asking a white-only bulb for green fails the whole patch on
+              // some firmwares; send it what it can do rather than nothing.
+              const p = (patch.rgb && !l.color) ? { ...patch, rgb: undefined } : patch;
+              if (patch.rgb && !l.color) refused++;
+              try { const r = await lights.control(l.id, p); if (r.ok) hit++; } catch {}
+            }
           } catch {}
           // keep the mock/UI state in sync too
-          if (a.room && a.room !== "all") home.setDevice(`light_${a.room}`, { on }); else home.setByType("light", { on });
-          done.push(`lights ${on ? "on" : "off"}${hit ? ` (${hit} real)` : ""}`); break;
+          const mock = { on, ...(color ? { rgb: color } : {}), ...(brightness != null ? { brightness } : {}) };
+          if (a.room && a.room !== "all") home.setDevice(`light_${a.room}`, mock); else home.setByType("light", mock);
+          const what = color ? String(a.color).toLowerCase()
+            : warmth ? `${a.warmth} white`
+            : brightness != null ? `${brightness}%`
+            : on ? "on" : "off";
+          done.push(`lights ${what}${hit ? ` (${hit} real)` : ""}${refused ? `, ${refused} can't do colour` : ""}`);
+          break;
         }
         case "lock": home.setByType("lock", { locked: !!a.locked }); done.push(a.locked ? "locked" : "unlocked"); break;
         case "thermostat": home.setDevice("thermostat_main", { target: Number(a.target) }); done.push(`thermostat ${a.target}`); break;
@@ -847,6 +874,55 @@ export async function runControl(action: string): Promise<{ label: string; scene
  */
 const ROOMS = ["living room", "living", "kitchen", "bedroom", "office", "bathroom", "hallway", "dining"];
 
+/**
+ * Colour names the house understands.
+ *
+ * "Set the lights to green" failed with "Lights don't have color in here" —
+ * which was not a hallucination so much as an honest report of a prompt that
+ * never mentioned colour. lights.control() has accepted `rgb` since it was
+ * written, party mode has been using it all evening, and the Kauf bulb reports
+ * color: true. The voice agent's lights action simply offered `on` and `room`
+ * and nothing else.
+ *
+ * Values are picked to look right on an RGB bulb rather than to be correct
+ * sRGB: a bulb at full green is more convincing than one at #008000, and
+ * "white" from an RGB LED needs a warm bias or it reads blue.
+ */
+const COLORS: Record<string, { r: number; g: number; b: number }> = {
+  red: { r: 255, g: 0, b: 0 },
+  orange: { r: 255, g: 95, b: 0 },
+  amber: { r: 255, g: 150, b: 20 },
+  yellow: { r: 255, g: 220, b: 0 },
+  lime: { r: 170, g: 255, b: 0 },
+  green: { r: 0, g: 255, b: 0 },
+  mint: { r: 80, g: 255, b: 160 },
+  teal: { r: 0, g: 255, b: 190 },
+  cyan: { r: 0, g: 255, b: 255 },
+  sky: { r: 70, g: 190, b: 255 },
+  blue: { r: 0, g: 70, b: 255 },
+  indigo: { r: 80, g: 0, b: 255 },
+  violet: { r: 160, g: 0, b: 255 },
+  purple: { r: 190, g: 0, b: 255 },
+  magenta: { r: 255, g: 0, b: 190 },
+  pink: { r: 255, g: 90, b: 170 },
+  rose: { r: 255, g: 60, b: 110 },
+  peach: { r: 255, g: 170, b: 120 },
+  white: { r: 255, g: 220, b: 180 },
+  "warm white": { r: 255, g: 180, b: 107 },
+  "cool white": { r: 220, g: 235, b: 255 },
+  daylight: { r: 255, g: 250, b: 240 },
+};
+// Colour temperature, for "warmer"/"cooler" rather than a hue.
+const WARMTH: Record<string, number> = { warm: 2200, neutral: 3500, cool: 5000, daylight: 6500 };
+
+/** Longest name first, so "warm white" is not matched as "white". */
+const COLOR_NAMES = Object.keys(COLORS).sort((a, b) => b.length - a.length);
+
+function detectColor(t: string): string | null {
+  for (const name of COLOR_NAMES) if (new RegExp(`\\b${name}\\b`).test(t)) return name;
+  return null;
+}
+
 function detectRoom(t: string): string {
   for (const r of ROOMS) if (t.includes(r)) return r.replace(" room", "");
   return "all";
@@ -926,6 +1002,33 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
       actions: [`party on (${r.lights} light${r.lights === 1 ? "" : "s"})`],
       listen: false,
     };
+  }
+
+  // Lights: colour, warmth, brightness. A named colour plus the word "lights"
+  // is not ambiguous, and routing it through the model is what produced
+  // "Lights don't have color in here" about a colour bulb.
+  if (/\blights?\b|\bbulbs?\b/.test(t) && /\b(turn|set|make|change|switch|go|dim|brighten)\b/.test(t)) {
+    const room = detectRoom(t);
+    const color = detectColor(t);
+    const warm = /\bwarmer?\b|\bcosy\b|\bcozy\b/.test(t) ? "warm"
+      : /\bcooler?\b|\bcolder\b/.test(t) ? "cool"
+      : /\bdaylight\b/.test(t) ? "daylight" : null;
+    const pct = t.match(/\b(\d{1,3})\s*(?:percent|%)\b/);
+    // "down"/"up" are safe here because this branch already required the word
+    // "lights" — "turn it down" is volume and never reaches this point.
+    const dim = /\bdim\b|\bdimmer\b|\blower\b|\bdarker\b|\bdown\b/.test(t);
+    const bright = /\bbrighten\b|\bbrighter\b|\bbrightest\b|\bfull\b|\bup\b/.test(t);
+    if (color || warm || pct || dim || bright) {
+      const action: any = { type: "lights", room, on: true };
+      if (color) action.color = color;
+      else if (warm) action.warmth = warm;
+      if (pct) action.brightness = Number(pct[1]);
+      else if (dim) action.brightness = 25;
+      else if (bright) action.brightness = 100;
+      const done = await execActions([action]);
+      const said = color ? `Lights ${color}.` : warm ? `${warm[0].toUpperCase()}${warm.slice(1)}er light.` : dim ? "Dimmed." : bright ? "Full brightness." : "Done.";
+      return { reply: said, actions: done, listen: false };
+    }
   }
 
   // Lights. Require a command cue, so questions fall through to the model.
