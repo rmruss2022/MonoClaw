@@ -652,7 +652,27 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
   // Bare "stop" is ambiguous on purpose and resolved by what is actually
   // happening: if the house is mid-sentence you meant the house, otherwise you
   // meant the music. "Stop the music" is unambiguous and handled below.
-  if (/^(stop|stop it|stop talking|shut up|be quiet|quiet|silence|enough|that'?s enough|never ?mind|cancel|forget it|skip it|no thanks|thank you)$/.test(t)) {
+  // Closing a conversation. "No, that's alright" went to the model, which
+  // sensibly had nothing to say or do — and the house answered "Sorry, I
+  // didn't get that", turning a polite decline into a failure. These end the
+  // turn in silence, which is what a person would do.
+  // Note what is NOT in here: "good night", which is the night scene's
+  // trigger phrase and must keep reaching it.
+  // "that's" / "thats" / "that is" — the transcriber is not consistent about
+  // contractions, and matching only one spelling is how this reads as a
+  // failure instead of a decline.
+  const THATS = "that(?:'?s| is)";
+  const CLOSERS = new RegExp(
+    `^(?:no,? ?(?:thanks|thank you|${THATS} (?:alright|all ?right|ok|okay|fine)|i'?m good|we'?re good)` +
+    `|${THATS} (?:all|it|fine|ok|okay|alright|all ?right)` +
+    `|i'?m good|we'?re good|all good|nothing|nope|no|bye|goodbye|see ?ya|thanks|thank you|cheers)$`,
+  );
+  if (CLOSERS.test(t)) {
+    if (speech.speaking()) speech.stop();
+    return { reply: "", actions: [], listen: false };
+  }
+
+  if (/^(stop|stop it|stop talking|shut up|be quiet|quiet|silence|enough|that'?s enough|never ?mind|cancel|forget it|skip it)$/.test(t)) {
     if (speech.speaking()) {
       speech.stop();
       // No reply. Answering "okay" to "shut up" is its own small insult, and
@@ -684,7 +704,13 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
   if (vol) {
     const down = /\b(down|lower|quiet|quieter|softer|soft|less|reduce)\b/.test(t);
     const up = /\b(up|louder|higher|raise|more|increase)\b/.test(t);
-    const num = t.match(/\b(\d{1,3})\s*(percent|%)?\b/);
+    // A number only means an absolute level if he actually said "to 40" or
+    // "40 percent". Caught live: "Lower the volume by 3 notches" would have
+    // matched the bare 3 and set the room to 3% — the opposite of a small
+    // nudge down. "By N <anything>" is relative, so just step it.
+    const num = /\b(to|at)\s+\d{1,3}\b|\b\d{1,3}\s*(percent|%)/.test(t)
+      ? t.match(/\b(\d{1,3})\b/)
+      : null;
     if (down || up || num) {
       const q = num ? num[1] : down ? "down" : "up";
       const done = await execActions([{ type: "music", op: "volume", query: q }]);
