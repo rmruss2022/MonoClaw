@@ -808,8 +808,94 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
   return null;
 }
 
+// ---- conversation memory ---------------------------------------------------
+/**
+ * What was said before now.
+ *
+ * There was none of this. Every utterance built a fresh prompt — SYSTEM, the
+ * house state, and `Matthew said: "<text>"` — with no trace of the turn before
+ * it. The `listen` flag held the microphone open, which made it LOOK like a
+ * conversation, but the model was answering each sentence cold.
+ *
+ * The failure, from the log:
+ *     19:44:25  "theater times for the new Hunger Games tonight"
+ *               -> "7 PM at AMC 19th St. East, or 10:35 PM"
+ *     19:45:00  "Where is the theater located?"
+ *               -> searched Brave for the literal string
+ *                  "Where is the theater located?"
+ *               -> "I'm not sure which one you mean"
+ *
+ * It had named the theater forty seconds earlier and had no idea.
+ *
+ * Deliberately a time window and not a session id: the exchange above spanned
+ * two separate wake words ("Bye." ended the first), and a follow-up five
+ * seconds after a goodbye is obviously the same conversation. Tying memory to
+ * the mic being open would have failed this exact case.
+ *
+ * In process, not on disk. This is short-term memory — what a person would
+ * still have in their head — not a record of everything ever said in the
+ * house. It evaporates on restart, which is the right default for a thing that
+ * listens all day.
+ */
+interface Turn { at: number; said: string; replied: string; context?: string }
+const MEMORY_WINDOW_MS = Number(process.env.OPEN_HOME_MEMORY_MINUTES ?? 10) * 60_000;
+const MEMORY_TURNS = Number(process.env.OPEN_HOME_MEMORY_TURNS ?? 8);
+let turns: Turn[] = [];
+
+function recent(): Turn[] {
+  const cut = Date.now() - MEMORY_WINDOW_MS;
+  turns = turns.filter((t) => t.at >= cut);
+  return turns.slice(-MEMORY_TURNS);
+}
+
+function remember(said: string, replied: string, context?: string): void {
+  turns.push({ at: Date.now(), said, replied, context });
+  if (turns.length > MEMORY_TURNS * 2) turns = turns.slice(-MEMORY_TURNS);
+}
+
+export function forget(): void { turns = []; }
+
+/** The conversation so far, oldest first, as the model should read it. */
+function transcript(hist: Turn[]): string {
+  if (!hist.length) return "";
+  const lines = hist.map((t) => `Matthew: ${t.said}\nYou: ${t.replied}`);
+  // Carry the most recent search results forward verbatim. Without them a
+  // follow-up about something we just looked up has to be searched again from
+  // scratch, which is exactly what could not be done without the context.
+  const ctx = hist.filter((t) => t.context).slice(-1)[0]?.context;
+  return `\nEarlier in this conversation (oldest first — "the theater", "it", "there" refer to things in here):\n${lines.join("\n")}\n` +
+    (ctx ? `\nWhat you looked up a moment ago, still valid:\n${ctx.slice(0, 1500)}\n` : "");
+}
+
+/**
+ * Is this a follow-up that cannot be searched on its own?
+ *
+ * "Where is the theater located?" matched the live-info regex and got searched
+ * verbatim, which is meaningless. When the question leans on something said
+ * earlier, the model has to see the history and form the query itself — so skip
+ * the pre-search and let it ask.
+ */
+function isFollowUp(text: string): boolean {
+  if (!turns.length) return false;
+  const t = text.toLowerCase();
+  const refers = /\b(it|its|it's|that|those|them|they|there|the one|this)\b/.test(t)
+    || /\bthe (theater|theatre|place|movie|film|show|game|restaurant|store|team|song|artist|album)\b/.test(t);
+  return refers || t.split(/\s+/).length <= 6;
+}
+
 // ---- main entry ------------------------------------------------------------
 export async function runAgent(text: string): Promise<{ reply: string; actions: string[]; understood: boolean; listen?: boolean }> {
+  // Filler is not a question. "Oh" and "you" both reached the model, cost a
+  // round trip each, and were answered out loud with "Sorry, I didn't get
+  // that" — which is worse than the silence they deserved. The client's frame
+  // count now catches most of these before they are even sent; this is the
+  // backstop for the ones that transcribe into a real word.
+  const bare = text.toLowerCase().trim().replace(/[.!?,]+$/, "");
+  if (bare.length < 2 || /^(oh|uh|um|erm|hmm|mm+|ah|eh|huh|you|a|the|and|so|well|yeah|ok|okay|mhm)$/.test(bare)) {
+    console.log(`[agent] ignoring filler: ${JSON.stringify(text)}`);
+    return { reply: "", actions: [], understood: false, listen: false };
+  }
+
   // Deterministic scene trigger: the core "good morning" scene must not depend on the
   // (occasionally empty/slow) LLM. Match the phrase and run the configured scene directly.
   if (/\bgood morning\b|\bwake up\b/i.test(text)) {
@@ -823,6 +909,9 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     const reply = report
       ? `Good morning! Starting your morning scene.\n\n${report}`
       : "Good morning! Starting your morning scene.";
+    // The report is the one thing worth keeping as context rather than as a
+    // reply: "what did it say about the trains?" is a reasonable follow-up.
+    remember(text, "Good morning! Starting your morning scene.", report || undefined);
     return { reply, actions: cleanDone, understood: true, listen: false };
   }
   if (/\bgood afternoon\b|\bafternoon\b/i.test(text)) {
@@ -840,6 +929,8 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     const fast = await fastPath(text);
     if (fast) {
       console.log(`[agent] fast path: ${JSON.stringify(text)} -> ${JSON.stringify(fast.actions)}`);
+      // Still remembered, so "turn them off again" has something to refer to.
+      remember(text, fast.reply || fast.actions.join(", "));
       return { ...fast, understood: true };
     }
   } catch (e) { console.log("[agent] fast path failed, using the model:", (e as Error)?.message); }
@@ -871,12 +962,33 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     /near me|nearby|around here|near here|close by|local/i.test(q)
       ? q.replace(/near me|nearby|around here|near here|close by/gi, `in ${HOME_PLACE}`)
       : q;
+  const hist = recent();
+  const past = transcript(hist);
+  // A follow-up must NOT be pre-searched. Searching "Where is the theater
+  // located?" verbatim is how that question got answered with "I'm not sure
+  // which one you mean" about a theater we had just named. Let the model read
+  // the history and form a query that stands on its own.
+  const followUp = isFollowUp(text);
   let pre = "";
-  if (needsLive) {
-    const results = await webSearch(localise(text));
+  let searched = "";
+  if (needsLive && !followUp) {
+    searched = localise(text);
+    const results = await webSearch(searched);
     pre = `\nWeb results (use these, don't ask to search again):\n${results}\n`;
+  } else if (needsLive) {
+    console.log(`[agent] follow-up — not pre-searching ${JSON.stringify(text)}`);
   }
-  const p1 = `${SYSTEM}\n\nThe house is in ${HOME_PLACE}; "near me" means there.\n\n${about}\n\nHouse (background only, do not recite): ${state}${pre}\nMatthew said: "${text}"`;
+  // Giving it the history was necessary but not sufficient. With context and
+  // no pre-search it stopped asking to search and started answering from its
+  // own head: "Where is the theater located?" came back "AMC 19th Street is at
+  // 28 Liberty Street", confidently, with web_search empty. It is 890
+  // Broadway. A wrong address delivered in a calm voice is worse than "let me
+  // look that up", so on a factual follow-up the search is mandatory.
+  const mustSearch = followUp && needsLive
+    ? `\nIMPORTANT: this is a follow-up to the conversation above and it refers to something already mentioned. You do NOT know the answer. Set "say" to "" and set "web_search" to a SELF-CONTAINED query that resolves the reference using the history — name the thing explicitly instead of saying "the theater" or "it". Addresses, times, runtimes and prices must come from a search, never from memory; those are exactly what you get wrong.\n`
+    : "";
+  if (past) console.log(`[agent] ${hist.length} turn(s) of context${followUp ? " (follow-up)" : ""}`);
+  const p1 = `${SYSTEM}\n\nThe house is in ${HOME_PLACE}; "near me" means there.\n\n${about}\n\nHouse (background only, do not recite): ${state}${past}${pre}${mustSearch}\nMatthew said: "${text}"`;
   let out = parseJson(await ccut(p1)) || {};
   // fallback: one web-search round-trip if the model still asks for one
   // One search per turn, hard. When we pre-searched and the model asks again
@@ -888,9 +1000,19 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
     out.web_search = "";
     if (!String(out.say || "").trim()) out.say = "I looked, but I couldn't find that. Want me to try it a different way?";
   }
+  let results = "";
+  // It was told to ask and answered anyway. Search on the resolved question
+  // rather than trusting it, since the whole point is that it does not know.
+  if (mustSearch && !out.web_search) {
+    const topic = hist.slice(-1)[0];
+    out.web_search = `${text} ${topic ? topic.said : ""}`.trim();
+    out.say = "";
+    console.log(`[agent] follow-up answered without searching; forcing a search for ${JSON.stringify(out.web_search)}`);
+  }
   if (out.web_search && !String(out.say || "").trim()) {
-    const results = await webSearch(localise(String(out.web_search)));
-    const p2 = `${SYSTEM}\n\n${about}\n\nHouse (background only, do not recite): ${state}\nMatthew said: "${text}"\n\nYou asked to search; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
+    searched = localise(String(out.web_search));
+    results = await webSearch(searched);
+    const p2 = `${SYSTEM}\n\nThe house is in ${HOME_PLACE}.\n\n${about}\n\nHouse (background only, do not recite): ${state}${past}\nMatthew said: "${text}"\n\nYou asked to search for "${searched}"; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
     out = parseJson(await ccut(p2)) || out;
   }
   console.log("[agent] llm out:", JSON.stringify({ say: out.say, actions: out.actions, web_search: out.web_search }));
@@ -915,5 +1037,8 @@ export async function runAgent(text: string): Promise<{ reply: string; actions: 
   // exactly that case.
   const asked = reply.includes("?");
   const listen = cleanDone.length === 0 && (out.listen === true || asked);
+  // Remember this exchange, including whatever we looked up, so the next
+  // question can refer to it the way a person would.
+  remember(text, reply, results || pre.replace(/^\nWeb results[^\n]*\n/, "") || undefined);
   return { reply, actions: cleanDone, understood: cleanDone.length > 0 || !!out.say, listen };
 }

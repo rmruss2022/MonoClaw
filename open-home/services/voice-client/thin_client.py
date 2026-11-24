@@ -76,6 +76,14 @@ SPEECH_TAIL_S = float(os.environ.get("SPEECH_TAIL_S", "0.6"))
 # than the idle one: the mic is hearing our own voice out of the same speaker,
 # and a false positive cuts a reply off mid-word.
 BARGE_THRESHOLD = float(os.environ.get("BARGE_THRESHOLD", "0.65"))
+# Frames of fresh audio that must pass through the wake model before a barge-in
+# is believed. See BargeIn.arm(): without this it re-detects the wake word that
+# is still sitting in the model's feature window and kills its own reply.
+BARGE_WARMUP_FRAMES = int(os.environ.get("BARGE_WARMUP_FRAMES", "25"))
+# A single loud frame is not speech. "Oh" and "you" (peak RMS 486 and 598, just
+# over a 300-500 threshold) each cost a model round-trip and got answered with
+# "Sorry, I didn't get that" out loud. Real words cover several frames.
+MIN_SPEECH_FRAMES = int(os.environ.get("MIN_SPEECH_FRAMES", "4"))
 
 
 def log(*a: object) -> None:
@@ -325,6 +333,24 @@ class BargeIn:
         self.threshold = threshold
         self.mic: "subprocess.Popen | None" = None
         self.score = 0.0
+        self.fresh = 0
+
+    def arm(self) -> None:
+        """Start watching, ignoring whatever is still in the model's window.
+
+        This is the whole reason barge-in was firing on the house's own voice
+        0.2s into a reply, at scores of 0.79 and 0.99 — it was re-detecting
+        MATTHEW'S ORIGINAL WAKE WORD. openWakeWord keeps a rolling window of
+        audio features, capture() never calls predict() so the window is never
+        advanced, and reset() in 0.4.0 only clears the prediction buffer, not
+        the features behind it. The first prediction after resuming replayed
+        "hey jarvis" from a minute earlier.
+
+        So: discard detections until enough new frames have gone through to
+        have completely replaced that window.
+        """
+        reset(self.oww)
+        self.fresh = 0
 
     def poll(self) -> bool:
         """Consume one frame. True if the wake word fired."""
@@ -336,6 +362,10 @@ class BargeIn:
             time.sleep(0.08)
             return False
         s = self.oww.predict(f).get(self.key, 0.0)
+        self.fresh += 1
+        # The model's window is about 1.4s; 25 frames is 2s, comfortably past it.
+        if self.fresh < BARGE_WARMUP_FRAMES:
+            return False
         if s >= self.threshold:
             self.score = s
             reset(self.oww)
@@ -444,8 +474,10 @@ def main() -> int:
                     break
 
                 peak = max((rms(f) for f in frames), default=0.0)
-                if peak <= thresh:
-                    log(f"nothing said (peak RMS {peak:.0f}, threshold {thresh:.0f})")
+                loud = sum(1 for f in frames if rms(f) > thresh)
+                if peak <= thresh or loud < MIN_SPEECH_FRAMES:
+                    log(f"nothing said (peak RMS {peak:.0f}, {loud} frame(s) over "
+                        f"threshold {thresh:.0f}, need {MIN_SPEECH_FRAMES})")
                     break
 
                 t_captured = time.time()
@@ -470,6 +502,7 @@ def main() -> int:
                 # cut short rather than sat through.
                 if (r.get("reply") or "").strip():
                     barge.mic = mic
+                    barge.arm()
                     spoke_for, cut_off = hub.wait_until_quiet(barge)
                     barge.mic = None
                     log(f"  +{spoke_for:.1f}s speaking   |   total {time.time()-t_wake:.1f}s since wake")
