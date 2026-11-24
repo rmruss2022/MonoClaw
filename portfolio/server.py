@@ -564,6 +564,14 @@ PAGE = r'''<!DOCTYPE html>
   .todo-item.done .txt{color:var(--muted);text-decoration:line-through}
   .todo-item .del{border:none;background:none;color:#c6cad4;font-size:17px;cursor:pointer;opacity:0;transition:opacity .12s,color .12s}
   .todo-item:hover .del{opacity:1} .todo-item .del:hover{color:#ec4899}
+  .todo-item .grip{flex:0 0 auto;width:22px;display:flex;align-items:center;justify-content:center;color:#c6cad4;
+                   font-size:15px;cursor:grab;touch-action:none;opacity:.55;transition:color .12s,opacity .12s;margin-left:-2px}
+  .todo-item:hover .grip{opacity:1} .todo-item .grip:hover{color:#7c3aed}
+  .todo-item.dragging{background:#fff;border-color:#c9b8f5;box-shadow:0 14px 30px -10px rgba(99,102,241,.5);
+                      transform:scale(1.015);cursor:grabbing;z-index:5;position:relative}
+  .todo-item.dragging .del{opacity:0}
+  .todo-list.reordering .todo-item{transition:transform .16s ease}
+  .todo-list.reordering .todo-item.dragging{transition:none}
   .todo-empty{color:var(--muted);font-size:14px;padding:10px 2px}
   .todo-foot{margin-top:14px;display:flex;justify-content:flex-end}
   .todo-clear{border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer}
@@ -949,6 +957,39 @@ PAGE = r'''<!DOCTYPE html>
   dateEl.textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
   var todos=[];
   function esc(s){return (s||'').replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+  // Drag-to-reorder (iOS-style): hold anywhere on a row (or grab the ☰ handle)
+  // then drag. Live-reorders siblings as the pointer crosses their midpoints,
+  // and persists the new order to the server (shared with Marquee + the widget).
+  var didDrag=false;
+  function reorderFromDOM(){
+    var order=[].slice.call(list.querySelectorAll('.todo-item')).map(function(x){return x.dataset.id;});
+    act('/reorder',{order:order});
+  }
+  function startDrag(li,downEv,immediate){
+    if(downEv.button&&downEv.button!==0)return;
+    var startX=downEv.clientX,startY=downEv.clientY,dragging=false,pressTimer=null;
+    function begin(){ pressTimer=null;dragging=true;didDrag=true;
+      li.classList.add('dragging');list.classList.add('reordering');
+      try{navigator.vibrate&&navigator.vibrate(8);}catch(_){} }
+    function move(ev){
+      if(!dragging){ if(Math.abs(ev.clientY-startY)>9||Math.abs(ev.clientX-startX)>9)cancel(); return; }
+      ev.preventDefault();
+      var y=ev.clientY,after=null,sibs=[].slice.call(list.querySelectorAll('.todo-item:not(.dragging)'));
+      for(var i=0;i<sibs.length;i++){var r=sibs[i].getBoundingClientRect();if(y<r.top+r.height/2){after=sibs[i];break;}}
+      if(after){ if(after!==li.nextElementSibling)list.insertBefore(li,after); }
+      else if(li!==list.lastElementChild){ list.appendChild(li); }
+    }
+    function up(){ cleanup();
+      if(dragging){dragging=false;li.classList.remove('dragging');list.classList.remove('reordering');reorderFromDOM();}
+      else if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}
+      setTimeout(function(){didDrag=false;},60); }
+    function cancel(){ cleanup(); if(pressTimer){clearTimeout(pressTimer);pressTimer=null;} }
+    function cleanup(){ document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up); }
+    document.addEventListener('pointermove',move,{passive:false});
+    document.addEventListener('pointerup',up);
+    document.addEventListener('pointercancel',up);
+    if(immediate)begin(); else pressTimer=setTimeout(begin,200);
+  }
   // Action API — server is the source of truth (shared with Marquee + the iOS widget).
   function act(path,body){
     return fetch('api/todo'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})})
@@ -960,12 +1001,18 @@ PAGE = r'''<!DOCTYPE html>
     if(!todos.length){var e=document.createElement('li');e.className='todo-empty';e.textContent='Nothing yet — add your first task.';list.appendChild(e);}
     todos.forEach(function(t){
       var li=document.createElement('li');li.className='todo-item'+(t.done?' done':'');
-      li.onclick=function(){act('/toggle',{id:t.id});};   // tap row = check / uncheck
+      li.dataset.id=t.id;
+      li.addEventListener('click',function(){ if(didDrag)return; act('/toggle',{id:t.id}); });  // tap row = check / uncheck
+      var grip=document.createElement('span');grip.className='grip';grip.textContent='☰';grip.title='Hold & drag to reorder';
       var box=document.createElement('span');box.className='box';box.textContent=t.done?'✓':'';
       var txt=document.createElement('span');txt.className='txt';txt.textContent=t.text;
       var del=document.createElement('button');del.className='del';del.innerHTML='✕';del.title='Delete';
       del.onclick=function(ev){ev.stopPropagation();act('/delete',{id:t.id});};
-      li.appendChild(box);li.appendChild(txt);li.appendChild(del);
+      li.addEventListener('pointerdown',function(ev){
+        if(ev.target.closest('.box')||ev.target.closest('.del'))return;
+        startDrag(li,ev,!!ev.target.closest('.grip'));
+      });
+      li.appendChild(grip);li.appendChild(box);li.appendChild(txt);li.appendChild(del);
       list.appendChild(li);
     });
     var done=todos.filter(function(t){return t.done;}).length;
@@ -1485,6 +1532,24 @@ def todo_delete(tid):
     return active_todos()
 
 
+def todo_reorder(order):
+    """Reorder the active (shown) tasks to match the given list of ids.
+    Archived/old rows are preserved and kept after the active block; their
+    order never affects the list view (history/stats key off done_at)."""
+    if not isinstance(order, list):
+        raise ValueError("order must be a list")
+    pos = {}
+    for i, tid in enumerate(order[:1000]):
+        pos.setdefault(str(tid), i)
+    items = load_todos()
+    active = [t for t in items if _is_active(t)]
+    rest = [t for t in items if not _is_active(t)]
+    # stable sort: known ids by requested position, unknown ids keep prior order
+    active.sort(key=lambda t: pos.get(str(t.get("id")), len(pos) + 1))
+    _save_todos_raw(active + rest)
+    return active_todos()
+
+
 def todo_history():
     """Completed tasks grouped by completion day, most recent first. Read-only."""
     by_day = {}
@@ -1662,7 +1727,7 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400); self.send_header('Content-Type', 'application/json'); self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode())
-        elif p in ('/api/todo', '/api/todo/add', '/api/todo/toggle', '/api/todo/delete'):
+        elif p in ('/api/todo', '/api/todo/add', '/api/todo/toggle', '/api/todo/delete', '/api/todo/reorder'):
             try:
                 b = self._body() or {}
                 if p == '/api/todo/add':
@@ -1671,6 +1736,8 @@ class H(BaseHTTPRequestHandler):
                     todos = todo_toggle(b.get("id"))
                 elif p == '/api/todo/delete':
                     todos = todo_delete(b.get("id"))
+                elif p == '/api/todo/reorder':
+                    todos = todo_reorder(b.get("order", []))
                 else:
                     todos = write_todos(b.get("todos", []))
                 self._send(json.dumps({"ok": True, "todos": todos}), 'application/json; charset=utf-8')
