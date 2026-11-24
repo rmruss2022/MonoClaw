@@ -13,6 +13,10 @@
  */
 import { spawn } from "node:child_process";
 import { Readable } from "node:stream";
+import { createHash } from "node:crypto";
+import { createWriteStream, existsSync, mkdirSync, renameSync, statSync, unlinkSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY || "";
@@ -205,9 +209,19 @@ async function setStreamVolumes(ids: number[], pct: number): Promise<void> {
   vlog(`set streams [${ids.join(",")}] -> ${pct}% amplitude (slider ${slider})`);
 }
 
-/** Dump every playback stream's level — the thing worth seeing when audio is wrong. */
+/**
+ * Dump every playback stream's level — the thing worth seeing when audio is
+ * wrong, and off by default because the measurement perturbs what it measures.
+ *
+ * Each call is a pw-dump, which costs ~600 ms of the hub's 30% CPU quota.
+ * Three of them per utterance meant one reply's instrumentation was still
+ * running when the next one started, showing up as time-to-first-sound
+ * jumping from 92 ms to 1199 ms at random. Set OPEN_HOME_SPEAK_LEVELS=1 when
+ * levels are actually in question.
+ */
+const LEVELS = process.env.OPEN_HOME_SPEAK_LEVELS === "1";
 async function levels(when: string): Promise<void> {
-  if (!VERBOSE) return;
+  if (!LEVELS) return;
   vlog(`levels ${when}: ${describe(await snapshot())}`);
 }
 
@@ -226,18 +240,37 @@ async function levels(when: string): Promise<void> {
  */
 const VOICE_APP = "openhome-voice";
 
+/**
+ * Safety net for the voice's own level.
+ *
+ * It should not be needed any more — state.restore-props=false in the player's
+ * PIPEWIRE_PROPS is what actually stops WirePlumber creating the stream at
+ * whatever volume it last remembered. This stays because the failure it
+ * catches (the first word or two coming in quiet and then swelling) is subtle
+ * enough to go unnoticed for days.
+ *
+ * It no longer *writes* unless the level is genuinely wrong, and it gives up
+ * after half a second: each attempt is a pw-dump against the hub's 30% CPU
+ * quota, and twenty of them was a lot of contention to spend on a no-op.
+ */
 async function unduckVoice(): Promise<void> {
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 8; attempt++) {
     const dump = await run_("pw-dump", []);
     try {
       const hit = (JSON.parse(dump) as any[]).find((n) =>
         n?.type === "PipeWire:Interface:Node" &&
         n?.info?.props?.["application.name"] === VOICE_APP);
-      if (hit?.id != null) { await sh("wpctl", ["set-volume", String(hit.id), "1.0"]); vlog(`voice node ${hit.id} -> 1.0 (after ${attempt + 1} tries)`); return; }
+      if (hit?.id != null) {
+        const level = hit.info?.params?.Props?.[0]?.channelVolumes?.[0] ?? 1;
+        if (level >= 0.99) { vlog(`voice node ${hit.id} already at full (${attempt + 1} tries)`); return; }
+        await sh("wpctl", ["set-volume", String(hit.id), "1.0"]);
+        log(`voice node ${hit.id} was at ${(level * 100).toFixed(0)}% — corrected to full`);
+        return;
+      }
     } catch { /* pw-dump raced a graph change */ }
-    await new Promise((r) => setTimeout(r, 80));
+    await new Promise((r) => setTimeout(r, 70));
   }
-  log("voice stream never appeared — level not corrected");
+  vlog("voice stream never appeared in the graph — level not checked");
 }
 
 function run_(cmd: string, args: string[]): Promise<string> {
@@ -300,6 +333,34 @@ export async function duckForListening(on: boolean): Promise<void> {
   vlog(`listening: restored [${ids.join(",")}]`);
 }
 
+/**
+ * Short replies, kept on disk after the first time they are said.
+ *
+ * Measured on a real turn: "Next song." came back in 2.5 s and then spent
+ * 3.4 s "speaking" — to say the word "skipped". Most of that tail is waiting
+ * for ElevenLabs' first mp3 frame (about 900 ms) plus player start-up, for a
+ * phrase that is byte-identical every single time. "Lights on.", "paused",
+ * "skipped", "See you in a bit." are a closed set in practice.
+ *
+ * Caching on FIRST USE rather than pre-rendering a list: no warm-up step, no
+ * list to keep in sync with the code, and it automatically covers whatever
+ * phrases actually recur in this house. The length cap is what keeps the
+ * morning report out of it.
+ */
+const CACHE_DIR = process.env.OPEN_HOME_VOICE_CACHE || join(homedir(), ".openhome", "voice-cache");
+const CACHE_MAX_CHARS = Number(process.env.OPEN_HOME_VOICE_CACHE_CHARS ?? 80);
+
+function cachePath(text: string, which: string): string | null {
+  if (text.length > CACHE_MAX_CHARS) return null;
+  // The voice and model are part of the key: change either and the old clip is
+  // the wrong voice, not a cache hit.
+  const key = createHash("sha1")
+    .update(`${which}|${ELEVENLABS_VOICE}|${OPENAI_VOICE}|${process.env.ELEVENLABS_MODEL || ""}|${text}`)
+    .digest("hex")
+    .slice(0, 16);
+  return join(CACHE_DIR, `${key}.mp3`);
+}
+
 let current: ReturnType<typeof spawn> | null = null;
 
 /** True while audio is actually playing — the client waits on this before it
@@ -356,25 +417,35 @@ async function run(text: string): Promise<void> {
       ? (OPENAI_KEY ? ["elevenlabs", "openai"] : ["elevenlabs"])
       : OPENAI_KEY ? (ELEVENLABS_KEY ? ["openai", "elevenlabs"] : ["openai"]) : ["elevenlabs"];
 
-  // Ask for the audio and inspect the audio graph at the SAME time. A pw-dump
-  // takes well over a second on this Pi, and doing it first simply added that
-  // to the delay before anything was heard — the two have nothing to do with
-  // each other.
-  const [graph, stream] = await Promise.all([
-    snapshot(),
-    (async () => {
-      for (const which of order) {
-        try { return await openStream(text, which); }
-        catch (e) { log(`${which} failed:`, (e as Error).message); }
-      }
-      return null;
-    })(),
-  ]);
+  // Have we said this exact thing before, in this exact voice? Then there is
+  // nothing to ask anyone for.
+  const cached = cachePath(text, order[0]);
+  // Size check, not just existence: a truncated clip is worse than a cache
+  // miss, because it is permanent and it plays half a word.
+  const hit = cached && existsSync(cached) && statSync(cached).size > 800 ? cached : null;
+
+  // Do NOT read the audio graph before playing. It used to be awaited here,
+  // on the theory that it was free because it ran alongside synthesis — but
+  // with a cached clip there is no synthesis to hide behind, and during a
+  // voice turn the music is already ducked so the result was used for nothing
+  // except the "levels before" log line. Measured cost of that log line:
+  // ~600 ms of silence before every single reply.
+  //
+  // So duck the streams we already know about, start playing, and read the
+  // graph afterwards — for the log, and to catch anything the known set missed.
+  const stream = hit ? null : await (async () => {
+    for (const which of order) {
+      try { return await openStream(text, which); }
+      catch (e) { log(`${which} failed:`, (e as Error).message); }
+    }
+    return null;
+  })();
   // If the turn already ducked for listening, leave that in place and do not
   // restore it here — the client lifts it when the conversation ends.
-  const music = listenDuck ? [] : graph.map((n) => n.id);
-  vlog(`levels before: ${describe(graph)}${listenDuck ? " (already ducked for listening)" : ""}`);
-  if (!stream) { log("no provider could synthesize"); return; }
+  const music = listenDuck ? [] : knownStreams.slice();
+  if (listenDuck) vlog("already ducked for listening");
+  if (hit) vlog(`cache hit ${hit} — no synthesis`);
+  if (!hit && !stream) { log("no provider could synthesize"); return; }
 
   kill();
   // Duck and start playback together. Ducking first left the room quiet for
@@ -398,14 +469,23 @@ async function run(text: string): Promise<void> {
       const mpvArgs = [
         "--no-video", "--really-quiet", "--no-terminal",
         `--volume=${VOICE_GAIN}`,
-        // Generous buffer: a network stream feeding a Bluetooth sink, where an
-        // underrun is audible as a gap in the middle of a sentence.
-        "--cache=yes", "--cache-secs=30", "--demuxer-readahead-secs=20",
-        // Ride a thin cache rather than pausing to refill mid-sentence.
-        "--cache-pause=no",
-        "--audio-buffer=0.4",
-        "--demuxer-lavf-format=mp3",
-        "-",
+        ...(hit
+          // A local file a few kilobytes long cannot underrun, so none of the
+          // network buffering applies — and every bit of it is latency before
+          // the first word. Measured: 0.4s of audio buffer alone.
+          ? ["--cache=no", "--audio-buffer=0.05"]
+          : [
+            // Generous buffer: a network stream feeding a Bluetooth sink, where
+            // an underrun is audible as a gap in the middle of a sentence.
+            "--cache=yes", "--cache-secs=30", "--demuxer-readahead-secs=20",
+            // Ride a thin cache rather than pausing to refill mid-sentence.
+            "--cache-pause=no",
+            "--audio-buffer=0.4",
+            // Only assert the container when reading from a pipe, where mpv has
+            // no filename and no seek to probe with.
+            "--demuxer-lavf-format=mp3",
+          ]),
+        hit || "-",
       ];
       const p = spawn("systemd-run", [
         "--user", "--scope", "--quiet",
@@ -422,27 +502,77 @@ async function run(text: string): Promise<void> {
           // word or two coming in quiet and then swelling.
           PIPEWIRE_PROPS: `{ application.name = ${VOICE_APP} node.name = ${VOICE_APP} state.restore-props = false state.restore-target = false }`,
         },
-        stdio: ["pipe", "ignore", "ignore"],
+        stdio: [hit ? "ignore" : "pipe", "ignore", "ignore"],
       });
       current = p;
-      vlog(`mpv pid=${p.pid} gain=${VOICE_GAIN} (streaming)`);
+      // The number that matters, and the one the "spoke in Nms" line below
+      // cannot show you: how long from being asked to speak until the player
+      // is actually running. Everything after this is audio, not waiting.
+      vlog(`mpv pid=${p.pid} gain=${VOICE_GAIN} (${hit ? "from cache" : "streaming"}) — started after ${Date.now() - started}ms`);
 
-      let firstByte = 0;
-      Readable.fromWeb(stream!.body as any)
-        .on("data", () => {
-          if (!firstByte) {
-            firstByte = Date.now();
-            vlog(`first audio byte ${firstByte - stream!.t0}ms after request`);
-          }
-        })
-        .on("error", (err) => { log("stream error:", err.message); try { p.stdin?.end(); } catch {} })
-        .pipe(p.stdin!)
-        // mpv exiting early (a newer utterance killed it) closes stdin under us.
-        .on("error", () => {});
+      // Write the clip to disk as it streams, so the SECOND time this phrase
+      // is said there is nothing to wait for. Via a .part file renamed at the
+      // end: a half-written mp3 left behind by an interruption would be a
+      // permanent cache hit that plays half a word.
+      let sink: ReturnType<typeof createWriteStream> | null = null;
+      let part = "";
+      if (!hit && cached) {
+        try {
+          mkdirSync(CACHE_DIR, { recursive: true });
+          part = `${cached}.part`;
+          sink = createWriteStream(part);
+          sink.on("error", () => { sink = null; });
+        } catch { sink = null; }
+      }
+      const commit = (ok: boolean) => {
+        if (!sink) return;
+        const s = sink; sink = null;
+        s.end(() => {
+          try {
+            if (ok) { renameSync(part, cached!); vlog(`cached ${text.length} chars -> ${cached}`); }
+            else unlinkSync(part);
+          } catch { /* nothing to clean up */ }
+        });
+      };
+
+      if (!hit) {
+        let firstByte = 0;
+        const src = Readable.fromWeb(stream!.body as any);
+        src
+          .on("data", (chunk) => {
+            if (!firstByte) {
+              firstByte = Date.now();
+              vlog(`first audio byte ${firstByte - stream!.t0}ms after request`);
+            }
+            sink?.write(chunk);
+          })
+          .on("end", () => commit(true))
+          .on("error", (err) => { log("stream error:", err.message); commit(false); try { p.stdin?.end(); } catch {} })
+          .pipe(p.stdin!)
+          // mpv exiting early (a newer utterance killed it) closes stdin under us.
+          .on("error", () => commit(false));
+      }
 
       unduckVoice().then(() => levels("speaking")).catch(() => {});
-      p.on("exit", () => { if (current === p) current = null; resolve(); });
-      p.on("error", (err) => { log("mpv:", err.message); if (current === p) current = null; resolve(); });
+      // Now that sound is coming out, read the graph and duck anything the
+      // known-stream guess missed — a track that started since the last read.
+      if (!listenDuck) {
+        snapshot().then(async (g) => {
+          const missed = g.map((n) => n.id).filter((id) => !music.includes(id));
+          if (missed.length) {
+            music.push(...missed);
+            await setStreamVolumes(missed, DUCK);
+            vlog(`also ducked [${missed.join(",")}] (new since last read)`);
+          }
+        }).catch(() => {});
+      }
+      p.on("exit", (code) => {
+        // Killed mid-sentence: whatever we captured is a fragment.
+        if (code !== 0) commit(false);
+        if (current === p) current = null;
+        resolve();
+      });
+      p.on("error", (err) => { log("mpv:", err.message); commit(false); if (current === p) current = null; resolve(); });
     });
   } finally {
     // Always restore, even if playback threw or was killed by a newer
@@ -450,5 +580,5 @@ async function run(text: string): Promise<void> {
     await setStreamVolumes(music, 100);
     await levels("after");
   }
-  log(`spoke ${text.length} chars via ${provider()} in ${Date.now() - started}ms (duck=${DUCK}% gain=${VOICE_GAIN})`);
+  log(`spoke ${text.length} chars ${hit ? "from cache" : `via ${provider()}`} in ${Date.now() - started}ms (duck=${DUCK}% gain=${VOICE_GAIN})`);
 }

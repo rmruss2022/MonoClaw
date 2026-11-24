@@ -662,14 +662,24 @@ export async function fastPath(text: string): Promise<{ reply: string; actions: 
   // contractions, and matching only one spelling is how this reads as a
   // failure instead of a decline.
   const THATS = "that(?:'?s| is)";
-  const CLOSERS = new RegExp(
+  // A decline wants silence. Saying anything back to "no, that's alright" is
+  // one more thing to listen to.
+  const DECLINE = new RegExp(
     `^(?:no,? ?(?:thanks|thank you|${THATS} (?:alright|all ?right|ok|okay|fine)|i'?m good|we'?re good)` +
     `|${THATS} (?:all|it|fine|ok|okay|alright|all ?right)` +
-    `|i'?m good|we'?re good|all good|nothing|nope|no|bye|goodbye|see ?ya|thanks|thank you|cheers)$`,
+    `|i'?m good|we'?re good|all good|nothing|nope|no)$`,
   );
-  if (CLOSERS.test(t)) {
+  if (DECLINE.test(t)) {
     if (speech.speaking()) speech.stop();
     return { reply: "", actions: [], listen: false };
+  }
+  // A goodbye is not a decline. It got "See you in a bit" from the model and
+  // that was better than silence — so keep the warmth, skip the round trip.
+  if (/^(bye|goodbye|bye bye|see ?ya|see you|later|good ?bye now)$/.test(t)) {
+    return { reply: "See you in a bit.", actions: [], listen: false };
+  }
+  if (/^(thanks|thank you|thanks a lot|cheers|appreciate it|nice one)$/.test(t)) {
+    return { reply: "Any time.", actions: [], listen: false };
   }
 
   if (/^(stop|stop it|stop talking|shut up|be quiet|quiet|silence|enough|that'?s enough|never ?mind|cancel|forget it|skip it)$/.test(t)) {
