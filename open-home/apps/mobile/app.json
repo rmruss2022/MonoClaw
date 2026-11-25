@@ -15,7 +15,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "ai.openhome.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSBluetoothAlwaysUsageDescription": "openhome uses Bluetooth to read your ring, so a double tap can wake Jarvis.",
+        "NSBluetoothPeripheralUsageDescription": "openhome uses Bluetooth to read your ring, so a double tap can wake Jarvis.",
+        "UIBackgroundModes": [
+          "bluetooth-central"
+        ]
       }
     },
     "android": {
@@ -51,7 +56,17 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": true,
+          "modes": [
+            "central"
+          ],
+          "bluetoothAlwaysPermission": "openhome uses Bluetooth to read your ring, so a double tap can wake Jarvis."
+        }
+      ]
     ]
   }
 }
