@@ -1,10 +1,19 @@
 import React, { useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TextInput } from "react-native";
+import Constants from "expo-constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { usePoll } from "@/api/hooks";
 import { Card, SectionTitle, PrimaryButton } from "@/components/ui";
 import { colors, radius, font } from "@/theme";
+
+/** Marketing version, and the build number TestFlight shows next to it. */
+const version = Constants.expoConfig?.version ?? "?";
+// nativeBuildVersion FIRST, deliberately: eas.json uses appVersionSource
+// "remote" with autoIncrement, so app.json has no buildNumber at all and the
+// config value would read "?" on exactly the builds this line exists to
+// identify. The native value is the one TestFlight shows.
+const build = Constants.nativeBuildVersion ?? Constants.expoConfig?.ios?.buildNumber ?? "?";
 
 export default function SettingsScreen() {
   const { controlPlane, setControlPlane, signOut, email } = useAuth();
@@ -59,7 +68,13 @@ export default function SettingsScreen() {
           <PrimaryButton label={saved ? "Saved ✓" : "Save"} onPress={save} />
         </Card>
 
-        <Text style={styles.tag}>openhome · your home, your keys</Text>
+        {/* Which build is actually running. Added after a TestFlight update
+            silently did not take: the app looked wrong, nothing in it could
+            say why, and proving it needed the shipped .ipa pulled apart on a
+            laptop. One line here answers it on the device. */}
+        <Text style={styles.tag}>
+          openhome {version} ({build}) · your home, your keys
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
