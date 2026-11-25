@@ -4,22 +4,26 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { usePoll, useCommand } from "@/api/hooks";
 import { SectionTitle, Loading, Empty } from "@/components/ui";
 import { colors, radius, font } from "@/theme";
+import { useRing } from "@/ring/useRing";
 
 /**
  * The ring.
  *
- * Reads hub state rather than talking to the ring over Bluetooth, and that is
- * the architecture rather than a shortcut: at home the Pi owns the BLE
- * connection, so the phone asking the hub is both simpler and more reliable
- * than two radios fighting over one peripheral that accepts a single
- * connection.
+ * Two halves, and they are deliberately separate:
  *
- * The away-from-home case DOES need CoreBluetooth in this app — see
- * services/ring-bridge/ARCHITECTURE.md. That is a native-module job
- * (react-native-ble-plx, the bluetooth-central background mode, and state
- * restoration so iOS can relaunch us). This screen is the half that works
- * without any of it, and it is also the screen that will show that data once
- * the native half exists.
+ *   "Status"     — whatever the hub last heard, from whichever client owned
+ *                  the connection. Needs no Bluetooth in this app at all.
+ *   "This phone" — this phone holding the BLE link itself (useRing + ble.ts).
+ *
+ * THE PHONE IS NOW THE PRIMARY TRANSPORT, on measurement rather than taste.
+ * The Pi can see the ring but only at -71 to -75 dBm, and at that signal its
+ * GATT handshake does not survive: each ATT round trip took 100-300 ms and the
+ * link supervision timeout fired before discovery finished. A USB dongle made
+ * it worse. The phone is inches from your hand instead of metres.
+ *
+ * Only one device can hold the ring at a time, so connecting here means the
+ * Pi's ring client cannot have it. That is a real trade, and this screen says
+ * so rather than hiding it.
  */
 interface Gesture { kind: string; at: number; value?: number }
 interface RingState {
@@ -65,11 +69,16 @@ export default function RingScreen() {
   if (loading && !data) return <Loading />;
 
   // A ring that has never reported is a different thing from a ring that is
-  // out of range, and saying so saves a pointless debugging session.
+  // out of range, and saying so saves a pointless debugging session. It is NOT
+  // a reason to hide the phone section — connecting here is how it stops being
+  // true.
   if (!data?.seen) {
     return (
       <SafeAreaView style={s.safe}>
-        <Empty text="No ring has reported to the hub yet. Start the ring client on the Pi, or pair the ring in the app once Bluetooth support ships." />
+        <ScrollView contentContainerStyle={s.body}>
+          <Empty text="No ring has reported to the hub yet. Connect it to this phone below, or start the ring client on the Pi." />
+          <Phone />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -125,6 +134,8 @@ export default function RingScreen() {
           )}
         </View>
 
+        <Phone />
+
         <SectionTitle>What the gestures do</SectionTitle>
         <View style={s.card}>
           {BINDINGS.map((b) => (
@@ -146,6 +157,91 @@ export default function RingScreen() {
         </Text>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * This phone's own BLE link.
+ *
+ * The achieved sample rate is shown prominently because it is the one number
+ * the gesture feature actually depends on, and it was never measurable over
+ * the Pi's weak link. Our own harness caught a natural double tap 10% of the
+ * time at 12 Hz and every time at 50 Hz, so this read decides whether taps
+ * work at all — hence the plain-language verdict next to it rather than a bare
+ * figure the reader has to interpret.
+ */
+function Phone() {
+  const ring = useRing();
+  const { state, telemetry: t } = ring;
+  const busy = state === "scanning" || state === "connecting";
+
+  const verdict =
+    t.hz === undefined
+      ? null
+      : t.hz >= 45
+        ? { text: "fast enough for a natural double tap", warn: false }
+        : t.hz >= 25
+          ? { text: "marginal — a deliberate double tap may work", warn: true }
+          : { text: "too slow for a natural double tap", warn: true };
+
+  return (
+    <>
+      <SectionTitle>This phone</SectionTitle>
+      <View style={s.card}>
+        <Row
+          label="Link"
+          value={
+            {
+              idle: "not connected",
+              unsupported: "needs a dev build",
+              scanning: "scanning…",
+              connecting: "connecting…",
+              live: "connected",
+              error: "failed",
+            }[state]
+          }
+          warn={state === "error" || state === "unsupported"}
+        />
+        {t.hz !== undefined && <Row label="Sample rate" value={`${t.hz} Hz`} />}
+        {verdict && <Row label="" value={verdict.text} warn={verdict.warn} />}
+        {t.battery !== undefined && (
+          <Row label="Battery" value={`${t.battery}%${t.charging ? " (charging)" : ""}`} />
+        )}
+        {t.rssi !== undefined && <Row label="Signal" value={`${t.rssi} dBm`} />}
+        {ring.lastGesture && (
+          <Row
+            label={GESTURE_LABEL[ring.lastGesture.kind] ?? ring.lastGesture.kind}
+            value={ring.lastGesture.sentToHub ? "sent to the hub" : "not reaching the hub"}
+            warn={!ring.lastGesture.sentToHub}
+          />
+        )}
+        {ring.message && <Text style={s.dim}>{ring.message}</Text>}
+
+        <Pressable
+          style={[s.secondary, busy && s.busy]}
+          disabled={busy}
+          onPress={() => (state === "live" ? ring.disconnect() : ring.connect())}
+        >
+          <Text style={s.secondaryText}>
+            {state === "live" ? "Disconnect" : busy ? "Working…" : "Connect ring to this phone"}
+          </Text>
+        </Pressable>
+        <Text style={s.note}>
+          Only one device can hold the ring at a time — connecting here takes it
+          from the Pi.
+        </Text>
+
+        {ring.log.length > 0 && (
+          <View style={s.logBox}>
+            {ring.log.slice(0, 8).map((line, i) => (
+              <Text key={i} style={s.logLine}>
+                {line}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    </>
   );
 }
 
@@ -176,5 +272,13 @@ const s = StyleSheet.create({
     borderRadius: radius.lg, paddingVertical: 15, alignItems: "center",
   },
   wakeText: { color: colors.onAccent, fontSize: font.body, fontWeight: "700" },
+  secondary: {
+    marginTop: 6, borderWidth: 1, borderColor: colors.line,
+    borderRadius: radius.md, paddingVertical: 12, alignItems: "center",
+  },
+  busy: { opacity: 0.5 },
+  secondaryText: { color: colors.text, fontSize: font.small, fontWeight: "600" },
+  logBox: { marginTop: 4, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 8, gap: 2 },
+  logLine: { color: colors.muted, fontSize: font.tiny, fontVariant: ["tabular-nums"] },
   note: { color: colors.muted, fontSize: font.tiny, textAlign: "center", marginTop: 8 },
 });
