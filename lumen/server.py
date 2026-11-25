@@ -5736,7 +5736,7 @@ async function renderMeditate(){
   <div class="nh-stats">
     <div class="nh-stat"><span class="nh-si flame"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="flg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ffd24a"/><stop offset=".45" stop-color="#ff9227"/><stop offset="1" stop-color="#f4511e"/></linearGradient></defs><path d="M12 2.3c3 3.4 5.1 6 5.1 9.5a5.1 5.1 0 0 1-10.2 0c0-2 .7-3.4 2-4.7C9.1 9 9.7 9.9 10.2 10.5 10.8 7.5 11 5 12 2.3Z" fill="url(#flg)"/><path d="M12 12.6c1.7 1.1 2.5 2.4 2.5 3.9a2.5 2.5 0 0 1-5 0c0-1 .5-1.9 1.4-2.6.2.5.6.9 1 1.2C11.8 13.6 11.9 13.1 12 12.6Z" fill="#ffe9a0"/></svg></span><b>${ME.streak||0}</b><span class="nh-sl">Day Streak</span></div>
     <div class="nh-stat"><span class="nh-si star">${ic('starf')}</span><b>${fmt(ME.light||0)}</b><span class="nh-sl">XP</span></div>
-    <div class="nh-stat"><span class="nh-si sun">${ic('sun')}</span><b>Lv. ${ME.level||1}</b><span class="nh-sl">Light Level</span></div>
+    <div class="nh-stat"><span class="nh-si sun"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="6.1"/><circle cx="12" cy="12" r="9.7" opacity=".4"/></svg></span><b>Lv. ${ME.level||1}</b><span class="nh-sl">Light Level</span></div>
   </div>
   ${(function(){var e=(JENTS&&JENTS[0]);
     if(!e)return `<div class="nh-sec"><div class="nh-sec-h"><h2>Your Journey</h2><button class="nh-link" id="nhJourneyAll">View All →</button></div><div class="nh-card nh-journey"><div class="nh-jthumb" style="background-image:url('/art/home-journey.jpg')"><span class="nh-jpin">${ic('pin')}</span></div><div class="nh-jbody"><div class="nh-jtitle">Begin your journey</div><div class="nh-jmeta">Your meditation moments appear here</div></div></div></div>`;
@@ -7641,7 +7641,7 @@ function renderPremiumGate(title,why){
     }catch(e){toast(e);b.disabled=false;b.innerHTML=ic('spark')+' Get founding-member access';}
   };
 }
-const COMM_LOTUS='<svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 40 V22 A11 11 0 0 1 35 22 V40"/><line x1="8" y1="40" x2="40" y2="40"/><circle cx="24" cy="28" r="2.9" fill="#f5c977" stroke="none"/></svg>';
+const COMM_LOTUS='<svg class="nh-lotussvg" viewBox="0 0 48 42" fill="none" stroke="#f5c977" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 40 V21 A11 11 0 0 1 35 21 V40"/><path d="M24 24.6 l1.35 3.15 3.15 1.35 -3.15 1.35 -1.35 3.15 -1.35 -3.15 -3.15 -1.35 3.15 -1.35Z" fill="#f5c977" stroke="none"/></svg>';
 const COMM_LETTERS=[
  {ic:'comm-quill',t:'On Beginning Again',by:'A letter from the Keeper',teaser:'You have not fallen behind. The cushion keeps no grudge.',
   body:['If it has been a day or a year, the breath is still here, patient as ever. Practice is not a streak you broke; it is a room you can walk back into at any hour.',
@@ -10951,7 +10951,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v126';
+const CACHE = 'lumen-v127';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
