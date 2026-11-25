@@ -4434,13 +4434,16 @@ html,body{background:#08080a!important;color:var(--text)!important}
 .nh-jpin{color:#e9e6dd!important;background:#0b0b0e!important}
 .nh-jthumb,.nh-pimg,.nh-lorb{filter:grayscale(1) contrast(1.04)!important}
 .nh-lbar i{background:#ece9e2!important}
+.nh-lbar,.sm-prog-bar,.jrh-bar,.planband-bar,.pil-bar,.jrny-bar,.bar{background:#ffffff14!important}
+.nh-jmeta,.nh-jquote{color:var(--muted)!important}
 .nh-lchev{color:var(--muted)!important}
 .nh-pplay{background:transparent!important;border:1px solid #f2efe8!important;color:#f2efe8!important;box-shadow:none!important}
 .nh-si{color:#cfcbc0!important}.nh-si svg,.nh-si .i{filter:grayscale(1)!important}
 /* ===== bottom nav → bone, no gold ===== */
 #nav button{color:var(--muted)!important}
-nav .inner{background:#0b0b0e!important;border-color:var(--line)!important}
-#nav button.on{color:#f2efe8!important;background:rgba(255,255,255,.055)!important}
+nav .inner{background:transparent!important;border:0!important;box-shadow:none!important}
+.nav{background:linear-gradient(rgba(8,8,10,0),#08080a 46%)!important}
+#nav button.on{color:#f2efe8!important;background:rgba(255,255,255,.05)!important}
 #nav .ic .i{color:#8a877f!important;filter:grayscale(1)!important}
 #nav button.on .ic .i{color:#f2efe8!important;filter:grayscale(1)!important;text-shadow:none!important}
 /* ===== remaining color sweep (stat icons, mandala, journeys accent, leagues, map) ===== */
@@ -4455,6 +4458,24 @@ nav .inner{background:#0b0b0e!important;border-color:var(--line)!important}
 .leaflet-tile,.leaflet-marker-icon,.leaflet-marker-pane img,.leaflet-overlay-pane img{filter:grayscale(1) contrast(1.04)!important}
 .leaflet-container{background:#08080a!important}
 canvas.stars{filter:grayscale(1)!important}
+/* ===== journey DETAIL screen → mono ===== */
+[style*="--a:"]{--a:#e8e4d8!important}
+.jrh{border-color:var(--line)!important;background:#0b0b0e!important}
+.jrh:before{display:none!important}
+.jrh-eyebrow{color:var(--muted)!important}.jrh-eyebrow .i{filter:grayscale(1)!important}
+.jrh-bar>i{box-shadow:none!important}
+.back-btn{background:#0b0b0e!important;border-color:var(--line)!important;color:#f2efe8!important}
+.lesson-card,.lj-card{background:#0b0b0e!important}
+.lesson-card.resume,.lesson-card:hover{border-color:#e8e4d8!important}
+.lesson-card .lc-med,.lesson-card [class*="num"]{color:#cfcbc0!important}
+.lc-badge.next{background:#ece9e2!important;color:#0a0a0d!important}
+.lc-badge.done{color:#c3c9c3!important;background:rgba(255,255,255,.08)!important}
+.jrnext-btn{background:#ece9e2!important;color:#0a0a0d!important;box-shadow:none!important;border:0!important}
+.lc-n{color:#cfcbc0!important}
+.lj-card.next{border-color:#e8e4d8!important;box-shadow:0 0 0 1px #e8e4d8 inset,0 0 18px -8px #e8e4d8!important}
+.ach-foil{background:linear-gradient(115deg,transparent 22%,#5a5a5f 40%,#eee 50%,#9a9a9f 60%,#eee 70%,transparent 82%)!important}
+/* ===== subtle film-grain texture over the whole app (experiment) ===== */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.05;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 </style>
 <!-- Sentry error monitoring (project loader auto-injects the DSN; buffers errors
      from first paint so onboarding/auth are covered). Release = deploy version. -->
@@ -4883,7 +4904,7 @@ window.__lumenPremiumError=function(m){
   try{toast(m||'Purchase didn’t complete');}catch(e){}
 };
 const NAV_ICON={meditate:'meditate',lessons:'compass',community:'globe',leagues:'trophy',journal:'book',collect:'crystal',profile:'lotus'};
-const NAV_EMBLEM={meditate:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="translate(12 20.5) scale(.5)" stroke-width="3"><path d="M0 0C-5 -14 -5 -24 0 -30C5 -24 5 -14 0 0Z" fill="currentColor" fill-opacity=".16"/><path d="M0 0C-5 -13 -5 -22 0 -27C5 -22 5 -13 0 0Z" transform="rotate(-33)" fill="currentColor" fill-opacity=".10"/><path d="M0 0C-5 -13 -5 -22 0 -27C5 -22 5 -13 0 0Z" transform="rotate(33)" fill="currentColor" fill-opacity=".10"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(-64)" fill="currentColor" fill-opacity=".07"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(64)" fill="currentColor" fill-opacity=".07"/></g><circle cx="12" cy="15.2" r="1.3" fill="currentColor"/></svg>',lessons:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5.3"/><path d="M12 3.9 13.5 8 12 12.1 10.5 8Z" fill="currentColor" fill-opacity=".18"/><circle cx="12" cy="8" r=".9" fill="currentColor"/><circle cx="12" cy="1.9" r=".7" fill="currentColor"/><g transform="translate(12 21.5) scale(.32)" stroke-width="4.6"><path d="M0 0C-5 -13 -5 -22 0 -27C5 -22 5 -13 0 0Z" fill="currentColor" fill-opacity=".14"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(-40)" fill="currentColor" fill-opacity=".08"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(40)" fill="currentColor" fill-opacity=".08"/></g></svg>',community:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5.3" r="2.2"/><path d="M8.1 11.4c.3-2 1.9-3 3.9-3s3.6 1 3.9 3"/><circle cx="5.7" cy="7" r="1.5" stroke-opacity=".75"/><path d="M2.9 11.8c.1-1.7 1.2-2.6 2.8-2.7" stroke-opacity=".7"/><circle cx="18.3" cy="7" r="1.5" stroke-opacity=".75"/><path d="M21.1 11.8c-.1-1.7-1.2-2.6-2.8-2.7" stroke-opacity=".7"/><g transform="translate(12 21.5) scale(.32)" stroke-width="4.6"><path d="M0 0C-5 -13 -5 -22 0 -27C5 -22 5 -13 0 0Z" fill="currentColor" fill-opacity=".14"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(-40)" fill="currentColor" fill-opacity=".08"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(40)" fill="currentColor" fill-opacity=".08"/></g></svg>',journal:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.4C10.1 3.3 7.8 2.9 5.4 3.2V12.4C7.8 12.1 10.1 12.5 12 13.6 13.9 12.5 16.2 12.1 18.6 12.4V3.2C16.2 2.9 13.9 3.3 12 4.4Z" fill="currentColor" fill-opacity=".12"/><path d="M12 4.4V13.6"/><path d="M7.3 6C8.5 6 9.6 6.3 10.5 6.8M7.3 8.6C8.5 8.6 9.6 8.9 10.5 9.4"/><path d="M16.7 6C15.5 6 14.4 6.3 13.5 6.8M16.7 8.6C15.5 8.6 14.4 8.9 13.5 9.4"/><g transform="translate(12 21.5) scale(.32)" stroke-width="4.6"><path d="M0 0C-5 -13 -5 -22 0 -27C5 -22 5 -13 0 0Z" fill="currentColor" fill-opacity=".14"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(-40)" fill="currentColor" fill-opacity=".08"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(40)" fill="currentColor" fill-opacity=".08"/></g></svg>',profile:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11.4" r="9" stroke-opacity=".42"/><g transform="translate(12 20.5) scale(.5)" stroke-width="3"><path d="M0 0C-5 -14 -5 -24 0 -30C5 -24 5 -14 0 0Z" fill="currentColor" fill-opacity=".16"/><path d="M0 0C-5 -13 -5 -22 0 -27C5 -22 5 -13 0 0Z" transform="rotate(-33)" fill="currentColor" fill-opacity=".10"/><path d="M0 0C-5 -13 -5 -22 0 -27C5 -22 5 -13 0 0Z" transform="rotate(33)" fill="currentColor" fill-opacity=".10"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(-64)" fill="currentColor" fill-opacity=".07"/><path d="M0 0C-6 -10 -6 -17 0 -21C6 -17 6 -10 0 0Z" transform="rotate(64)" fill="currentColor" fill-opacity=".07"/></g><circle cx="12" cy="2.4" r=".9" fill="currentColor"/><circle cx="3.3" cy="11.4" r=".7" fill="currentColor" opacity=".85"/><circle cx="20.7" cy="11.4" r=".7" fill="currentColor" opacity=".85"/></svg>'};
+const NAV_EMBLEM={meditate:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="6" r="2.4"/><path d="M12 9C8.4 9 6 11.6 6 15.6 8.1 16.6 15.9 16.6 18 15.6 18 11.6 15.6 9 12 9Z" fill="currentColor" fill-opacity=".13"/><path d="M6 15.6H18"/><path d="M8.6 13.4C9.6 14.1 10.7 14.4 12 14.4 13.3 14.4 14.4 14.1 15.4 13.4"/></svg>',lessons:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18C7 14.5 11 15 11 11.5 11 8.6 14.5 9 15.5 6" stroke-dasharray="2.3 2.7"/><circle cx="7" cy="18" r="1.15" fill="currentColor"/><path d="M15.7 2.9 16.5 4.8 18.6 5 17 6.4 17.5 8.5 15.7 7.4 13.9 8.5 14.4 6.4 12.8 5 14.9 4.8Z" fill="currentColor" fill-opacity=".2"/></svg>',community:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="7" r="2.6"/><path d="M7.5 15.5C7.8 13 9.6 11.8 12 11.8 14.4 11.8 16.2 13 16.5 15.5"/><circle cx="5.4" cy="9" r="1.8" stroke-opacity=".7"/><path d="M2.4 15C2.5 13 3.7 11.9 5.5 11.9" stroke-opacity=".65"/><circle cx="18.6" cy="9" r="1.8" stroke-opacity=".7"/><path d="M21.6 15C21.5 13 20.3 11.9 18.5 11.9" stroke-opacity=".65"/></svg>',journal:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5.4C10 4.2 7.6 3.8 5 4.2V16.6C7.6 16.2 10 16.6 12 17.8 14 16.6 16.4 16.2 19 16.6V4.2C16.4 3.8 14 4.2 12 5.4Z" fill="currentColor" fill-opacity=".12"/><path d="M12 5.4V17.8"/><path d="M7.3 7.3C8.5 7.3 9.6 7.6 10.5 8.1M7.3 10C8.5 10 9.6 10.3 10.5 10.8"/><path d="M16.7 7.3C15.5 7.3 14.4 7.6 13.5 8.1M16.7 10C15.5 10 14.4 10.3 13.5 10.8"/></svg>',profile:'<svg class="i nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="3.1"/><path d="M5.5 18.6C6 15.3 8.7 13.5 12 13.5 15.3 13.5 18 15.3 18.5 18.6"/></svg>'};
 function navEmblem(t){return NAV_EMBLEM[t]||ic(NAV_ICON[t],'nav');}
 const LEAGUE_ICON={Ember:'flame',Spark:'spark',Glow:'glow',Flare:'flare',Beacon:'beacon',Nova:'star',Supernova:'nova'};
 const leagueIcon=(name,cls)=>ic(LEAGUE_ICON[name]||'trophy',cls||'');
@@ -10930,7 +10951,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v125';
+const CACHE = 'lumen-v126';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
