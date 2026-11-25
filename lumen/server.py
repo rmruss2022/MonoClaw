@@ -437,13 +437,13 @@ def send_email(to, subject, text, html=None):
 
 # (name, weekly_light_threshold, color, color2) — color2 is the gradient partner
 LEAGUES = [
-    ("Ember",     0,    "#ef4444", "#f97316"),
-    ("Spark",     50,   "#f97316", "#fbbf24"),
-    ("Glow",      150,  "#eab308", "#a3e635"),
-    ("Flare",     350,  "#22c55e", "#2dd4bf"),
-    ("Beacon",    700,  "#06b6d4", "#38bdf8"),
-    ("Nova",      1200, "#6366f1", "#818cf8"),
-    ("Supernova", 2000, "#d946ef", "#ec4899"),
+    ("Ember",     0,    "#8a867c", "#a39f93"),
+    ("Spark",     50,   "#9a968a", "#b3afa2"),
+    ("Glow",      150,  "#aaa699", "#c3bfb0"),
+    ("Flare",     350,  "#bab6a8", "#d2cebd"),
+    ("Beacon",    700,  "#c9c5b6", "#e0dccb"),
+    ("Nova",      1200, "#d8d4c4", "#ece8d6"),
+    ("Supernova", 2000, "#e8e3d2", "#fff8e6"),
 ]
 
 def league_for(weekly_light):
@@ -4442,6 +4442,18 @@ html,body{background:#08080a!important;color:var(--text)!important}
 #nav button.on{color:#f2efe8!important;background:transparent!important}
 #nav .ic .i{color:#8a877f!important;filter:grayscale(1)!important}
 #nav button.on .ic .i{color:#f2efe8!important;filter:grayscale(1)!important;text-shadow:none!important}
+/* ===== remaining color sweep (stat icons, mandala, journeys accent, leagues, map) ===== */
+.nh-si.flame,.nh-si.star,.nh-si.sun{color:#cfcbc0!important;filter:grayscale(1)!important}
+.you-mandala,.mandala-wrap,.mkr-mandala{filter:grayscale(1) contrast(1.04)!important}
+.jrny-card{--a:#e8e4d8!important;background:#0b0b0e!important;border:1px solid var(--line)!important}
+.jrny-bar>i{box-shadow:none!important}
+.jcard-med{--a:#cfcbc0!important;color:#cfcbc0!important;background:#141418!important;border-color:var(--line)!important;filter:grayscale(1)!important}
+.league-hero{border-color:var(--line)!important;--lc:#cfcbc0!important;--lc2:#cfcbc0!important}
+.league-hero h1{color:#f2efe8!important}
+.you-catbtn{color:var(--muted)!important}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-pane img,.leaflet-overlay-pane img{filter:grayscale(1) contrast(1.04)!important}
+.leaflet-container{background:#08080a!important}
+canvas.stars{filter:grayscale(1)!important}
 </style>
 <!-- Sentry error monitoring (project loader auto-injects the DSN; buffers errors
      from first paint so onboarding/auth are covered). Release = deploy version. -->
@@ -5500,7 +5512,7 @@ function lumenOrb(me){
   const into=me.level_into||0, need=me.level_need||100;
   const prog=Math.max(0,Math.min(1,into/((into+need)||1)));
   const b=Math.max(.16,Math.min(1,(lvl-1)/11 + prog/11));   // brightness 0..1, grows with level
-  const col=(me.league&&me.league.color)||'#f5c977';
+  const col=(me.league&&me.league.color)||'#e8e4d8';
   const rays=Math.min(18,6+Math.floor(lvl*0.9));
   const motes=Math.min(12,Math.floor((me.total_sessions||0)/5));
   const coreR=17+Math.round(20*b);
@@ -10917,7 +10929,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v123';
+const CACHE = 'lumen-v124';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
