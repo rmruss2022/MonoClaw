@@ -8964,7 +8964,7 @@ boot();
 </html>"""
 
 class H(BaseHTTPRequestHandler):
-    server_version = "Lumen/1.0"
+    server_version = "Realized/1.0"
 
     def log_message(self, *a):
         pass

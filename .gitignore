@@ -57,3 +57,7 @@ nightsweep/work/context-*.md
 nightsweep/logs/sweep-*.log
 *.py.bak
 *.py.pre-ui
+
+# editor/script backups
+*.bak
+*.bak-*
