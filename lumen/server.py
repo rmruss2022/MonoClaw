@@ -4424,6 +4424,24 @@ html,body{background:#08080a!important;color:var(--text)!important}
 .onb-anim{background:#0b0b0e!important;box-shadow:none!important;border:1px solid var(--line)!important;border-radius:6px!important}
 /* onboarding gold star/mote glows → neutral */
 .os-tw,.os-rise{fill:#d7d3c8!important;filter:none!important}
+/* ===== authed Home (nh-*) system → monochrome ===== */
+.nh-start{background:transparent!important;color:#f2efe8!important;border:1px solid #f2efe8!important;box-shadow:none!important;font-family:'IBM Plex Mono',ui-monospace,monospace!important;text-transform:uppercase!important;letter-spacing:.14em!important;font-size:13px!important;font-weight:500!important}
+.nh-stat{background:#0b0b0e!important;border:1px solid var(--line)!important;box-shadow:none!important;border-radius:6px!important}
+.nh-sl{font-family:'IBM Plex Mono',ui-monospace,monospace!important;text-transform:uppercase!important;letter-spacing:.14em!important;color:var(--muted)!important}
+.nh-link{color:var(--muted)!important;font-family:'IBM Plex Mono',ui-monospace,monospace!important;text-transform:uppercase!important;letter-spacing:.14em!important;font-size:11px!important}
+.nh-sec-h h2{font-family:var(--display)!important;font-weight:360!important;color:#f2efe8!important}
+.nh-card,.nh-level,.nh-pick{background:#0b0b0e!important;border:1px solid var(--line)!important;border-radius:6px!important;box-shadow:none!important}
+.nh-jpin{color:#e9e6dd!important;background:#0b0b0e!important}
+.nh-jthumb,.nh-pimg,.nh-lorb{filter:grayscale(1) contrast(1.04)!important}
+.nh-lbar i{background:#ece9e2!important}
+.nh-lchev{color:var(--muted)!important}
+.nh-pplay{background:transparent!important;border:1px solid #f2efe8!important;color:#f2efe8!important;box-shadow:none!important}
+.nh-si{color:#cfcbc0!important}.nh-si svg,.nh-si .i{filter:grayscale(1)!important}
+/* ===== bottom nav → bone, no gold ===== */
+#nav button{color:var(--muted)!important}
+#nav button.on{color:#f2efe8!important;background:transparent!important}
+#nav .ic .i{color:#8a877f!important;filter:grayscale(1)!important}
+#nav button.on .ic .i{color:#f2efe8!important;filter:grayscale(1)!important;text-shadow:none!important}
 </style>
 <!-- Sentry error monitoring (project loader auto-injects the DSN; buffers errors
      from first paint so onboarding/auth are covered). Release = deploy version. -->
@@ -10899,7 +10917,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v121';
+const CACHE = 'lumen-v122';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
