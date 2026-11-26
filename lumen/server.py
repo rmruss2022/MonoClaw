@@ -6007,31 +6007,31 @@ function completeFlow(minutes){
 function buildShareCard(d){
   const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
   const bg=g.createRadialGradient(W/2,H*0.34,60,W/2,H*0.34,H*0.9);
-  bg.addColorStop(0,'#1c1636');bg.addColorStop(.55,'#120f24');bg.addColorStop(1,'#09080f');
+  bg.addColorStop(0,'#141417');bg.addColorStop(.55,'#0b0b0e');bg.addColorStop(1,'#08080a');
   g.fillStyle=bg;g.fillRect(0,0,W,H);
-  for(let i=0;i<48;i++){g.globalAlpha=0.05+Math.random()*0.28;g.fillStyle='#f5c977';g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.9,0,7);g.fill();}
+  for(let i=0;i<48;i++){g.globalAlpha=0.05+Math.random()*0.28;g.fillStyle='#ece9e2';g.beginPath();g.arc(Math.random()*W,Math.random()*H,Math.random()*1.9,0,7);g.fill();}
   g.globalAlpha=1;g.textAlign='center';
-  g.fillStyle='#f5c977';g.font='700 58px Georgia,"Times New Roman",serif';g.fillText('lumen',W/2,152);
+  g.fillStyle='#f2efe8';g.font='300 58px Georgia,"Times New Roman",serif';g.fillText('Realized',W/2,152);
   const ox=W/2,oy=438;
-  let halo=g.createRadialGradient(ox,oy,0,ox,oy,255);halo.addColorStop(0,'rgba(246,201,119,.55)');halo.addColorStop(.5,'rgba(240,168,74,.16)');halo.addColorStop(1,'rgba(240,168,74,0)');
+  let halo=g.createRadialGradient(ox,oy,0,ox,oy,255);halo.addColorStop(0,'rgba(236,233,226,.30)');halo.addColorStop(.5,'rgba(236,233,226,.08)');halo.addColorStop(1,'rgba(236,233,226,0)');
   g.fillStyle=halo;g.beginPath();g.arc(ox,oy,255,0,7);g.fill();
-  g.save();g.translate(ox,oy);g.rotate(-0.34);g.strokeStyle='rgba(255,231,176,.5)';g.lineWidth=5;g.beginPath();g.ellipse(0,0,192,54,0,0,7);g.stroke();g.restore();
-  let core=g.createRadialGradient(ox-30,oy-40,8,ox,oy,116);core.addColorStop(0,'#fffdf6');core.addColorStop(.45,'#f7c972');core.addColorStop(.84,'#e49b38');core.addColorStop(1,'#9a5e1c');
+  g.save();g.translate(ox,oy);g.rotate(-0.34);g.strokeStyle='rgba(236,233,226,.35)';g.lineWidth=5;g.beginPath();g.ellipse(0,0,192,54,0,0,7);g.stroke();g.restore();
+  let core=g.createRadialGradient(ox-30,oy-40,8,ox,oy,116);core.addColorStop(0,'#ffffff');core.addColorStop(.45,'#d9d6cf');core.addColorStop(.84,'#8a877f');core.addColorStop(1,'#3a3936');
   g.fillStyle=core;g.beginPath();g.arc(ox,oy,112,0,7);g.fill();
-  g.save();g.translate(ox,oy);g.rotate(-0.34);g.strokeStyle='rgba(255,231,176,.92)';g.lineWidth=5;g.beginPath();g.ellipse(0,0,192,54,0,3.14,6.28);g.stroke();g.restore();
+  g.save();g.translate(ox,oy);g.rotate(-0.34);g.strokeStyle='rgba(242,239,232,.85)';g.lineWidth=5;g.beginPath();g.ellipse(0,0,192,54,0,3.14,6.28);g.stroke();g.restore();
   g.fillStyle='#f6f1ea';g.font='700 170px Georgia,serif';g.fillText(String(d.minutes||0),W/2,780);
-  g.fillStyle='#b9b0d0';g.font='400 46px -apple-system,"Segoe UI",sans-serif';g.fillText((d.minutes===1?'minute':'minutes')+' of stillness',W/2,848);
-  if(d.sound){g.fillStyle='#8f8a9d';g.font='400 38px -apple-system,sans-serif';g.fillText(d.sound.charAt(0).toUpperCase()+d.sound.slice(1)+' soundscape',W/2,910);}
-  g.fillStyle='#f5c977';g.font='700 72px -apple-system,sans-serif';g.fillText('+'+fmt(d.light||0)+' Light',W/2,1022);
-  if(d.streak&&d.streak>1){g.fillStyle='#fb923c';g.font='600 44px -apple-system,sans-serif';g.fillText(d.streak+'-day streak',W/2,1092);}
-  g.fillStyle='#7f7a92';g.font='400 34px -apple-system,sans-serif';g.fillText('light, one breath at a time',W/2,1272);
+  g.fillStyle='#ece9e2';g.font='400 46px -apple-system,"Segoe UI",sans-serif';g.fillText((d.minutes===1?'minute':'minutes')+' of stillness',W/2,848);
+  if(d.sound){g.fillStyle='#7b7971';g.font='400 38px -apple-system,sans-serif';g.fillText(d.sound.charAt(0).toUpperCase()+d.sound.slice(1)+' soundscape',W/2,910);}
+  g.fillStyle='#f2efe8';g.font='700 72px -apple-system,sans-serif';g.fillText('+'+fmt(d.light||0)+' Light',W/2,1022);
+  if(d.streak&&d.streak>1){g.fillStyle='#ece9e2';g.font='600 44px -apple-system,sans-serif';g.fillText(d.streak+'-day streak',W/2,1092);}
+  g.fillStyle='#7b7971';g.font='400 34px -apple-system,sans-serif';g.fillText('light, one breath at a time',W/2,1272);
   return c;
 }
 async function shareMeditation(d){
   const url='https://apps.apple.com/app/id6822133425';
   const text=`I sat for ${d.minutes} ${d.minutes===1?'minute':'minutes'} with Realized${d.streak>1?` — ${d.streak}-day streak`:''}. Light, one breath at a time.`;
   let file=null;
-  try{const cv=buildShareCard(d);const blob=await new Promise(r=>cv.toBlob(r,'image/png',0.92));if(blob)file=new File([blob],'lumen-meditation.png',{type:'image/png'});}catch(e){}
+  try{const cv=buildShareCard(d);const blob=await new Promise(r=>cv.toBlob(r,'image/png',0.92));if(blob)file=new File([blob],'realized-meditation.png',{type:'image/png'});}catch(e){}
   try{
     if(file&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],text:text+'\n'+url});return;}
     if(navigator.share){await navigator.share({title:'Realized',text,url});return;}
@@ -10951,7 +10951,7 @@ h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;m
 </div></body></html>"""
 
 SERVICE_WORKER = r"""
-const CACHE = 'lumen-v127';
+const CACHE = 'lumen-v128';
 const STATIC = ['icon-192.png', 'icon-512.png', 'manifest.webmanifest'];
 self.addEventListener('install', e => {
   self.skipWaiting();
