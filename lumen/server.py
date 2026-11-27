@@ -1609,9 +1609,692 @@ SEASON_PLAN = [
       "Write a short note to the you who's a little further along in this season. What do you want them to know?"]),
 ]
 
-# The three journaling modes. Deep = pillar work; Daily = a letter to today;
-# Season = where you are in the larger arc of your life right now.
-JOURNAL_KINDS = ("deep", "daily", "season")
+# ---------------------------------------------------------------------------
+# BECOMING — a guided visualization pathway. You see the life that is already
+# yours, feel it as true before the evidence arrives, and then operate from
+# that state. Nine sittings. Authored in content/becoming/pathway-becoming.md and
+# generated from it by build_plan.py — edit the markdown, not this literal.
+# ---------------------------------------------------------------------------
+BECOMING_ARC = ("Nine sittings. You rehearse the self you are becoming until it is the one who shows up.")
+
+BECOMING_PLAN = [{'code': 'becoming_01',
+  'title': 'The Known Self',
+  'eyebrow': 'BECOMING · 01 · THE KNOWN SELF',
+  'invitation': 'Before you build the new self, meet the one running the day.',
+  'teach': ['You think the day happens to you. Mostly, the day happens *from* you. The same '
+            'thoughts arrive in the same order, they produce the same feelings, and those feelings '
+            'hand you the next set of thoughts. The loop closes. By noon you have confirmed who '
+            'you already were.',
+            "Joe Dispenza's name for this is a thinking-and-feeling loop, and his line for where "
+            'it leads is direct: *"your personality creates your personal reality."* Personality '
+            'here means the whole of it — how you think, how you act, how you feel. Change none of '
+            'those and the reality holds its shape.',
+            'There is nothing broken in this. It is how a nervous system becomes efficient. '
+            'Neurons that fire together strengthen their connection, so whatever you have '
+            'practised most becomes the cheapest thing to do again. You have been practising '
+            'someone. You are good at them.',
+            'So the work does not begin with a vision. It begins with recognition. You cannot step '
+            'out of a loop you have not seen the shape of.'],
+  'practice': [{'name': 'Settling',
+                'cue': 'Let the body be still. Let the breath be its own.',
+                'secs': 150,
+                'say': ['Welcome. Find a seat where the spine can hold itself without effort.',
+                        'Let the eyes close.',
+                        'There is nothing to fix in this sitting. You are here to look.',
+                        'Feel the weight of the body arriving on the surface beneath you.',
+                        'Let the breath be slower than your thinking.',
+                        'Now bring your awareness to the space your hands occupy.',
+                        'Not the hands. The space they take up.',
+                        'And the space around them.',
+                        'Now the space your feet occupy, and the space around them.',
+                        'The space your whole body occupies.',
+                        'And the space the room holds around it.',
+                        'Rest there. No effort. Nothing to reach for.']},
+               {'name': 'The loop',
+                'cue': 'Watch one familiar thought. Do not follow it.',
+                'secs': 190,
+                'say': ['Now let your attention turn toward an ordinary day.',
+                        'Yesterday will do.',
+                        'Notice the first thought that came to you on waking.',
+                        'You have thought it before.',
+                        'Follow what it produced. There was a feeling underneath it, and you know '
+                        'the feeling well.',
+                        'Name it plainly. Rushed. Behind. Braced. Wanting.',
+                        'Now notice what that feeling asked you to think next.',
+                        'That is the loop. Thought to feeling, feeling to thought, all day, with '
+                        'nobody driving.',
+                        'Watch it the way you would watch weather over a field.',
+                        'You are not the weather. You are the one seeing it.',
+                        'Stay with that distinction. It is the whole doorway.',
+                        'Each time attention slips back inside the loop, notice, and step out '
+                        'again.',
+                        'That stepping out is the skill. You are practising it now.']},
+               {'name': 'The seam',
+                'cue': 'Rest in the gap between one thought and the next.',
+                'secs': 170,
+                'say': ['Let the day go.',
+                        'Come back to the breath, and let it lengthen once.',
+                        'Somewhere in the quiet there is a seam — a gap between one thought and '
+                        'the next.',
+                        'Do not hunt for it. Let it be noticed.',
+                        'That gap is where choice lives.',
+                        'You do not have to be the person you practised yesterday.',
+                        'You only have to notice, in the gap, that there is another option.',
+                        'Rest here for a moment longer, without needing anything from it.',
+                        'When you are ready, let the breath deepen.',
+                        'Feel the body. Feel the room.',
+                        'Let the eyes open, and carry a little of that clear seeing into the '
+                        'day.']}],
+  'prompt': 'Name the loop you were in today. What was the first thought, what feeling did it hand '
+            'you, and what did that feeling make you do? Write it plainly — you are not '
+            'confessing, you are mapping.',
+  'done': 'You can name one specific loop from your own day — a thought, the feeling it produced, '
+          'and the action that followed — without flinching or defending it. You are not trying to '
+          'fix it yet. Seeing it once, clearly, is the whole lesson.',
+  'principle': 'The self you practised yesterday is the one who runs today — until you see the '
+               'loop and step out of it.',
+  'steps': ['Name the loop you were in today. What was the first thought, what feeling did it hand '
+            'you, and what did that feeling make you do? Write it plainly — you are not '
+            'confessing, you are mapping.']},
+ {'code': 'becoming_02',
+  'title': 'Greater Than',
+  'eyebrow': 'BECOMING · 02 · GREATER THAN',
+  'invitation': 'Step out of your body, your surroundings, and the clock — for ten minutes.',
+  'teach': ['Three things keep the old self in place. Your environment, which reminds you '
+            'constantly of who you have been. Your body, which runs the familiar chemistry of that '
+            'self without being asked. And time — the sense that your future is a slightly worse '
+            'copy of your past, with the same hours in it.',
+            'Dispenza teaches the practice as becoming *greater than* those three. Not escaping '
+            'them. Becoming larger than their vote. In a sitting, you stop giving your attention '
+            "to the room, to the body's reports, and to the clock, and for a few minutes you are "
+            'not locked to a known identity.',
+            'The mechanism is less mysterious than it sounds, and more useful. Attention is a '
+            'resource with a budget. Every bit of it spent on surroundings, sensation and schedule '
+            'is a bit unavailable for building something new. Open, unfocused awareness takes the '
+            'budget back.',
+            'This is the induction. Every lesson after this one depends on it. You are not '
+            'visualizing yet. You are making room.'],
+  'practice': [{'name': 'The space the body occupies',
+                'cue': 'Awareness on space, not on surfaces.',
+                'secs': 160,
+                'say': ['Sit where you will not be interrupted. Let the eyes close.',
+                        'Let the breath slow, and let it stay slow without managing it.',
+                        'Become aware of the space your feet occupy.',
+                        'Not the sensation. The volume. The place where they are.',
+                        'Now the space your legs occupy.',
+                        'The space your hands occupy, and the space between them.',
+                        'The space your chest occupies as it rises and falls.',
+                        'The space your head occupies.',
+                        'The space your whole body occupies, all at once.',
+                        'Hold the whole of it in one unbroken awareness.']},
+               {'name': 'Greater than the room, the body, the clock',
+                'cue': 'Sense the space around you. Let the edges soften.',
+                'secs': 200,
+                'say': ['Now widen. Become aware of the space the room occupies around your body.',
+                        'The space above you. The space behind you.',
+                        'Let the edges of where you end grow less interesting.',
+                        'You are not leaving your body. You are loosening your grip on its '
+                        'borders.',
+                        'Now let the room go, and sense the space beyond it.',
+                        'No image is needed. Just the openness.',
+                        'For these minutes, there is nowhere you have to be.',
+                        'There is nothing you have to do.',
+                        'There is no one you have to be.',
+                        'If the mind reaches for your phone, your list, the hour — notice, and '
+                        'come back to open space.',
+                        'Let the clock keep time without you.',
+                        'Rest here, awake and unhurried.']},
+               {'name': 'Nothing to defend',
+                'cue': 'Nowhere to be. Nothing to do. No one to be.',
+                'secs': 200,
+                'say': ['Stay in the openness a while longer.',
+                        'Notice how little the old self needs you right now.',
+                        "It needs the room to remind it. It needs the body's chemistry to confirm "
+                        'it. It needs the clock to chase it.',
+                        'You have quietly stopped supplying all three.',
+                        'This is what unfamiliar feels like. Unfamiliar is not unsafe.',
+                        'This is the ground you will build on.',
+                        'Stay, with nothing to defend.',
+                        'Now begin to come back. Let the breath deepen.',
+                        'Feel the weight of the body. Feel the room reassemble around you.',
+                        'Bring the openness with you. It belongs to you, not to the cushion.',
+                        'Let the eyes open.']}],
+  'prompt': 'What in your surroundings reminds you most insistently of who you have already been — '
+            'a room, a routine, a person, a screen? And what is one thing you could change about '
+            'it this week, however small?',
+  'done': 'There was a stretch — even thirty seconds — where you were not tracking the room, your '
+          'body, or the time. You noticed how unfamiliar that felt, and you stayed anyway.',
+  'principle': 'You are not your body, your surroundings, or the hour. Become greater than the '
+               'three and the known self has nothing left to hold onto.',
+  'steps': ['What in your surroundings reminds you most insistently of who you have already been — '
+            'a room, a routine, a person, a screen? And what is one thing you could change about '
+            'it this week, however small?']},
+ {'code': 'becoming_03',
+  'title': 'The Rehearsal',
+  'eyebrow': 'BECOMING · 03 · THE REHEARSAL',
+  'invitation': 'See one ordinary morning in the life you are becoming.',
+  'teach': ['Mental rehearsal is the oldest trick in the book and the best evidenced thing in this '
+            'pathway. When people practise a finger sequence only in imagination — no movement — '
+            'the motor map in the brain reorganizes and real gains follow. Imagining a maximal '
+            'contraction, with no movement at all, builds measurable strength.',
+            'Be precise about what that means, because the claim is often inflated. Imagination '
+            'alone produced less change than physical practice did. What produced the most was the '
+            'two together — rehearse it, then do it. Rehearsal is not a substitute for the work. '
+            'It is what makes the work land faster when you get there.',
+            "Dispenza's use of this is the hinge of his method. You rehearse the future self until "
+            'the brain has already built some of the circuitry for it. Then the experience, when '
+            'it arrives, does not have to be learned entirely from scratch. He calls it installing '
+            'the hardware ahead of the event.',
+            'The error people make is rehearsing outcomes. A number, a title, a room. Outcomes are '
+            'thin. What has texture is a Tuesday — what you do at seven in the morning, what you '
+            'say no to at eleven, how your shoulders sit when you walk into the thing you used to '
+            'dread.',
+            'So be specific and be ordinary. You are not daydreaming a highlight reel. You are '
+            'walking through one unremarkable day of a life that is already yours.'],
+  'practice': [{'name': 'Open the ground',
+                'cue': 'Settle. Let the space open before you build in it.',
+                'secs': 170,
+                'say': ['Take your seat. Let the eyes close.',
+                        'Let the breath slow until it is slower than your thoughts.',
+                        'Become aware of the space your body occupies, and the space around it.',
+                        'Let the room loosen. Let the hour loosen.',
+                        'Nothing to be. Nothing to do.',
+                        'Stay in the open for a few breaths. This is the ground.',
+                        'You will build in open space, not in a crowded mind.',
+                        'Let the openness hold.']},
+               {'name': 'One ordinary morning',
+                'cue': 'A specific room. A specific hour. Present tense.',
+                'secs': 230,
+                'say': ['Now let a single scene begin to form. Not a triumph. A morning.',
+                        'You are waking up in the life you are becoming.',
+                        'Where are you. Let the room arrive — the light, the surfaces, the air on '
+                        'your skin.',
+                        'What is the first thing you do.',
+                        'Notice how your body moves. Notice that it is unhurried.',
+                        'What do you reach for. What do you not reach for anymore.',
+                        'Go to the first real thing you do with your day. See yourself begin it.',
+                        'Watch your own hands at the work. Watch your own face.',
+                        'Someone speaks to you. Hear how you answer — the tone, the steadiness in '
+                        'it.',
+                        'Notice what is simply absent from this morning. A dread. A bracing. A '
+                        'rehearsal of some argument.',
+                        'It is not there. You are not carrying it.',
+                        'Walk through the whole morning once more, in order, in the present tense. '
+                        'This is happening.',
+                        'Let it be plain and specific. The plainer it is, the more real it becomes '
+                        'to you.']},
+               {'name': 'Walk it once more',
+                'cue': 'Run it again. Let it get familiar.',
+                'secs': 200,
+                'say': ['Now run the scene once more, faster, like something remembered rather '
+                        'than imagined.',
+                        'You have been here. This is a Tuesday in your life.',
+                        'Notice how the second pass feels less like invention.',
+                        'That is the point. You are making the unfamiliar familiar.',
+                        'Let the scene rest. Let it keep existing without you watching it.',
+                        'Come back to the breath. Let it deepen.',
+                        'Feel the weight of your body in this room, in this hour.',
+                        'You do not have to leave that morning behind. You have begun building it.',
+                        'Let the eyes open.']}],
+  'prompt': 'Write one ordinary morning in the life you are becoming, in the present tense, as if '
+            'it happened today. Be specific. What time do you wake, what do you do first, what is '
+            'no longer in the room with you?',
+  'done': 'You can describe one specific, unremarkable scene — a room, an hour, a gesture — rather '
+          'than a wish or a number. On the second pass it felt slightly familiar instead of '
+          'invented. That shift is the whole gain.',
+  'principle': 'A future rehearsed in detail stops being strange. Walk it often enough and you '
+               'will recognise it when it arrives.',
+  'steps': ['Write one ordinary morning in the life you are becoming, in the present tense, as if '
+            'it happened today. Be specific. What time do you wake, what do you do first, what is '
+            'no longer in the room with you?']},
+ {'code': 'becoming_04',
+  'title': 'Already True',
+  'eyebrow': 'BECOMING · 04 · ALREADY TRUE',
+  'invitation': 'Feel the gratitude of having arrived, before the evidence arrives.',
+  'teach': ['A rehearsal without feeling is a memo. It does not take. The feeling is what tells '
+            'your body this matters, and the body is what makes the pattern stick.',
+            "Dispenza's emphasis here is specific: gratitude is the state of having received. You "
+            'do not feel grateful for something you are still waiting for. So to hold gratitude '
+            'for a life not yet visible is to instruct your whole system that it has already '
+            'arrived. Awe, freedom, love and joy do the same work. He groups them as elevated '
+            'emotions and sets them against the survival emotions — fear, anger, scarcity, '
+            'judgement — which narrow attention to threat and keep the old self fed.',
+            'That narrowing is real and well documented. Stress states shrink the aperture of '
+            'attention and bias you toward the familiar and the defensive. Positive states widen '
+            'it. A wider aperture is how you notice the opening you would otherwise walk past.',
+            'So the instruction is not to pretend. Pretending is thin and your body is not fooled. '
+            'The instruction is to find one true thing to be grateful for right now, let the '
+            'feeling actually arrive in your chest, and then hold the future in that feeling '
+            'rather than holding it in wanting. Wanting says it is not here. Gratitude says it '
+            'is.'],
+  'practice': [{'name': 'Open, then drop into the chest',
+                'cue': 'Breath slow. Attention in the centre of the chest.',
+                'secs': 160,
+                'say': ['Take your seat. Let the eyes close.',
+                        'Slow the breath, and let the body settle beneath it.',
+                        'Open into the space your body occupies and the space around it.',
+                        'Now bring your attention to the centre of your chest.',
+                        'Breathe into that place, slowly, as if the breath began there.',
+                        'Let each breath be a little longer and a little softer than the one '
+                        'before.',
+                        'Stay with the chest. Let the thinking mind lose interest.']},
+               {'name': 'One true gratitude, then the future inside it',
+                'cue': 'Find something real. Let the feeling arrive.',
+                'secs': 210,
+                'say': ['Now find one thing in your life that is genuinely already given.',
+                        "Something small and real. Someone's face. A roof. A morning. A body that "
+                        'keeps breathing you.',
+                        'Do not think about it. Let it land in your chest.',
+                        'Wait for the feeling to actually arrive. It will be quiet. Let it come '
+                        'anyway.',
+                        'Let it grow a little. Let it be warmer than it was.',
+                        'Now, holding that exact feeling, bring the life you are becoming into it.',
+                        'Not as a want. As a thing that has already happened.',
+                        'Thank it. The way you would thank something already in your hands.',
+                        'Notice the difference between wanting it and having it. Your body knows '
+                        'the difference.',
+                        'If it slides back into wanting, come back to the one true thing, and '
+                        'begin again.',
+                        'Stay here, grateful for a life that has not arrived on paper.']},
+               {'name': 'Let it be your state',
+                'cue': 'Hold it without effort. This is the state.',
+                'secs': 180,
+                'say': ['Let the images go. Keep the feeling.',
+                        'This is the state. Not the picture — the state.',
+                        'The pictures are how you got here. The feeling is what you are '
+                        'practising.',
+                        'Hold it without gripping it. Let it be the weather you are standing in.',
+                        'Notice that nothing outside you changed, and the feeling is real anyway.',
+                        'That is yours. Nobody has to grant it.',
+                        'Now let the breath deepen. Feel the body.',
+                        'Carry the feeling out with you. Do not leave it on the cushion.',
+                        'Let the eyes open.']}],
+  'prompt': 'What are you grateful for in a life that has not arrived yet? Write it as thanks, in '
+            'the past tense, as though it were already given.',
+  'done': 'The gratitude actually arrived in your body rather than staying an idea, and you held '
+          'the future inside that feeling for at least a minute without sliding back into wanting. '
+          'You can tell the difference between the two.',
+  'principle': 'Gratitude is the state of having received. Feel it before the evidence and you '
+               'stop waiting for your life to give you permission.',
+  'steps': ['What are you grateful for in a life that has not arrived yet? Write it as thanks, in '
+            'the past tense, as though it were already given.']},
+ {'code': 'becoming_05',
+  'title': 'Coherence',
+  'eyebrow': 'BECOMING · 05 · COHERENCE',
+  'invitation': 'Bring the heart and the breath into one rhythm, and hold it.',
+  'teach': ['Your heart does not beat like a metronome. The interval between beats stretches and '
+            'shortens constantly, and that variation tracks your state. Under stress it becomes '
+            'jagged and erratic. Under slow breathing and a held positive feeling it becomes a '
+            'smooth wave.',
+            'This is the one place in the method with instrumentation behind it. Slow, even '
+            'breathing at roughly six breaths a minute reliably produces that smooth wave, and the '
+            'pattern is measurable, trainable, and associated with better emotional regulation and '
+            'recovery. HRV biofeedback is a real clinical tool, not a metaphor.',
+            'Dispenza works with this directly and calls it heart-brain coherence, and treats it '
+            'as the carrier the rehearsal rides on: a scattered signal does not install anything, '
+            'a coherent one does. Keep the useful half of that and leave the rest. You do not need '
+            'to believe anything about fields to use it. What you need is a reliable way to get '
+            'your body out of alarm and into a steady, open state — and then do your rehearsing '
+            'from there.',
+            'So this lesson is the smallest and most portable thing in the pathway. One hand on '
+            'the chest, a long slow breath, one held feeling. Sixty seconds of it changes the '
+            'state you are making decisions from.'],
+  'practice': [{'name': 'Find the rhythm',
+                'cue': 'In for five. Out for five. Keep it even.',
+                'secs': 170,
+                'say': ['Take your seat. Let the eyes close.',
+                        'Place one hand over the centre of your chest, and leave it there.',
+                        'Now breathe in slowly, to a count of five.',
+                        'And out slowly, to a count of five.',
+                        'Keep the two sides even. No pause, no strain. A wave, not a bellows.',
+                        'In, five. Out, five.',
+                        'Let the count become automatic, then let it fade, and keep the rhythm.',
+                        'Let your attention live in the chest, under your hand.']},
+               {'name': 'Add the feeling',
+                'cue': 'Hold one warm feeling in the rhythm.',
+                'secs': 210,
+                'say': ['Now, keeping the rhythm, bring in one warm feeling.',
+                        'Care for someone. Gratitude for something real. The steadiness of a place '
+                        'you love.',
+                        'Let it sit in the chest, with the breath moving through it.',
+                        'Breath and feeling together, in one rhythm. This is coherence.',
+                        'If the rhythm breaks, do not correct it harshly. Simply return to the '
+                        'count.',
+                        'In, five. Out, five. The feeling riding on it.',
+                        'Now let the feeling radiate outward from the chest with each exhale.',
+                        'Not pushed. Just allowed, the way warmth leaves a stone.',
+                        'Keep the rhythm. Keep the feeling. Let everything else be quiet.',
+                        'Notice how the body calms when the signal stops arguing with itself.']},
+               {'name': 'Rehearse from here',
+                'cue': 'Hold the rhythm. Let one scene pass through it.',
+                'secs': 190,
+                'say': ['Holding this rhythm, let one scene from the life you are becoming pass '
+                        'through you.',
+                        'Not built. Just allowed to move through the coherent state.',
+                        'You are not visualizing hard. You are letting the picture borrow the '
+                        'feeling.',
+                        'Let it pass, and come back to the rhythm.',
+                        'This is the order that matters. State first. Then the vision.',
+                        'Remember how short this is. Five in, five out, one warm feeling. A minute '
+                        'of it is enough.',
+                        'You can do this in a car, in a corridor, in the ninety seconds before '
+                        'something hard.',
+                        'Now let the rhythm return to its own pace.',
+                        'Take your hand from your chest. Feel the body.',
+                        'Let the eyes open, and let the steadiness stay.']}],
+  'prompt': 'Where in your day do you most need sixty seconds of this — the moment you reliably '
+            'lose your footing? Name the moment, and write the cue you will use to catch it.',
+  'done': 'You found the even five-in, five-out rhythm and held a warm feeling inside it without '
+          'forcing either. You know where in tomorrow you will use the sixty-second version.',
+  'principle': 'When the heart and the breath run one rhythm, the signal is clean. A settled state '
+               'carries further than a loud wish.',
+  'steps': ['Where in your day do you most need sixty seconds of this — the moment you reliably '
+            'lose your footing? Name the moment, and write the cue you will use to catch it.']},
+ {'code': 'becoming_06',
+  'title': 'The Refractory Period',
+  'eyebrow': 'BECOMING · 06 · THE REFRACTORY PERIOD',
+  'invitation': 'Catch the old self on its way back, and choose again.',
+  'teach': ['An emotion has a tail. After the event that caused it is over, the chemistry keeps '
+            'running — and for as long as it runs, your thinking is coloured by it. Emotion '
+            'researchers call that window the refractory period.',
+            "Dispenza's point about it is the practical one. If the tail lasts hours, you have a "
+            'mood. If you keep it running for days, you have a temperament. Keep it running for '
+            'years and it has become your personality — a feeling you now call *me*. He describes '
+            'this as a memorised emotional state, and says the body has learned the mind. The '
+            'feeling no longer needs the original event. It generates its own reasons.',
+            'This is why insight alone changes so little. You saw the loop in Lesson 01, and by '
+            'Wednesday you were back inside it, because the old state is chemically and '
+            'neurologically cheaper than the new one. Nothing is wrong with you. You are being '
+            'efficient at being who you were.',
+            'So the skill is not avoiding the old state. It is catching the return and shortening '
+            'the tail. Notice it earlier than you did last time. Then run the thing you practised '
+            'in Lesson 05 and choose again from a different state. Each time the tail gets '
+            'shorter, the old self loses a little of its grip.'],
+  'practice': [{'name': 'Settle, and name the familiar feeling',
+                'cue': 'Name the state you return to most.',
+                'secs': 180,
+                'say': ['Take your seat. Let the eyes close.',
+                        'Slow the breath. Let the body settle.',
+                        'Open into the space your body occupies, and the space around it.',
+                        'Now ask one honest question, and wait for the answer rather than deciding '
+                        'it.',
+                        'Which feeling do you return to most often, when nothing in particular has '
+                        'happened?',
+                        'Let it name itself. Irritation. Urgency. Heaviness. Suspicion. '
+                        'Not-enough.',
+                        'Do not argue with it. You are identifying it, not evicting it.',
+                        'This is the state that has been calling itself you.']},
+               {'name': 'Find where it lives, and stop feeding it',
+                'cue': 'Feel it in the body. Let it be there without being obeyed.',
+                'secs': 210,
+                'say': ['Find where it lives in the body. Most states have an address.',
+                        'The jaw. The throat. The stomach. Between the shoulders.',
+                        'Breathe into that place, slowly, without trying to move it.',
+                        'Now notice what it wants you to think.',
+                        'It always has a thought ready. It will offer you one now.',
+                        'Let the thought come, and do not take it.',
+                        'That is the move. The feeling is allowed. The thought is declined.',
+                        'Keep breathing into the place where it lives. Long out-breaths.',
+                        'Notice it does not need an event. It has been running on its own for a '
+                        'long time.',
+                        'You are not fighting it. You are simply stopping the supply.',
+                        'Stay here, feeling it, refusing to think from it.']},
+               {'name': 'Choose the other state',
+                'cue': 'Five in, five out. One warm feeling. Begin again.',
+                'secs': 190,
+                'say': ['Now return to the chest, and to the rhythm. In for five. Out for five.',
+                        'Bring back one warm, true feeling, and let it sit in the chest.',
+                        'Notice that both states are available to you. Only one is practised.',
+                        'Practise this one for the rest of these breaths.',
+                        'This is what catching it looks like. You felt the old state arrive, and '
+                        'you chose again.',
+                        'You will not do this perfectly. Doing it sooner than last time is the '
+                        'whole win.',
+                        'Let the rhythm settle into its own pace.',
+                        'Feel the body. Feel the room.',
+                        'Let the eyes open, and go looking for the next return.']}],
+  'prompt': 'Which feeling do you come back to when nothing has happened — the one that has been '
+            'calling itself you? Write how long it usually runs, and name the earliest signal that '
+            'it has started.',
+  'done': 'You named the state you default to, found where it sits in your body, and declined one '
+          'thought it offered you. You know the earliest signal that it has begun, which is what '
+          'lets you catch it sooner next time.',
+  'principle': 'The old feeling will come back. That is not failure — it is a habit asking to be '
+               'fed. Notice it, and do not feed it.',
+  'steps': ['Which feeling do you come back to when nothing has happened — the one that has been '
+            'calling itself you? Write how long it usually runs, and name the earliest signal that '
+            'it has started.']},
+ {'code': 'becoming_07',
+  'title': "Who You'd Have To Be",
+  'eyebrow': 'BECOMING · 07 · BEING BEFORE DOING',
+  'invitation': 'Stop asking what to do. Ask who you would have to be.',
+  'teach': ['Most planning starts at the wrong end. You decide what to do, then you try to do it '
+            'from the state you are already in — and the old state quietly declines. That is why '
+            'the list survives and the life does not.',
+            'Dispenza inverts it. Being before doing. The question is not *what are my steps*, it '
+            'is *who would I have to be for those steps to be obvious?* Then you practise being '
+            'that person in a sitting, and let the behaviour follow from the state rather than '
+            'from willpower.',
+            'This is less mystical than it sounds. You already know what it is like to do '
+            'something hard easily, because you have done it on a day you felt good. The behaviour '
+            'was not harder on your worst day — you were in a state that could not afford it. '
+            'Raise the state and the same behaviour costs less.',
+            'So choose one quality, not ten. Decisive. Patient. Generous. Unhurried. One. Then '
+            'rehearse yourself holding it inside a specific moment that usually goes the other '
+            'way.'],
+  'practice': [{'name': 'Choose one quality',
+                'cue': 'One quality. Say it to yourself once.',
+                'secs': 170,
+                'say': ['Take your seat. Let the eyes close.',
+                        'Slow the breath, and let the body settle beneath it.',
+                        'Open into the space you occupy, and the space around you.',
+                        'Now ask: who would I have to be, for the life I am building to be '
+                        'ordinary?',
+                        'Let one quality come forward. Not a list. One.',
+                        'Decisive. Patient. Generous. Steady. Unafraid of the hard conversation.',
+                        'Say it to yourself once, plainly.',
+                        'Now find a memory — any memory — where you already were that. You have '
+                        'been. Find it.',
+                        'Let the feeling of that moment return to the body.']},
+               {'name': 'Be it inside the hard moment',
+                'cue': 'A real moment that usually goes the other way.',
+                'secs': 210,
+                'say': ['Now bring forward one moment in your week that usually goes the other '
+                        'way.',
+                        'See it exactly. The room. The person. The hour of day.',
+                        'Watch the old self walk into it. You know how that goes. Let it play '
+                        'once, honestly.',
+                        'Now bring it back to the beginning.',
+                        'Walk in as the one holding that quality.',
+                        'Notice your posture first. Then your breath. Then your voice.',
+                        'See what you say. See what you do not say.',
+                        'Notice that nothing about the room changed. You did.',
+                        'Run it again, and let it be less effortful this time.',
+                        'This is the rehearsal that matters most. Not the outcome — the being.',
+                        'Hold the quality in your body for a few breaths with no scene at all.',
+                        'That is what you will walk out of here wearing.']},
+               {'name': 'Let it be yours',
+                'cue': 'Hold the quality. No scene. No effort.',
+                'secs': 180,
+                'say': ['Let the scenes go. Keep the quality.',
+                        'Feel it as something you have, not something you are reaching for.',
+                        'Notice there is no one to convince of it. It does not need to be '
+                        'announced.',
+                        'It will show in what you do, which is the only place it ever shows.',
+                        'Today, you will get one chance to be this. Probably sooner than you '
+                        'expect.',
+                        'You already know what it feels like, because you have just practised it.',
+                        'Let the breath deepen. Feel the body.',
+                        'Let the eyes open, and go be it once.']}],
+  'prompt': 'Name the one quality you would have to be holding for your next step to be obvious. '
+            'Then name the specific moment this week where you will be it, and what you will do '
+            'differently in that moment.',
+  'done': 'You chose one quality, found a real memory of already having it, and rehearsed holding '
+          'it inside a specific moment from your actual week. You have named where you will use it '
+          'before the day is out.',
+  'principle': 'Doing follows being. Decide who you are, and the actions stop needing to be argued '
+               'for.',
+  'steps': ['Name the one quality you would have to be holding for your next step to be obvious. '
+            'Then name the specific moment this week where you will be it, and what you will do '
+            'differently in that moment.']},
+ {'code': 'becoming_08',
+  'title': 'Trust',
+  'eyebrow': 'BECOMING · 08 · TRUST',
+  'invitation': 'Let go of how and when. Keep the what and the who.',
+  'teach': ['There is a point in this work where gripping becomes the obstacle. You have seen it, '
+            'you have felt it, and now you want to manage its arrival — the route, the date, the '
+            'proof by Friday. That management is the old self returning in a more flattering '
+            'outfit. Checking is a form of doubt with a calendar.',
+            "Dispenza's language for the alternative is the generous present moment. You hold the "
+            'what and the who, and you release the how and the when. Not because the universe is '
+            'taking your order, but because a known future is a small one. If you insist on the '
+            'route you already know, you have limited the outcome to what the old self could '
+            'arrange.',
+            'Keep the practical version of this, because it is sturdy. Attachment to a specific '
+            'route makes you blind to better ones. A person holding a steady state and a clear '
+            'direction notices openings; a person auditing their progress hourly notices only the '
+            "gap. Trust here is not passivity. It is refusing to spend today's state on managing "
+            "tomorrow's timeline.",
+            'So this sitting is about taking your hands off. You keep the vision and the quality. '
+            'You put down the schedule.'],
+  'practice': [{'name': 'Open, and notice the grip',
+                'cue': 'Find where you are gripping. Do not pull it loose.',
+                'secs': 180,
+                'say': ['Take your seat. Let the eyes close.',
+                        'Slow the breath until it is slower than your thinking.',
+                        'Open into the space your body occupies, and the space around it.',
+                        'Now notice where you are gripping.',
+                        'There is a timeline somewhere in you. A by-when. A proof you keep asking '
+                        'for.',
+                        'Find it. Feel where it sits in the body.',
+                        'Do not pull it loose. Just see that you are holding it.',
+                        'Breathe into the place where it is held. Long, slow out-breaths.']},
+               {'name': 'Put down the how and the when',
+                'cue': 'Keep the what. Release the route.',
+                'secs': 220,
+                'say': ['Now bring the life you are becoming back in front of you. Clearly. '
+                        'Specifically.',
+                        'Keep the what. Keep the who you are in it.',
+                        'And now, deliberately, put down the how.',
+                        'You do not have to know the route. You have never known the route of '
+                        'anything good.',
+                        'Put down the when. Set the date down somewhere behind you.',
+                        'Notice what that frees. Notice how much of your attention was spent on '
+                        'the clock.',
+                        'Keep the vision. It is still here. It did not need the schedule to '
+                        'survive.',
+                        'Now let the unknown be interesting rather than threatening.',
+                        'There are openings you cannot see from where you are standing. That is '
+                        'not a problem. That is the whole point.',
+                        'Breathe into the openness, and let the vision rest inside it, unmanaged.',
+                        'Hold it the way you hold something already handled.',
+                        'Stay here. Nothing to arrange. Nothing to check.']},
+               {'name': 'Hands off',
+                'cue': 'Hold the vision loosely. Let today be enough.',
+                'secs': 190,
+                'say': ['Let the vision soften, and keep the trust.',
+                        'This is what hands-off feels like. Not giving up. Giving the route back.',
+                        'Notice how much steadier you are without the timeline in your fist.',
+                        'Today does not have to produce evidence. Today only has to be lived from '
+                        'this state.',
+                        'That is the practice. That is all it ever was.',
+                        'Let the breath deepen. Feel the weight of your body.',
+                        'Feel the room. Feel the hour you are actually in.',
+                        'Let the eyes open, and let today be enough.']}],
+  'prompt': 'Where are you gripping — what route or deadline are you insisting on? Write what you '
+            'are putting down, and what you are keeping.',
+  'done': 'You can state what you are keeping (the vision, the quality) and what you are putting '
+          'down (a specific route or date), and you felt the difference in your body when you set '
+          'the timeline down. You are not checking for evidence today.',
+  'principle': 'Hold the what and the who. Put down the how and the when. Gripping the method is '
+               "how you keep the outcome at arm's length.",
+  'steps': ['Where are you gripping — what route or deadline are you insisting on? Write what you '
+            'are putting down, and what you are keeping.']},
+ {'code': 'becoming_09',
+  'title': 'Operate From It',
+  'eyebrow': 'BECOMING · 09 · OPERATE FROM IT',
+  'invitation': 'The sitting is not the practice. The hour after it is.',
+  'teach': ['Everything so far happened with your eyes closed. That was the easy part. The pathway '
+            'is only real if the state survives contact with your actual Tuesday.',
+            "Dispenza's instruction for this is blunt: do not get up from the meditation the same "
+            'person who sat down. Decide who is standing up, and then stay that person on the '
+            'drive, in the inbox, in the conversation that usually takes you. The sitting raises '
+            'the state. The day is where you operate from it, and where it either holds or does '
+            'not.',
+            'This is also the honest limit of the whole method. It does not deliver outcomes. It '
+            'changes the state you make decisions from — and over months, the decisions are the '
+            'life. That is a slower and more trustworthy claim than any of the bigger ones, and it '
+            'is the one that holds up.',
+            'So this last lesson is short and it does not end when the narration does. You raise '
+            'the state, you name the hour you will be tested in, and you walk out already being '
+            'it. Then you come back tomorrow and do it again, because repetition is the only thing '
+            'that ever changed a person.'],
+  'practice': [{'name': 'Raise the state',
+                'cue': 'Everything you have practised, in order. Short.',
+                'secs': 160,
+                'say': ['Take your seat. Let the eyes close.',
+                        'Slow the breath. Let the body settle.',
+                        'Open into the space your body occupies, and the space around it. Nowhere '
+                        'to be. Nothing to do.',
+                        'Hand to the chest if you want it. In for five. Out for five.',
+                        'Bring one warm, true feeling into the chest, and let it actually arrive.',
+                        'Now let one ordinary scene from the life you are becoming pass through '
+                        'that feeling.',
+                        'And let the scene go. Keep the state.',
+                        'That is the whole sequence. Four minutes, any morning, for the rest of '
+                        'your life.']},
+               {'name': 'Decide who stands up',
+                'cue': 'Name the hour. Name who walks into it.',
+                'secs': 200,
+                'say': ['Now look at the day in front of you. The real one. The one with the hard '
+                        'hour in it.',
+                        'Find the hour. You know which one it is.',
+                        'See yourself walking into it, holding what you are holding right now.',
+                        'Not performing it. Just not losing it.',
+                        'Notice the moment it would usually slip. Watch yourself notice, and come '
+                        'back.',
+                        'That is all the skill is. Noticing, and coming back, more times than you '
+                        'lose it.',
+                        'Now decide who stands up from this seat.',
+                        'Say it to yourself in the present tense. Not who you will be. Who you '
+                        'are.',
+                        'You are not waiting for the life to arrive before you become the one '
+                        'living it.',
+                        'You become the one living it, and the life follows the one who is living '
+                        'it.']},
+               {'name': 'Carry it out',
+                'cue': 'Stand up as the one you have been practising.',
+                'secs': 160,
+                'say': ['Let the breath deepen.',
+                        'Feel your hands. Feel your feet on the floor.',
+                        'Feel the room, the hour, the ordinary day waiting for you.',
+                        'You are taking the state with you. It is not stored here.',
+                        'You will lose it today and you will catch it again, and the catching is '
+                        'the practice.',
+                        'Come back tomorrow. Repetition is the only thing that has ever changed '
+                        'anyone.',
+                        'Let the eyes open.',
+                        'Stand up as the one you have been practising. Begin.']}],
+  'prompt': 'Where did you act from the old self today, and where did you act from the new one? Be '
+            'specific about both, and name the hour tomorrow where you will be tested again.',
+  'done': 'You named the specific hour in your real day where the state will be tested, and you '
+          'stood up having decided who was standing. You lost it at some point and noticed — that '
+          'counts, and it is the actual skill.',
+  'principle': 'The sitting is the rehearsal. The hour after it is the performance. Carry the '
+               'state out and let it choose for you.',
+  'steps': ['Where did you act from the old self today, and where did you act from the new one? Be '
+            'specific about both, and name the hour tomorrow where you will be tested again.']}]
+
+# The journaling modes. Deep = pillar work; Daily = a letter to today;
+# Season = where you are in the larger arc of your life; Becoming = the self
+# you are rehearsing toward.
+JOURNAL_KINDS = ("deep", "daily", "season", "becoming")
+
+# The set that counts toward a *complete week*. Deliberately still three:
+# adding Becoming here would hand every existing user a fourth missing slot
+# mid-streak, which is a silent goalpost move. Becoming is a pathway you opt
+# into, not a weekly obligation.
+WEEK_KINDS = ("deep", "daily", "season")
 
 def _gemini_key():
     k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -1871,6 +2554,12 @@ def journal_reflect(prompt, text, kind="daily", pillar=None, place=None):
                "living through right now, not just today. Reflect on the season itself with "
                "warmth: what it is asking of them, what it is giving, and honour where they "
                "are in the arc without rushing them past it." % named)
+    elif kind == "becoming":
+        ctx = ("This is a 'Becoming' reflection — written after a guided visualization of the "
+               "life they are rehearsing toward. Reflect on the self they are practising, not "
+               "the circumstances. Mirror back the specific future they described and the state "
+               "they held, and affirm their agency in it. Never cast doubt on what they saw, and "
+               "never imply they are behind or that it is not working yet.")
     else:
         ctx = "This is a daily journal letter — a check-in with themselves."
     p = ("You are the Keeper — a warm, grounded meditation companion inside Realized. "
@@ -2019,6 +2708,42 @@ def season_exercise(c, u):
     return {"title": title, "invitation": invitation, "steps": steps, "opening": opening,
             "chapter": idx + 1, "chapters": n, "chapter_titles": [ch[0] for ch in chapters],
             "looped": done >= n}
+
+def becoming_exercise(c, u):
+    """The next sitting of the Becoming pathway. Mirrors season_exercise's
+    contract exactly — title / invitation / steps / chapter / chapters — and adds
+    the fields a guided visualization needs: the eyebrow, the teaching, the
+    narration segments with their timings, the principle, and what done looks
+    like. Advances by how many becoming sittings have been logged, then cycles."""
+    chapters = BECOMING_PLAN
+    done = c.execute("SELECT COUNT(*) n FROM journal WHERE user_id=? AND kind='becoming'",
+                     (u["id"],)).fetchone()["n"]
+    n = len(chapters)
+    idx = done % n if n else 0
+    L = chapters[idx]
+    opening = ""
+    if ai_enabled():
+        prev = c.execute("SELECT text,created FROM journal WHERE user_id=? AND kind='becoming' "
+                         "ORDER BY id DESC LIMIT 2", (u["id"],)).fetchall()
+        hist = "\n\n".join(f"[{(r['created'] or '')[:10]}] {(r['text'] or '')[:300]}" for r in prev)
+        name = (u["name"] or "").split()[0] if u["name"] else ""
+        p = ("You are the Keeper inside Realized, opening a 'Becoming' sitting — a guided "
+             f"visualization arc. Today's lesson is '{L['title']}' ({L['invitation']}). Write ONE "
+             "steady, empowering opening line (max 22 words, second person, present tense, no "
+             "emoji) that invites them in. Never diminish them. "
+             + (f"Their name is {name}. " if name else "")
+             + ("Their recent Becoming reflections, newest first:\n" + hist
+                if hist else "This is their first sitting on this path; welcome them to it.")
+             + "\n\nReturn ONLY JSON: {\"opening\":\"...\"}")
+        r = ai_json(p, timeout=20) or {}
+        opening = (r.get("opening") or "").strip()[:200]
+    return {"title": L["title"], "invitation": L["invitation"], "steps": L["steps"],
+            "opening": opening, "chapter": idx + 1, "chapters": n,
+            "chapter_titles": [x["title"] for x in chapters], "looped": done >= n,
+            "code": L["code"], "eyebrow": L["eyebrow"], "teach": L["teach"],
+            "practice": L["practice"], "principle": L["principle"],
+            "prompt": L["prompt"], "done_looks_like": L["done"], "arc": BECOMING_ARC}
+
 
 def journal_insights(rows):
     """Find the gentle throughline across a person's recent letters."""
@@ -7097,8 +7822,8 @@ let jScreen='home';          // journal sub-screen: 'home' | 'compose' | 'pillar
 // Open the Daily composer with a given prompt (used from Life OS / meditate home links).
 function openJournalDaily(p){if(p!=null)jPrompt=p;journalMode='daily';journalPillar=null;jScreen='compose';go('journal');}
 
-const J_MODES=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
-const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',season:'What chapter of life are you living through right now?'};
+const J_MODES=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season'],['becoming','Becoming','moon']];
+const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',season:'What chapter of life are you living through right now?',becoming:'See the life that is already yours. Feel it. Then live from there.'};
 
 function jWeekRing(){
   const cts=(jWeek&&jWeek.counts)||{};
@@ -7108,7 +7833,7 @@ function jWeekRing(){
     +`<span class="jwk-cap">${n>=3?'all three tended this week ✦':n+' of 3 this week'}</span></div>`;
 }
 // Journal hero — the three facets as glowing medallions, lit when tended this week.
-const JFACETS=[['deep','Deep','jdeep','#72716d','#999793'],['daily','Daily','jdaily','#a5a39e','#8a8884'],['season','Season','season','#a6a49f','#898783']];
+const JFACETS=[['deep','Deep','jdeep','#72716d','#999793'],['daily','Daily','jdaily','#a5a39e','#8a8884'],['season','Season','season','#a6a49f','#898783'],['becoming','Becoming','moon','#b4b1a8','#8a8884']];
 function jWeekHero(){
   const cts=(jWeek&&jWeek.counts)||{};
   const n=JFACETS.filter(f=>(cts[f[0]]||0)>0).length;
@@ -7124,7 +7849,7 @@ function jWeekHero(){
 // Today's recommended journaling — one pick (Deep · Daily · Season) chosen by the
 // server, shown as a gold hero card at the top of the journal. Tapping Begin jumps
 // straight into that mode (and that pillar, for Deep). Wired in renderJournal.
-const J_MODE_ICON={deep:'jdeep',daily:'jdaily',season:'season'};
+const J_MODE_ICON={deep:'jdeep',daily:'jdaily',season:'season',becoming:'moon'};
 function jRecCard(){
   if(!jRec||!jRec.mode)return '';
   const icn=J_MODE_ICON[jRec.mode]||'spark';
@@ -7657,12 +8382,13 @@ function renderJournalWelcome(){
   $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b></div>`
   +`<div class="jwelc">`
     +`<div class="jwelc-hero"><div class="jwelc-halo">${ic('book','g')}</div>`
-      +`<h2 class="jwelc-h">Three ways to meet yourself</h2>`
+      +`<h2 class="jwelc-h">Four ways to meet yourself</h2>`
       +`<p class="jwelc-sub">Putting your inner life into words is one of the most studied tools we have for a steadier mind. Here’s how your journal works — and the research behind each part.</p></div>`
     +`<div class="jwelc-cards">`
       +_jwCard('jdaily','Daily','A short, honest letter to today.','Just 15 minutes, 3–4 times is enough — a meta-analysis of expressive-writing studies found a <b>0.47 effect-size</b> gain in well-being.','Smyth, 1998 · meta-analysis of 13 studies')
       +_jwCard('jdeep','Deep','Guided sittings on your eight life pillars — the things that matter most.','People who wrote each week about what they valued and were grateful for reported <b>~25% higher well-being</b>.','Emmons &amp; McCullough, 2003')
       +_jwCard('season','Season','Step back and name the chapter of life you’re living through right now.','Writing about your life’s larger arc and goals lifted mood and <b>cut illness-related doctor visits</b> months later.','King, 2001')
+      +_jwCard('moon','Becoming','See the life that is already yours, feel it as true, and live from there.','Nine guided sittings. You rehearse the self you are becoming until it is the one who shows up.','A guided pathway')
     +`</div>`
     +`<div class="jwelc-note">${ic('spark','g')} Expressive and reflective writing has 40+ years of evidence behind it (James Pennebaker and others): less stress and rumination, clearer thinking, even better sleep.</div>`
     +`<div class="jwelc-pledge">`
@@ -8099,10 +8825,10 @@ async function renderJournalHome(){
   let plan=null;try{plan=await api('plan');}catch(e){}
   listening=false;rec=null;
   const recMode=jRec&&jRec.mode;
-  const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season']];
-  const JDOOR_COL={deep:['#72716d','#999793'],daily:['#a5a39e','#8a8884'],season:['#a6a49f','#898783']};
-  const JMODE_IMG={deep:'jmode-deep',daily:'jmode-daily',season:'jmode-season'};
-  const JMODE_EYE={deep:'Guided inner work',daily:"Today's letter",season:'This chapter of life'};
+  const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season'],['becoming','Becoming','moon']];
+  const JDOOR_COL={deep:['#72716d','#999793'],daily:['#a5a39e','#8a8884'],season:['#a6a49f','#898783'],becoming:['#b4b1a8','#8a8884']};
+  const JMODE_IMG={deep:'jmode-deep',daily:'jmode-daily',season:'jmode-season',becoming:'jmode-becoming'};
+  const JMODE_EYE={deep:'Guided inner work',daily:"Today's letter",season:'This chapter of life',becoming:"The self you're walking toward"};
   const door=([k,lbl,icn])=>{const isRec=recMode===k;
     return `<button class="comm-letter jmodecard${isRec?' jmodecard-rec':''}" data-m="${k}">`
       +`<span class="comm-let-ic" style="background-image:url('/art/${JMODE_IMG[k]}.jpg?v=111')"></span>`
@@ -9670,6 +10396,13 @@ class H(BaseHTTPRequestHandler):
             ex = season_exercise(c, u)
             self._send(200, {"ready": True, **ex}); return
 
+        if p == "/api/journal/becoming":
+            u = self._me(c)
+            if not u:
+                self._send(401, {"error": "sign in"}); return
+            ex = becoming_exercise(c, u)
+            self._send(200, {"ready": True, **ex}); return
+
         if p == "/api/journal/week":
             u = self._me(c)
             if not u:
@@ -9677,14 +10410,14 @@ class H(BaseHTTPRequestHandler):
             wk = week_str()
             today = datetime.now(timezone.utc).date()
             monday = (today - timedelta(days=today.weekday())).isoformat()  # ISO-week start (UTC)
-            counts = {k: 0 for k in JOURNAL_KINDS}
+            counts = {k: 0 for k in WEEK_KINDS}
             for r in c.execute("SELECT COALESCE(kind,'daily') k, COUNT(*) n FROM journal "
                                "WHERE user_id=? AND substr(created,1,10)>=? GROUP BY k",
                                (u["id"], monday)).fetchall():
                 if r["k"] in counts:
                     counts[r["k"]] += r["n"]
-            touched = [k for k in JOURNAL_KINDS if counts[k] > 0]
-            missing = [k for k in JOURNAL_KINDS if counts[k] == 0]
+            touched = [k for k in WEEK_KINDS if counts[k] > 0]
+            missing = [k for k in WEEK_KINDS if counts[k] == 0]
             self._send(200, {"week": wk, "counts": counts, "touched": touched,
                              "missing": missing, "complete": not missing}); return
 
@@ -10698,7 +11431,7 @@ class H(BaseHTTPRequestHandler):
             # which journaling categories are still untouched this ISO week?
             today = datetime.now(timezone.utc).date()
             monday = (today - timedelta(days=today.weekday())).isoformat()
-            wkc = {k: 0 for k in JOURNAL_KINDS}
+            wkc = {k: 0 for k in WEEK_KINDS}
             for r in c.execute("SELECT COALESCE(kind,'daily') k, COUNT(*) n FROM journal "
                                "WHERE user_id=? AND substr(created,1,10)>=? GROUP BY k",
                                (u["id"], monday)).fetchall():
@@ -10707,7 +11440,7 @@ class H(BaseHTTPRequestHandler):
             self._send(200, {"ok": True, "id": entry_id, "count": total, "reflection": refl["reflection"], "mood": mood,
                              "kind": kind, "pillar": pillar, "place": place,
                              "plan_slice": plan_slice,
-                             "week": {"counts": wkc, "missing": [k for k in JOURNAL_KINDS if wkc[k] == 0]},
+                             "week": {"counts": wkc, "missing": [k for k in WEEK_KINDS if wkc[k] == 0]},
                              "new_achievements": [{"code": a, "title": ACH_BY_CODE[a][1]} for a in new_ach]}); return
 
         # Toggle an entry's community-share state after it's sealed — the share
@@ -12926,13 +13659,13 @@ def _journal_week_missing(c, uid):
     """Which of the three journaling categories haven't been written this ISO week."""
     today = datetime.now(timezone.utc).date()
     monday = (today - timedelta(days=today.weekday())).isoformat()
-    counts = {k: 0 for k in JOURNAL_KINDS}
+    counts = {k: 0 for k in WEEK_KINDS}
     for r in c.execute("SELECT COALESCE(kind,'daily') k, COUNT(*) n FROM journal "
                        "WHERE user_id=? AND substr(created,1,10)>=? GROUP BY k",
                        (uid, monday)).fetchall():
         if r["k"] in counts:
             counts[r["k"]] += r["n"]
-    return [k for k in JOURNAL_KINDS if counts[k] == 0], counts
+    return [k for k in WEEK_KINDS if counts[k] == 0], counts
 
 
 def _notif_candidate(c, u, prefs, lt):
