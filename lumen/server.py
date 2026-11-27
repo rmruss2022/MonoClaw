@@ -2290,11 +2290,11 @@ BECOMING_PLAN = [{'code': 'becoming_01',
 # you are rehearsing toward.
 JOURNAL_KINDS = ("deep", "daily", "season", "becoming")
 
-# The set that counts toward a *complete week*. Deliberately still three:
-# adding Becoming here would hand every existing user a fourth missing slot
-# mid-streak, which is a silent goalpost move. Becoming is a pathway you opt
-# into, not a weekly obligation.
-WEEK_KINDS = ("deep", "daily", "season")
+# The set that counts toward a *complete week* — the three curated pathways.
+# The Page is deliberately NOT here: it is the surface that asks nothing of you,
+# and making it a weekly duty would defeat the point of it. Still three, so the
+# shape of a complete week is unchanged for anyone mid-streak.
+WEEK_KINDS = ("deep", "season", "becoming")
 
 def _gemini_key():
     k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -2560,8 +2560,13 @@ def journal_reflect(prompt, text, kind="daily", pillar=None, place=None):
                "the circumstances. Mirror back the specific future they described and the state "
                "they held, and affirm their agency in it. Never cast doubt on what they saw, and "
                "never imply they are behind or that it is not working yet.")
+    elif kind == "daily":
+        ctx = ("This is a page entry — unprompted, written freely about today. Nothing was "
+               "asked of them, so take your lead entirely from what they chose to write. "
+               "Reflect the thing they actually came to say, and leave them steadier than "
+               "they arrived.")
     else:
-        ctx = "This is a daily journal letter — a check-in with themselves."
+        ctx = "This is a journal letter — a check-in with themselves."
     p = ("You are the Keeper — a warm, grounded meditation companion inside Realized. "
          "Someone just wrote this private journal entry"
          + (f' responding to the prompt “{prompt}”.' if prompt else ".") + " " + ctx +
@@ -4006,7 +4011,7 @@ a{color:var(--purple)}
    z-index:-1 ::before (painting order), hiding the lotus hero. html is the gold floor. */
 body.jw-gold{background:transparent !important;overflow:hidden !important;overscroll-behavior:none !important}
 body.jw-gold::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:linear-gradient(175deg,rgba(231,229,222,.30) 0%,rgba(210,207,201,.22) 26%,rgba(190,187,182,.18) 50%,rgba(171,169,164,.34) 78%,rgba(154,152,147,.52) 100%),url('/art/journal-hero-gold.jpg?v=123') center center / cover no-repeat,#9a9893;background-color:#9a9893}
+  background:linear-gradient(175deg,rgba(231,229,222,.30) 0%,rgba(210,207,201,.22) 26%,rgba(190,187,182,.18) 50%,rgba(171,169,164,.34) 78%,rgba(154,152,147,.52) 100%),url('/art/journal-hero-gold.jpg?v=137') center center / cover no-repeat,#9a9893;background-color:#9a9893}
 /* gold the root too, so no dark base can ever show (keyboard, overscroll, etc.) */
 html.jw-gold-h{overflow:hidden !important;background:#9a9893 !important;overscroll-behavior:none !important}
 body.jw-writing .jx-close{display:none}
@@ -7822,8 +7827,8 @@ let jScreen='home';          // journal sub-screen: 'home' | 'compose' | 'pillar
 // Open the Daily composer with a given prompt (used from Life OS / meditate home links).
 function openJournalDaily(p){if(p!=null)jPrompt=p;journalMode='daily';journalPillar=null;jScreen='compose';go('journal');}
 
-const J_MODES=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season'],['becoming','Becoming','moon']];
-const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A letter to yourself, about today.',season:'What chapter of life are you living through right now?',becoming:'See the life that is already yours. Feel it. Then live from there.'};
+const J_MODES=[['deep','Deep','jdeep'],['season','Season','season'],['becoming','Becoming','moon'],['daily','The Page','jdaily']];
+const J_MODE_BLURB={deep:'Guided work on one of your eight life pillars.',daily:'A blank page. No prompt, no pathway — just today.',season:'What chapter of life are you living through right now?',becoming:'See the life that is already yours. Feel it. Then live from there.'};
 
 function jWeekRing(){
   const cts=(jWeek&&jWeek.counts)||{};
@@ -8250,12 +8255,17 @@ function sealHandler(payload){
 }
 
 function renderDailyCompose(){
-  $('#jcompose').innerHTML=composerHTML({prompt:jPrompt,shuffle:false,title:'Daily Journal'});
+  // The blank page. Deep, Season and Becoming are the curated pathways; this is
+  // the one surface that asks nothing of you, so it carries no prompt at all.
+  const top=`<div class="jp-top"><div class="jp-eye">TODAY</div>`
+    +`<div class="jp-inv">A letter to today. Nothing is asking a question — start wherever you are.</div></div>`;
+  $('#jcompose').innerHTML=composerHTML({prompt:'',shuffle:false,title:'The Page',topHTML:top,
+                                         placeholder:'Today…'});
   wireComposerCommon(()=>jPrompt);
   // Guarded: shuffle is no longer rendered on this card, and an unguarded
   // binding here would throw on render and blank the screen.
   const jshufEl=$('#jshuf');if(jshufEl)jshufEl.onclick=()=>{let n;do{n=JPROMPTS[Math.floor(Math.random()*JPROMPTS.length)];}while(n===jPrompt&&JPROMPTS.length>1);jPrompt=n;$('.lp-q').textContent='“'+jPrompt+'”';if(speakOn)sayPrompt(jPrompt);};
-  $('#jsave').onclick=sealHandler(()=>({kind:'daily',prompt:jPrompt}));
+  $('#jsave').onclick=sealHandler(()=>({kind:'daily',prompt:''}));
 }
 
 // Lesson-plan progress bar — a row of chapter dots + caption, used by Deep
@@ -8382,13 +8392,13 @@ function renderJournalWelcome(){
   $('#app').innerHTML=`<div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Journal</b></div>`
   +`<div class="jwelc">`
     +`<div class="jwelc-hero"><div class="jwelc-halo">${ic('book','g')}</div>`
-      +`<h2 class="jwelc-h">Four ways to meet yourself</h2>`
-      +`<p class="jwelc-sub">Putting your inner life into words is one of the most studied tools we have for a steadier mind. Here’s how your journal works — and the research behind each part.</p></div>`
+      +`<h2 class="jwelc-h">Three pathways and a page</h2>`
+      +`<p class="jwelc-sub">Three guided pathways you walk a sitting at a time, and one page that is always open. Here’s how your journal works — and the research behind each part.</p></div>`
     +`<div class="jwelc-cards">`
-      +_jwCard('jdaily','Daily','A short, honest letter to today.','Just 15 minutes, 3–4 times is enough — a meta-analysis of expressive-writing studies found a <b>0.47 effect-size</b> gain in well-being.','Smyth, 1998 · meta-analysis of 13 studies')
       +_jwCard('jdeep','Deep','Guided sittings on your eight life pillars — the things that matter most.','People who wrote each week about what they valued and were grateful for reported <b>~25% higher well-being</b>.','Emmons &amp; McCullough, 2003')
       +_jwCard('season','Season','Step back and name the chapter of life you’re living through right now.','Writing about your life’s larger arc and goals lifted mood and <b>cut illness-related doctor visits</b> months later.','King, 2001')
       +_jwCard('moon','Becoming','See the life that is already yours, feel it as true, and live from there.','Nine guided sittings. You rehearse the self you are becoming until it is the one who shows up.','A guided pathway')
+      +_jwCard('jdaily','The Page','A blank page for today. No prompt, no pathway — it asks nothing of you.','Always open. Write a line or a page; nothing is waiting to be completed.','Whenever you need it')
     +`</div>`
     +`<div class="jwelc-note">${ic('spark','g')} Expressive and reflective writing has 40+ years of evidence behind it (James Pennebaker and others): less stress and rumination, clearer thinking, even better sleep.</div>`
     +`<div class="jwelc-pledge">`
@@ -8825,10 +8835,12 @@ async function renderJournalHome(){
   let plan=null;try{plan=await api('plan');}catch(e){}
   listening=false;rec=null;
   const recMode=jRec&&jRec.mode;
-  const DOORS=[['deep','Deep','jdeep'],['daily','Daily','jdaily'],['season','Season','season'],['becoming','Becoming','moon']];
+  // Pathways first — they are the curated work. The page comes last: always
+  // open, never required.
+  const DOORS=[['deep','Deep','jdeep'],['season','Season','season'],['becoming','Becoming','moon'],['daily','The Page','jdaily']];
   const JDOOR_COL={deep:['#72716d','#999793'],daily:['#a5a39e','#8a8884'],season:['#a6a49f','#898783'],becoming:['#b4b1a8','#8a8884']};
   const JMODE_IMG={deep:'jmode-deep',daily:'jmode-daily',season:'jmode-season',becoming:'jmode-becoming'};
-  const JMODE_EYE={deep:'Guided inner work',daily:"Today's letter",season:'This chapter of life',becoming:"The self you're walking toward"};
+  const JMODE_EYE={deep:'Guided inner work',daily:'No prompt · always open',season:'This chapter of life',becoming:"The self you're walking toward"};
   const door=([k,lbl,icn])=>{const isRec=recMode===k;
     return `<button class="comm-letter jmodecard${isRec?' jmodecard-rec':''}" data-m="${k}">`
       +`<span class="comm-let-ic" style="background-image:url('/art/${JMODE_IMG[k]}.jpg?v=111')"></span>`
@@ -9003,12 +9015,12 @@ async function renderPillarsProgress(){
 // letters / Keeper insights below.
 async function renderJournalCompose(){
   if(journalMode==='deep'&&!journalPillar){jScreen='pillars';return renderJournal();}
-  if(journalMode!=='deep'&&!jPrompt){
+  if(journalMode!=='deep'&&journalMode!=='daily'&&!jPrompt){
     try{jPrompt=(await api('lifeos/prompts')).prompts.reflection;}catch(e){}
     if(!jPrompt){try{jPrompt=(await api('prompt')).prompt;}catch(e){jPrompt=JPROMPTS[0];}}
   }
   listening=false;rec=null;
-  const lbl={deep:'Deep',daily:'Daily',season:'Season'}[journalMode]||'Journal';
+  const lbl={deep:'Deep',daily:'The Page',season:'Season',becoming:'Becoming'}[journalMode]||'Journal';
   const backTo=(journalMode==='deep')?'pillars':'home';
   $('#app').innerHTML=`<button class="jx-close" id="jxclose" aria-label="Close">${ic('close')}</button>`
     +`<div id="jcompose"></div>`;
@@ -13652,11 +13664,12 @@ _JOURNAL_NUDGE = {
     "deep": ("Deep work is waiting", "Pick a pillar and sit with it for a few lines."),
     "daily": ("A moment for your journal", "A quick daily check-in with yourself tonight?"),
     "season": ("The season you're in", "What chapter of life are you living through right now?"),
+    "becoming": ("The self you're walking toward", "One sitting on the Becoming path tonight?"),
 }
 
 
 def _journal_week_missing(c, uid):
-    """Which of the three journaling categories haven't been written this ISO week."""
+    """Which of the three curated pathways haven't been written this ISO week."""
     today = datetime.now(timezone.utc).date()
     monday = (today - timedelta(days=today.weekday())).isoformat()
     counts = {k: 0 for k in WEEK_KINDS}
@@ -13688,7 +13701,7 @@ def _notif_candidate(c, u, prefs, lt):
             return ("weekly_recap", *notif_copy("weekly_recap", u, {"light": row["s"], "sessions": row["n"]}),
                     f"weekly_recap:{week_str()}")
     # 2b) journal rhythm — nudge toward a journaling category still untouched this
-    #     week, so Deep / Daily / Season all get visited. Only for people already
+    #     week, so Deep / Season / Becoming all get visited. Only for people already
     #     journaling (never a cold nag); at most once per category per week.
     if cats.get("journal", 1) and tier in ("new", "habitual", "at_risk") and 2 <= wd <= 5 and h == 18:
         missing, counts = _journal_week_missing(c, u["id"])
