@@ -515,20 +515,29 @@ def distinct_places(c, uid):
     return len(pks)
 
 
-def seed_demo_account(c):
-    """Fill the App Review demo account (appreview@lumen.app) with believable,
-    backdated history so the app films full: a real streak, weeks of sessions, a
-    traveled map, a tended journal, achievements and a collection. Idempotent."""
+def seed_demo_account(c, email=None, name=None, seed=7):
+    """Fill an account with believable, backdated history so the app films full:
+    a real streak, weeks of sessions, a traveled map, a tended journal,
+    achievements and a collection.
+
+    Defaults to the App Review demo account. Pass `email` to fill any other
+    account — an existing user keeps their own name and password, only their
+    history is rebuilt. Idempotent: it clears that user's sessions, journal,
+    achievements, items and companions first, so re-running gives the same
+    result rather than stacking duplicates. `seed` varies the generated data."""
     import random
     from datetime import datetime, timedelta, timezone
-    rnd = random.Random(7)
-    email, name, pw = "appreview@lumen.app", "Ava Rowe", "LumenReview!2026"
+    rnd = random.Random(seed)
+    email = (email or "appreview@lumen.app").strip().lower()
+    name, pw = (name or "Ava Rowe"), "LumenReview!2026"
     u = user_by_email(c, email)
     if not u:
         salt = secrets.token_hex(16)
         c.execute("INSERT INTO users(email,name,salt,hash,created) VALUES(?,?,?,?,?)",
                   (email, name, salt, _hash_pw(pw, salt), now_iso()))
         c.commit(); u = user_by_email(c, email)
+    else:
+        name = u["name"] or name          # never rename or re-key a real account
     uid = u["id"]
     for t in ("sessions", "journal", "achievements", "items", "companions"):
         c.execute("DELETE FROM %s WHERE user_id=?" % t, (uid,))
@@ -4400,6 +4409,10 @@ b,strong{font-weight:500}
 /* every micro-label is tracked mono caps */
 [class*="-eyebrow"],[class*="-lbl"],[class*="-eye"],.jrny-tag{
   font-family:var(--mono);text-transform:uppercase;letter-spacing:.18em;font-weight:500}
+/* collection cards paint their art as a CSS background on a <button>, so the
+   img/svg grayscale rule never reached them — they stayed in full colour for
+   anyone with a collection. */
+.you-card,[class*="you-card"],[class*="-cardface"]{filter:grayscale(1) contrast(1.04)}
 /* no bloom anywhere in the UI; light belongs inside photographs */
 .glow,[class*="-glow"]{display:none}
 
@@ -9298,8 +9311,13 @@ class H(BaseHTTPRequestHandler):
             if (q.get("secret", "") or "") != "lumen-demo-seed-9f3ac21b":
                 self._send(403, {"error": "nope"}); return
             try:
-                out = seed_demo_account(c)
-                self._send(200, {"ok": True, **out}); return
+                tgt = (q.get("email") or "").strip().lower() or None
+                try:
+                    sd = int(q.get("seed") or 7)
+                except Exception:
+                    sd = 7
+                out = seed_demo_account(c, email=tgt, seed=sd)
+                self._send(200, {"ok": True, "email": tgt or "appreview@lumen.app", **out}); return
             except Exception as e:
                 self._send(500, {"error": repr(e)}); return
 
