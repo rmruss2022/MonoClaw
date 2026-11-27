@@ -9107,6 +9107,8 @@ class H(BaseHTTPRequestHandler):
         if p in ("/admin", "/admin.html"):
             self._send(200, ADMIN_PAGE, "text/html; charset=utf-8",
                        extra=[("Cache-Control", "no-cache, no-store, must-revalidate")]); return
+        if p in ("/brand", "/brand.html", "/brand-guide"):
+            self._send(200, BRAND_PAGE, "text/html; charset=utf-8"); return
         if p in ("/site", "/site.html", "/lp"):
             self._send(200, site_page(), "text/html; charset=utf-8"); return
         if p in ("/survey", "/survey.html", "/feedback"):
@@ -11983,6 +11985,434 @@ boot();
 </script></body></html>"""
 
 
+BRAND_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Realized — Brand Guide</title>
+<meta name="theme-color" content="#08080a"><link rel="icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..500;1,9..144,300..500&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+ --ink:#08080a;--panel:#0b0b0e;--bone:#ece9e2;--bright:#f2efe8;--muted:#7b7971;
+ --line:rgba(255,255,255,.12);
+ --display:'Fraunces',Georgia,serif;
+ --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+ --body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--body);line-height:1.6;
+ -webkit-font-smoothing:antialiased}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.05;
+ mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+img{filter:grayscale(1) contrast(1.04)}
+
+/* ---- plate: one page of the guide ---- */
+.plate{max-width:1120px;margin:0 auto;padding:84px 40px 64px;position:relative;
+ border-top:1px solid var(--line)}
+.plate:first-of-type{border-top:0}
+.pnum{position:absolute;right:40px;bottom:30px;font-family:var(--mono);font-size:10.5px;
+ letter-spacing:.18em;color:var(--muted)}
+h2.t{font-family:var(--display);font-weight:340;font-size:clamp(30px,5vw,50px);line-height:1;
+ letter-spacing:-.02em;color:var(--bright);margin:0 0 10px}
+p.sub{color:var(--muted);margin:0 0 42px;font-size:15.5px;max-width:720px}
+.rule{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);
+ font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--bright)}
+.lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+ color:var(--muted);margin:0 0 8px}
+.note{color:var(--muted);font-size:14px;margin:0}
+
+/* ---- cover ---- */
+.cover{display:grid;grid-template-columns:1fr 1fr;min-height:560px;border-top:0}
+.cover>div{padding:64px 48px;display:flex;flex-direction:column;justify-content:center}
+.cover .left{background:var(--bone);color:#0a0a0d;align-items:center;text-align:center;
+ background-image:
+  repeating-linear-gradient(90deg,rgba(10,10,13,.045) 0 1px,transparent 1px 3px),
+  repeating-linear-gradient(0deg,rgba(10,10,13,.035) 0 1px,transparent 1px 3px);
+ background-blend-mode:multiply,multiply}
+.cover .left img{width:70px;height:70px;margin-bottom:26px;filter:none}
+.cover .wm{font-family:var(--display);font-weight:400;font-size:46px;letter-spacing:-.02em;margin:0}
+.cover .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+ color:#56544e;margin-top:14px}
+.cover h1{font-family:var(--display);font-weight:340;font-size:clamp(40px,6vw,66px);line-height:1;
+ letter-spacing:-.02em;color:var(--bright);margin:0 0 18px}
+.cover .eye{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+ color:var(--muted);margin:0 0 16px}
+.cover p{color:var(--muted);margin:0;max-width:420px}
+
+/* ---- two-up ---- */
+.two{display:grid;grid-template-columns:1fr 1px 1fr;gap:40px;align-items:start}
+.two .div{background:var(--line);align-self:stretch}
+.markbox{display:grid;place-items:center;padding:40px;min-height:210px;border:1px solid var(--line);margin-bottom:22px}
+.markbox img{width:96px;height:96px;filter:none}
+.markbox.small img{width:44px;height:44px}
+h3{font-family:var(--display);font-weight:360;font-size:21px;color:var(--bright);margin:0 0 6px}
+
+/* ---- colour rows ---- */
+.sw{display:grid;grid-template-columns:200px 240px 1fr;gap:24px;align-items:center;
+ padding:14px 0;border-bottom:1px solid var(--line)}
+.sw i{display:block;height:54px;border:1px solid var(--line)}
+.sw .n{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--bright)}
+.sw .j{color:var(--muted);font-size:14px}
+.mix{display:flex;height:40px;margin-top:26px;border:1px solid var(--line)}
+.mix i+i{border-left:1px solid var(--line)}
+
+/* ---- surfaces ---- */
+.surf{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.surf>div{padding:26px;min-height:190px;display:flex;flex-direction:column;justify-content:flex-end}
+.s-ink{background:var(--ink);border:1px solid var(--line)}
+.s-panel{background:var(--panel);border:1px solid var(--line)}
+.s-paper{background:var(--bone);color:#0a0a0d;border:1px solid rgba(10,10,13,.14);
+ background-image:
+  repeating-linear-gradient(90deg,rgba(10,10,13,.045) 0 1px,transparent 1px 3px),
+  repeating-linear-gradient(0deg,rgba(10,10,13,.035) 0 1px,transparent 1px 3px),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.5'/%3E%3C/svg%3E");
+ background-blend-mode:multiply,multiply,multiply}
+.s-paper .lbl{color:#56544e}.s-paper .note{color:#56544e}
+
+/* ---- type specimens ---- */
+.spec{display:grid;grid-template-columns:260px 1fr;gap:40px;align-items:baseline;
+ padding:26px 0;border-bottom:1px solid var(--line)}
+.sp-h{font-family:var(--display);font-weight:340;font-size:44px;letter-spacing:-.02em;color:var(--bright);line-height:1.05}
+.sp-h em{font-style:italic}
+.sp-l{font-family:var(--mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--bone)}
+.sp-b{font-size:16px;color:var(--bone);max-width:620px}
+
+/* ---- combos ---- */
+.combos{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+ border:1px solid var(--line)}
+.combo{background:var(--ink);padding:26px}
+.combo .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+ color:var(--muted);margin:0 0 16px}
+.combo .a{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.combo .b{font-family:var(--display);font-weight:340;font-size:26px;letter-spacing:-.015em;
+ color:var(--bright);line-height:1.1;margin-top:6px}
+.combo .c{color:var(--muted);font-size:14px;margin-top:8px}
+
+/* ---- live components ---- */
+.comp{display:grid;grid-template-columns:repeat(2,1fr);gap:40px}
+.comp .set{display:flex;flex-direction:column;gap:14px;margin-bottom:10px}
+.btn{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+ font-weight:500;border-radius:999px;padding:16px 26px;text-align:center;cursor:pointer;
+ border:1px solid var(--bright);background:transparent;color:var(--bright);
+ transition:background .12s linear,color .12s linear}
+.btn:hover{background:var(--bright);color:var(--ink)}
+.btn.fill{background:var(--bright);color:var(--ink)}
+.btn.fill:hover{background:var(--bone)}
+.btn[disabled]{opacity:.35;cursor:not-allowed}
+.link{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;
+ color:var(--bone);text-decoration:underline;text-underline-offset:5px;background:none;border:0;cursor:pointer}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;
+ border:1px solid var(--line);font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+ text-transform:uppercase;color:var(--bone);cursor:pointer;background:transparent}
+.row[aria-selected="true"]{border-color:var(--bright);box-shadow:inset 0 0 0 2px var(--ink),inset 0 0 0 3px var(--bright)}
+.row small{display:block;color:var(--muted);letter-spacing:.1em;font-size:9.5px;margin-top:3px}
+.badges{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+ letter-spacing:.18em;text-transform:uppercase;padding:6px 11px;border:1px solid var(--line);color:var(--bone)}
+.badge.on{border-color:var(--bright);color:var(--bright)}
+.badge.solid{background:var(--bright);color:var(--ink);border-color:transparent}
+.badge.off{color:var(--muted)}
+.field{width:100%;padding:16px 18px;background:transparent;border:1px solid var(--line);
+ color:var(--bone);font-family:var(--mono);font-size:12px;letter-spacing:.06em}
+.field::placeholder{color:var(--muted);text-transform:uppercase;letter-spacing:.14em;font-size:10.5px}
+.field:focus{outline:none;border-color:var(--bright)}
+.tabbar{display:flex;justify-content:space-between;padding:16px 20px;background:var(--panel);
+ border:1px solid var(--line)}
+.tabbar span{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.tabbar span.on{color:var(--bright)}
+
+/* ---- motifs ---- */
+.motifs{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+.motif{background:var(--ink);padding:30px 16px;text-align:center}
+.motif svg{width:54px;height:54px;margin-bottom:16px}
+.motif .lbl{margin:0}
+
+/* ---- imagery do/don't ---- */
+.shots{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.shot{position:relative;border:1px solid var(--line)}
+.shot img{width:100%;height:170px;object-fit:cover;display:block}
+.shot .tag{position:absolute;top:0;left:0;font-family:var(--mono);font-size:9px;letter-spacing:.18em;
+ padding:4px 8px;background:var(--bright);color:var(--ink)}
+.shot .tag.no{background:var(--ink);color:var(--bright);border:1px solid var(--bright)}
+.shot.bad img{filter:sepia(.75) saturate(4) hue-rotate(-18deg) contrast(.95)}
+.shot.busy img{filter:grayscale(1) contrast(2.6) brightness(1.5)}
+.shot p{margin:0;padding:12px 14px;color:var(--muted);font-size:13px}
+
+/* ---- voice ---- */
+.voice{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.voice ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.voice li{padding-left:24px;position:relative;color:var(--bone);font-size:15px}
+.voice li:before{content:'✦';position:absolute;left:0;color:var(--muted)}
+.voice .no li{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+.voice .no li:before{content:'×';text-decoration:none}
+
+/* ---- don'ts ---- */
+.donts{display:flex;flex-wrap:wrap;gap:10px}
+.dont{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+ padding:10px 14px;border:1px solid var(--line);color:var(--muted)}
+
+footer{max-width:1120px;margin:0 auto;padding:60px 40px 80px;border-top:1px solid var(--line);
+ font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+footer a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
+@media(max-width:860px){
+ .cover{grid-template-columns:1fr}.two{grid-template-columns:1fr}.two .div{display:none}
+ .surf,.combos,.comp,.voice{grid-template-columns:1fr}
+ .motifs{grid-template-columns:repeat(2,1fr)}.shots{grid-template-columns:1fr 1fr}
+ .spec{grid-template-columns:1fr;gap:12px}.sw{grid-template-columns:1fr;gap:10px}
+ .plate{padding:56px 22px 48px}
+}
+</style></head><body>
+
+<!-- 01 COVER -->
+<section class="plate cover">
+  <div class="left">
+    <img src="/icon.svg" alt="Realized">
+    <p class="wm">Realized</p>
+    <p class="tag">Become who you're meant to be</p>
+  </div>
+  <div>
+    <p class="eye">Brand guide · rev 2 · Nov 2026</p>
+    <h1>How Realized<br>looks, everywhere.</h1>
+    <p>The app, the App Store, every post and page. One job per element — if a rule here fights a screen, the screen is wrong.</p>
+  </div>
+</section>
+
+<!-- 02 THE ESSENCE -->
+<section class="plate">
+  <h2 class="t">The essence</h2>
+  <p class="sub">Realized helps people become who they're meant to be — by seeing, feeling and operating from their highest self, daily, until they transform into it.</p>
+  <div class="combos">
+    <div class="combo"><p class="k">Name</p><p class="b">Realized</p></div>
+    <div class="combo"><p class="k">Tagline</p><p class="b">Become who you're<br>meant to be.</p></div>
+    <div class="combo"><p class="k">Mantra</p><p class="b">See it. <em style="font-style:italic">Feel it.</em> Become it.</p></div>
+  </div>
+  <p class="rule">Direction locked Nov 24, rev 2 — Co-Star × OpenHome. Austere monochrome, image-led.</p>
+  <span class="pnum">02</span>
+</section>
+
+<!-- 03 LOGO -->
+<section class="plate">
+  <h2 class="t">Logo system</h2>
+  <p class="sub">Two forms, one idea: the Gateway — a threshold opening onto the light you're rising into.</p>
+  <div class="two">
+    <div>
+      <div class="markbox"><img src="/icon.svg" alt="App icon"></div>
+      <h3>The icon</h3>
+      <p class="note">Use it where the brand is expected: App Store, home screen, splash, the top of a deck. Square — the OS rounds it.</p>
+    </div>
+    <div class="div"></div>
+    <div>
+      <div class="markbox small"><img src="/icon.svg" alt="The mark"></div>
+      <h3>The mark</h3>
+      <p class="note">Use it tiny: the in-app header beside "Realized", the favicon, a corner sign-off. Clear space ≥ 15% of its height.</p>
+    </div>
+  </div>
+  <p class="rule">Never recolour, glow, gradient, stretch or crop the mark — and never set it on busy imagery without a dark scrim.</p>
+  <span class="pnum">03</span>
+</section>
+
+<!-- 04 COLOUR -->
+<section class="plate">
+  <h2 class="t">Colour</h2>
+  <p class="sub">Austere and monochrome. Light does the work — there is no accent colour.</p>
+  <div class="sw"><i style="background:#08080a"></i><span class="n">Ink · #08080A</span><span class="j">The main background. Every screen starts here.</span></div>
+  <div class="sw"><i style="background:#0b0b0e"></i><span class="n">Panel · #0B0B0E</span><span class="j">Cards, raised blocks, the tab bar.</span></div>
+  <div class="sw"><i style="background:#ece9e2"></i><span class="n">Bone · #ECE9E2</span><span class="j">Body text, the mark, the paper surface.</span></div>
+  <div class="sw"><i style="background:#f2efe8"></i><span class="n">Bone-bright · #F2EFE8</span><span class="j">Headlines, emphasis, the primary button.</span></div>
+  <div class="sw"><i style="background:#7b7971"></i><span class="n">Muted · #7B7971</span><span class="j">Labels, meta, secondary text.</span></div>
+  <div class="sw"><i style="background:rgba(255,255,255,.12)"></i><span class="n">Hairline · #FFF @ 12%</span><span class="j">Borders, rules, dividers.</span></div>
+  <p class="lbl" style="margin-top:34px">The mix in every screen</p>
+  <div class="mix">
+    <i style="flex:62;background:#08080a"></i><i style="flex:22;background:#0b0b0e"></i>
+    <i style="flex:10;background:#ece9e2"></i><i style="flex:4;background:#f2efe8"></i>
+    <i style="flex:2;background:#7b7971"></i>
+  </div>
+  <p class="note" style="margin-top:22px">Where the old theme used hue to separate things — gold, violet and blue icons, coloured bars, state badges — Realized separates them by <b style="color:var(--bright)">brightness only</b>. Anything that was a colour becomes its luminance, tinted slightly warm toward Bone. Bright is active, earned, now. Dim is done, pending, secondary.</p>
+  <p class="rule">No gold. No violet. No blue. No green. No gradient fills, no gradient text, no glows.</p>
+  <span class="pnum">04</span>
+</section>
+
+<!-- 05 SURFACES -->
+<section class="plate">
+  <h2 class="t">Surfaces</h2>
+  <p class="sub">Three, and only three. Ink fills the screen, Panel holds the cards, Paper is the one bright block.</p>
+  <div class="surf">
+    <div class="s-ink"><p class="lbl">Ink</p><p class="note">The default. Near-black under a 5% film grain, so the blacks read as photography rather than flat CSS.</p></div>
+    <div class="s-panel"><p class="lbl">Panel</p><p class="note">A card on Ink. One hairline border, 5px radius. No shadow, no gradient, no glow.</p></div>
+    <div class="s-paper"><p class="lbl">Paper</p><p class="note">The inverse. Bone under a woven grey texture, so it reads as pressed paper, not a white rectangle. The only dark-on-light in the app.</p></div>
+  </div>
+  <p class="rule">At most one Paper block per screen — two bright blocks and the hierarchy collapses.</p>
+  <span class="pnum">05</span>
+</section>
+
+<!-- 06 TYPE -->
+<section class="plate">
+  <h2 class="t">Type</h2>
+  <p class="sub">Three styles, each with one job. Never add a fourth to a single screen.</p>
+  <div class="spec">
+    <div><p class="lbl">Headlines — Fraunces</p><p class="note">Light, ~340. Italic for one emphasized word. The big editorial statements and the wordmark.</p></div>
+    <div class="sp-h">Become who you're <em>meant</em> to be.</div>
+  </div>
+  <div class="spec">
+    <div><p class="lbl">Labels — IBM Plex Mono</p><p class="note">500, uppercase, .18em tracking, 10–11px. Dates, counts, eyebrows, buttons, nav.</p></div>
+    <div class="sp-l">Tue · Nov 27 &nbsp;/&nbsp; Day 019 &nbsp;/&nbsp; 6 Min</div>
+  </div>
+  <div class="spec">
+    <div><p class="lbl">Body — Inter</p><p class="note">Sentences, descriptions, anything longer. Never centre it.</p></div>
+    <div class="sp-b">Decode your day-at-a-glance to see how it plays out in real life. Daily recommendations for what to read, watch and listen to, based on your practice.</div>
+  </div>
+  <p class="rule">Numerals in sequence are mono and padded — 01 / 02 / 03 — never a filled circle.</p>
+  <span class="pnum">06</span>
+</section>
+
+<!-- 07 COMBOS -->
+<section class="plate">
+  <h2 class="t">Type combos</h2>
+  <p class="sub">Three ways the styles pair. Three styles max per graphic; the italic always gets the fewest words.</p>
+  <div class="combos">
+    <div class="combo"><p class="k">Label + headline</p><p class="a">Today you are</p><p class="b">Becoming the person who already has it.</p></div>
+    <div class="combo"><p class="k">Headline + body</p><p class="b">Raise your state.</p><p class="c">Operate from there. A statement, then one sentence that earns it.</p></div>
+    <div class="combo"><p class="k">Mono-meta + serif title</p><p class="a">Stoics · III</p><p class="b">The Dichotomy of Control</p></div>
+  </div>
+  <p class="rule">Script-equivalent is Fraunces italic — one or two words only.</p>
+  <span class="pnum">07</span>
+</section>
+
+<!-- 08 COMPONENTS -->
+<section class="plate">
+  <h2 class="t">Components</h2>
+  <p class="sub">Live, not pictures. Everything below is the real markup — hover it, focus it, click it.</p>
+  <div class="comp">
+    <div>
+      <p class="lbl">Buttons</p>
+      <div class="set">
+        <button class="btn fill">Begin</button>
+        <button class="btn">Continue</button>
+        <button class="btn" disabled>Unavailable</button>
+        <button class="link">I already have an account</button>
+      </div>
+      <p class="note">One filled control per screen at most. Everything else is a hairline outline or an underlined mono link — the only underline in the system.</p>
+      <p class="lbl" style="margin-top:30px">Fields</p>
+      <input class="field" placeholder="Ask anything...">
+      <p class="lbl" style="margin-top:30px">Tab bar</p>
+      <div class="tabbar"><span class="on">Practice</span><span>Journeys</span><span>Journal</span><span>Community</span><span>You</span></div>
+      <p class="note" style="margin-top:12px">Flat Panel. No tint, no coloured icon backgrounds. Active is bone, inactive is muted.</p>
+    </div>
+    <div>
+      <p class="lbl">Selection</p>
+      <div class="set">
+        <div class="row"><span>Monthly</span><span>$8.99</span></div>
+        <div class="row" aria-selected="true"><span>Annual<small>Save 53%</small></span><span>$49.99</span></div>
+      </div>
+      <p class="note">Selection is a brighter, doubled border — never a fill, never a tick, never a colour.</p>
+      <p class="lbl" style="margin-top:30px">Badges &amp; status</p>
+      <div class="badges">
+        <span class="badge on">✦ Verified</span>
+        <span class="badge solid">✦ Earned</span>
+        <span class="badge">Day 019</span>
+        <span class="badge off">Expired</span>
+      </div>
+      <p class="note" style="margin-top:14px">No blue tick and no emoji. The four-point sparkle is the earned/verified mark and the list bullet.</p>
+    </div>
+  </div>
+  <p class="rule">Rows over cards — lists are flat rows split by hairlines, not floating cards with gaps.</p>
+  <span class="pnum">08</span>
+</section>
+
+<!-- 09 MOTIFS -->
+<section class="plate">
+  <h2 class="t">Motifs</h2>
+  <p class="sub">Use one, quietly — never a pile. Bone line-work on Ink.</p>
+  <div class="motifs">
+    <div class="motif">
+      <svg viewBox="0 0 40 40" fill="none" stroke="#ece9e2" stroke-width="1.2"><path d="M10 34V20a10 10 0 0 1 20 0v14"/><path d="M6 34h28"/><circle cx="20" cy="17" r="1.6" fill="#ece9e2" stroke="none"/></svg>
+      <p class="lbl">The gateway</p>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 40 40" fill="none" stroke="#ece9e2" stroke-width="1.2"><circle cx="20" cy="20" r="2.4" fill="#ece9e2" stroke="none"/><path d="M20 6v6M20 28v6M6 20h6M28 20h6"/></svg>
+      <p class="lbl">A point of light</p>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 40 40" fill="none" stroke="#ece9e2" stroke-width="1.2"><circle cx="20" cy="20" r="4"/><circle cx="20" cy="20" r="9" opacity=".6"/><circle cx="20" cy="20" r="14" opacity=".3"/></svg>
+      <p class="lbl">Concentric rings</p>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 40 40" fill="none" stroke="#ece9e2" stroke-width="1.2"><circle cx="20" cy="20" r="12"/><path d="M20 8a12 12 0 0 0 0 24z" fill="#ece9e2" stroke="none"/></svg>
+      <p class="lbl">Moon phases</p>
+    </div>
+    <div class="motif">
+      <svg viewBox="0 0 40 40" fill="none"><path d="M20 5c1.4 9 5 12.6 14 14-9 1.4-12.6 5-14 14-1.4-9-5-12.6-14-14 9-1.4 12.6-5 14-14z" fill="#ece9e2"/></svg>
+      <p class="lbl">The sparkle</p>
+    </div>
+  </div>
+  <p class="rule">The sparkle replaces every emoji and every tick in the product.</p>
+  <span class="pnum">09</span>
+</section>
+
+<!-- 10 IMAGERY -->
+<section class="plate">
+  <h2 class="t">Imagery</h2>
+  <p class="sub">Real light, deep black, room to breathe. Surreal black-and-white celestial and architectural scenes — here's what good looks like, next to what to avoid.</p>
+  <div class="shots">
+    <div class="shot"><span class="tag">Do</span><img src="/art/home-hero.jpg" alt=""><p>One subject, deep black, negative space for words.</p></div>
+    <div class="shot bad"><span class="tag no">Don't</span><img src="/art/journeys-hero.jpg" alt=""><p>Any saturation at all. Always desaturate before it ships.</p></div>
+    <div class="shot"><span class="tag">Do</span><img src="/art/season-hero.jpg" alt=""><p>Framed with a 1px hairline, or full-bleed behind a dark scrim.</p></div>
+    <div class="shot busy"><span class="tag no">Don't</span><img src="/art/comm-hero.jpg" alt=""><p>Crushed, cluttered frames with nowhere calm to set type.</p></div>
+  </div>
+  <p class="rule">Made with gpt-image-2, converted to grayscale. Words go on the calm part of the frame — never over the busy part.</p>
+  <span class="pnum">10</span>
+</section>
+
+<!-- 11 VOICE -->
+<section class="plate">
+  <h2 class="t">Voice</h2>
+  <p class="sub">An oracle that empowers. Second person, present tense, short declaratives.</p>
+  <div class="voice">
+    <div>
+      <p class="lbl">Always</p>
+      <ul>
+        <li>You are freer than you were told.</li>
+        <li>Raise your state. Operate from there.</li>
+        <li>Act as the one you're becoming.</li>
+        <li>Agency, becoming, capability, ownership.</li>
+      </ul>
+    </div>
+    <div class="no">
+      <p class="lbl">Never</p>
+      <ul>
+        <li>You are small — a speck in the universe.</li>
+        <li>It doesn't really matter in the end.</li>
+        <li>Crush your goals. Unlock your potential.</li>
+        <li>Anything that shrinks the user.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="rule">Elevated, not clinical. Spiritual, not woo. No emoji in product copy — the sparkle is a glyph.</p>
+  <span class="pnum">11</span>
+</section>
+
+<!-- 12 DON'TS -->
+<section class="plate">
+  <h2 class="t">The don'ts</h2>
+  <p class="sub">All of them, in one place. If you're reaching for one of these, the answer is brightness, weight or space instead.</p>
+  <div class="donts">
+    <span class="dont">No accent colour</span><span class="dont">No gold</span><span class="dont">No violet</span>
+    <span class="dont">No blue</span><span class="dont">No green</span><span class="dont">No gradient fills</span>
+    <span class="dont">No gradient text</span><span class="dont">No glows or blooms</span>
+    <span class="dont">No coloured shadows</span><span class="dont">No rounded gradient cards</span>
+    <span class="dont">No emoji</span><span class="dont">No coloured icon backgrounds</span>
+    <span class="dont">No ticks for selection</span><span class="dont">No centred body copy</span>
+    <span class="dont">No fourth typeface</span><span class="dont">No second Paper block</span>
+  </div>
+  <p class="rule">Before shipping a theme change, sweep for stray colour — any saturated hex outside the override layer is a bug.</p>
+  <span class="pnum">12</span>
+</section>
+
+<footer>Realized · <a href="/site">Site</a> · <a href="/privacy">Privacy</a> · Living document — update as the system grows.</footer>
+</body></html>"""
+
+
 def site_page():
     w = MATERIALS["website_copy"]
     # brand icon set (real imagery, served from /art) in place of emoji
@@ -12173,7 +12603,7 @@ footer a:hover{color:var(--bone)}
 
 <section class="cta2"><h2>Start your streak tonight.</h2><a class="btn lg" href="__APP__">__CTA__</a></section>
 </div>
-<footer>Realized · <a href="/privacy">Privacy</a> · <a href="__IG__">Instagram</a> · <a href="__APP__">App Store</a><br>© 2026 Realized. Light up the world.</footer>
+<footer>Realized · <a href="/brand">Brand guide</a> · <a href="/privacy">Privacy</a> · <a href="__IG__">Instagram</a> · <a href="__APP__">App Store</a><br>© 2026 Realized. Light up the world.</footer>
 <script>
 (function(){var f=document.getElementById('wl');if(!f)return;
  f.addEventListener('submit',function(e){e.preventDefault();

@@ -3,6 +3,8 @@
 *How Realized looks everywhere — the app, the App Store, every post and page. The practice of becoming.*
 *One job per element. If a rule here fights a screen, the screen is wrong.*
 
+**The implemented version of this document lives at `/brand`** — the same guide rendered in the real theme, with live components rather than screenshots. This file is the source; that page is the proof. Change one, change the other.
+
 **Direction locked Nov 24 (rev 2): Co-Star × OpenHome — austere monochrome, image-led.**
 The earlier "Molten Dawn" gold-and-violet pass is superseded. Don't revive it, don't reintroduce an accent colour to "add warmth."
 
