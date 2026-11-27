@@ -10901,7 +10901,7 @@ MANIFEST = json.dumps({
     "name": "Realized — become who you’re meant to be", "short_name": "Realized",
     "description": "Become who you’re meant to be. Meditate, plan your life, and feel your highest self — raising your state and acting from it, day by day.",
     "start_url": ".", "scope": ".", "display": "standalone", "orientation": "portrait",
-    "background_color": "#0b0a12", "theme_color": "#0b0a12",
+    "background_color": "#08080a", "theme_color": "#08080a",
     "categories": ["health", "lifestyle", "education"],
     "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
               {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
@@ -10914,13 +10914,14 @@ MANIFEST = json.dumps({
 # API requests are never intercepted. skipWaiting + clients.claim so updates apply
 # immediately. Bump CACHE on any change you want to force-evict.
 PRIVACY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Inter:wght@400;500&amp;display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Realized — Privacy Policy</title>
 <style>
-body{margin:0;background:#0b0a12;color:#ece9f5;font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;line-height:1.65}
+body{margin:0;background:#08080a;color:#ece9e2;font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;line-height:1.65}
 .wrap{max-width:720px;margin:0 auto;padding:40px 22px 80px}
-h1{color:#f5c977;font-size:26px;margin:0 0 4px}h2{color:#a855f7;font-size:17px;margin:28px 0 6px}
-.muted{color:#9a93b8;font-size:13px}a{color:#f5c977}ul{padding-left:20px}li{margin:4px 0}
+h1{color:#f2efe8;font-family:'Fraunces',Georgia,serif;font-weight:340;font-size:30px;letter-spacing:-.015em;margin:0 0 6px}h2{color:#f2efe8;font-family:'Fraunces',Georgia,serif;font-weight:360;font-size:19px;margin:34px 0 8px}
+.muted{color:#7b7971;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.18em;font-size:10.5px}a{color:#ece9e2;border-bottom:1px solid rgba(255,255,255,.12);text-decoration:none}ul{padding-left:20px}li{margin:6px 0;color:#ece9e2}
 </style></head><body><div class="wrap">
 <h1>Realized — Privacy Policy</h1>
 <p class="muted">Last updated: 12 October 2026</p>
@@ -11000,20 +11001,21 @@ self.addEventListener('fetch', e => {
 APP_STORE_URL = "https://apps.apple.com/app/id6822133425"
 
 SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Inter:wght@400;500&amp;display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Realized — tell us what you think</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  :root{--gold:#f5c977;--bg:#0b0a12;--panel:#15111f;--line:#2a2440;--muted:#b4acd0;--text:#f6f1ea}
+  :root{--gold:#ece9e2;--bg:#08080a;--panel:#0b0b0e;--line:rgba(255,255,255,.12);--muted:#7b7971;--text:#ece9e2}
   html,body{height:100%}
   body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;
-    background-image:radial-gradient(70% 45% at 50% 0%,rgba(36,28,74,.55),transparent 70%);display:flex;flex-direction:column;min-height:100%}
-  .top{position:sticky;top:0;z-index:5;background:linear-gradient(#0b0a12,rgba(11,10,18,.85));backdrop-filter:blur(6px);padding:14px 18px 10px}
+    background-image:none;display:flex;flex-direction:column;min-height:100%}
+  .top{position:sticky;top:0;z-index:5;background:rgba(8,8,10,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(6px);padding:14px 18px 10px}
   .brandrow{display:flex;align-items:center;justify-content:space-between;max-width:620px;margin:0 auto}
   .brand{font-family:Georgia,serif;font-size:22px;font-weight:700;color:var(--gold)}
   .count{font-size:12px;color:var(--muted);letter-spacing:.06em}
-  .pbar{max-width:620px;margin:10px auto 0;height:5px;border-radius:99px;background:#241d3a;overflow:hidden}
-  .pbar>i{display:block;height:100%;background:linear-gradient(90deg,#e0953a,var(--gold));border-radius:99px;transition:width .3s}
+  .pbar{max-width:620px;margin:10px auto 0;height:5px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}
+  .pbar>i{display:block;height:100%;background:var(--gold);border-radius:99px;transition:width .3s}
   .stage{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 20px}
   .screen{max-width:600px;width:100%;animation:rise .32s cubic-bezier(.2,.8,.25,1) both}
   @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -11025,11 +11027,11 @@ SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
   .stars{display:flex;gap:12px;margin:6px 0}
   .star{font-size:46px;color:#3a3357;cursor:pointer;transition:transform .08s;user-select:none}
   .star:active{transform:scale(.9)}
-  .star.on{color:var(--gold);text-shadow:0 0 16px rgba(245,201,119,.55)}
+  .star.on{color:var(--gold);text-shadow:none}
   .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
   .chip{font-size:16px;padding:13px 18px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;transition:.12s}
   .chip:hover{border-color:#4a4270}
-  .chip.on{border-color:var(--gold);background:rgba(245,201,119,.13);color:var(--gold);box-shadow:0 0 18px -6px rgba(245,201,119,.5)}
+  .chip.on{border-color:var(--gold);background:rgba(236,233,226,.13);color:var(--gold);box-shadow:none}
   textarea,input[type=email]{width:100%;background:#0f0b18;border:1px solid var(--line);border-radius:14px;color:var(--text);
     font-family:inherit;font-size:17px;padding:15px;resize:vertical}
   textarea{min-height:130px}
@@ -11037,11 +11039,11 @@ SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
   .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:20px 0 8px}
   .nps{display:flex;flex-wrap:wrap;gap:8px}
   .np{width:50px;height:54px;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:700;font-size:18px}
-  .np.on{border-color:var(--gold);background:rgba(245,201,119,.15);color:var(--gold)}
+  .np.on{border-color:var(--gold);background:rgba(236,233,226,.15);color:var(--gold)}
   .npends{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-top:8px}
-  .nav{position:sticky;bottom:0;background:linear-gradient(rgba(11,10,18,0),rgba(11,10,18,.9) 35%);padding:16px 20px calc(16px + env(safe-area-inset-bottom))}
+  .nav{position:sticky;bottom:0;background:linear-gradient(rgba(8,8,10,0),rgba(8,8,10,.94) 35%);padding:16px 20px calc(16px + env(safe-area-inset-bottom))}
   .navin{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:12px}
-  .btn{flex:1;background:linear-gradient(135deg,var(--gold),#e0953a);color:#2a1a05;font-weight:700;font-size:17px;border:0;border-radius:14px;padding:16px;cursor:pointer}
+  .btn{flex:1;background:transparent;color:#f2efe8;border:1px solid #f2efe8;border-radius:999px;padding:16px;cursor:pointer;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.14em;font-weight:500;font-size:13px}
   .btn.ghost{flex:0 0 auto;background:none;border:1px solid var(--line);color:var(--text);padding:16px 20px}
   .btn:disabled{opacity:.55}
   .finish{display:block;text-align:center;color:var(--muted);font-size:13px;margin-top:12px;text-decoration:underline;cursor:pointer}
@@ -11052,7 +11054,7 @@ SURVEY_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
   .hero-ic{font-size:60px;text-align:center;margin-bottom:10px}
 </style></head>
 <body>
-<div class="top"><div class="brandrow"><span class="brand">lumen</span><span class="count" id="count"></span></div>
+<div class="top"><div class="brandrow"><span class="brand">Realized</span><span class="count" id="count"></span></div>
   <div class="pbar"><i id="pbar" style="width:0%"></i></div></div>
 <div class="stage"><div class="screen" id="screen"></div></div>
 <div class="nav"><div class="navin" id="nav"></div><div class="err" id="err"></div></div>
@@ -11138,7 +11140,7 @@ function render(){
   document.getElementById('err').textContent='';
   let h='';
   if(s.t==='intro'){
-    h=`<div class="hero-ic">🌟</div><h1 style="text-align:center">Help shape <em>Realized</em></h1>
+    h=`<div class="hero-ic">✦</div><h1 style="text-align:center">Help shape <em>Realized</em></h1>
       <p class="sub" style="text-align:center">You’re one of the first to try it. We’ll go module by module — rate what you tried, skip what you didn’t, and tell us what you’d change. About 3–4 minutes, and you can finish early anytime.</p>`;
   } else if(s.t==='take'){
     const f=s.f;
@@ -11200,7 +11202,7 @@ async function submit(){
     const r=await fetch('api/survey',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers,nps,email})});
     if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Could not send');}
     document.querySelector('.top').style.display='none';document.querySelector('.nav').style.display='none';
-    document.getElementById('screen').innerHTML='<div class="ok"><div class="big">🌟</div><h2>Thank you</h2>'+
+    document.getElementById('screen').innerHTML='<div class="ok"><div class="big">✦</div><h2>Thank you</h2>'+
       '<p class="sub">Your feedback goes straight to the people building Realized. It genuinely shapes what comes next.</p>'+
       '<a class="btn" href="https://apps.apple.com/app/id6822133425" style="display:inline-block;text-decoration:none;max-width:300px;margin:18px auto 0">Back to Realized</a></div>';
     window.scrollTo(0,0);
@@ -11723,7 +11725,7 @@ ADMIN_PAGE = r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Realized · Admin</title>
 <style>
-:root{--bg:#0b0a12;--card:#161326;--ink:#ece9f5;--mut:#9a93b8;--gold:#f5c977;--purp:#a855f7;--line:#2a2540;--ok:#34d399;--go:#60a5fa}
+:root{--bg:#08080a;--card:#0b0b0e;--ink:#ece9e2;--mut:#7b7971;--gold:#e7e2d7;--purp:#9a978f;--line:rgba(255,255,255,.12);--ok:#c7c3b8;--go:#b4b1a8}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif}
 a{color:var(--gold)}.wrap{max-width:1040px;margin:0 auto;padding:22px 18px 90px}
 h1{font-size:22px;margin:0;color:var(--gold)}.sub{color:var(--mut);font-size:13px;margin:2px 0 18px}
@@ -11737,7 +11739,7 @@ h1{font-size:22px;margin:0;color:var(--gold)}.sub{color:var(--mut);font-size:13p
 .card h3{margin:0 0 8px;font-size:15px;color:var(--purp)}
 .bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin-top:8px}
 .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
-.bar i{width:70%;background:linear-gradient(180deg,var(--gold),var(--purp));border-radius:3px 3px 0 0;min-height:2px;display:block}
+.bar i{width:70%;background:var(--gold);border-radius:0;min-height:2px;display:block}
 .bar b{font-size:9px;color:var(--mut);font-weight:400}
 table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:500}
 .pcol{display:flex;gap:12px;flex-wrap:wrap}.psec{flex:1;min-width:280px}
@@ -11746,10 +11748,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;p
 .task .top{display:flex;justify-content:space-between;gap:10px;align-items:center}
 .task .t{font-weight:600;font-size:15px}.task .why{color:var(--mut);font-size:12.5px;margin:8px 0 10px;line-height:1.45}
 .rank{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--purp);color:#fff;font-size:12px;font-weight:700;margin-right:8px;vertical-align:middle}
-.qw{background:rgba(245,201,119,.16);color:var(--gold);border:1px solid rgba(245,201,119,.4);border-radius:999px;font-size:10.5px;padding:1px 7px;margin-left:8px;white-space:nowrap}
+.qw{background:rgba(236,233,226,.16);color:var(--gold);border:1px solid rgba(236,233,226,.4);border-radius:999px;font-size:10.5px;padding:1px 7px;margin-left:8px;white-space:nowrap}
 .prog{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--mut);flex:none}
 .pbar{width:60px;height:6px;border-radius:999px;background:var(--line);overflow:hidden}
-.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--ok))}
+.pbar i{display:block;height:100%;background:var(--gold)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .chip{background:var(--line);border-radius:999px;padding:2px 9px;font-size:11px;color:var(--mut)}
 .checks{display:flex;flex-direction:column;gap:2px}
@@ -11776,9 +11778,9 @@ tr.rdone td.outlet{opacity:.65}
 .outlet .onm{font-weight:600;font-size:13px}.outlet .onm a{color:var(--ink);text-decoration:none}.outlet .onm a:hover{color:var(--gold)}
 .ometa{display:flex;align-items:center;gap:8px;margin-top:5px}
 .cost{font-size:10px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
-.cost.free{color:var(--ok);border-color:rgba(52,211,153,.4)}.cost.paid{color:var(--gold);border-color:rgba(245,201,119,.4)}.cost.mix{color:var(--go);border-color:rgba(96,165,250,.4)}
+.cost.free{color:var(--ok);border-color:rgba(52,211,153,.4)}.cost.paid{color:var(--gold);border-color:rgba(236,233,226,.4)}.cost.mix{color:var(--go);border-color:rgba(96,165,250,.4)}
 .mini{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--mut)}
-.mbar{width:42px;height:5px;border-radius:999px;background:var(--line);overflow:hidden}.mbar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--ok))}
+.mbar{width:42px;height:5px;border-radius:999px;background:var(--line);overflow:hidden}.mbar i{display:block;height:100%;background:var(--gold)}
 td.cell.on{background:rgba(52,211,153,.08)}td.x{background:#100e1d}
 .mcell{display:flex;gap:7px;cursor:pointer;line-height:1.4}
 .mcell input{margin-top:1px;width:15px;height:15px;accent-color:var(--ok);flex:none;cursor:pointer}
@@ -11797,7 +11799,7 @@ tr.subrow>td{background:#100e1d;padding:10px 14px}
 .subdel{background:transparent;border:0;color:#6b6388;cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px}
 .subdel:hover{color:#fda4af;background:#241a2a}
 .subadd{display:flex;gap:7px;margin-top:8px}
-.subadd input{flex:1;background:#161326;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font-size:13px;font-family:inherit}
+.subadd input{flex:1;background:#0b0b0e;border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font-size:13px;font-family:inherit}
 .subadd button{background:var(--purp);border:0;color:#fff;border-radius:9px;padding:7px 14px;font-size:13px;cursor:pointer}
 </style></head><body><div class="wrap" id="app"><p class="sub">Loading…</p></div>
 <script>
@@ -11921,7 +11923,7 @@ async function analytics(){const b=$('#body');b.innerHTML='<p class="sub">Loadin
  const F=a.onboarding_funnel||[];const top=F.length?(F[0].users||1):1;
  const funnelRows=F.map(f=>{const pct=Math.round(100*(f.users||0)/top);
    return `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${esc(f.label)}</span><span>${f.users} · ${pct}%</span></div>
-   <div style="height:10px;background:#1a1730;border-radius:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#f5c977,#e0a955)"></div></div></div>`;}).join('')||'<p class="sub">No onboarding events yet — open the app in a fresh browser to generate some.</p>';
+   <div style="height:10px;background:#141418;border-radius:0;overflow:hidden"><div style="height:100%;width:${pct}%;background:#ece9e2"></div></div></div>`;}).join('')||'<p class="sub">No onboarding events yet — open the app in a fresh browser to generate some.</p>';
  const scr=(a.screens||[]).map(s=>`<tr><td>${esc(s.screen)}</td><td>${s.views}</td><td>${s.users}</td></tr>`).join('')||'<tr><td colspan=3>No screen views yet</td></tr>';
  const dau=(a.daily_active||[]).map(d=>`<tr><td>${esc(d.day)}</td><td>${d.users}</td></tr>`).join('')||'<tr><td colspan=2>—</td></tr>';
  b.innerHTML=`<div class="grid">${kpi(a.visitors,'Visitors · '+a.days+'d')}${kpi(a.signups,'Signups · '+a.days+'d')}${kpi((a.onboarding_conv_pct!=null?a.onboarding_conv_pct+'%':'—'),'Onboarding complete')}${kpi(a.total_events,'Events')}</div>
@@ -11973,7 +11975,7 @@ def site_page():
         f'onerror="this.closest(\'.fi\').style.display=\'none\'"></div>'
         f'<h3>{t}</h3><p>{d}</p></div>' for img, t, d in feat_set)
     steps = "".join(
-        f'<div class="step"><div class="sn">{i+1}</div><h4>{t}</h4><p>{d}</p></div>'
+        f'<div class="step"><div class="sn">{i+1:02d}</div><h4>{t}</h4><p>{d}</p></div>'
         for i, (t, d) in enumerate([
             ("Open today's sky", "Start with your Vedic reading — your rāśi and the Moon's nakshatra — then pick a guided journey and sit for a few minutes."),
             ("Light up a place", "Your session ignites your spot on a living world map. Snap a photo of where you sat and add it to your Atlas."),
@@ -11995,78 +11997,112 @@ def site_page():
 <meta name="description" content="__SUB__">
 <meta property="og:title" content="Realized — become who you’re meant to be">
 <meta property="og:description" content="__SUB__"><meta property="og:type" content="website">
-<meta name="theme-color" content="#0b0a12"><link rel="icon" href="/icon.svg">
+<meta name="theme-color" content="#08080a"><link rel="icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..500;1,9..144,300..500&amp;family=IBM+Plex+Mono:wght@400;500&amp;family=Inter:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0b0a12;--ink:#ece9f5;--mut:#b4acd0;--gold:#f5c977;--purp:#a855f7;--line:#2a2540}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:
- radial-gradient(1200px 700px at 50% -8%,rgba(168,85,247,.30),transparent 60%),
- radial-gradient(900px 600px at 85% 15%,rgba(245,201,119,.14),transparent 55%),var(--bg);
- color:var(--ink);font-family:ui-rounded,-apple-system,"Segoe UI",Roboto,system-ui,sans-serif;line-height:1.6}
-.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
-header{position:sticky;top:0;z-index:9;backdrop-filter:blur(10px);background:rgba(11,10,18,.55);
- padding:14px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
-.logo{font-weight:800;color:var(--gold);font-size:19px;display:flex;align-items:center;gap:8px}
-.logo img{width:26px;height:26px;border-radius:7px}
-.nav{display:flex;gap:18px;align-items:center}.nav a{color:var(--mut);text-decoration:none;font-size:14px;white-space:nowrap}
-.nav a:hover{color:var(--ink)}
-@media(max-width:620px){
- .nav{gap:12px}.nav a.navlink{display:none}
- .btn{padding:10px 16px;font-size:14px}.logo{font-size:17px}
+:root{
+ --ink:#08080a;--panel:#0b0b0e;--bone:#ece9e2;--bone-bright:#f2efe8;
+ --muted:#7b7971;--line:rgba(255,255,255,.12);
+ --display:'Fraunces',Georgia,'Times New Roman',serif;
+ --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+ --body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
 }
-.btn{display:inline-block;background:linear-gradient(90deg,var(--gold),var(--purp));color:#140f22;font-weight:800;
- text-decoration:none;padding:12px 22px;border-radius:999px;font-size:15px;box-shadow:0 10px 30px rgba(168,85,247,.35);transition:transform .15s}
-.btn:hover{transform:translateY(-2px)}.btn.lg{padding:15px 30px;font-size:16px}
-.hero{text-align:center;padding:60px 0 34px}
-.badge{display:inline-block;border:1px solid var(--line);background:rgba(22,19,38,.7);color:var(--mut);
- border-radius:999px;padding:5px 14px;font-size:12.5px;margin-bottom:20px}
-.hero h1{font-size:clamp(32px,6.5vw,60px);margin:0 0 16px;line-height:1.08;
- background:linear-gradient(90deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero p{font-size:clamp(16px,2.6vw,21px);color:var(--mut);max-width:640px;margin:0 auto 28px}
-.orbit{width:96px;height:96px;margin:0 auto 10px;display:block;border-radius:24px;
- filter:drop-shadow(0 0 28px rgba(245,201,119,.6));animation:float 5s ease-in-out infinite}
-@keyframes float{50%{transform:translateY(-10px)}}
-.sub2{color:var(--mut);font-size:13px;margin-top:14px}
-h2.sec{text-align:center;font-size:clamp(22px,4vw,32px);margin:60px 0 6px}
-.lead{text-align:center;color:var(--mut);max-width:560px;margin:0 auto 26px}
-.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-.f{background:rgba(22,19,38,.7);border:1px solid var(--line);border-radius:18px;padding:22px}
-.fi{margin-bottom:12px}.fi img{width:68px;height:68px;border-radius:16px;object-fit:cover;
- border:1px solid var(--line);box-shadow:0 6px 18px rgba(0,0,0,.45)}
-.f h3{margin:0 0 6px;color:var(--gold);font-size:18px}.f p{margin:0;color:var(--mut);font-size:14.5px}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-.step{background:rgba(22,19,38,.5);border:1px solid var(--line);border-radius:18px;padding:22px;position:relative}
-.sn{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--purp));
- color:#140f22;font-weight:800;display:grid;place-items:center;margin-bottom:10px}
-.step h4{margin:0 0 6px;font-size:16px}.step p{margin:0;color:var(--mut);font-size:14px}
-.quote{text-align:center;max-width:720px;margin:64px auto 0;font-size:clamp(20px,3.4vw,28px);line-height:1.4}
-.quote span{color:var(--gold)}.quote .by{display:block;color:var(--mut);font-size:14px;margin-top:14px}
-.faqs{max-width:720px;margin:14px auto 0}
-.faq{border:1px solid var(--line);border-radius:14px;padding:4px 16px;margin:10px 0;background:rgba(22,19,38,.5)}
-.faq summary{cursor:pointer;padding:14px 0;font-weight:600;font-size:15px;list-style:none}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--bone);font-family:var(--body);
+ font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+img{filter:grayscale(1) contrast(1.04)}
+/* mono micro-labels: eyebrows, nav, numbers, buttons, footer */
+.badge,.abadge,.sub2,.sn,.nav a,.btn,footer{font-family:var(--mono);
+ text-transform:uppercase;letter-spacing:.18em;font-weight:500}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+header{position:sticky;top:0;z-index:9;background:rgba(8,8,10,.86);backdrop-filter:blur(10px);
+ padding:16px 0;border-bottom:1px solid var(--line)}
+.logo{font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:-.01em;
+ color:var(--bone-bright);display:flex;align-items:center;gap:10px;text-transform:none}
+.logo img{width:24px;height:24px;border-radius:0;filter:grayscale(1) brightness(1.9)}
+.nav{display:flex;gap:22px;align-items:center}
+.nav a{color:var(--muted);text-decoration:none;font-size:11px;white-space:nowrap}
+.nav a:hover{color:var(--bone)}
+/* one button in the system: flat mono outline, no fill, no glow */
+.btn{display:inline-block;background:transparent;color:var(--bone-bright);
+ border:1px solid var(--bone-bright);border-radius:999px;padding:12px 24px;font-size:11.5px;
+ text-decoration:none;transition:background .12s linear,color .12s linear;cursor:pointer}
+.btn:hover{background:var(--bone-bright);color:var(--ink)}
+.btn.lg{padding:15px 32px;font-size:12.5px}
+@media(max-width:620px){
+ .nav{gap:14px}.nav a.navlink{display:none}
+ .btn{padding:10px 18px}.logo{font-size:18px}
+}
+.hero{text-align:center;padding:76px 0 44px}
+.orbit{width:58px;height:58px;margin:0 auto 26px;display:block;border:1px solid var(--line);
+ padding:11px;border-radius:0;filter:grayscale(1) brightness(1.9)}
+.badge{display:inline-block;border:0;background:none;padding:0;color:var(--muted);
+ font-size:10.5px;margin-bottom:22px}
+.hero h1{font-family:var(--display);font-weight:340;font-size:clamp(34px,7vw,64px);line-height:1.06;
+ letter-spacing:-.015em;color:var(--bone-bright);margin:0 0 18px;
+ background:none;-webkit-text-fill-color:currentColor}
+.hero p{font-family:var(--body);font-size:clamp(16px,2.4vw,19px);color:var(--muted);
+ max-width:620px;margin:0 auto 30px;text-transform:none;letter-spacing:0}
+.sub2{color:var(--muted);font-size:10.5px;margin-top:18px}
+h2.sec{font-family:var(--display);font-weight:340;text-align:center;font-size:clamp(24px,4vw,36px);
+ letter-spacing:-.01em;color:var(--bone-bright);margin:88px 0 10px}
+.lead{text-align:center;color:var(--muted);max-width:560px;margin:0 auto 34px}
+/* flat rows divided by hairlines — no floating cards */
+.feats,.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+ gap:1px;background:var(--line);border:1px solid var(--line)}
+.f,.step{background:var(--ink);padding:28px 24px;border-radius:0;position:relative}
+.fi{margin-bottom:16px}
+.fi img{width:60px;height:60px;object-fit:cover;border:1px solid var(--line);border-radius:0;box-shadow:none}
+.f h3{font-family:var(--display);font-weight:360;color:var(--bone-bright);font-size:19px;
+ margin:0 0 8px;letter-spacing:-.005em}
+.f p,.step p{margin:0;color:var(--muted);font-size:14.5px}
+.sn{display:block;width:auto;height:auto;background:none;border-radius:0;color:var(--muted);
+ font-size:10.5px;margin-bottom:14px}
+.step h4{font-family:var(--display);font-weight:360;font-size:18px;color:var(--bone-bright);margin:0 0 8px}
+.quote{font-family:var(--display);font-weight:340;text-align:center;max-width:720px;margin:96px auto 0;
+ font-size:clamp(21px,3.4vw,30px);line-height:1.38;color:var(--bone-bright)}
+.quote span{font-style:italic;color:var(--bone-bright)}
+.quote .by{display:block;font-family:var(--mono);font-style:normal;text-transform:uppercase;
+ letter-spacing:.18em;color:var(--muted);font-size:10.5px;margin-top:20px}
+.faqs{max-width:720px;margin:18px auto 0;border-top:1px solid var(--line)}
+.faq{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:0;margin:0;background:none}
+.faq summary{cursor:pointer;padding:20px 0;font-size:15.5px;font-weight:400;color:var(--bone);list-style:none}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:'+';float:right;color:var(--gold);font-size:20px}
-.faq[open] summary::after{content:'–'}.faq p{margin:0 0 14px;color:var(--mut);font-size:14.5px}
-.cta2{text-align:center;padding:70px 0 20px}.cta2 h2{font-size:clamp(24px,4vw,34px);margin:0 0 20px}
-footer{text-align:center;color:var(--mut);font-size:13px;padding:44px 0 64px;border-top:1px solid var(--line);margin-top:50px}
-footer a{color:var(--gold);text-decoration:none}
-.anchor{margin:30px 0 8px}
-.anchor-wrap{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:center;
- background:linear-gradient(160deg,rgba(245,201,119,.11),rgba(168,85,247,.09));border:1px solid var(--line);border-radius:26px;padding:28px}
-.anchor-art img{width:100%;border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);border:1px solid var(--line);display:block}
-.abadge{display:inline-block;border:1px solid var(--line);background:rgba(22,19,38,.7);color:var(--gold);border-radius:999px;padding:5px 13px;font-size:12.5px;margin-bottom:12px}
-.anchor-copy h2{font-size:clamp(26px,4vw,38px);margin:0 0 12px;line-height:1.1;
- background:linear-gradient(90deg,#fff,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
-.anchor-copy>p{color:var(--mut);margin:0 0 16px;font-size:16px}
-.alist{list-style:none;padding:0;margin:0 0 20px;display:flex;flex-direction:column;gap:9px}
-.alist li{color:var(--ink);font-size:14.5px;padding-left:24px;position:relative}
-.alist li:before{content:'\2726';position:absolute;left:0;color:var(--gold)}
+.faq summary::after{content:'+';float:right;color:var(--muted);font-family:var(--mono);font-size:16px}
+.faq[open] summary::after{content:'–'}
+.faq p{margin:0 0 22px;color:var(--muted);font-size:14.5px}
+.cta2{text-align:center;padding:96px 0 24px}
+.cta2 h2{font-family:var(--display);font-weight:340;font-size:clamp(26px,4.2vw,38px);
+ letter-spacing:-.01em;color:var(--bone-bright);margin:0 0 26px}
+footer{text-align:center;color:var(--muted);font-size:10.5px;line-height:2.4;
+ padding:56px 0 72px;border-top:1px solid var(--line);margin-top:72px}
+footer a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
+footer a:hover{color:var(--bone)}
+/* The Journal — framed image block, no gradient wash */
+.anchor{margin:88px 0 8px}
+.anchor-wrap{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;
+ background:var(--panel);border:1px solid var(--line);border-radius:0;padding:32px}
+.anchor-art img{width:100%;display:block;border:1px solid var(--line);border-radius:0;box-shadow:none}
+.abadge{display:inline-block;border:0;background:none;padding:0;color:var(--muted);
+ font-size:10.5px;margin-bottom:16px}
+.anchor-copy h2{font-family:var(--display);font-weight:340;font-size:clamp(26px,4vw,38px);
+ margin:0 0 14px;line-height:1.1;letter-spacing:-.015em;color:var(--bone-bright);
+ background:none;-webkit-text-fill-color:currentColor}
+.anchor-copy>p{color:var(--muted);margin:0 0 20px;font-size:15.5px}
+.alist{list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:11px}
+.alist li{color:var(--bone);font-size:14.5px;padding-left:24px;position:relative}
+.alist li:before{content:'\2726';position:absolute;left:0;color:var(--muted)}
 .anchor-cta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0}
-.anchor-cta .price{font-size:26px;font-weight:800;color:var(--ink)}
-.anchor-cta input{flex:1;min-width:160px;background:rgba(11,10,18,.6);border:1px solid var(--line);
- border-radius:999px;padding:12px 18px;color:var(--ink);font-size:15px;font-family:inherit}
-.anchor-cta input:focus{outline:none;border-color:var(--gold)}
-@media(max-width:720px){.anchor-wrap{grid-template-columns:1fr;gap:20px;padding:20px}}
+.anchor-cta .price{font-family:var(--mono);font-size:22px;font-weight:500;
+ color:var(--bone-bright);letter-spacing:.02em}
+.anchor-cta input{flex:1;min-width:160px;background:transparent;border:1px solid var(--line);
+ border-radius:999px;padding:12px 18px;color:var(--bone);font-family:var(--mono);
+ font-size:12px;letter-spacing:.06em}
+.anchor-cta input::placeholder{color:var(--muted);text-transform:uppercase;letter-spacing:.14em;font-size:10.5px}
+.anchor-cta input:focus{outline:none;border-color:var(--bone-bright)}
+@media(max-width:720px){.anchor-wrap{grid-template-columns:1fr;gap:24px;padding:22px}}
 </style></head><body>
 <header class="wraphd"><div class="wrap" style="display:flex;justify-content:space-between;align-items:center;padding:0">
 <div class="logo"><img src="/icon.svg" alt="Realized"> Realized</div>
@@ -12082,7 +12118,7 @@ footer a{color:var(--gold);text-decoration:none}
 <div class="anchor-wrap">
   <div class="anchor-art"><img src="/art/lumen-journal.png" alt="The Realized Journal" loading="lazy" onerror="this.closest('.anchor-art').style.display='none'"></div>
   <div class="anchor-copy">
-    <div class="abadge">★ The anchor · a companion you can hold</div>
+    <div class="abadge">✦ The anchor · a companion you can hold</div>
     <h2>The Realized Journal</h2>
     <p>The guided practice of the app, in your hands. The eight life pillars, the season you're in, and a year of evening prompts — printed on cream dot-grid paper, bound in a linen hardcover with a gold ribbon and gilded edges.</p>
     <ul class="alist">
@@ -12120,7 +12156,7 @@ footer a{color:var(--gold);text-decoration:none}
   var em=(document.getElementById('wlemail').value||'').trim();var m=document.getElementById('wlmsg');
   fetch('/api/waitlist',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em})})
    .then(function(r){return r.json();}).then(function(d){
-     if(d&&d.ok){f.style.display='none';m.textContent='✦ You are on the list — we will email you the moment it ships.';m.style.color='#f5c977';}
+     if(d&&d.ok){f.style.display='none';m.textContent='✦ You are on the list — we will email you the moment it ships.';m.style.color='#ece9e2';}
      else{m.textContent=(d&&d.error)||'Something went wrong — please try again.';}
    }).catch(function(){m.textContent='Something went wrong — please try again.';});
  });})();
@@ -12622,32 +12658,32 @@ def _is_premium(u):
 def _email_shell(headline, paras, cta_text, cta_url, unsub_url, preheader=""):
     """A dark, on-brand responsive HTML email + a plain-text fallback."""
     body = "".join(
-        f'<p style="margin:0 0 16px;color:#d8d2e8;font-size:16px;line-height:1.6">{p}</p>' for p in paras)
-    html = f"""<!doctype html><html><body style="margin:0;background:#0b0a12;">
+        f'<p style="margin:0 0 16px;color:#b4b1a8;font-size:16px;line-height:1.6">{p}</p>' for p in paras)
+    html = f"""<!doctype html><html><body style="margin:0;background:#08080a;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">{preheader}</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b0a12;padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#08080a;padding:28px 12px">
 <tr><td align="center">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#14111f;border:1px solid #2a2440;border-radius:20px;overflow:hidden">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#0b0b0e;border:1px solid #26262a;border-radius:0;overflow:hidden">
     <tr><td style="padding:34px 32px 8px;text-align:center">
-      <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:700;color:#f5c977;letter-spacing:.5px">lumen</div>
-      <div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8f8a9d;margin-top:6px">light, one breath at a time</div>
+      <div style="font-family:Georgia,'Times New Roman',serif;font-size:30px;font-weight:400;color:#f2efe8;letter-spacing:-.01em">Realized</div>
+      <div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#7b7971;margin-top:8px">become who you're meant to be</div>
     </td></tr>
     <tr><td style="padding:18px 32px 4px">
-      <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:25px;line-height:1.25;color:#f6f1ea;font-weight:700">{headline}</h1>
+      <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:26px;line-height:1.22;color:#f2efe8;font-weight:400">{headline}</h1>
       {body}
     </td></tr>
     <tr><td style="padding:10px 32px 30px" align="center">
-      <a href="{cta_url}" style="display:inline-block;background:linear-gradient(135deg,#f5c977,#e0953a);color:#2a1a05;text-decoration:none;font-weight:700;font-size:16px;padding:14px 30px;border-radius:14px">{cta_text}</a>
+      <a href="{cta_url}" style="display:inline-block;background:#f2efe8;color:#08080a;text-decoration:none;font-weight:500;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-family:Menlo,Consolas,monospace;padding:16px 32px;border-radius:999px">{cta_text}</a>
     </td></tr>
-    <tr><td style="padding:0 32px 30px;text-align:center;border-top:1px solid #241f38">
-      <p style="margin:18px 0 0;color:#6f6a82;font-size:12px;line-height:1.6">
+    <tr><td style="padding:0 32px 30px;text-align:center;border-top:1px solid #26262a">
+      <p style="margin:18px 0 0;color:#7b7971;font-size:12px;line-height:1.6">
         You're getting this because you have a Realized account.<br>
-        <a href="{unsub_url}" style="color:#8f8a9d;text-decoration:underline">Unsubscribe</a> from these emails anytime.
+        <a href="{unsub_url}" style="color:#7b7971;text-decoration:underline">Unsubscribe</a> from these emails anytime.
       </p>
     </td></tr>
   </table>
 </td></tr></table></body></html>"""
-    text = "lumen — light, one breath at a time\n\n" + headline + "\n\n" + \
+    text = "Realized — become who you're meant to be\n\n" + headline + "\n\n" + \
         "\n\n".join(re.sub("<[^>]+>", "", p) for p in paras) + \
         f"\n\n{cta_text}: {cta_url}\n\nUnsubscribe: {unsub_url}"
     return html, text
@@ -12681,7 +12717,7 @@ def _email_tpl(kind, c, u, ctx=None):
         s = "Your week in light"
         hl = f"{sits} {'sit' if sits==1 else 'sits'} this week."
         paras = [
-            f"This week you sat {sits} {'time' if sits==1 else 'times'} and earned <b style=\"color:#f5c977\">+{light} Light</b>" +
+            f"This week you sat {sits} {'time' if sits==1 else 'times'} and earned <b style=\"color:#ece9e2\">+{light} Light</b>" +
             (f", keeping a {u['streak']}-day streak alive." if (u['streak'] or 0) > 1 else "."),
             "Quietly proud of you. A few minutes tomorrow keeps the thread going."]
         return (s, *shell(hl, paras, "Continue your practice", pre=f"{sits} sits · +{light} Light"))
@@ -12702,7 +12738,7 @@ def _email_tpl(kind, c, u, ctx=None):
         hl = "You've built a real practice."
         paras = [
             f"{name}, your consistency is showing — and there's more waiting when you're ready to go deeper.",
-            "<b style=\"color:#f5c977\">Realized Premium</b> (coming soon) will unlock the full library of journeys, deeper Vedic readings, and more ways to grow your mandala.",
+            "<b style=\"color:#ece9e2\">Realized Premium</b> (coming soon) will unlock the full library of journeys, deeper Vedic readings, and more ways to grow your mandala.",
             "Want first access and a founding-member price? Tap below to raise your hand."]
         return (s, *shell(hl, paras, "I'm interested in Premium",
                           url=f"{PUBLIC_URL}/e/premium?u={_unsub_token(c, u)}",
@@ -12744,12 +12780,12 @@ def _email_candidate(c, u, lt):
         for day_at, key, ctx in (
             (3, "tip:journeys", {"subject": "Guided journeys are the heart of Realized",
                  "headline": "Let a real tradition guide you.",
-                 "paras": ["Beyond the timer, Realized has narrated <b style=\"color:#f5c977\">Journeys</b> — guided courses drawn from Stoic, Vedic and breathwork traditions.",
+                 "paras": ["Beyond the timer, Realized has narrated <b style=\"color:#ece9e2\">Journeys</b> — guided courses drawn from Stoic, Vedic and breathwork traditions.",
                            "Open the Journeys tab and start the one that calls to you."],
                  "cta": "Explore Journeys", "pre": "There's more than the timer."}),
             (10, "tip:journal", {"subject": "Meet the Keeper — your journal companion",
                  "headline": "A few honest lines change everything.",
-                 "paras": ["Realized's <b style=\"color:#f5c977\">Journal</b> gives you a warm companion, the Keeper, who reflects back the throughline in what you write.",
+                 "paras": ["Realized's <b style=\"color:#ece9e2\">Journal</b> gives you a warm companion, the Keeper, who reflects back the throughline in what you write.",
                            "Try a single entry after your next sit."],
                  "cta": "Open your journal", "pre": "Reflection makes it stick."})):
             if ds_signup >= day_at and not _email_has(c, u["id"], key):
