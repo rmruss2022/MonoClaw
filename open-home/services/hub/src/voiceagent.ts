@@ -17,6 +17,8 @@ import * as spotify from "./spotify.ts";
 import * as sceneConfig from "./sceneConfig.ts";
 import * as recipes from "./recipes.ts";
 import * as cooking from "./cooking.ts";
+import * as profile from "./profile.ts";
+import * as briefings from "./briefings.ts";
 
 const CCUT_URL = (process.env.CCUT_CLAUDE_URL || "").replace(/\/$/, "");
 const CCUT_TOKEN = process.env.CCUT_CLAUDE_TOKEN || "";
@@ -114,6 +116,11 @@ Actions you can take (include any that apply):
   Examples: "what can I make for 4 people that's vegan"→recipe_suggest; "let's cook the chickpea curry"→cook_start;
   "next step"→cook_next; "set a timer for 10 minutes"→cook_timer seconds 600; "how's it going"→cook_status; "I'm done"→cook_finish.
   For cooking actions, leave "say" empty — the home speaks the step/result for you.
+- BRIEFINGS — custom daily reports (morning, evening, or named):
+  - {"type":"briefing","which":"<name, or morning|evening|afternoon|night>"}
+  Examples: "give me my morning briefing"/"brief me"→briefing which "morning";
+  "evening briefing"→briefing which "evening"; "run my focus briefing"→briefing which "focus".
+  Leave "say" empty for briefing actions — the home speaks the composed report.
 
 Rules:
 - For anything needing current/live info (weather, news, sports, prices, "today", facts you're unsure of), set "web_search" to a focused query and set "say" to "" — the home will search and ask you again with results.
@@ -387,7 +394,7 @@ function fmtDur(sec: number): string {
   return `${s} second${s !== 1 ? "s" : ""}`;
 }
 
-async function execActions(actions: any[]): Promise<string[]> {
+async function execActions(actions: any[], text: string = ""): Promise<string[]> {
   const done: string[] = [];
   for (const a of actions || []) {
     remainingMs();   // Never start another action after the caller's deadline.
@@ -468,6 +475,15 @@ async function execActions(actions: any[]): Promise<string[]> {
         }
         case "cook_finish": { const r = cooking.complete(); done.push("SPEAK::" + (r.ok ? "Nice work — recipe complete. I've logged it." : "No recipe in progress.")); break; }
         case "cook_abandon": { const r = cooking.abandon(); done.push("SPEAK::" + (r.ok ? "Okay, I've stopped the recipe." : "No recipe in progress.")); break; }
+        case "briefing": {
+          const which = String(a.which || "").trim();
+          let b = which ? (briefings.getBriefing(which) || briefings.matchPhrase(which) || briefings.forTimeOfDay(which as any)) : undefined;
+          if (!b && text) b = briefings.matchPhrase(text) || undefined;
+          if (!b) { done.push("SPEAK::I don't have that briefing set up yet."); break; }
+          const out = await briefings.compose(b);
+          done.push("SPEAK::" + (out.text || `Here's your ${b.name} briefing.`));
+          break;
+        }
       }
     } catch (e) {
       console.log("[agent] action failed:", JSON.stringify(a), "->", (e as Error)?.message);
@@ -507,7 +523,8 @@ async function runAgentWithinBudget(text: string): Promise<{ reply: string; acti
     const results = await webSearch(text);
     pre = `\nWeb results (use these, don't ask to search again):\n${results}\n`;
   }
-  const p1 = `${SYSTEM}\n\nHome state: ${state}${pre}\nUser said: "${text}"`;
+  const who = profile.contextLine();
+  const p1 = `${SYSTEM}\n\nAbout the user: ${who}\nHome state: ${state}${pre}\nUser said: "${text}"`;
   let out = await llmJson(p1);
   // fallback: one web-search round-trip if the model still asks for one
   if (out.web_search && !String(out.say || "").trim()) {
@@ -518,7 +535,7 @@ async function runAgentWithinBudget(text: string): Promise<{ reply: string; acti
     out = await llmJson(p2);
   }
   console.log("[agent] llm out:", JSON.stringify({ say: out.say, actions: out.actions, web_search: out.web_search }));
-  const done = await execActions(out.actions || []);
+  const done = await execActions(out.actions || [], text);
   remainingMs();
   // Music plays tag their result as "NOWPLAYING::<name>" so we can announce the
   // real thing that started, not the model's generic "sure, playing that".
