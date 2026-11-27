@@ -5973,25 +5973,31 @@ async function startSession(){
   try{await api('session/start','POST',{});}catch(e){}
   getGeo();  // capture location now (user gesture) so it's ready by the time the sit ends
   Sound.bell();Sound.start(pick.sound);try{Haptics.medium();}catch(e){}
-  const total=pick.minutes*60;let left=total;let ended=false;
+  // The clock counts UP — you watch the time you have given, not time you owe.
+  // The chosen length stays as the target that rings the bell and completes.
+  const total=pick.minutes*60;let elapsed=0;let ended=false;
   $('#nav').classList.add('hidden');
   $('#app').innerHTML=`
   <div class="sit-screen">
     <div class="orb-wrap">
       <div class="ring"></div>
-      <div class="orb"><div class="t" id="clock">${mm(left)}</div></div>
+      <div class="orb"><div class="t" id="clock">${mm(0)}</div></div>
       <div class="breath-label" id="bl">breathe in</div>
     </div>
-    <div class="center muted" style="margin-top:-4px">${SOUNDS.find(s=>s[0]===pick.sound)[2]} · ${pick.minutes} min</div>
+    <div class="center muted" style="margin-top:-4px">${SOUNDS.find(s=>s[0]===pick.sound)[2]} · ${pick.minutes} min<span id="sitTarget" style="display:block;font-size:11px;margin-top:4px">${mm(total)} to go</span></div>
     <div class="end-wrap"><button class="btn ghost" id="end">End session</button></div>
   </div>`;
   const bl=$('#bl');let phase=0;
   const breath=setInterval(()=>{phase=(phase+1)%2;bl.textContent=phase?'breathe out':'breathe in';},5000);
-  timerInt=setInterval(()=>{left--;$('#clock')&&($('#clock').textContent=mm(left));if(left<=0){finish(true);}},1000);
+  timerInt=setInterval(()=>{elapsed++;
+    const cl=$('#clock');if(cl)cl.textContent=mm(elapsed);
+    const tg=$('#sitTarget');if(tg&&elapsed<total)tg.textContent=mm(total-elapsed)+' to go';
+    if(elapsed>=total){finish(true);}},1000);
   function stopTimers(){clearInterval(timerInt);clearInterval(breath);}
   async function finish(complete){
     if(ended)return;ended=true;stopTimers();Sound.stop();if(complete){Sound.bell();try{Haptics.success();}catch(e){}}
-    const done=complete?pick.minutes:Math.max(1,Math.round((total-left)/60));
+    const done=complete?pick.minutes:Math.max(1,Math.round(elapsed/60));
+    window.__lastSitSeconds=complete?total:elapsed;
     completeFlow(done);
   }
   $('#end').onclick=()=>finish(false);
@@ -6003,7 +6009,8 @@ function completeFlow(minutes){
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Session complete</b></div>
   <div class="card center"><div style="color:var(--gold)">${ic('lotus','lg grad-gold')}</div>
-    <h2 style="margin:8px 0 2px">${minutes} minutes</h2>
+    <h2 style="margin:8px 0 2px">${minutes} minute${minutes===1?'':'s'}</h2>
+    <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.18em;font-size:10.5px;color:var(--muted);margin:2px 0 6px">${(window.__lastSitSeconds!=null?mm(window.__lastSitSeconds):mm(minutes*60))} on the clock</div>
     <p class="muted" style="margin:0">How do you feel?</p>
     <div class="grid3" id="mood" style="margin-top:12px">
       ${[['calm','calm','calm'],['energized','bolt','energized'],['unclear','fog','unclear']].map(m=>`<div class="chip" data-m="${m[0]}"><div class="big">${ic(m[1])}</div>${m[2]}</div>`).join('')}
