@@ -5044,7 +5044,7 @@ function renderAuth(){
   $('#app').innerHTML=`
   <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Realized</b></div>
   <div class="center" style="margin:26px 0 10px">
-    <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${lumenMark('lg')}</div>
+    <div style="color:var(--gold)">${lumenMark('lg')}</div>
     <h1 style="margin:14px 0 4px">Light up the world</h1>
     <p class="muted" style="margin:0 28px">Meditate, earn Light, and watch the planet glow with everyone practicing today.</p>
   </div>
@@ -5085,7 +5085,7 @@ function renderReset(prefill){
     $('#app').innerHTML=`
     <div class="brand"><span class="mark">${lumenMark('mark')}</span><b>Realized</b></div>
     <div class="center" style="margin:26px 0 10px">
-      <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${ic('lock','lg grad-gold')}</div>
+      <div style="color:var(--gold)">${ic('lock','lg grad-gold')}</div>
       <h1 style="margin:14px 0 4px">Reset your password</h1>
       <p class="muted" style="margin:0 28px">${stage==='request'?'Enter your email and we’ll send you a 6-digit reset code.':'Enter the code we emailed you and choose a new password.'}</p>
     </div>
@@ -5442,7 +5442,7 @@ function renderOnboardOffer(){
   const price=_premPrice();
   $('#app').innerHTML=`
   <div class="onb-hero" style="padding-bottom:4px">
-    <div style="color:var(--gold);filter:drop-shadow(0 0 24px var(--gold))">${lumenMark('lg')}</div>
+    <div style="color:var(--gold)">${lumenMark('lg')}</div>
     <h1 class="onb-h onb-enter d1">Go deeper with Premium</h1>
     <p class="onb-p">About the price of one coffee a month. Everything you have already seen stays free — Premium opens the rest of the library.</p>
   </div>
@@ -8656,9 +8656,9 @@ async function renderProfile(){
   +`<div class="you-stats">${[['Light',fmt(p.light)],['Streak',p.streak],['Sessions',p.total_sessions],['Minutes',p.total_minutes],['Best streak',p.best_streak],['This week',fmt(p.weekly_light)]].map(st=>`<div class="you-stat"><div class="n">${st[1]}</div><div class="l">${st[0]}</div></div>`).join('')}</div>`
   +`<div class="nh-sec-h" style="margin-top:18px"><h2>Your League</h2></div>`
   +leagueSectionHTML(lgd)
-  +((p.tier!=='premium')?`<div class="card" id="procard" style="border:1px solid #3b3b39;background:linear-gradient(160deg,#151515,#131212);margin-top:14px">
-    <div class="row" style="align-items:center;gap:12px"><span style="flex:0 0 auto">${lumenMark('pro')}</span><div style="flex:1"><div class="pill" style="border-color:#cccac4;color:#cccac4;font-size:11px">LUMEN PREMIUM</div><h3 style="margin:8px 0 2px;color:#f2eee7">Go deeper with Premium</h3><p class="muted" style="font-size:13px;margin:0;line-height:1.55">${_canBuy()?`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#cccac4">${_premPrice()} a month</b>.`:`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#cccac4">coming soon</b>.`}</p></div></div>
-    <button class="btn" id="pro" style="margin-top:12px;background:linear-gradient(135deg,#cccac4,#9e9c98);color:#1c1c1b;font-weight:700;border:0">${_canBuy()?(ic('spark')+' Subscribe · '+_premPrice()+'/month'):(ic('spark')+' Get founding-member access')}</button>
+  +((p.tier!=='premium')?`<div class="card" id="procard" style="border:1px solid rgba(255,255,255,.12);background:#0b0b0e;margin-top:14px">
+    <div class="row" style="align-items:center;gap:12px"><span style="flex:0 0 auto">${lumenMark('pro')}</span><div style="flex:1"><div class="pill" style="border-color:#cccac4;color:#cccac4;font-size:11px">REALIZED PREMIUM</div><h3 style="margin:8px 0 2px;color:#f2eee7">Go deeper with Premium</h3><p class="muted" style="font-size:13px;margin:0;line-height:1.55">${_canBuy()?`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#cccac4">${_premPrice()} a month</b>.`:`The full library of journeys, deeper Vedic readings, and more ways to grow your mandala — <b style="color:#cccac4">coming soon</b>.`}</p></div></div>
+    <button class="btn" id="pro" style="margin-top:12px;background:#f2efe8;color:#08080a;border:0;font-family:'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.14em;font-weight:500;font-size:12.5px">${_canBuy()?(ic('spark')+' Subscribe · '+_premPrice()+'/month'):(ic('spark')+' Get founding-member access')}</button>
     <p class="muted" id="prostate" style="font-size:12px;text-align:center;margin:8px 0 0">${_canBuy()?`${_premPrice()} per month, billed through your Apple ID. Renews until cancelled; cancel any time in Settings.`:'First access + a founding price when it opens. No charge yet.'}</p>
     ${_canBuy()?`<button class="btn ghost" id="prorestore" style="margin-top:8px;font-size:13px">Restore purchase</button>`:''}</div>`:'')
   +`<div class="nh-sec-h" style="margin-top:18px"><h2>Settings</h2></div>`
