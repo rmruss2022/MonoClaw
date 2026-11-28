@@ -530,7 +530,7 @@ async function runAgentWithinBudget(text: string): Promise<{ reply: string; acti
   if (out.web_search && !String(out.say || "").trim()) {
     if (remainingMs() < 2000) throw new Error("Insufficient time for another search");
     const results = await webSearch(String(out.web_search));
-    const p2 = `${SYSTEM}\n\nHome state: ${state}\nUser said: "${text}"\n\nYou asked to search; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
+    const p2 = `${SYSTEM}\n\nAbout the user: ${who}\nHome state: ${state}\nUser said: "${text}"\n\nYou asked to search; here are results:\n${results}\n\nNow answer. Respond with the JSON object (put the answer in "say").`;
     if (remainingMs() < 1000) throw new Error("Insufficient time for another LLM call");
     out = await llmJson(p2);
   }

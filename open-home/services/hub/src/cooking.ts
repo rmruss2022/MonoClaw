@@ -67,7 +67,7 @@ export function onTimerDone(cb: (t: CookTimer, s: Session) => void): void { time
 const remaining = (t: CookTimer): number => Math.max(0, Math.round((t.endsAt - now()) / 1000));
 
 /** Public view of the session with live timer remaining + current step text. */
-export function view(): (Session & { step?: recipes.Step; timers: Array<CookTimer & { remainingSec: number }> }) | null {
+export function view(): (Omit<Session, "timers"> & { step?: recipes.Step; timers: Array<CookTimer & { remainingSec: number }> }) | null {
   if (!session) return null;
   const r = recipes.getRecipe(session.recipeId);
   const step = r?.steps.find((s) => s.n === session!.currentStep);
